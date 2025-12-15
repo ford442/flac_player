@@ -1,5 +1,5 @@
 // Audio player with load/play/pause/seek functionality
-import { FlacDecoder, FlacDecoderResult } from './flacDecoder';
+import { FlacDecoder } from './flacDecoder';
 
 export interface PlayerState {
   isPlaying: boolean;
