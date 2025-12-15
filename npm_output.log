@@ -1,0 +1,75 @@
+
+> flac-player@1.0.0 start
+> webpack serve --mode development --open
+
+<i> [webpack-dev-server] Project is running at:
+<i> [webpack-dev-server] Loopback: http://localhost:3000/
+<i> [webpack-dev-server] On Your Network (IPv4): http://192.168.0.2:3000/
+<i> [webpack-dev-server] Content not from webpack is served from '/app/public' directory
+asset bundle.f001c1f5f0d4a294c830.js 1.44 MiB [emitted] [immutable] (name: main)
+asset index.html 700 bytes [emitted]
+runtime modules 28.1 KiB 14 modules
+modules by path ./node_modules/ 1.26 MiB 43 modules
+modules by path ./src/ 47.2 KiB
+  modules by path ./src/*.ts 29.6 KiB 5 modules
+  modules by path ./src/components/ 13.6 KiB
+    ./src/components/Player.tsx 7.08 KiB [built] [code generated]
+    + 2 modules
+  modules by path ./src/*.tsx 771 bytes
+    ./src/index.tsx 275 bytes [built] [code generated]
+    ./src/App.tsx 496 bytes [built] [code generated]
+  modules by path ./src/*.css 3.33 KiB
+    ./src/App.css 2.23 KiB [built] [code generated]
+    ./node_modules/css-loader/dist/cjs.js!./src/App.css 1.09 KiB [built] [code generated]
+
+ERROR in /app/src/webgpuVisualizer.ts
+./src/webgpuVisualizer.ts 476:64-74
+[tsl] ERROR in /app/src/webgpuVisualizer.ts(476,65)
+      TS2345: Argument of type 'Float32Array<ArrayBufferLike>' is not assignable to parameter of type 'GPUAllowSharedBufferSource'.
+  Type 'Float32Array<ArrayBufferLike>' is not assignable to type 'ArrayBufferView<ArrayBuffer>'.
+    Types of property 'buffer' are incompatible.
+      Type 'ArrayBufferLike' is not assignable to type 'ArrayBuffer'.
+        Type 'SharedArrayBuffer' is not assignable to type 'ArrayBuffer'.
+          Types of property '[Symbol.toStringTag]' are incompatible.
+            Type '"SharedArrayBuffer"' is not assignable to type '"ArrayBuffer"'.
+ts-loader-default_e3b0c44298fc1c14
+ @ ./src/components/Player.tsx 5:0-55 36:35-51
+ @ ./src/App.tsx 3:0-45 5:302-308
+ @ ./src/index.tsx 4:0-24 6:52-55
+
+webpack 5.103.0 compiled with 1 error in 3442 ms
+assets by path *.js 1.44 MiB
+  asset bundle.57b3c419eb767870b14b.js 1.44 MiB [emitted] [immutable] (name: main)
+  asset main.25f6b0713493a418f0ba.hot-update.js 854 bytes [emitted] [immutable] [hmr] (name: main)
+asset index.html 700 bytes [emitted]
+asset main.25f6b0713493a418f0ba.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main 1.44 MiB = bundle.57b3c419eb767870b14b.js 1.44 MiB main.25f6b0713493a418f0ba.hot-update.js 854 bytes
+cached modules 1.28 MiB [cached] 53 modules
+runtime modules 28.1 KiB 14 modules
+javascript modules 25.8 KiB
+  ./src/components/Player.tsx 7.08 KiB [built] [code generated]
+  ./src/webgpuVisualizer.ts 18.7 KiB [built] [code generated] [1 error]
+
+ERROR in /app/src/webgpuVisualizer.ts
+./src/webgpuVisualizer.ts 68:6-18
+[tsl] ERROR in /app/src/webgpuVisualizer.ts(68,7)
+      TS2322: Type 'RenderingContext' is not assignable to type 'GPUCanvasContext'.
+  Type 'CanvasRenderingContext2D' is missing the following properties from type 'GPUCanvasContext': __brand, configure, unconfigure, getConfiguration, getCurrentTexture
+ts-loader-default_e3b0c44298fc1c14
+ @ ./src/components/Player.tsx 5:0-55 36:35-51
+ @ ./src/App.tsx 3:0-45 5:302-308
+ @ ./src/index.tsx 4:0-24 6:52-55
+
+webpack 5.103.0 compiled with 1 error in 612 ms
+assets by path *.js 1.44 MiB
+  asset bundle.24e48aabaa0c3f32057a.js 1.44 MiB [emitted] [immutable] (name: main)
+  asset main.5054fd14f6837d913c84.hot-update.js 854 bytes [emitted] [immutable] [hmr] (name: main)
+asset index.html 700 bytes [emitted]
+asset main.5054fd14f6837d913c84.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main 1.44 MiB = bundle.24e48aabaa0c3f32057a.js 1.44 MiB main.5054fd14f6837d913c84.hot-update.js 854 bytes
+cached modules 1.28 MiB [cached] 53 modules
+runtime modules 28.1 KiB 14 modules
+javascript modules 25.8 KiB
+  ./src/components/Player.tsx 7.08 KiB [built] [code generated]
+  ./src/webgpuVisualizer.ts 18.7 KiB [built] [code generated]
+webpack 5.103.0 compiled successfully in 549 ms
