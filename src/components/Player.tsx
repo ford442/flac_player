@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AudioPlayer, PlayerState } from '../audioPlayer';
 import { AudioLoader } from '../audioLoader';
-import { WebGPUVisualizer } from '../webgpuVisualizer';
+import { WebGPUVisualizer, VisualizerMode } from '../webgpuVisualizer';
 import './Player.css';
 
 export const Player: React.FC = () => {
@@ -14,6 +14,7 @@ export const Player: React.FC = () => {
   const [audioUrl, setAudioUrl] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [webGPUSupported, setWebGPUSupported] = useState<boolean>(true);
+  const [visualizerMode, setVisualizerMode] = useState<VisualizerMode>('flat');
   
   const playerRef = useRef<AudioPlayer | null>(null);
   const visualizerRef = useRef<WebGPUVisualizer | null>(null);
@@ -41,12 +42,31 @@ export const Player: React.FC = () => {
         if (success) {
           visualizer.startAnimation();
           visualizerRef.current = visualizer;
+          visualizer.setMode(visualizerMode);
+          visualizer.setTogglePlayCallback(() => {
+              // Toggle Play callback from 3D interaction
+              if (playerRef.current) {
+                  const state = playerRef.current.getState();
+                   if (state.isPlaying) {
+                       playerRef.current.pause();
+                   } else if (state.duration > 0) {
+                       playerRef.current.play();
+                   }
+              }
+          });
         } else {
           setWebGPUSupported(false);
         }
       });
     }
   }, []);
+
+  // Update visualizer mode when state changes
+  useEffect(() => {
+      if (visualizerRef.current) {
+          visualizerRef.current.setMode(visualizerMode);
+      }
+  }, [visualizerMode]);
 
   const handleLoadAudio = async () => {
     if (!audioUrl.trim() || !playerRef.current) {
@@ -103,6 +123,42 @@ export const Player: React.FC = () => {
       </div>
 
       <div className="player-controls">
+
+        <div className="mode-toggle-container" style={{display: 'flex', justifyContent: 'center', marginBottom: '1rem'}}>
+            <div className="mode-toggle">
+                <button
+                    className={`toggle-btn ${visualizerMode === 'flat' ? 'active' : ''}`}
+                    onClick={() => setVisualizerMode('flat')}
+                    style={{
+                        padding: '0.5rem 1rem',
+                        background: visualizerMode === 'flat' ? '#0084ff' : 'rgba(255,255,255,0.1)',
+                        border: 'none',
+                        borderTopLeftRadius: '8px',
+                        borderBottomLeftRadius: '8px',
+                        color: 'white',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Flat Mode
+                </button>
+                <button
+                    className={`toggle-btn ${visualizerMode === '3D' ? 'active' : ''}`}
+                    onClick={() => setVisualizerMode('3D')}
+                    style={{
+                        padding: '0.5rem 1rem',
+                        background: visualizerMode === '3D' ? '#0084ff' : 'rgba(255,255,255,0.1)',
+                        border: 'none',
+                        borderTopRightRadius: '8px',
+                        borderBottomRightRadius: '8px',
+                        color: 'white',
+                        cursor: 'pointer'
+                    }}
+                >
+                    3D Device
+                </button>
+            </div>
+        </div>
+
         <div className="url-input-container">
           <input
             type="text"
@@ -150,7 +206,9 @@ export const Player: React.FC = () => {
 
         <div className="info-panel">
           <p className="info-text">
-            Supports FLAC and WAV files from Google Cloud Storage, FTP, or direct URLs
+            Supports FLAC and WAV files. Use 'gs://' for Google Cloud Storage.
+            <br/>
+            <strong>3D Mode:</strong> Drag to rotate, Click on device screen to Play/Pause.
           </p>
         </div>
       </div>
