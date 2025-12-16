@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AudioPlayer, PlayerState } from '../audioPlayer';
+import { SdlAudioPlayer } from '../sdlAudioPlayer';
 import { AudioLoader } from '../audioLoader';
 import { WebGPUVisualizer, VisualizerMode } from '../webgpuVisualizer';
 import './Player.css';
+
+type AudioOutputMode = 'web-audio' | 'sdl';
 
 export const Player: React.FC = () => {
   const [playerState, setPlayerState] = useState<PlayerState>({
@@ -15,35 +18,59 @@ export const Player: React.FC = () => {
   const [error, setError] = useState<string>('');
   const [webGPUSupported, setWebGPUSupported] = useState<boolean>(true);
   const [visualizerMode, setVisualizerMode] = useState<VisualizerMode>('flat');
+  const [outputMode, setOutputMode] = useState<AudioOutputMode>('web-audio');
   
-  const playerRef = useRef<AudioPlayer | null>(null);
+  // Use a generic type or union for playerRef
+  const playerRef = useRef<AudioPlayer | SdlAudioPlayer | null>(null);
   const visualizerRef = useRef<WebGPUVisualizer | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    // Initialize player
-    const player = new AudioPlayer();
+    // Initialize player based on mode
+    let player: AudioPlayer | SdlAudioPlayer;
+    if (outputMode === 'sdl') {
+      player = new SdlAudioPlayer();
+    } else {
+      player = new AudioPlayer();
+    }
+
     player.setStateChangeCallback(setPlayerState);
     playerRef.current = player;
 
+    // If we have an existing visualizer, we might need to re-init it if the analyser changed
+    // But SdlAudioPlayer returns a dummy analyser or null.
+    // If outputMode changed, we might want to reload audio if it was loaded?
+    // For now, switching modes resets the player.
+
     return () => {
       player.destroy();
-      if (visualizerRef.current) {
-        visualizerRef.current.destroy();
-      }
+      // We don't necessarily destroy visualizer here as it's bound to canvas,
+      // but we might need to re-hook the analyser.
     };
-  }, []);
+  }, [outputMode]);
 
   useEffect(() => {
     // Initialize WebGPU visualizer
-    if (canvasRef.current && playerRef.current && !visualizerRef.current) {
-      const visualizer = new WebGPUVisualizer(canvasRef.current);
-      visualizer.initialize(playerRef.current.getAnalyser()).then((success) => {
-        if (success) {
-          visualizer.startAnimation();
-          visualizerRef.current = visualizer;
-          visualizer.setMode(visualizerMode);
-          visualizer.setTogglePlayCallback(() => {
+    // We need to re-run this when player reference changes (which happens on mode switch)
+    // but playerRef.current is mutable.
+    // Better to depend on outputMode to trigger re-init of visualizer source.
+
+    const initVisualizer = async () => {
+      if (!canvasRef.current || !playerRef.current) return;
+
+      if (!visualizerRef.current) {
+        const visualizer = new WebGPUVisualizer(canvasRef.current);
+        visualizerRef.current = visualizer;
+      }
+
+      const analyser = playerRef.current.getAnalyser();
+      // If analyser is dummy (SDL), visualizer might just show nothing or flat line.
+
+      const success = await visualizerRef.current.initialize(analyser);
+      if (success) {
+          visualizerRef.current.startAnimation();
+          visualizerRef.current.setMode(visualizerMode);
+          visualizerRef.current.setTogglePlayCallback(() => {
               // Toggle Play callback from 3D interaction
               if (playerRef.current) {
                   const state = playerRef.current.getState();
@@ -54,12 +81,13 @@ export const Player: React.FC = () => {
                    }
               }
           });
-        } else {
+      } else {
           setWebGPUSupported(false);
-        }
-      });
-    }
-  }, []);
+      }
+    };
+
+    initVisualizer();
+  }, [outputMode]); // Re-run when output mode changes
 
   // Update visualizer mode when state changes
   useEffect(() => {
@@ -124,7 +152,9 @@ export const Player: React.FC = () => {
 
       <div className="player-controls">
 
-        <div className="mode-toggle-container" style={{display: 'flex', justifyContent: 'center', marginBottom: '1rem'}}>
+        <div className="mode-toggle-container" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginBottom: '1rem'}}>
+
+            {/* Visualizer Mode Toggle */}
             <div className="mode-toggle">
                 <button
                     className={`toggle-btn ${visualizerMode === 'flat' ? 'active' : ''}`}
@@ -155,6 +185,40 @@ export const Player: React.FC = () => {
                     }}
                 >
                     3D Device
+                </button>
+            </div>
+
+            {/* Audio Output Toggle */}
+            <div className="mode-toggle">
+                <button
+                    className={`toggle-btn ${outputMode === 'web-audio' ? 'active' : ''}`}
+                    onClick={() => setOutputMode('web-audio')}
+                    style={{
+                        padding: '0.5rem 1rem',
+                        background: outputMode === 'web-audio' ? '#28a745' : 'rgba(255,255,255,0.1)',
+                        border: 'none',
+                        borderTopLeftRadius: '8px',
+                        borderBottomLeftRadius: '8px',
+                        color: 'white',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Web Audio
+                </button>
+                <button
+                    className={`toggle-btn ${outputMode === 'sdl' ? 'active' : ''}`}
+                    onClick={() => setOutputMode('sdl')}
+                    style={{
+                        padding: '0.5rem 1rem',
+                        background: outputMode === 'sdl' ? '#28a745' : 'rgba(255,255,255,0.1)',
+                        border: 'none',
+                        borderTopRightRadius: '8px',
+                        borderBottomRightRadius: '8px',
+                        color: 'white',
+                        cursor: 'pointer'
+                    }}
+                >
+                    SDL3 (WASM)
                 </button>
             </div>
         </div>
