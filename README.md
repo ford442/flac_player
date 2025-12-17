@@ -41,6 +41,14 @@ Start the development server:
 npm start
 ```
 
+If you are developing with the SDL-based audio engine (Emscripten build), build the WASM bundle first:
+
+```bash
+# make sure emsdk is installed and activated in your shell
+npm run build:wasm
+npm start
+```
+
 This will open the app at `http://localhost:3000`
 
 ## Production Build
