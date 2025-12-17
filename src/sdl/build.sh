@@ -4,6 +4,7 @@ set -e
 # Directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$SCRIPT_DIR/../.."
+source /content/build_space/emsdk/emsdk_env.sh
 
 # Create a build directory
 BUILD_DIR="$SCRIPT_DIR/build"
