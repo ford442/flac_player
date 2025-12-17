@@ -17,7 +17,8 @@ module.exports = {
       {
         test: /\.tsx?$/,
         use: 'ts-loader',
-        exclude: /node_modules/
+        // Exclude node_modules and SDL generated build artifacts to avoid accidental inclusion
+        exclude: /node_modules|src\/sdl\/build/
       },
       {
         test: /\.css$/,
