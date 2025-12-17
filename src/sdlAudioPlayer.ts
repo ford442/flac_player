@@ -37,7 +37,21 @@ export class SdlAudioPlayer {
   }
 
   private async initializeModule() {
-    // Dynamically load the script if not already present
+    // Load the ScriptProcessor->AudioWorklet shim first (best-effort). This enables environments
+    // where ScriptProcessorNode is missing/deprecated to still work via AudioWorkletNode.
+    if (!(window as any).__sdl_script_processor_shim_loaded) {
+      const shim = document.createElement('script');
+      shim.src = 'script-processor-shim.js';
+      shim.async = true;
+      document.head.appendChild(shim);
+
+      await new Promise<void>((resolve) => {
+        shim.onload = () => { (window as any).__sdl_script_processor_shim_loaded = true; resolve(); };
+        shim.onerror = () => { console.warn('Script processor shim failed to load; continuing without shim.'); resolve(); };
+      });
+    }
+
+    // Dynamically load the WASM/SDL script if not already present
     if (!window.createSdlAudioModule) {
       const script = document.createElement('script');
       script.src = 'sdl-audio.js';
