@@ -128,18 +128,39 @@ export class SdlAudioPlayer {
 
       // Allocate memory in WASM
       const byteLength = interleaved.byteLength;
-      const ptr = this.module._malloc(byteLength);
+      const ptr = (this.module as any)._malloc(byteLength);
 
-      // Copy data to WASM heap
-      // HEAPF32 is a view of memory as F32. Indices are floats, not bytes.
-      // ptr is byte offset.
-      this.module.HEAPF32.set(interleaved, ptr >> 2);
+      if (!ptr || ptr === 0) {
+        (this.module as any)._free && (this.module as any)._free(ptr);
+        throw new Error('WASM malloc failed (returned 0).');
+      }
+
+      // Copy data to WASM heap. Be defensive: some module builds may not expose HEAPF32 directly.
+      let heapF32 = (this.module as any).HEAPF32 as Float32Array | undefined;
+      if (!heapF32) {
+        const heapU8 = (this.module as any).HEAPU8 || (this.module as any).HEAP8;
+        if (!heapU8) {
+          (this.module as any)._free && (this.module as any)._free(ptr);
+          console.error('WASM module does not expose HEAPU8 or HEAPF32. Module keys:', Object.keys(this.module));
+          throw new Error('WASM heap not available on module. Ensure the module initialized correctly.');
+        }
+        heapF32 = new Float32Array(heapU8.buffer);
+        (this.module as any).HEAPF32 = heapF32;
+      }
+
+      try {
+        heapF32.set(interleaved, ptr >> 2);
+      } catch (err) {
+        (this.module as any)._free && (this.module as any)._free(ptr);
+        console.error('Failed copying audio data to WASM heap:', err);
+        throw err;
+      }
 
       // Send to C++
-      this.module._set_audio_data(ptr, interleavedLength, channels, result.sampleRate);
+      (this.module as any)._set_audio_data(ptr, interleavedLength, channels, result.sampleRate);
 
       // Free memory (C++ side should copy the data to its own buffer as implemented)
-      this.module._free(ptr);
+      (this.module as any)._free(ptr);
 
       this.notifyStateChange();
 
