@@ -115,6 +115,23 @@ Access-Control-Allow-Origin: *
 Access-Control-Allow-Methods: GET
 ```
 
+### AudioWorklet / Cross-Origin Isolation
+
+When using the modern AudioWorklet backend (recommended for lower latency and better audio performance), browsers require cross-origin isolation. To enable this during development and in production, the server must send these headers:
+
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+- Development: the dev server (`webpack-dev-server`) adds these headers automatically when running `npm start`.
+- Production: configure your hosting provider to emit the headers above. For example:
+  - Netlify: use `_headers` file or Netlify headers config
+  - Vercel: configure headers in `vercel.json` or platform settings
+  - S3/CloudFront: configure CloudFront response headers or Lambda@Edge
+
+Without these headers, the browser will block the AudioWorklet/SharedArrayBuffer functionality and the SDL audio backend may fall back to ScriptProcessor or fail to initialize. If you cannot set these headers, the project includes a ScriptProcessor→AudioWorklet shim as a fallback, but enabling COOP/COEP is the recommended path for best audio performance.
+
 ## License
 
 MIT

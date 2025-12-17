@@ -43,6 +43,11 @@ module.exports = {
     },
     compress: true,
     port: 3000,
-    hot: true
+    hot: true,
+    // Required for AudioWorklet and cross-origin isolation during development
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp"
+    }
   }
 };
