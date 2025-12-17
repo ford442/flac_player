@@ -10,7 +10,7 @@
     "build": "webpack --mode production",
     "postbuild": "test -f dist/sdl-audio.js && test -f dist/sdl-audio.wasm",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx"
-  }
+  },
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
