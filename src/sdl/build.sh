@@ -80,7 +80,19 @@ if [ ! -f "$SRC_CPP" ]; then
   echo "Error: source file $SRC_CPP not found." >&2
   exit 1
 fi
+# Verify SDL headers and library exist before compiling
+if [ ! -f "$SDL_DIR/include/SDL3/SDL.h" ]; then
+  echo "Error: SDL headers not found in $SDL_DIR/include (expected $SDL_DIR/include/SDL3/SDL.h)." >&2
+  echo "If you haven't run the SDL build step, run this script again to clone and build SDL, or set SDL_DIR to a prebuilt SDL path." >&2
+  echo "Example: SDL_DIR=/path/to/local/SDL bash src/sdl/build.sh" >&2
+  exit 1
+fi
 
+if [ ! -f "$SDL_DIR/build_wasm/libSDL3.a" ]; then
+  echo "Error: SDL static library not found at $SDL_DIR/build_wasm/libSDL3.a." >&2
+  echo "Try rebuilding SDL with emcmake/emmake (the script will do this) or set SDL_DIR to a prebuilt SDL with a build_wasm/libSDL3.a present." >&2
+  exit 1
+fi
 emcc "$SRC_CPP" \
   -I "$SDL_DIR/include" \
   -L "$SDL_DIR/build_wasm" -lSDL3 \
