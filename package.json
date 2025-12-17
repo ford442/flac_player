@@ -8,7 +8,7 @@
     "build:wasm": "bash ./src/sdl/build.sh",
     "prebuild": "npm run build:wasm",
     "build": "webpack --mode production",
-    "postbuild": "test -f dist/sdl-audio.js && test -f dist/sdl-audio.wasm",
+    "postbuild": "test -f dist/sdl-audio.js || test -f dist/public/sdl-audio.js && test -f dist/sdl-audio.wasm || test -f dist/public/sdl-audio.wasm",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
