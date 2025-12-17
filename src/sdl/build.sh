@@ -93,18 +93,21 @@ if [ ! -f "$SDL_DIR/build_wasm/libSDL3.a" ]; then
   echo "Try rebuilding SDL with emcmake/emmake (the script will do this) or set SDL_DIR to a prebuilt SDL with a build_wasm/libSDL3.a present." >&2
   exit 1
 fi
-emcc "$SRC_CPP" \
-  -I "$SDL_DIR/include" \
-  -L "$SDL_DIR/build_wasm" -lSDL3 \
-  -s WASM=1 \
-  -s EXPORTED_FUNCTIONS='["_init_audio","_set_audio_data","_play","_pause_audio","_resume_audio","_stop","_seek","_get_current_time","_set_volume","_cleanup","_malloc","_free"]' \
-  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap"]' \
-  -s ALLOW_MEMORY_GROWTH=1 \
-  -s MODULARIZE=1 \
-  -s EXPORT_NAME="createSdlAudioModule" \
-  -s ENVIRONMENT="web,worker" \
-  -O3 \
-  -o "$OUT_JS"
+echo "Compiling audio_engine.cpp..."
+emcc audio_engine.cpp \
+    -I "$SDL_DIR/include" \
+    -L "$SDL_DIR/build_wasm" -lSDL3 \
+    -s WASM=1 \
+    -s EXPORTED_FUNCTIONS="['_init_audio', '_set_audio_data', '_play', '_pause_audio', '_resume_audio', '_stop', '_seek', '_get_current_time', '_set_volume', '_cleanup', '_malloc', '_free']" \
+    -s EXPORTED_RUNTIME_METHODS="['ccall', 'cwrap']" \
+    -s ALLOW_MEMORY_GROWTH=1 \
+    -s MODULARIZE=1 \
+    -s EXPORT_NAME="createSdlAudioModule" \
+    -s ENVIRONMENT="web,worker" \
+    -s AUDIO_WORKLET=1 \
+    -s WASM_WORKERS=1 \
+    -O3 \
+    -o "$PROJECT_ROOT/public/sdl-audio.js"
 
 if [ $? -ne 0 ]; then
   echo "Error: emcc compilation failed" >&2
