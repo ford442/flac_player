@@ -24,6 +24,10 @@ else
     echo "Sourcing EMSDK from $HOME/emsdk/emsdk_env.sh"
     # shellcheck disable=SC1090
     source "$HOME/emsdk/emsdk_env.sh"
+  elif [ -f "/content/build_space/emsdk/emsdk_env.sh" ]; then
+    echo "Sourcing EMSDK from /content/build_space/emsdk/emsdk_env.sh"
+    # shellcheck disable=SC1090
+    source "/content/build_space/emsdk/emsdk_env.sh"
   else
     echo "Error: Emscripten (emcc) not found in PATH and no EMSDK env script detected." >&2
     echo "Please install Emscripten and activate it (see https://emscripten.org/docs/getting_started/downloads.html)" >&2
