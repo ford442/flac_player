@@ -36,7 +36,7 @@ if [ ! -f "$SDL_DIR/build_wasm/libSDL3.a" ]; then
         -DCMAKE_BUILD_TYPE=Release
 
     # Build
-    emmake make -C build_wasm -j$(nproc)
+    emmake make -C build_wasm -j55
     cd "$SCRIPT_DIR"
 else
     echo "SDL3 library already built."
