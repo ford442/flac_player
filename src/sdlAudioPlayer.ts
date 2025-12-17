@@ -157,10 +157,26 @@ export class SdlAudioPlayer {
       }
 
       // Send to C++
-      (this.module as any)._set_audio_data(ptr, interleavedLength, channels, result.sampleRate);
+      try {
+        (this.module as any)._set_audio_data(ptr, interleavedLength, channels, result.sampleRate);
+      } catch (err) {
+        // If the heap isn't exposed (e.g., module runs in worker and HEAP* is not available),
+        // fall back to ccall which will copy the JS array into WASM memory for us.
+        console.warn('Direct heap access failed, falling back to Module.ccall copy path:', err);
+        // Free previously allocated ptr since ccall will do its own allocation/copy
+        (this.module as any)._free(ptr);
+        try {
+          (this.module as any).ccall('set_audio_data', null, ['array', 'number', 'number', 'number'], [interleaved, interleavedLength, channels, result.sampleRate]);
+        } catch (ccErr) {
+          console.error('Fallback ccall set_audio_data failed:', ccErr);
+          throw ccErr;
+        }
+      }
 
       // Free memory (C++ side should copy the data to its own buffer as implemented)
-      (this.module as any)._free(ptr);
+      if ((this.module as any)._free) {
+        try { (this.module as any)._free(ptr); } catch (_) {}
+      }
 
       this.notifyStateChange();
 
