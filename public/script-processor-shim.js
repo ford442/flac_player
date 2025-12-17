@@ -93,7 +93,4 @@
 
     return wrapper;
   };
-
-    return wrapper;
-  };
 })();
