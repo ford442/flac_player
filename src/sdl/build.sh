@@ -60,16 +60,24 @@ else
   echo "SDL3 already present at $SDL_DIR"
 fi
 
-# Build SDL3 for Emscripten if not already built
+# Build SDL3 for Emscripten if not already built or if forced
+# You can force a rebuild by setting FORCE_REBUILD_SDL=1
+if [ "${FORCE_REBUILD_SDL:-0}" = "1" ] && [ -d "$SDL_DIR/build_wasm" ]; then
+  echo "Forcing SDL rebuild: removing $SDL_DIR/build_wasm"
+  rm -rf "$SDL_DIR/build_wasm"
+fi
+
 if [ ! -f "$SDL_DIR/build_wasm/libSDL3.a" ]; then
-  echo "Configuring and building SDL3 (this may take a while)..."
+  echo "Configuring and building SDL3 with WASM_WORKERS=1 (this may take a while)..."
   pushd "$SDL_DIR" >/dev/null
   emcmake cmake -S . -B build_wasm \
-    -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST=OFF -DSDL_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Release
+    -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_TEST=OFF -DSDL_EXAMPLES=OFF -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_FLAGS="-s WASM_WORKERS=1" \
+    -DCMAKE_CXX_FLAGS="-s WASM_WORKERS=1"
   emmake make -C build_wasm -j"$JOBS"
   popd >/dev/null
 else
-  echo "SDL3 appears already built (libSDL3.a present)."
+  echo "SDL3 appears already built. (If you get linker errors, delete $SDL_DIR/build_wasm and retry with FORCE_REBUILD_SDL=1)"
 fi
 
 # Compile our engine

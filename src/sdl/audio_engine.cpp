@@ -28,7 +28,8 @@ struct PlayerState {
 
 EMSCRIPTEN_KEEPALIVE
 int init_audio() {
-    if (SDL_Init(SDL_INIT_AUDIO) < 0) {
+    // SDL3 returns bool (true on success)
+    if (!SDL_Init(SDL_INIT_AUDIO)) {
         std::cerr << "SDL_Init failed: " << SDL_GetError() << std::endl;
         return 0;
     }
@@ -70,8 +71,8 @@ void set_audio_data(float* data, int length, int channels, int sampleRate) {
         return;
     }
 
-    // Bind stream to device
-    if (SDL_BindAudioStream(g_state.deviceId, g_state.stream) < 0) {
+    // Bind stream to device (SDL3 returns bool)
+    if (!SDL_BindAudioStream(g_state.deviceId, g_state.stream)) {
         std::cerr << "SDL_BindAudioStream failed: " << SDL_GetError() << std::endl;
     }
 }
