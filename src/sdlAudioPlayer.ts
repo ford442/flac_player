@@ -126,59 +126,44 @@ export class SdlAudioPlayer {
         }
       }
 
-      // Allocate memory in WASM
+      // Allocate memory in WASM (in bytes) and write safely to the current WASM buffer
       const byteLength = interleaved.byteLength;
-      let ptr = 0;
-      let usedManualMalloc = false;
+      const ptr = (this.module as any)._malloc(byteLength);
 
-      // Try to find heap views
-      let heapF32 = (this.module as any).HEAPF32 as Float32Array | undefined;
-      if (!heapF32) {
-        const heapU8 = (this.module as any).HEAPU8 || (this.module as any).HEAP8;
-        if (heapU8) {
-          heapF32 = new Float32Array(heapU8.buffer);
-          (this.module as any).HEAPF32 = heapF32;
-        }
-      }
-
-      if (heapF32) {
-        // Direct heap access is available. Manually malloc and copy.
-        ptr = (this.module as any)._malloc(byteLength);
-        if (!ptr || ptr === 0) {
-           console.warn('WASM malloc failed (returned 0). Falling back to ccall auto-allocation.');
-           heapF32 = undefined; // Force fallback
-        } else {
-           usedManualMalloc = true;
-           try {
-             heapF32.set(interleaved, ptr >> 2);
-             // Call C++ function with pointer
-             (this.module as any)._set_audio_data(ptr, interleavedLength, channels, result.sampleRate);
-           } catch (err) {
-             console.warn('Direct heap write/call failed. Falling back to ccall.', err);
-             // Clean up and force fallback
-             (this.module as any)._free && (this.module as any)._free(ptr);
-             ptr = 0;
-             usedManualMalloc = false;
-             heapF32 = undefined;
-           }
-        }
-      }
-
-      if (!heapF32) {
-        // Fallback: Use ccall with 'array' type. This handles allocation, copy, and freeing internally.
-        // Or at least it allocates/copies. We trust Emscripten's ccall.
-        console.log('Using ccall fallback for set_audio_data (HEAP direct access unavailable).');
+      if (!ptr || ptr === 0) {
+        // Malloc failed: fall back to ccall copy (note: ccall -> writeArrayToMemory may hit RangeError if it writes into a stale view)
+        console.warn('WASM malloc failed (returned 0). Trying ccall fallback that copies the array into WASM memory.');
         try {
           (this.module as any).ccall('set_audio_data', null, ['array', 'number', 'number', 'number'], [interleaved, interleavedLength, channels, result.sampleRate]);
         } catch (ccErr) {
           console.error('Fallback ccall set_audio_data failed:', ccErr);
           throw ccErr;
         }
-      }
+      } else {
+        try {
+          // Critical fix: always use HEAPU8.buffer to create a fresh Float32Array view for the allocated region.
+          // _malloc() can grow WebAssembly memory; accessing stale Module.HEAPF32 may throw RangeError.
+          const memoryBuffer = (this.module as any).HEAPU8.buffer;
+          const destination = new Float32Array(memoryBuffer, ptr, interleavedLength);
+          destination.set(interleaved);
 
-      // Free memory if we manually allocated it
-      if (usedManualMalloc && ptr !== 0 && (this.module as any)._free) {
-        try { (this.module as any)._free(ptr); } catch (_) {}
+          // Send to C++ (direct call, faster and avoids writeArrayToMemory)
+          (this.module as any)._set_audio_data(ptr, interleavedLength, channels, result.sampleRate);
+        } catch (err) {
+          console.error('Failed to write audio data into WASM heap:', err, { ptr, byteLength, heapByteLength: ((this.module as any).HEAPU8 && (this.module as any).HEAPU8.buffer ? (this.module as any).HEAPU8.buffer.byteLength : undefined) });
+          // Try fallback ccall if direct write fails (covers browser-specific edge cases)
+          try {
+            (this.module as any).ccall('set_audio_data', null, ['array', 'number', 'number', 'number'], [interleaved, interleavedLength, channels, result.sampleRate]);
+          } catch (ccErr) {
+            console.error('Fallback ccall set_audio_data also failed:', ccErr);
+            // Free pointer and rethrow original error
+            (this.module as any)._free && (this.module as any)._free(ptr);
+            throw err;
+          }
+        } finally {
+          // Free malloc'd memory (the C++ copy made its own copy into g_state.audioBuffer)
+          (this.module as any)._free && (this.module as any)._free(ptr);
+        }
       }
 
       this.notifyStateChange();
