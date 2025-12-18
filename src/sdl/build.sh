@@ -11,17 +11,8 @@ OUT_JS="$OUT_DIR/sdl-audio.js"
 mkdir -p "$BUILD_DIR" "$OUT_DIR"
 
 # Check for emcc
-if ! command -v emcc >/dev/null 2>&1; then
-  # Try to source EMSDK if likely locations exist
-  if [ -n "${EMSDK:-}" ] && [ -f "$EMSDK/emsdk_env.sh" ]; then
-    source "$EMSDK/emsdk_env.sh"
-  elif [ -f "$HOME/emsdk/emsdk_env.sh" ]; then
-    source "$HOME/emsdk/emsdk_env.sh"
-  else
-    echo "Error: Emscripten (emcc) not found. Please activate emsdk." >&2
-    exit 1
-  fi
-fi
+source /content/build_space/emsdk/emsdk_env.sh || source ./emsdk/emsdk_env.sh || ../emsdk/emsdk_env.sh || ../../emsdk/emsdk_env.sh
+
 
 echo "Compiling audio_engine.cpp -> $OUT_JS using -sUSE_SDL=3"
 
