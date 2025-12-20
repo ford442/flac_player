@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AudioPlayer, PlayerState } from '../audioPlayer';
 import { SdlAudioPlayer } from '../sdlAudioPlayer';
-import { AudioLoader } from '../audioLoader';
+import { AudioLoader, PlaylistTrack } from '../audioLoader';
 import { WebGPUVisualizer, VisualizerMode } from '../webgpuVisualizer';
 import './Player.css';
 
@@ -19,6 +19,9 @@ export const Player: React.FC = () => {
   const [webGPUSupported, setWebGPUSupported] = useState<boolean>(true);
   const [visualizerMode, setVisualizerMode] = useState<VisualizerMode>('flat');
   const [outputMode, setOutputMode] = useState<AudioOutputMode>('web-audio');
+  const [playlist, setPlaylist] = useState<PlaylistTrack[]>([]);
+  const [showPlaylist, setShowPlaylist] = useState<boolean>(false);
+  const [isLoadingPlaylist, setIsLoadingPlaylist] = useState<boolean>(false);
   
   // Use a generic type or union for playerRef
   const playerRef = useRef<AudioPlayer | SdlAudioPlayer | null>(null);
@@ -96,8 +99,8 @@ export const Player: React.FC = () => {
       }
   }, [visualizerMode]);
 
-  const handleLoadAudio = async () => {
-    if (!audioUrl.trim() || !playerRef.current) {
+  const loadAudioFromUrl = async (url: string) => {
+    if (!url.trim() || !playerRef.current) {
       return;
     }
 
@@ -106,12 +109,30 @@ export const Player: React.FC = () => {
 
     try {
       const loader = new AudioLoader();
-      const arrayBuffer = await loader.loadFromURL(audioUrl);
+      const arrayBuffer = await loader.loadFromURL(url);
       await playerRef.current.loadAudio(arrayBuffer);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load audio');
     } finally {
       setPlayerState(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  const handleLoadAudio = async () => {
+    await loadAudioFromUrl(audioUrl);
+  };
+
+  const handleLoadPlaylist = async () => {
+    setIsLoadingPlaylist(true);
+    try {
+      const loader = new AudioLoader();
+      const tracks = await loader.fetchPlaylist('music');
+      setPlaylist(tracks);
+      setShowPlaylist(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load playlist');
+    } finally {
+      setIsLoadingPlaylist(false);
     }
   };
 
@@ -146,6 +167,39 @@ export const Player: React.FC = () => {
         {!webGPUSupported && (
           <div className="webgpu-warning">
             WebGPU not supported in this browser
+          </div>
+        )}
+
+        {showPlaylist && (
+          <div className="playlist-container">
+            <div className="playlist-header">
+              <h3>Playlist</h3>
+              <button
+                className="close-playlist-btn"
+                onClick={() => setShowPlaylist(false)}
+              >
+                &times;
+              </button>
+            </div>
+            <div className="playlist-items">
+              {playlist.map((track, index) => (
+                <div
+                  key={index}
+                  className={`playlist-item ${audioUrl === track.url ? 'active' : ''}`}
+                  onClick={() => {
+                    setAudioUrl(track.url);
+                    loadAudioFromUrl(track.url);
+                  }}
+                >
+                  {track.name}
+                </div>
+              ))}
+              {playlist.length === 0 && !isLoadingPlaylist && (
+                <div style={{color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: '2rem'}}>
+                  No tracks found
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -239,6 +293,17 @@ export const Player: React.FC = () => {
           >
             {playerState.isLoading ? 'Loading...' : 'Load'}
           </button>
+          <button
+            className="load-button"
+            onClick={handleLoadPlaylist}
+            disabled={isLoadingPlaylist}
+            style={{
+                marginLeft: '0.5rem',
+                background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)'
+            }}
+          >
+            {isLoadingPlaylist ? 'Loading...' : 'Playlist'}
+          </button>
         </div>
 
         {error && <div className="error-message">{error}</div>}
@@ -270,7 +335,7 @@ export const Player: React.FC = () => {
 
         <div className="info-panel">
           <p className="info-text">
-            Supports FLAC and WAV files. Use 'gs://' for Google Cloud Storage.
+            Supports FLAC and WAV files. Use &apos;gs://&apos; for Google Cloud Storage.
             <br/>
             <strong>3D Mode:</strong> Drag to rotate, Click on device screen to Play/Pause.
           </p>
