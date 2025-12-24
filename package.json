@@ -5,7 +5,10 @@
   "private": true,
   "scripts": {
     "start": "webpack serve --mode development --open",
+    "build:wasm": "bash ./src/sdl/build.sh",
+    "prebuild": "npm run build:wasm",
     "build": "webpack --mode production",
+    "postbuild": "test -f dist/sdl-audio.js || test -f dist/public/sdl-audio.js && test -f dist/sdl-audio.wasm || test -f dist/public/sdl-audio.wasm",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx"
   },
   "dependencies": {
@@ -22,6 +25,7 @@
     "@typescript-eslint/parser": "^6.0.0",
     "@webgpu/types": "^0.1.38",
     "babel-loader": "^9.1.3",
+    "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.8.1",
     "eslint": "^8.50.0",
     "eslint-plugin-react": "^7.33.0",

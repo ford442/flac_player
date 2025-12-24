@@ -5,6 +5,24 @@ export interface AudioSource {
   name?: string;
 }
 
+export interface PlaylistTrack {
+  name: string;
+  url: string;
+}
+
+interface ApiFile {
+  filename: string;
+  size: number;
+  updated: string;
+  url: string;
+}
+
+interface ApiResponse {
+  folder: string;
+  count: number;
+  files: ApiFile[];
+}
+
 export class AudioLoader {
   async loadAudio(source: AudioSource): Promise<ArrayBuffer> {
     try {
@@ -63,5 +81,31 @@ export class AudioLoader {
     }
 
     return this.loadAudio({ url: finalUrl, type });
+  }
+
+  async fetchPlaylist(folder: string): Promise<PlaylistTrack[]> {
+    try {
+      const response = await fetch(`https://ford442-storage-manager.hf.space/api/storage/files?folder=${folder}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch playlist: ${response.status} ${response.statusText}`);
+      }
+      const data: ApiResponse = await response.json();
+
+      // Filter for .flac and .wav files
+      const tracks = data.files
+        .filter(file => {
+          const lowerName = file.filename.toLowerCase();
+          return lowerName.endsWith('.flac') || lowerName.endsWith('.wav');
+        })
+        .map(file => ({
+          name: file.filename,
+          url: file.url
+        }));
+
+      return tracks;
+    } catch (error) {
+      console.error('Error fetching playlist:', error);
+      throw error;
+    }
   }
 }

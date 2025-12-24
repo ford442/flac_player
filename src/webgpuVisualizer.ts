@@ -249,7 +249,7 @@ export class WebGPUVisualizer {
       });
 
       const cubeShader = `
-        struct Uniforms {
+struct Uniforms {
             modelViewProjectionMatrix : mat4x4<f32>,
         };
         @group(0) @binding(0) var<uniform> uniforms : Uniforms;
@@ -273,22 +273,15 @@ export class WebGPUVisualizer {
 
         @fragment
         fn fragment_main(@location(0) uv : vec2<f32>, @location(1) vertexPos : vec3<f32>) -> @location(0) vec4<f32> {
-            // Apply texture only to Front Face (z close to 1)
-            // Since we use a simple cube, we can check vertexPos.z > 0.9
-            // But texture mapping is already set up.
-
-            // Check if it's the front face. Due to interpolation, z might vary slightly.
-            // However, with separate vertices, the front face has Z=1.
-
-            // Actually, we mapped UVs for all faces.
-            // Let's just draw the screen on the front, and a dark "case" on others.
+            // FIX: Sample the texture unconditionally outside the if statement
+            // This satisfies the "uniform control flow" requirement for textureSample
+            let texColor = textureSample(myTexture, mySampler, uv);
 
             var color: vec4<f32>;
 
+            // Check if it's the front face (Z approx 1.0)
             if (vertexPos.z > 0.9) {
                  // Front Face: Screen
-                 // Draw Play Button Overlay?
-                 let texColor = textureSample(myTexture, mySampler, uv);
 
                  // Simple Play Icon logic (circle triangle)
                  // center 0.5, 0.2 (bottom)
@@ -300,8 +293,9 @@ export class WebGPUVisualizer {
 
                  color = mix(texColor, buttonColor, 0.3);
             } else {
-                 // Case
+                 // Case (Sides/Back)
                  color = vec4<f32>(0.1, 0.1, 0.1, 1.0);
+
                  // Add some edge highlighting
                  let edge = step(0.95, abs(uv.x)) + step(0.95, abs(uv.y));
                  color = color + vec4<f32>(edge * 0.2);
