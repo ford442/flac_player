@@ -1,5 +1,6 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
+const CopyPlugin = require('copy-webpack-plugin');
 
 module.exports = {
   entry: './src/index.tsx',
@@ -16,7 +17,8 @@ module.exports = {
       {
         test: /\.tsx?$/,
         use: 'ts-loader',
-        exclude: /node_modules/
+        // Exclude node_modules and SDL generated build artifacts to avoid accidental inclusion
+        exclude: /node_modules|src\/sdl\/build/
       },
       {
         test: /\.css$/,
@@ -28,6 +30,12 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: './public/index.html',
       filename: 'index.html'
+    }),
+    // Ensure sdl-audio.* files from public/ are copied into dist/
+    new CopyPlugin({
+      patterns: [
+        { from: 'public/sdl-audio.*', to: '.' }
+      ]
     })
   ],
   devServer: {
@@ -36,6 +44,11 @@ module.exports = {
     },
     compress: true,
     port: 3000,
-    hot: true
+    hot: true,
+    // Required for AudioWorklet and cross-origin isolation during development
+    headers: {
+      "Cross-Origin-Opener-Policy": "same-origin",
+      "Cross-Origin-Embedder-Policy": "require-corp"
+    }
   }
 };
