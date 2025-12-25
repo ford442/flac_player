@@ -162,16 +162,17 @@ export class SdlAudioPlayer {
              */
             const reconstructHeapView = <T extends ArrayBufferView>(
               existing: T | undefined,
-              ViewCtor: HeapViewConstructor<T>
+              ViewCtor: HeapViewConstructor<T>,
+              buffer: ArrayBufferLike
             ): T => {
               const offset = existing ? existing.byteOffset : 0;
               const length = existing ? existing.byteLength / ViewCtor.BYTES_PER_ELEMENT : undefined; // undefined => view spans full buffer
-              return new ViewCtor(currentBuffer, offset, length);
+              return new ViewCtor(buffer, offset, length);
             };
 
-            wasmModule.HEAPU8 = reconstructHeapView(wasmModule.HEAPU8, Uint8Array);
-            wasmModule.HEAPF32 = reconstructHeapView(wasmModule.HEAPF32, Float32Array);
-            wasmModule.HEAP8 = reconstructHeapView(wasmModule.HEAP8, Int8Array);
+            wasmModule.HEAPU8 = reconstructHeapView(wasmModule.HEAPU8, Uint8Array, currentBuffer);
+            wasmModule.HEAPF32 = reconstructHeapView(wasmModule.HEAPF32, Float32Array, currentBuffer);
+            wasmModule.HEAP8 = reconstructHeapView(wasmModule.HEAP8, Int8Array, currentBuffer);
           }
 
           let memoryBuffer: ArrayBufferLike;
