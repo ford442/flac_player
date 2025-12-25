@@ -31,10 +31,11 @@ module.exports = {
       template: './public/index.html',
       filename: 'index.html'
     }),
-    // Ensure sdl-audio.* files from public/ are copied into dist/
+    // Ensure sdl-audio.* and script processor files from public/ are copied into dist/
     new CopyPlugin({
       patterns: [
-        { from: 'public/sdl-audio.*', to: '.' }
+        { from: 'public/sdl-audio.*', to: '.' },
+        { from: 'public/script-processor-*.js', to: '.' }
       ]
     })
   ],
