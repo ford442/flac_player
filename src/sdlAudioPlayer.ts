@@ -15,7 +15,11 @@ interface SdlModule {
   _cleanup(): void;
   _malloc(size: number): number;
   _free(ptr: number): void;
-  HEAPF32: Float32Array;
+  HEAPF32?: Float32Array;
+  HEAPU8?: Uint8Array;
+  // Memory access for pthreads/AUDIO_WORKLET builds
+  wasmMemory?: WebAssembly.Memory;
+  buffer?: ArrayBuffer;
 }
 
 // Global function exposed by the WASM script
@@ -141,16 +145,43 @@ export class SdlAudioPlayer {
         }
       } else {
         try {
-          // Critical fix: always use HEAPU8.buffer to create a fresh Float32Array view for the allocated region.
-          // _malloc() can grow WebAssembly memory; accessing stale Module.HEAPF32 may throw RangeError.
-          const memoryBuffer = (this.module as any).HEAPU8.buffer;
+          // Get WebAssembly memory buffer - different access patterns for different Emscripten builds
+          // With pthreads and AUDIO_WORKLET, memory is typically accessed via wasmMemory.buffer
+          let memoryBuffer: ArrayBuffer | null = null;
+          
+          if ((this.module as any).wasmMemory && (this.module as any).wasmMemory.buffer) {
+            // Modern pthreads/AUDIO_WORKLET build - use wasmMemory
+            memoryBuffer = (this.module as any).wasmMemory.buffer;
+          } else if ((this.module as any).buffer) {
+            // Some builds expose buffer directly
+            memoryBuffer = (this.module as any).buffer;
+          } else if ((this.module as any).HEAPU8 && (this.module as any).HEAPU8.buffer) {
+            // Traditional build - use HEAPU8.buffer
+            memoryBuffer = (this.module as any).HEAPU8.buffer;
+          } else if ((this.module as any).HEAPF32 && (this.module as any).HEAPF32.buffer) {
+            // Fallback to HEAPF32.buffer
+            memoryBuffer = (this.module as any).HEAPF32.buffer;
+          }
+
+          if (!memoryBuffer) {
+            throw new Error('Unable to access WebAssembly memory buffer');
+          }
+
+          // Create a Float32Array view at the allocated memory location
           const destination = new Float32Array(memoryBuffer, ptr, interleavedLength);
           destination.set(interleaved);
 
           // Send to C++ (direct call, faster and avoids writeArrayToMemory)
           (this.module as any)._set_audio_data(ptr, interleavedLength, channels, result.sampleRate);
         } catch (err) {
-          console.error('Failed to write audio data into WASM heap:', err, { ptr, byteLength, heapByteLength: ((this.module as any).HEAPU8 && (this.module as any).HEAPU8.buffer ? (this.module as any).HEAPU8.buffer.byteLength : undefined) });
+          console.error('Failed to write audio data into WASM heap:', err, { 
+            ptr, 
+            byteLength,
+            hasWasmMemory: !!(this.module as any).wasmMemory,
+            hasBuffer: !!(this.module as any).buffer,
+            hasHEAPU8: !!(this.module as any).HEAPU8,
+            hasHEAPF32: !!(this.module as any).HEAPF32
+          });
           // Try fallback ccall if direct write fails (covers browser-specific edge cases)
           try {
             (this.module as any).ccall('set_audio_data', null, ['array', 'number', 'number', 'number'], [interleaved, interleavedLength, channels, result.sampleRate]);
