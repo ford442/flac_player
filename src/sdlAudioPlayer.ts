@@ -150,7 +150,10 @@ export class SdlAudioPlayer {
           const wasmModule = this.module as SdlModule;
           const canReconstructViews = Boolean(wasmModule.wasmMemory?.buffer);
           if (canReconstructViews) {
-            const currentBuffer = wasmModule.wasmMemory!.buffer;
+            const currentBuffer = wasmModule.wasmMemory?.buffer;
+            if (!currentBuffer) {
+              throw new Error('WASM memory buffer missing during reconstruction');
+            }
             /**
              * Rebuild a heap view against the current WASM buffer.
              * When an existing view is provided, its byteOffset/length are preserved;
@@ -162,9 +165,7 @@ export class SdlAudioPlayer {
             ): T => {
               const offset = existing ? existing.byteOffset : 0;
               const length = existing ? existing.length : undefined; // undefined => view spans full buffer
-              return length !== undefined
-                ? new ViewCtor(currentBuffer, offset, length)
-                : new ViewCtor(currentBuffer);
+              return new ViewCtor(currentBuffer, offset, length);
             };
 
             wasmModule.HEAPU8 = reconstructHeapView(wasmModule.HEAPU8, Uint8Array);
