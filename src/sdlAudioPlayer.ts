@@ -152,7 +152,7 @@ export class SdlAudioPlayer {
           const wasmModule = this.module as SdlModuleWithMemory;
           if (wasmModule.wasmMemory?.buffer) {
             const currentBuffer = wasmModule.wasmMemory.buffer;
-            const rebuildView = <T extends ArrayBufferView>(
+            const reconstructHeapView = <T extends ArrayBufferView>(
               existing: T | undefined,
               ViewCtor: new (buffer: ArrayBufferLike, byteOffset?: number, length?: number) => T
             ): T => {
@@ -163,9 +163,9 @@ export class SdlAudioPlayer {
                 : new ViewCtor(currentBuffer);
             };
 
-            wasmModule.HEAPU8 = rebuildView(wasmModule.HEAPU8, Uint8Array);
-            wasmModule.HEAPF32 = rebuildView(wasmModule.HEAPF32, Float32Array);
-            wasmModule.HEAP8 = rebuildView(wasmModule.HEAP8, Int8Array);
+            wasmModule.HEAPU8 = reconstructHeapView(wasmModule.HEAPU8, Uint8Array);
+            wasmModule.HEAPF32 = reconstructHeapView(wasmModule.HEAPF32, Float32Array);
+            wasmModule.HEAP8 = reconstructHeapView(wasmModule.HEAP8, Int8Array);
           }
 
           let memoryBuffer: ArrayBufferLike;
