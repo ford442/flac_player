@@ -146,32 +146,34 @@ export class SdlAudioPlayer {
         try {
           // Critical fix: always use an up-to-date WASM heap buffer. Some environments (e.g., AudioWorklet)
           // don't populate HEAP* views on the main thread, so reconstruct them from wasmMemory when needed.
-          const moduleRef = this.module as any;
-          if (moduleRef.wasmMemory?.buffer) {
-            const currentBuffer = moduleRef.wasmMemory.buffer;
+          const wasmModule = this.module as any;
+          if (wasmModule.wasmMemory?.buffer) {
+            const currentBuffer = wasmModule.wasmMemory.buffer;
             ([
               ['HEAPU8', Uint8Array],
               ['HEAPF32', Float32Array],
               ['HEAP8', Int8Array]
             ] as const).forEach(([name, View]) => {
-              const view = moduleRef[name];
+              const view = wasmModule[name];
               if (!view || view.buffer !== currentBuffer) {
-                moduleRef[name] = new View(currentBuffer);
+                const offset = view?.byteOffset ?? 0;
+                const length = view?.length;
+                wasmModule[name] = length ? new View(currentBuffer, offset, length) : new View(currentBuffer);
               }
             });
           }
 
           let memoryBuffer: ArrayBufferLike;
 
-          if (moduleRef.HEAPU8?.buffer) {
-            memoryBuffer = moduleRef.HEAPU8.buffer;
-          } else if (moduleRef.wasmMemory?.buffer) {
-            memoryBuffer = moduleRef.wasmMemory.buffer;
-          } else if (moduleRef.HEAP8?.buffer) {
-            memoryBuffer = moduleRef.HEAP8.buffer;
+          if (wasmModule.HEAPU8?.buffer) {
+            memoryBuffer = wasmModule.HEAPU8.buffer;
+          } else if (wasmModule.wasmMemory?.buffer) {
+            memoryBuffer = wasmModule.wasmMemory.buffer;
+          } else if (wasmModule.HEAP8?.buffer) {
+            memoryBuffer = wasmModule.HEAP8.buffer;
           } else {
             // Debug log to help identify available properties if all else fails
-            console.error('Available module properties:', Object.keys(moduleRef));
+            console.error('Available module properties:', Object.keys(wasmModule));
             throw new Error('Cannot find WASM memory buffer (HEAPU8, wasmMemory, or HEAP8 are missing)');
           }
 
