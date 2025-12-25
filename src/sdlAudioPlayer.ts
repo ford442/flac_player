@@ -149,15 +149,16 @@ export class SdlAudioPlayer {
           const moduleRef = this.module as any;
           if (moduleRef.wasmMemory?.buffer) {
             const currentBuffer = moduleRef.wasmMemory.buffer;
-            if (!moduleRef.HEAPU8 || moduleRef.HEAPU8.buffer !== currentBuffer) {
-              moduleRef.HEAPU8 = new Uint8Array(currentBuffer);
-            }
-            if (!moduleRef.HEAPF32 || moduleRef.HEAPF32.buffer !== currentBuffer) {
-              moduleRef.HEAPF32 = new Float32Array(currentBuffer);
-            }
-            if (!moduleRef.HEAP8 || moduleRef.HEAP8.buffer !== currentBuffer) {
-              moduleRef.HEAP8 = new Int8Array(currentBuffer);
-            }
+            ([
+              ['HEAPU8', Uint8Array],
+              ['HEAPF32', Float32Array],
+              ['HEAP8', Int8Array]
+            ] as const).forEach(([name, View]) => {
+              const view = moduleRef[name];
+              if (!view || view.buffer !== currentBuffer) {
+                moduleRef[name] = new View(currentBuffer);
+              }
+            });
           }
 
           let memoryBuffer: ArrayBufferLike;
