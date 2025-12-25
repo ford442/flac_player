@@ -22,6 +22,11 @@ interface SdlModule {
   ccall?(ident: string, returnType: string | null, argTypes: string[], args: unknown[]): unknown;
 }
 
+type HeapViewConstructor<T extends ArrayBufferView> = {
+  new (buffer: ArrayBufferLike, byteOffset?: number, length?: number): T;
+  BYTES_PER_ELEMENT: number;
+};
+
 // Global function exposed by the WASM script
 declare global {
   function createSdlAudioModule(): Promise<SdlModule>;
@@ -148,12 +153,8 @@ export class SdlAudioPlayer {
           // Critical fix: always use an up-to-date WASM heap buffer. Some environments (e.g., AudioWorklet)
           // don't populate HEAP* views on the main thread, so reconstruct them from wasmMemory when needed.
           const wasmModule = this.module as SdlModule;
-          const canReconstructViews = Boolean(wasmModule.wasmMemory?.buffer);
-          if (canReconstructViews) {
-            const currentBuffer = wasmModule.wasmMemory?.buffer;
-            if (!currentBuffer) {
-              throw new Error('WASM memory buffer missing during reconstruction');
-            }
+          const currentBuffer = wasmModule.wasmMemory?.buffer;
+          if (currentBuffer) {
             /**
              * Rebuild a heap view against the current WASM buffer.
              * When an existing view is provided, its byteOffset/length are preserved;
@@ -161,11 +162,10 @@ export class SdlAudioPlayer {
              */
             const reconstructHeapView = <T extends ArrayBufferView>(
               existing: T | undefined,
-              ViewCtor: new (buffer: ArrayBufferLike, byteOffset?: number, length?: number) => T
+              ViewCtor: HeapViewConstructor<T>
             ): T => {
               const offset = existing ? existing.byteOffset : 0;
-              const bytesPerElement = (ViewCtor as { BYTES_PER_ELEMENT: number }).BYTES_PER_ELEMENT;
-              const length = existing ? existing.byteLength / bytesPerElement : undefined; // undefined => view spans full buffer
+              const length = existing ? existing.byteLength / ViewCtor.BYTES_PER_ELEMENT : undefined; // undefined => view spans full buffer
               return new ViewCtor(currentBuffer, offset, length);
             };
 
