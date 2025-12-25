@@ -19,7 +19,7 @@ interface SdlModule {
   HEAPU8: Uint8Array;
   wasmMemory?: WebAssembly.Memory;
   HEAP8?: Int8Array;
-  ccall?(ident: string, returnType: unknown, argTypes: string[], args: unknown[]): unknown;
+  ccall?(ident: string, returnType: string | null, argTypes: string[], args: unknown[]): unknown;
 }
 
 type SdlModuleWithMemory = SdlModule & { wasmMemory?: WebAssembly.Memory };
@@ -152,18 +152,20 @@ export class SdlAudioPlayer {
           const wasmModule = this.module as SdlModuleWithMemory;
           if (wasmModule.wasmMemory?.buffer) {
             const currentBuffer = wasmModule.wasmMemory.buffer;
-            ([
-              ['HEAPU8', Uint8Array],
-              ['HEAPF32', Float32Array],
-              ['HEAP8', Int8Array]
-            ] as const).forEach(([name, View]) => {
-              const view = wasmModule[name];
-              if (!view || view.buffer !== currentBuffer) {
-                const offset = view?.byteOffset ?? 0;
-                const length = view?.length;
-                wasmModule[name] = length !== undefined ? new View(currentBuffer, offset, length) : new View(currentBuffer);
-              }
-            });
+            const rebuildView = <T extends ArrayBufferView>(
+              existing: T | undefined,
+              ViewCtor: new (buffer: ArrayBufferLike, byteOffset?: number, length?: number) => T
+            ): T => {
+              const offset = existing?.byteOffset ?? 0;
+              const length = existing?.length;
+              return length !== undefined
+                ? new ViewCtor(currentBuffer, offset, length)
+                : new ViewCtor(currentBuffer);
+            };
+
+            wasmModule.HEAPU8 = rebuildView(wasmModule.HEAPU8, Uint8Array);
+            wasmModule.HEAPF32 = rebuildView(wasmModule.HEAPF32, Float32Array);
+            wasmModule.HEAP8 = rebuildView(wasmModule.HEAP8, Int8Array);
           }
 
           let memoryBuffer: ArrayBufferLike;
