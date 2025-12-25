@@ -22,8 +22,6 @@ interface SdlModule {
   ccall?(ident: string, returnType: string | null, argTypes: string[], args: unknown[]): unknown;
 }
 
-type SdlModuleWithMemory = SdlModule & { wasmMemory?: WebAssembly.Memory };
-
 // Global function exposed by the WASM script
 declare global {
   function createSdlAudioModule(): Promise<SdlModule>;
@@ -149,15 +147,15 @@ export class SdlAudioPlayer {
         try {
           // Critical fix: always use an up-to-date WASM heap buffer. Some environments (e.g., AudioWorklet)
           // don't populate HEAP* views on the main thread, so reconstruct them from wasmMemory when needed.
-          const wasmModule = this.module as SdlModuleWithMemory;
+          const wasmModule = this.module as SdlModule;
           if (wasmModule.wasmMemory?.buffer) {
             const currentBuffer = wasmModule.wasmMemory.buffer;
             const reconstructHeapView = <T extends ArrayBufferView>(
               existing: T | undefined,
               ViewCtor: new (buffer: ArrayBufferLike, byteOffset?: number, length?: number) => T
             ): T => {
-              const offset = existing?.byteOffset ?? 0;
-              const length = existing?.length;
+              const offset = existing ? existing.byteOffset : 0;
+              const length = existing ? existing.length : undefined;
               return length !== undefined
                 ? new ViewCtor(currentBuffer, offset, length)
                 : new ViewCtor(currentBuffer);
