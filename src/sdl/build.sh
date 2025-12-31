@@ -17,18 +17,18 @@ source /content/build_space/emsdk/emsdk_env.sh || source ./emsdk/emsdk_env.sh ||
 echo "Compiling audio_engine.cpp -> $OUT_JS using -sUSE_SDL=3"
 
 # Compile directly using the SDL3 port
+# Removed -s WASM_WORKERS=1 and -s AUDIO_WORKLET=1 to ensure main thread memory access
+# Removed "buffer" from EXPORTED_RUNTIME_METHODS as it is not a valid export
 emcc "$SCRIPT_DIR/audio_engine.cpp" \
   -s USE_SDL=3 \
   -s USE_PTHREADS=1 \
   -s WASM=1 \
   -s EXPORTED_FUNCTIONS='["_init_audio","_set_audio_data","_play","_pause_audio","_resume_audio","_stop","_seek","_get_current_time","_set_volume","_cleanup","_malloc","_free"]' \
-  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPF32","HEAPU8","wasmMemory"]' \
+  -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPF32","HEAPU8","wasmMemory","getValue","setValue"]' \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s MODULARIZE=1 \
   -s EXPORT_NAME="createSdlAudioModule" \
   -s ENVIRONMENT="web,worker" \
-  -s AUDIO_WORKLET=1 \
-  -s WASM_WORKERS=1 \
   -O3 \
   -o "$OUT_JS"
 
