@@ -18,7 +18,7 @@ echo "Compiling audio_engine.cpp -> $OUT_JS using -sUSE_SDL=3"
 
 # Compile directly using the SDL3 port
 # Removed -s WASM_WORKERS=1 and -s AUDIO_WORKLET=1 to ensure main thread memory access
-# Removed "buffer" from EXPORTED_RUNTIME_METHODS as it is not a valid export
+# Increased INITIAL_MEMORY to 256MB to handle large audio files without immediate growth
 emcc "$SCRIPT_DIR/audio_engine.cpp" \
   -s USE_SDL=3 \
   -s USE_PTHREADS=1 \
@@ -26,6 +26,7 @@ emcc "$SCRIPT_DIR/audio_engine.cpp" \
   -s EXPORTED_FUNCTIONS='["_init_audio","_set_audio_data","_play","_pause_audio","_resume_audio","_stop","_seek","_get_current_time","_set_volume","_cleanup","_malloc","_free"]' \
   -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPF32","HEAPU8","wasmMemory","getValue","setValue"]' \
   -s ALLOW_MEMORY_GROWTH=1 \
+  -s INITIAL_MEMORY=268435456 \
   -s MODULARIZE=1 \
   -s EXPORT_NAME="createSdlAudioModule" \
   -s ENVIRONMENT="web,worker" \
