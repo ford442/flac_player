@@ -28,24 +28,28 @@ struct PlayerState {
 
 EMSCRIPTEN_KEEPALIVE
 int init_audio() {
+    printf("[C++] init_audio called\n");
     // SDL3 returns bool (true on success)
     if (!SDL_Init(SDL_INIT_AUDIO)) {
-        std::cerr << "SDL_Init failed: " << SDL_GetError() << std::endl;
+        std::cerr << "[C++] SDL_Init failed: " << SDL_GetError() << std::endl;
         return 0;
     }
 
     // Open default playback device
     g_state.deviceId = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL);
     if (g_state.deviceId == 0) {
-        std::cerr << "SDL_OpenAudioDevice failed: " << SDL_GetError() << std::endl;
+        std::cerr << "[C++] SDL_OpenAudioDevice failed: " << SDL_GetError() << std::endl;
         return 0;
     }
 
+    printf("[C++] init_audio success. Device ID: %u\n", g_state.deviceId);
     return 1;
 }
 
 EMSCRIPTEN_KEEPALIVE
 void set_audio_data(float* data, int length, int channels, int sampleRate) {
+    printf("[C++] set_audio_data called. Length: %d, Channels: %d, Rate: %d\n", length, channels, sampleRate);
+
     // Stop current playback
     if (g_state.stream) {
         SDL_DestroyAudioStream(g_state.stream);
@@ -53,7 +57,15 @@ void set_audio_data(float* data, int length, int channels, int sampleRate) {
     }
 
     // Update state
-    g_state.audioBuffer.assign(data, data + length);
+    try {
+        printf("[C++] Assigning to g_state.audioBuffer...\n");
+        g_state.audioBuffer.assign(data, data + length);
+        printf("[C++] g_state.audioBuffer assigned. Size: %zu\n", g_state.audioBuffer.size());
+    } catch (const std::exception& e) {
+        std::cerr << "[C++] Error assigning audio buffer: " << e.what() << std::endl;
+        return;
+    }
+
     g_state.channels = channels;
     g_state.sampleRate = sampleRate;
     g_state.playHead = 0;
@@ -67,14 +79,15 @@ void set_audio_data(float* data, int length, int channels, int sampleRate) {
 
     g_state.stream = SDL_CreateAudioStream(&spec, &spec);
     if (!g_state.stream) {
-        std::cerr << "SDL_CreateAudioStream failed: " << SDL_GetError() << std::endl;
+        std::cerr << "[C++] SDL_CreateAudioStream failed: " << SDL_GetError() << std::endl;
         return;
     }
 
     // Bind stream to device (SDL3 returns bool)
     if (!SDL_BindAudioStream(g_state.deviceId, g_state.stream)) {
-        std::cerr << "SDL_BindAudioStream failed: " << SDL_GetError() << std::endl;
+        std::cerr << "[C++] SDL_BindAudioStream failed: " << SDL_GetError() << std::endl;
     }
+    printf("[C++] set_audio_data completed successfully.\n");
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -187,6 +200,7 @@ void set_volume(float vol) {
 
 EMSCRIPTEN_KEEPALIVE
 void cleanup() {
+    printf("[C++] cleanup called\n");
     if (g_state.stream) {
         SDL_DestroyAudioStream(g_state.stream);
         g_state.stream = nullptr;
