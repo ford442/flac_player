@@ -41,44 +41,64 @@ export class SdlAudioPlayer {
   }
 
   private async initializeModule() {
+    console.log('[SdlAudioPlayer] Initializing module...');
     // Load the ScriptProcessor->AudioWorklet shim first (best-effort). This enables environments
     // where ScriptProcessorNode is missing/deprecated to still work via AudioWorkletNode.
     if (!(window as any).__sdl_script_processor_shim_loaded) {
+      console.log('[SdlAudioPlayer] Loading script-processor-shim.js...');
       const shim = document.createElement('script');
       shim.src = 'script-processor-shim.js';
       shim.async = true;
       document.head.appendChild(shim);
 
       await new Promise<void>((resolve) => {
-        shim.onload = () => { (window as any).__sdl_script_processor_shim_loaded = true; resolve(); };
-        shim.onerror = () => { console.warn('Script processor shim failed to load; continuing without shim.'); resolve(); };
+        shim.onload = () => {
+          console.log('[SdlAudioPlayer] script-processor-shim.js loaded.');
+          (window as any).__sdl_script_processor_shim_loaded = true;
+          resolve();
+        };
+        shim.onerror = () => {
+          console.warn('[SdlAudioPlayer] Script processor shim failed to load; continuing without shim.');
+          resolve();
+        };
       });
     }
 
     // Dynamically load the WASM/SDL script if not already present
     if (!window.createSdlAudioModule) {
+      console.log('[SdlAudioPlayer] Loading sdl-audio.js...');
       const script = document.createElement('script');
       script.src = 'sdl-audio.js';
       script.async = true;
       document.body.appendChild(script);
 
       await new Promise<void>((resolve, reject) => {
-        script.onload = () => resolve();
+        script.onload = () => {
+           console.log('[SdlAudioPlayer] sdl-audio.js loaded.');
+           resolve();
+        };
         script.onerror = () => reject(new Error('Failed to load sdl-audio.js'));
       });
     }
 
     try {
+      console.log('[SdlAudioPlayer] Calling createSdlAudioModule()...');
       this.module = await window.createSdlAudioModule();
+      console.log('[SdlAudioPlayer] Module created. Inspecting keys:', Object.keys(this.module));
+      console.log('[SdlAudioPlayer] Module.wasmMemory:', (this.module as any).wasmMemory);
+      console.log('[SdlAudioPlayer] Module.buffer:', (this.module as any).buffer);
+      console.log('[SdlAudioPlayer] Module.HEAPU8:', (this.module as any).HEAPU8);
+
       const success = this.module._init_audio();
       if (!success) {
-        console.error('Failed to initialize SDL audio');
+        console.error('[SdlAudioPlayer] Failed to initialize SDL audio (init_audio returned 0)');
       } else {
+        console.log('[SdlAudioPlayer] SDL Audio initialized successfully.');
         this.isReady = true;
         this.startPolling();
       }
     } catch (err) {
-      console.error('Error initializing SDL module:', err);
+      console.error('[SdlAudioPlayer] Error initializing SDL module:', err);
     }
   }
 
@@ -103,9 +123,9 @@ export class SdlAudioPlayer {
   }
 
   async loadAudio(arrayBuffer: ArrayBuffer): Promise<void> {
+    console.log('[SdlAudioPlayer] loadAudio called with ArrayBuffer of size:', arrayBuffer.byteLength);
     if (!this.module || !this.isReady) {
-        // Retry init if not ready? or wait?
-        // For simplicity, assume initialized by the time user clicks load.
+        console.warn('[SdlAudioPlayer] Module not ready during loadAudio call.');
         if (!this.module) throw new Error('SDL Module not initialized');
     }
 
@@ -113,8 +133,10 @@ export class SdlAudioPlayer {
     this.notifyStateChange();
 
     try {
+      console.log('[SdlAudioPlayer] Decoding audio...');
       const decoder = new FlacDecoder();
       const result = await decoder.decode(arrayBuffer);
+      console.log('[SdlAudioPlayer] Decoded. Channels:', result.channels, 'SampleRate:', result.sampleRate, 'Duration:', result.duration);
 
       this.duration = result.duration;
 
@@ -122,6 +144,8 @@ export class SdlAudioPlayer {
       const channels = result.channels;
       const length = result.samples[0].length;
       const interleavedLength = length * channels;
+      console.log('[SdlAudioPlayer] Interleaving samples. Total samples:', interleavedLength);
+
       const interleaved = new Float32Array(interleavedLength);
 
       for (let i = 0; i < length; i++) {
@@ -132,49 +156,60 @@ export class SdlAudioPlayer {
 
       // Allocate memory in WASM (in bytes) and write safely to the current WASM buffer
       const byteLength = interleaved.byteLength;
+      console.log('[SdlAudioPlayer] Attempting to malloc:', byteLength, 'bytes');
+
       const ptr = (this.module as any)._malloc(byteLength);
+      console.log('[SdlAudioPlayer] malloc returned ptr:', ptr);
 
       if (!ptr || ptr === 0) {
-        // Malloc failed: fall back to ccall copy (note: ccall -> writeArrayToMemory may hit RangeError if it writes into a stale view)
-        console.warn('WASM malloc failed (returned 0). Trying ccall fallback that copies the array into WASM memory.');
+        console.warn('[SdlAudioPlayer] WASM malloc failed (returned 0). Using ccall fallback.');
         try {
           (this.module as any).ccall('set_audio_data', null, ['array', 'number', 'number', 'number'], [interleaved, interleavedLength, channels, result.sampleRate]);
         } catch (ccErr) {
-          console.error('Fallback ccall set_audio_data failed:', ccErr);
+          console.error('[SdlAudioPlayer] Fallback ccall set_audio_data failed:', ccErr);
           throw ccErr;
         }
       } else {
         try {
+          console.log('[SdlAudioPlayer] Accessing WASM memory buffer...');
           // Get WebAssembly memory buffer - different access patterns for different Emscripten builds
           // With pthreads and AUDIO_WORKLET, memory is typically accessed via wasmMemory.buffer
           let memoryBuffer: ArrayBuffer | null = null;
           
           if ((this.module as any).wasmMemory && (this.module as any).wasmMemory.buffer) {
-            // Modern pthreads/AUDIO_WORKLET build - use wasmMemory
+            console.log('[SdlAudioPlayer] Using Module.wasmMemory.buffer');
             memoryBuffer = (this.module as any).wasmMemory.buffer;
           } else if ((this.module as any).buffer) {
-            // Some builds expose buffer directly
+            console.log('[SdlAudioPlayer] Using Module.buffer');
             memoryBuffer = (this.module as any).buffer;
           } else if ((this.module as any).HEAPU8 && (this.module as any).HEAPU8.buffer) {
-            // Traditional build - use HEAPU8.buffer
+            console.log('[SdlAudioPlayer] Using Module.HEAPU8.buffer');
             memoryBuffer = (this.module as any).HEAPU8.buffer;
           } else if ((this.module as any).HEAPF32 && (this.module as any).HEAPF32.buffer) {
-            // Fallback to HEAPF32.buffer
+             console.log('[SdlAudioPlayer] Using Module.HEAPF32.buffer');
             memoryBuffer = (this.module as any).HEAPF32.buffer;
           }
 
           if (!memoryBuffer) {
+             console.error('[SdlAudioPlayer] Unable to find valid memory buffer on Module object:', this.module);
             throw new Error('Unable to access WebAssembly memory buffer');
           }
 
+          console.log('[SdlAudioPlayer] Creating Float32Array view on memory buffer. Ptr:', ptr, 'Length:', interleavedLength);
           // Create a Float32Array view at the allocated memory location
           const destination = new Float32Array(memoryBuffer, ptr, interleavedLength);
+
+          console.log('[SdlAudioPlayer] Copying data to WASM memory...');
           destination.set(interleaved);
+          console.log('[SdlAudioPlayer] Copy successful.');
 
           // Send to C++ (direct call, faster and avoids writeArrayToMemory)
+          console.log('[SdlAudioPlayer] Calling _set_audio_data...');
           (this.module as any)._set_audio_data(ptr, interleavedLength, channels, result.sampleRate);
+          console.log('[SdlAudioPlayer] _set_audio_data returned.');
+
         } catch (err) {
-          console.error('Failed to write audio data into WASM heap:', err, { 
+          console.error('[SdlAudioPlayer] Failed to write audio data into WASM heap:', err, {
             ptr, 
             byteLength,
             hasWasmMemory: !!(this.module as any).wasmMemory,
@@ -184,15 +219,17 @@ export class SdlAudioPlayer {
           });
           // Try fallback ccall if direct write fails (covers browser-specific edge cases)
           try {
+            console.log('[SdlAudioPlayer] Attempting fallback ccall after error...');
             (this.module as any).ccall('set_audio_data', null, ['array', 'number', 'number', 'number'], [interleaved, interleavedLength, channels, result.sampleRate]);
           } catch (ccErr) {
-            console.error('Fallback ccall set_audio_data also failed:', ccErr);
+            console.error('[SdlAudioPlayer] Fallback ccall set_audio_data also failed:', ccErr);
             // Free pointer and rethrow original error
             (this.module as any)._free && (this.module as any)._free(ptr);
             throw err;
           }
         } finally {
           // Free malloc'd memory (the C++ copy made its own copy into g_state.audioBuffer)
+          console.log('[SdlAudioPlayer] Freeing ptr:', ptr);
           (this.module as any)._free && (this.module as any)._free(ptr);
         }
       }
@@ -200,7 +237,7 @@ export class SdlAudioPlayer {
       this.notifyStateChange();
 
     } catch (error) {
-      console.error('Error loading audio in SDL player:', error);
+      console.error('[SdlAudioPlayer] Error loading audio in SDL player:', error);
       throw error;
     }
   }
