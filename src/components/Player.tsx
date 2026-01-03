@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AudioPlayer, PlayerState } from '../audioPlayer';
 import { SdlAudioPlayer } from '../sdlAudioPlayer';
+import { Sdl2AudioPlayer } from '../sdl2AudioPlayer';
 import { AudioLoader, PlaylistTrack } from '../audioLoader';
 import { WebGPUVisualizer, VisualizerMode } from '../webgpuVisualizer';
 import './Player.css';
 
-type AudioOutputMode = 'web-audio' | 'sdl';
+type AudioOutputMode = 'web-audio' | 'sdl' | 'sdl2';
 
 export const Player: React.FC = () => {
   const [playerState, setPlayerState] = useState<PlayerState>({
@@ -24,15 +25,17 @@ export const Player: React.FC = () => {
   const [isLoadingPlaylist, setIsLoadingPlaylist] = useState<boolean>(false);
   
   // Use a generic type or union for playerRef
-  const playerRef = useRef<AudioPlayer | SdlAudioPlayer | null>(null);
+  const playerRef = useRef<AudioPlayer | SdlAudioPlayer | Sdl2AudioPlayer | null>(null);
   const visualizerRef = useRef<WebGPUVisualizer | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     // Initialize player based on mode
-    let player: AudioPlayer | SdlAudioPlayer;
+    let player: AudioPlayer | SdlAudioPlayer | Sdl2AudioPlayer;
     if (outputMode === 'sdl') {
       player = new SdlAudioPlayer();
+    } else if (outputMode === 'sdl2') {
+      player = new Sdl2AudioPlayer();
     } else {
       player = new AudioPlayer();
     }
@@ -266,13 +269,26 @@ export const Player: React.FC = () => {
                         padding: '0.5rem 1rem',
                         background: outputMode === 'sdl' ? '#28a745' : 'rgba(255,255,255,0.1)',
                         border: 'none',
+                        color: 'white',
+                        cursor: 'pointer'
+                    }}
+                >
+                    SDL3 (WASM)
+                </button>
+                <button
+                    className={`toggle-btn ${outputMode === 'sdl2' ? 'active' : ''}`}
+                    onClick={() => setOutputMode('sdl2')}
+                    style={{
+                        padding: '0.5rem 1rem',
+                        background: outputMode === 'sdl2' ? '#28a745' : 'rgba(255,255,255,0.1)',
+                        border: 'none',
                         borderTopRightRadius: '8px',
                         borderBottomRightRadius: '8px',
                         color: 'white',
                         cursor: 'pointer'
                     }}
                 >
-                    SDL3 (WASM)
+                    SDL2 (WASM)
                 </button>
             </div>
         </div>

@@ -35,6 +35,7 @@ module.exports = {
     new CopyPlugin({
       patterns: [
         { from: 'public/sdl-audio.*', to: '.' },
+        { from: 'public/sdl2-audio.*', to: '.' },
         { from: 'public/script-processor-*.js', to: '.' }
       ]
     })
