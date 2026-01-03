@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "start": "webpack serve --mode development --open",
-    "build:wasm": "bash ./src/sdl/build.sh",
+    "build:wasm": "bash ./src/sdl/build_sdl2.sh",
     "prebuild": "npm run build:wasm",
     "build": "webpack --mode production",
     "postbuild": "test -f dist/sdl-audio.js || test -f dist/public/sdl-audio.js && test -f dist/sdl-audio.wasm || test -f dist/public/sdl-audio.wasm",
