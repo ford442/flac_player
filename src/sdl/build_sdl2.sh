@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$SCRIPT_DIR/../.."
 BUILD_DIR="$SCRIPT_DIR/build"
-OUT_DIR="$PROJECT_ROOT/public"
+OUT_DIR="$PROJECT_ROOT/dist"
 OUT_JS="$OUT_DIR/sdl2-audio.js"
 
 mkdir -p "$BUILD_DIR" "$OUT_DIR"
