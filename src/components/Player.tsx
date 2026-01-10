@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { AudioPlayer, PlayerState } from '../audioPlayer';
 import { SdlAudioPlayer } from '../sdlAudioPlayer';
 import { AudioLoader, PlaylistTrack } from '../audioLoader';
@@ -22,6 +22,8 @@ export const Player: React.FC = () => {
   const [playlist, setPlaylist] = useState<PlaylistTrack[]>([]);
   const [showPlaylist, setShowPlaylist] = useState<boolean>(false);
   const [isLoadingPlaylist, setIsLoadingPlaylist] = useState<boolean>(false);
+  const [isShuffle, setIsShuffle] = useState<boolean>(false);
+  const [autoAdvance, setAutoAdvance] = useState<boolean>(true);
   
   // Use a generic type or union for playerRef
   const playerRef = useRef<AudioPlayer | SdlAudioPlayer | null>(null);
@@ -99,7 +101,7 @@ export const Player: React.FC = () => {
       }
   }, [visualizerMode]);
 
-  const loadAudioFromUrl = async (url: string) => {
+  const loadAudioFromUrl = useCallback(async (url: string, autoPlay: boolean = false) => {
     if (!url.trim() || !playerRef.current) {
       return;
     }
@@ -111,12 +113,15 @@ export const Player: React.FC = () => {
       const loader = new AudioLoader();
       const arrayBuffer = await loader.loadFromURL(url);
       await playerRef.current.loadAudio(arrayBuffer);
+      if (autoPlay) {
+        playerRef.current.play();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load audio');
     } finally {
       setPlayerState(prev => ({ ...prev, isLoading: false }));
     }
-  };
+  }, []);
 
   const handleLoadAudio = async () => {
     await loadAudioFromUrl(audioUrl);
@@ -135,6 +140,44 @@ export const Player: React.FC = () => {
       setIsLoadingPlaylist(false);
     }
   };
+
+  const playNextTrack = useCallback(() => {
+    if (playlist.length === 0) return;
+
+    const currentIndex = playlist.findIndex(t => t.url === audioUrl);
+    let nextIndex = 0;
+
+    if (isShuffle) {
+      nextIndex = Math.floor(Math.random() * playlist.length);
+      // Avoid repeating same song if possible
+      if (playlist.length > 1 && nextIndex === currentIndex) {
+         nextIndex = (nextIndex + 1) % playlist.length;
+      }
+    } else {
+      if (currentIndex === -1) {
+        nextIndex = 0;
+      } else {
+        nextIndex = (currentIndex + 1) % playlist.length;
+      }
+    }
+
+    const nextTrack = playlist[nextIndex];
+    setAudioUrl(nextTrack.url);
+    loadAudioFromUrl(nextTrack.url, true);
+  }, [playlist, audioUrl, isShuffle, loadAudioFromUrl]);
+
+  useEffect(() => {
+    if (!playerState.isLoading && playerState.duration > 0) {
+      // Check if track finished (within 200ms of end)
+      if (playerState.currentTime >= playerState.duration - 0.2) {
+        if (autoAdvance && playlist.length > 0) {
+          playNextTrack();
+        } else if (playerState.isPlaying) {
+          playerRef.current?.pause();
+        }
+      }
+    }
+  }, [playerState, autoAdvance, playlist.length, playNextTrack]);
 
   const handlePlay = () => {
     playerRef.current?.play();
@@ -188,7 +231,7 @@ export const Player: React.FC = () => {
                   className={`playlist-item ${audioUrl === track.url ? 'active' : ''}`}
                   onClick={() => {
                     setAudioUrl(track.url);
-                    loadAudioFromUrl(track.url);
+                    loadAudioFromUrl(track.url, true);
                   }}
                 >
                   {track.name}
@@ -275,6 +318,17 @@ export const Player: React.FC = () => {
                     SDL3 (WASM)
                 </button>
             </div>
+        </div>
+
+        <div className="playback-settings" style={{display: 'flex', gap: '1.5rem', justifyContent: 'center', marginBottom: '1rem', color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem'}}>
+            <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'}}>
+                <input type="checkbox" checked={isShuffle} onChange={(e) => setIsShuffle(e.target.checked)} />
+                Shuffle
+            </label>
+            <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'}}>
+                <input type="checkbox" checked={autoAdvance} onChange={(e) => setAutoAdvance(e.target.checked)} />
+                Auto-Advance
+            </label>
         </div>
 
         <div className="url-input-container">
