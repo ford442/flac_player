@@ -357,7 +357,7 @@ struct Uniforms {
       this.canvas.addEventListener('mousedown', (e) => {
           this.isDragging = true;
           this.lastMousePos = { x: e.clientX, y: e.clientY };
-          this.checkInteraction(e.clientX, e.clientY);
+          this.checkInteraction();
       });
 
       window.addEventListener('mousemove', (e) => {
@@ -375,7 +375,7 @@ struct Uniforms {
       });
   }
 
-  private checkInteraction(mx: number, my: number) {
+  private checkInteraction() {
       if (this.mode !== '3D') return;
       if (this.onTogglePlay) {
           this.onTogglePlay();
@@ -467,7 +467,7 @@ struct Uniforms {
       );
 
       const mvp = Mat4.multiply(projection, view);
-      this.device.queue.writeBuffer(this.cubeUniformBuffer!, 0, mvp.values as any);
+      this.device.queue.writeBuffer(this.cubeUniformBuffer!, 0, new Float32Array(mvp.values));
 
       if (!this.depthTexture ||
           this.depthTexture.width !== this.canvas.width ||

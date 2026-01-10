@@ -33,7 +33,15 @@ export const Player: React.FC = () => {
   useEffect(() => {
     // Initialize player based on mode
     let player: AudioPlayer | SdlAudioPlayer;
+
+    // NOTE: SDL (WASM) audio path is experimental and has produced runtime
+    // memory / pointer errors during testing (see console output in bug report).
+    // If you see "Unable to access WebAssembly memory buffer" or "memory access out of bounds",
+    // verify the Emscripten build flags (MODULARIZE, ALLOW_MEMORY_GROWTH) and that the
+    // generated module exports the expected heap views (HEAPU8/HEAPF32/wasmMemory).
+    // See `src/sdlAudioPlayer.ts` for more diagnostic guidance.
     if (outputMode === 'sdl') {
+      console.debug('[Player] Initializing SDL (WASM) audio mode - see sdlAudioPlayer diagnostics if errors occur');
       player = new SdlAudioPlayer();
     } else {
       player = new AudioPlayer();
@@ -164,6 +172,31 @@ export const Player: React.FC = () => {
     const nextTrack = playlist[nextIndex];
     setAudioUrl(nextTrack.url);
     loadAudioFromUrl(nextTrack.url, true);
+  }, [playlist, audioUrl, isShuffle, loadAudioFromUrl]);
+
+  const playPreviousTrack = useCallback(() => {
+    if (playlist.length === 0) return;
+
+    const currentIndex = playlist.findIndex(t => t.url === audioUrl);
+    let prevIndex = 0;
+
+    if (isShuffle) {
+      prevIndex = Math.floor(Math.random() * playlist.length);
+      // Avoid repeating same song if possible
+      if (playlist.length > 1 && prevIndex === currentIndex) {
+        prevIndex = (prevIndex - 1 + playlist.length) % playlist.length;
+      }
+    } else {
+      if (currentIndex <= 0) {
+        prevIndex = playlist.length - 1;
+      } else {
+        prevIndex = currentIndex - 1;
+      }
+    }
+
+    const prevTrack = playlist[prevIndex];
+    setAudioUrl(prevTrack.url);
+    loadAudioFromUrl(prevTrack.url, true);
   }, [playlist, audioUrl, isShuffle, loadAudioFromUrl]);
 
   useEffect(() => {
@@ -365,10 +398,24 @@ export const Player: React.FC = () => {
         <div className="playback-controls">
           <button
             className="control-button"
+            onClick={playPreviousTrack}
+            disabled={playlist.length === 0}
+          >
+            ⏮ Prev
+          </button>
+          <button
+            className="control-button"
             onClick={playerState.isPlaying ? handlePause : handlePlay}
             disabled={!playerState.duration}
           >
             {playerState.isPlaying ? '⏸ Pause' : '▶ Play'}
+          </button>
+          <button
+            className="control-button"
+            onClick={playNextTrack}
+            disabled={playlist.length === 0}
+          >
+            Next ⏭
           </button>
         </div>
 
