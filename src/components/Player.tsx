@@ -353,17 +353,6 @@ export const Player: React.FC = () => {
             </div>
         </div>
 
-        <div className="playback-settings" style={{display: 'flex', gap: '1.5rem', justifyContent: 'center', marginBottom: '1rem', color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem'}}>
-            <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'}}>
-                <input type="checkbox" checked={isShuffle} onChange={(e) => setIsShuffle(e.target.checked)} />
-                Shuffle
-            </label>
-            <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer'}}>
-                <input type="checkbox" checked={autoAdvance} onChange={(e) => setAutoAdvance(e.target.checked)} />
-                Auto-Advance
-            </label>
-        </div>
-
         <div className="url-input-container">
           <input
             type="text"
@@ -397,6 +386,16 @@ export const Player: React.FC = () => {
 
         <div className="playback-controls">
           <button
+            className={`secondary-control-button ${isShuffle ? 'active' : ''}`}
+            onClick={() => setIsShuffle(!isShuffle)}
+            title="Shuffle"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
+            </svg>
+          </button>
+
+          <button
             className="control-button"
             onClick={playPreviousTrack}
             disabled={playlist.length === 0}
@@ -416,6 +415,16 @@ export const Player: React.FC = () => {
             disabled={playlist.length === 0}
           >
             Next ⏭
+          </button>
+
+          <button
+            className={`secondary-control-button ${autoAdvance ? 'active' : ''}`}
+            onClick={() => setAutoAdvance(!autoAdvance)}
+            title="Auto-Advance"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v6z"/>
+            </svg>
           </button>
         </div>
 

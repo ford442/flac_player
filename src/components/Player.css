@@ -109,6 +109,7 @@
   display: flex;
   justify-content: center;
   gap: 1rem;
+  align-items: center;
 }
 
 .control-button {
@@ -131,6 +132,33 @@
 .control-button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+.secondary-control-button {
+  padding: 1rem 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.secondary-control-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.secondary-control-button.active {
+  background: linear-gradient(135deg, #00d4ff 0%, #0084ff 100%);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 0 15px rgba(0, 132, 255, 0.4);
 }
 
 .seek-container {
