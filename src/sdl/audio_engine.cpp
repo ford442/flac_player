@@ -47,7 +47,20 @@ int init_audio() {
 }
 
 EMSCRIPTEN_KEEPALIVE
-void set_audio_data(float* data, int length, int channels, int sampleRate) {
+float* create_audio_buffer(int length) {
+    printf("[C++] create_audio_buffer called with length: %d\n", length);
+    try {
+        g_state.audioBuffer.resize(length);
+        printf("[C++] Resized g_state.audioBuffer to %zu elements.\n", g_state.audioBuffer.size());
+        return g_state.audioBuffer.data();
+    } catch (const std::exception& e) {
+        std::cerr << "[C++] Error resizing audio buffer: " << e.what() << std::endl;
+        return nullptr;
+    }
+}
+
+EMSCRIPTEN_KEEPALIVE
+void set_audio_data(int length, int channels, int sampleRate) {
     printf("[C++] set_audio_data called. Length: %d, Channels: %d, Rate: %d\n", length, channels, sampleRate);
 
     // Stop current playback
@@ -56,13 +69,11 @@ void set_audio_data(float* data, int length, int channels, int sampleRate) {
         g_state.stream = nullptr;
     }
 
-    // Update state
-    try {
-        printf("[C++] Assigning to g_state.audioBuffer...\n");
-        g_state.audioBuffer.assign(data, data + length);
-        printf("[C++] g_state.audioBuffer assigned. Size: %zu\n", g_state.audioBuffer.size());
-    } catch (const std::exception& e) {
-        std::cerr << "[C++] Error assigning audio buffer: " << e.what() << std::endl;
+    // Verify buffer size
+    if (g_state.audioBuffer.size() != length) {
+        std::cerr << "[C++] Mismatch between provided length (" << length
+                  << ") and buffer size (" << g_state.audioBuffer.size()
+                  << "). Please call create_audio_buffer first." << std::endl;
         return;
     }
 
