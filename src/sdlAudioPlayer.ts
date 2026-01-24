@@ -4,7 +4,8 @@ import { PlayerState } from './audioPlayer';
 // Define the Emscripten module interface
 interface SdlModule {
   _init_audio(): number;
-  _set_audio_data(dataPtr: number, length: number, channels: number, sampleRate: number): void;
+  _create_audio_buffer(length: number): number;
+  _set_audio_data(length: number, channels: number, sampleRate: number): void;
   _play(): void;
   _pause_audio(): void;
   _resume_audio(): void;
@@ -155,83 +156,48 @@ export class SdlAudioPlayer {
       }
 
       // Allocate memory in WASM (in bytes) and write safely to the current WASM buffer
-      const byteLength = interleaved.byteLength;
-      console.log('[SdlAudioPlayer] Attempting to malloc:', byteLength, 'bytes');
+      // Let C++ allocate the memory and give us a pointer
+      const ptr = (this.module as any)._create_audio_buffer(interleavedLength);
+      if (!ptr) {
+        throw new Error('[SdlAudioPlayer] _create_audio_buffer failed to allocate memory.');
+      }
 
-      const ptr = (this.module as any)._malloc(byteLength);
-      console.log('[SdlAudioPlayer] malloc returned ptr:', ptr);
+      console.log('[SdlAudioPlayer] C++ allocated buffer at ptr:', ptr);
 
-      if (!ptr || ptr === 0) {
-        console.warn('[SdlAudioPlayer] WASM malloc failed (returned 0). Using ccall fallback.');
-        try {
-          (this.module as any).ccall('set_audio_data', null, ['array', 'number', 'number', 'number'], [interleaved, interleavedLength, channels, result.sampleRate]);
-        } catch (ccErr) {
-          console.error('[SdlAudioPlayer] Fallback ccall set_audio_data failed:', ccErr);
-          throw ccErr;
+      try {
+        // Get the correct memory view
+        let memoryView: Float32Array | null = null;
+        if ((this.module as any).HEAPF32) {
+          memoryView = (this.module as any).HEAPF32;
+        } else if ((this.module as any).wasmMemory && (this.module as any).wasmMemory.buffer) {
+          // Fallback for certain Emscripten versions/configs
+          memoryView = new Float32Array((this.module as any).wasmMemory.buffer);
         }
-      } else {
-        try {
-          console.log('[SdlAudioPlayer] Accessing WASM memory buffer...');
-          // Get WebAssembly memory buffer - different access patterns for different Emscripten builds
-          // With pthreads and AUDIO_WORKLET, memory is typically accessed via wasmMemory.buffer
-          let memoryBuffer: ArrayBuffer | null = null;
-          
-          if ((this.module as any).wasmMemory && (this.module as any).wasmMemory.buffer) {
-            console.log('[SdlAudioPlayer] Using Module.wasmMemory.buffer');
-            memoryBuffer = (this.module as any).wasmMemory.buffer;
-          } else if ((this.module as any).buffer) {
-            console.log('[SdlAudioPlayer] Using Module.buffer');
-            memoryBuffer = (this.module as any).buffer;
-          } else if ((this.module as any).HEAPU8 && (this.module as any).HEAPU8.buffer) {
-            console.log('[SdlAudioPlayer] Using Module.HEAPU8.buffer');
-            memoryBuffer = (this.module as any).HEAPU8.buffer;
-          } else if ((this.module as any).HEAPF32 && (this.module as any).HEAPF32.buffer) {
-             console.log('[SdlAudioPlayer] Using Module.HEAPF32.buffer');
-            memoryBuffer = (this.module as any).HEAPF32.buffer;
-          }
 
-          if (!memoryBuffer) {
-             console.error('[SdlAudioPlayer] Unable to find valid memory buffer on Module object:', this.module);
-            throw new Error('Unable to access WebAssembly memory buffer');
-          }
-
-          console.log('[SdlAudioPlayer] Creating Float32Array view on memory buffer. Ptr:', ptr, 'Length:', interleavedLength);
-          // Create a Float32Array view at the allocated memory location
-          const destination = new Float32Array(memoryBuffer, ptr, interleavedLength);
-
-          console.log('[SdlAudioPlayer] Copying data to WASM memory...');
-          destination.set(interleaved);
-          console.log('[SdlAudioPlayer] Copy successful.');
-
-          // Send to C++ (direct call, faster and avoids writeArrayToMemory)
-          console.log('[SdlAudioPlayer] Calling _set_audio_data...');
-          (this.module as any)._set_audio_data(ptr, interleavedLength, channels, result.sampleRate);
-          console.log('[SdlAudioPlayer] _set_audio_data returned.');
-
-        } catch (err) {
-          console.error('[SdlAudioPlayer] Failed to write audio data into WASM heap:', err, {
-            ptr, 
-            byteLength,
-            hasWasmMemory: !!(this.module as any).wasmMemory,
-            hasBuffer: !!(this.module as any).buffer,
-            hasHEAPU8: !!(this.module as any).HEAPU8,
-            hasHEAPF32: !!(this.module as any).HEAPF32
-          });
-          // Try fallback ccall if direct write fails (covers browser-specific edge cases)
-          try {
-            console.log('[SdlAudioPlayer] Attempting fallback ccall after error...');
-            (this.module as any).ccall('set_audio_data', null, ['array', 'number', 'number', 'number'], [interleaved, interleavedLength, channels, result.sampleRate]);
-          } catch (ccErr) {
-            console.error('[SdlAudioPlayer] Fallback ccall set_audio_data also failed:', ccErr);
-            // Free pointer and rethrow original error
-            (this.module as any)._free && (this.module as any)._free(ptr);
-            throw err;
-          }
-        } finally {
-          // Free malloc'd memory (the C++ copy made its own copy into g_state.audioBuffer)
-          console.log('[SdlAudioPlayer] Freeing ptr:', ptr);
-          (this.module as any)._free && (this.module as any)._free(ptr);
+        if (!memoryView) {
+          throw new Error('Unable to access WebAssembly HEAPF32 memory view.');
         }
+
+        // Write directly to the WASM memory at the provided pointer.
+        // The pointer is a byte offset, so we need to convert it to a Float32 index.
+        const floatIndex = ptr / 4;
+        console.log(`[SdlAudioPlayer] Writing ${interleavedLength} samples to HEAPF32 at index ${floatIndex}`);
+
+        memoryView.set(interleaved, floatIndex);
+
+        console.log('[SdlAudioPlayer] Copy successful. Calling _set_audio_data...');
+        (this.module as any)._set_audio_data(interleavedLength, channels, result.sampleRate);
+        console.log('[SdlAudioPlayer] _set_audio_data returned.');
+
+      } catch (err) {
+        console.error('[SdlAudioPlayer] Failed to write audio data into WASM heap:', err, {
+          ptr,
+          interleavedLength,
+          hasWasmMemory: !!(this.module as any).wasmMemory,
+          hasHEAPF32: !!(this.module as any).HEAPF32
+        });
+        // No need to free ptr, as it's a direct pointer to a vector's data, not a malloc'd block
+        throw err;
       }
 
       this.notifyStateChange();
