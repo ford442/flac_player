@@ -320,6 +320,74 @@
   color: #0084ff;
 }
 
+.playlist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.track-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.track-name {
+  font-weight: 500;
+}
+
+.track-rating {
+  letter-spacing: 1px;
+}
+
+.track-genre {
+  color: #aaa;
+  font-size: 0.8em;
+}
+
+.track-last-played {
+  color: #666;
+  font-size: 0.75em;
+}
+
+.playlist-controls {
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.playlist-controls select option {
+  background: #1a1a2e;
+  color: white;
+}
+
+.edit-form {
+  width: 100%;
+  padding: 0.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.edit-form input,
+.edit-form select {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  color: white;
+  padding: 0.5rem;
+}
+
+.edit-form input:focus,
+.edit-form select:focus {
+  outline: none;
+  border-color: #0084ff;
+}
+
+.edit-form option {
+  background: #1a1a2e;
+  color: white;
+}
+
 .info-text {
   margin: 0;
   font-size: 0.9rem;

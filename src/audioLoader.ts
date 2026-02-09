@@ -6,9 +6,18 @@ export interface AudioSource {
 }
 
 export interface PlaylistTrack {
+  id: string;
   name: string;
   url: string;
+  rating?: number;
+  description?: string;
+  author?: string;
+  genre?: string;
+  last_played?: string;
 }
+
+export type SortBy = 'date' | 'rating' | 'name' | 'last_played' | 'genre';
+export type RepeatMode = 'off' | 'one' | 'all';
 
 interface ApiFile {
   filename: string;
@@ -83,28 +92,73 @@ export class AudioLoader {
     return this.loadAudio({ url: finalUrl, type });
   }
 
-  async fetchPlaylist(folder: string): Promise<PlaylistTrack[]> {
+  async fetchPlaylist(
+    sortBy: SortBy = 'date',
+    sortDesc: boolean = true,
+    genre?: string,
+    minRating?: number
+  ): Promise<PlaylistTrack[]> {
     try {
-      const response = await fetch(`https://ford442-storage-manager.hf.space/api/storage/files?folder=${folder}`);
+      // Build query params
+      const params = new URLSearchParams({ type: 'sample', sort_by: sortBy });
+      if (sortDesc) params.append('sort_desc', 'true');
+      if (genre) params.append('genre', genre);
+      if (minRating) params.append('min_rating', minRating.toString());
+
+      const response = await fetch(`https://ford442-storage-manager.hf.space/api/songs?${params}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch playlist: ${response.status} ${response.statusText}`);
       }
-      const data: ApiResponse = await response.json();
+      const data = await response.json();
 
-      // Filter for .flac and .wav files
-      const tracks = data.files
-        .filter(file => {
-          const lowerName = file.filename.toLowerCase();
+      // Map API response to PlaylistTrack format
+      const tracks: PlaylistTrack[] = data
+        .filter((item: any) => {
+          const lowerName = (item.name || item.filename || '').toLowerCase();
           return lowerName.endsWith('.flac') || lowerName.endsWith('.wav');
         })
-        .map(file => ({
-          name: file.filename,
-          url: file.url
+        .map((item: any) => ({
+          id: item.id,
+          name: item.name || item.filename,
+          url: `https://ford442-storage-manager.hf.space/api/samples/${item.id}`,
+          rating: item.rating,
+          description: item.description,
+          author: item.author,
+          genre: item.genre,
+          last_played: item.last_played
         }));
 
       return tracks;
     } catch (error) {
       console.error('Error fetching playlist:', error);
+      throw error;
+    }
+  }
+
+  async recordPlay(sampleId: string): Promise<void> {
+    try {
+      await fetch(`https://ford442-storage-manager.hf.space/api/samples/${sampleId}/play`, {
+        method: 'POST'
+      });
+    } catch (error) {
+      // Silently fail - play recording is not critical
+      console.warn('Failed to record play:', error);
+    }
+  }
+
+  async updateSampleMetadata(sampleId: string, updates: { name?: string; rating?: number; description?: string; genre?: string }): Promise<void> {
+    try {
+      const response = await fetch(`https://ford442-storage-manager.hf.space/api/samples/${sampleId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to update metadata: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Error updating metadata:', error);
       throw error;
     }
   }

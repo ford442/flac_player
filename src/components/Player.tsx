@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AudioPlayer, PlayerState } from '../audioPlayer';
 import { SdlAudioPlayer } from '../sdlAudioPlayer';
 import { Sdl2AudioPlayer } from '../sdl2AudioPlayer';
-import { AudioLoader, PlaylistTrack } from '../audioLoader';
+import { AudioLoader, PlaylistTrack, SortBy, RepeatMode } from '../audioLoader';
 import { WebGPUVisualizer, VisualizerMode } from '../webgpuVisualizer';
 import './Player.css';
 
@@ -27,6 +27,17 @@ export const Player: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
   const [autoAdvance, setAutoAdvance] = useState<boolean>(true);
   const [shuffle, setShuffle] = useState<boolean>(false);
+  // Editing state
+  const [editingTrack, setEditingTrack] = useState<number | null>(null);
+  const [editName, setEditName] = useState<string>('');
+  const [editRating, setEditRating] = useState<number | null>(null);
+  const [editGenre, setEditGenre] = useState<string>('');
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  // Sorting & filtering
+  const [sortBy, setSortBy] = useState<SortBy>('date');
+  const [sortDesc, setSortDesc] = useState<boolean>(true);
+  const [filterGenre, setFilterGenre] = useState<string>('');
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
 
   // Use a generic type or union for playerRef
   const playerRef = useRef<AudioPlayer | SdlAudioPlayer | Sdl2AudioPlayer | null>(null);
@@ -161,7 +172,7 @@ export const Player: React.FC = () => {
     setIsLoadingPlaylist(true);
     try {
       const loader = new AudioLoader();
-      const tracks = await loader.fetchPlaylist('music');
+      const tracks = await loader.fetchPlaylist(sortBy, sortDesc, filterGenre || undefined);
       setPlaylist(tracks);
       setShowPlaylist(true);
       setCurrentIndex(tracks.length ? 0 : null);
@@ -172,14 +183,17 @@ export const Player: React.FC = () => {
     }
   };
 
-  const playTrackAtIndex = async (index: number, autoPlay = true) => {
-    if (!playlist || index < 0 || index >= playlist.length) return;
+  const handlePlayTrack = async (index: number, autoPlay = true) => {
+    await playTrackAtIndex(index, autoPlay);
+    // Record play
     const track = playlist[index];
-    setCurrentIndex(index);
-    setAudioUrl(track.url);
-    await loadAudioFromUrl(track.url);
-    if (autoPlay) playerRef.current?.play();
+    if (track?.id) {
+      const loader = new AudioLoader();
+      loader.recordPlay(track.id);
+    }
   };
+
+
 
   const handlePlay = () => {
     playerRef.current?.play();
@@ -203,6 +217,56 @@ export const Player: React.FC = () => {
       const next = currentIndex === null ? 0 : currentIndex + 1;
       const nextIndex = next >= playlist.length ? 0 : next; // wrap
       playTrackAtIndex(nextIndex).catch(() => { });
+    }
+  };
+
+  const playTrackAtIndex = async (index: number, autoPlay = true) => {
+    if (!playlist || index < 0 || index >= playlist.length) return;
+    const track = playlist[index];
+    setCurrentIndex(index);
+    setAudioUrl(track.url);
+    await loadAudioFromUrl(track.url);
+    if (autoPlay) playerRef.current?.play();
+  };
+
+  const handleStartEdit = (index: number) => {
+    const track = playlist[index];
+    setEditingTrack(index);
+    setEditName(track.name);
+    setEditRating(track.rating || null);
+    setEditGenre(track.genre || '');
+  };
+
+  const handleSaveEdit = async (index: number) => {
+    const track = playlist[index];
+    if (!track.id) {
+      setError('Cannot edit: Track has no ID');
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      const loader = new AudioLoader();
+      await loader.updateSampleMetadata(track.id, {
+        name: editName,
+        rating: editRating,
+        genre: editGenre || undefined
+      });
+      
+      // Update local playlist
+      const updatedPlaylist = [...playlist];
+      updatedPlaylist[index] = {
+        ...track,
+        name: editName,
+        rating: editRating,
+        genre: editGenre || undefined
+      };
+      setPlaylist(updatedPlaylist);
+      setEditingTrack(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save changes');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -255,18 +319,171 @@ export const Player: React.FC = () => {
                 &times;
               </button>
             </div>
+            <div className="playlist-controls" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortBy)}
+                style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', color: 'white' }}
+              >
+                <option value="date">Sort by Date</option>
+                <option value="rating">Sort by Rating</option>
+                <option value="name">Sort by Name</option>
+                <option value="last_played">Sort by Last Played</option>
+                <option value="genre">Sort by Genre</option>
+              </select>
+              <button
+                onClick={() => setSortDesc(d => !d)}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: sortDesc ? 'rgba(0,132,255,0.3)' : 'rgba(255,255,255,0.1)',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: 'white',
+                  cursor: 'pointer'
+                }}
+              >
+                {sortDesc ? '↓ Desc' : '↑ Asc'}
+              </button>
+              <input
+                type="text"
+                value={filterGenre}
+                onChange={(e) => setFilterGenre(e.target.value)}
+                placeholder="Filter by genre..."
+                style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', color: 'white', flex: 1, minWidth: '100px' }}
+              />
+              <button
+                onClick={handleLoadPlaylist}
+                disabled={isLoadingPlaylist}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: '#28a745',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: 'white',
+                  cursor: isLoadingPlaylist ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {isLoadingPlaylist ? '...' : 'Apply'}
+              </button>
+            </div>
             <div className="playlist-items">
               {playlist.map((track, index) => (
                 <div
                   key={index}
                   className={`playlist-item ${audioUrl === track.url ? 'active' : ''}`}
-                  onClick={() => {
-                    setCurrentIndex(index);
-                    setAudioUrl(track.url);
-                    loadAudioFromUrl(track.url);
-                  }}
                 >
-                  {track.name}
+                  {editingTrack === index ? (
+                    <div className="edit-form" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        placeholder="Song name"
+                        style={{ width: '100%', marginBottom: '0.5rem', padding: '0.25rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
+                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <label style={{ color: 'rgba(255,255,255,0.8)' }}>Rating:</label>
+                        <select
+                          value={editRating || ''}
+                          onChange={(e) => setEditRating(e.target.value ? parseInt(e.target.value) : null)}
+                          style={{ padding: '0.25rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
+                        >
+                          <option value="">-</option>
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                            <option key={n} value={n}>{n}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <label style={{ color: 'rgba(255,255,255,0.8)' }}>Genre:</label>
+                        <input
+                          type="text"
+                          value={editGenre}
+                          onChange={(e) => setEditGenre(e.target.value)}
+                          placeholder="e.g., ambient, bass"
+                          style={{ padding: '0.25rem', flex: 1, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => handleSaveEdit(index)}
+                          disabled={isSaving}
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            background: '#28a745',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: 'white',
+                            cursor: isSaving ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          {isSaving ? '...' : 'Save'}
+                        </button>
+                        <button
+                          onClick={() => setEditingTrack(null)}
+                          disabled={isSaving}
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            background: 'rgba(255,255,255,0.2)',
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: 'white',
+                            cursor: isSaving ? 'not-allowed' : 'pointer'
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="track-info"
+                      onClick={() => {
+                        setCurrentIndex(index);
+                        setAudioUrl(track.url);
+                        loadAudioFromUrl(track.url);
+                      }}
+                      style={{ flex: 1 }}
+                    >
+                      <div className="track-name">{track.name}</div>
+                      {track.rating && (
+                        <div className="track-rating" style={{ color: '#FFD700', fontSize: '0.85em' }}>
+                          {'★'.repeat(track.rating)}{'☆'.repeat(10 - track.rating)}
+                        </div>
+                      )}
+                      {track.genre && (
+                        <div className="track-genre" style={{ color: '#aaa', fontSize: '0.8em' }}>
+                          {track.genre}
+                        </div>
+                      )}
+                      {track.last_played && (
+                        <div className="track-last-played" style={{ color: '#666', fontSize: '0.75em' }}>
+                          Last: {new Date(track.last_played).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {editingTrack !== index && (
+                    <button
+                      className="edit-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartEdit(index);
+                      }}
+                      style={{
+                        marginLeft: '0.5rem',
+                        padding: '0.25rem 0.5rem',
+                        background: 'rgba(255,255,255,0.1)',
+                        border: 'none',
+                        borderRadius: '4px',
+                        color: 'rgba(255,255,255,0.7)',
+                        cursor: 'pointer',
+                        fontSize: '0.8rem'
+                      }}
+                    >
+                      Edit
+                    </button>
+                  )}
                 </div>
               ))}
               {playlist.length === 0 && !isLoadingPlaylist && (
@@ -432,6 +649,16 @@ export const Player: React.FC = () => {
               title="Shuffle"
             >
               🔀
+            </button>
+            <button
+              className={`shuffle-btn ${repeatMode !== 'off' ? 'active' : ''}`}
+              onClick={() => setRepeatMode(m => m === 'off' ? 'all' : m === 'all' ? 'one' : 'off')}
+              title={`Repeat: ${repeatMode}`}
+              style={{
+                background: repeatMode === 'one' ? 'linear-gradient(135deg, #00c853 0%, #64dd17 100%)' : undefined
+              }}
+            >
+              {repeatMode === 'off' ? '🔁' : repeatMode === 'all' ? '🔁' : '🔂'}
             </button>
           </div>
         </div>
