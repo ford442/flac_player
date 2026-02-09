@@ -14,6 +14,7 @@ export interface PlaylistTrack {
   author?: string;
   genre?: string;
   last_played?: string;
+  type?: string;  // For debugging
 }
 
 export type SortBy = 'date' | 'rating' | 'name' | 'last_played' | 'genre';
@@ -99,28 +100,44 @@ export class AudioLoader {
     minRating?: number
   ): Promise<PlaylistTrack[]> {
     try {
+      // First check health
+      const healthRes = await fetch('https://ford442-storage-manager.hf.space/api/health');
+      if (healthRes.ok) {
+        const health = await healthRes.json();
+        console.log('Storage manager health:', health);
+      }
+
       // Build query params
-      const params = new URLSearchParams({ type: 'sample', sort_by: sortBy });
+      const params = new URLSearchParams({ type: 'music', sort_by: sortBy });
       if (sortDesc) params.append('sort_desc', 'true');
       if (genre) params.append('genre', genre);
       if (minRating) params.append('min_rating', minRating.toString());
 
-      const response = await fetch(`https://ford442-storage-manager.hf.space/api/songs?${params}`);
+      const url = `https://ford442-storage-manager.hf.space/api/songs?${params}`;
+      console.log('Fetching playlist from:', url);
+
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error(`Failed to fetch playlist: ${response.status} ${response.statusText}`);
       }
       const data = await response.json();
+      console.log('Raw API response:', data);
+      console.log('Number of items:', data.length);
 
       // Map API response to PlaylistTrack format
       const tracks: PlaylistTrack[] = data
         .filter((item: any) => {
           const lowerName = (item.name || item.filename || '').toLowerCase();
-          return lowerName.endsWith('.flac') || lowerName.endsWith('.wav');
+          const isAudio = lowerName.endsWith('.flac') || lowerName.endsWith('.wav');
+          if (!isAudio) {
+            console.log('Filtering out (not audio):', item.name || item.filename);
+          }
+          return isAudio;
         })
         .map((item: any) => ({
           id: item.id,
           name: item.name || item.filename,
-          url: `https://ford442-storage-manager.hf.space/api/samples/${item.id}`,
+          url: `https://ford442-storage-manager.hf.space/api/music/${item.id}`,
           rating: item.rating,
           description: item.description,
           author: item.author,
@@ -128,6 +145,7 @@ export class AudioLoader {
           last_played: item.last_played
         }));
 
+      console.log('Filtered tracks:', tracks.length);
       return tracks;
     } catch (error) {
       console.error('Error fetching playlist:', error);
@@ -135,10 +153,13 @@ export class AudioLoader {
     }
   }
 
-  async recordPlay(sampleId: string): Promise<void> {
+  async recordPlay(musicId: string): Promise<void> {
     try {
-      await fetch(`https://ford442-storage-manager.hf.space/api/samples/${sampleId}/play`, {
-        method: 'POST'
+      // Use the update endpoint to set last_played
+      await fetch(`https://ford442-storage-manager.hf.space/api/music/${musicId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ last_played: new Date().toISOString() })
       });
     } catch (error) {
       // Silently fail - play recording is not critical
@@ -146,9 +167,9 @@ export class AudioLoader {
     }
   }
 
-  async updateSampleMetadata(sampleId: string, updates: { name?: string; rating?: number; description?: string; genre?: string }): Promise<void> {
+  async updateSampleMetadata(musicId: string, updates: { name?: string; rating?: number; description?: string; genre?: string; last_played?: string }): Promise<void> {
     try {
-      const response = await fetch(`https://ford442-storage-manager.hf.space/api/samples/${sampleId}`, {
+      const response = await fetch(`https://ford442-storage-manager.hf.space/api/music/${musicId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
