@@ -51,8 +51,8 @@ export class Sdl2AudioPlayer {
 
       await new Promise<void>((resolve, reject) => {
         script.onload = () => {
-           console.log('[Sdl2AudioPlayer] sdl2-audio.js loaded.');
-           resolve();
+          console.log('[Sdl2AudioPlayer] sdl2-audio.js loaded.');
+          resolve();
         };
         script.onerror = () => reject(new Error('Failed to load sdl2-audio.js'));
       });
@@ -76,8 +76,14 @@ export class Sdl2AudioPlayer {
     }
   }
 
+  private onEnded?: () => void;
+
   setStateChangeCallback(callback: (state: PlayerState) => void): void {
     this.onStateChange = callback;
+  }
+
+  setOnEndedCallback(callback?: () => void): void {
+    this.onEnded = callback;
   }
 
   private notifyStateChange(): void {
@@ -89,8 +95,17 @@ export class Sdl2AudioPlayer {
   private startPolling() {
     if (this.pollInterval) window.clearInterval(this.pollInterval);
     this.pollInterval = window.setInterval(() => {
-      if (this.isPlaying && this.module) {
+      if (!this.module) return;
+      const current = typeof (this.module as any)._get_current_time === 'function' ? (this.module as any)._get_current_time() : 0;
+      if (this.isPlaying) {
         this.notifyStateChange();
+        if (this.duration && current >= this.duration - 0.25) {
+          this.isPlaying = false;
+          this.notifyStateChange();
+          if (this.onEnded) {
+            try { this.onEnded(); } catch (err) { console.warn('onEnded handler threw', err); }
+          }
+        }
       }
     }, 100);
   }
@@ -98,7 +113,7 @@ export class Sdl2AudioPlayer {
   async loadAudio(arrayBuffer: ArrayBuffer): Promise<void> {
     console.log('[Sdl2AudioPlayer] loadAudio called. Size:', arrayBuffer.byteLength);
     if (!this.module || !this.isReady) {
-        throw new Error('SDL2 Module not initialized');
+      throw new Error('SDL2 Module not initialized');
     }
 
     this.stop();

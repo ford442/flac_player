@@ -75,8 +75,8 @@ export class SdlAudioPlayer {
 
       await new Promise<void>((resolve, reject) => {
         script.onload = () => {
-           console.log('[SdlAudioPlayer] sdl-audio.js loaded.');
-           resolve();
+          console.log('[SdlAudioPlayer] sdl-audio.js loaded.');
+          resolve();
         };
         script.onerror = () => reject(new Error('Failed to load sdl-audio.js'));
       });
@@ -103,8 +103,14 @@ export class SdlAudioPlayer {
     }
   }
 
+  private onEnded?: () => void;
+
   setStateChangeCallback(callback: (state: PlayerState) => void): void {
     this.onStateChange = callback;
+  }
+
+  setOnEndedCallback(callback?: () => void): void {
+    this.onEnded = callback;
   }
 
   private notifyStateChange(): void {
@@ -113,12 +119,22 @@ export class SdlAudioPlayer {
     }
   }
 
-  // Poll for playback position updates
+  // Poll for playback position updates and detect "ended" for SDL player
   private startPolling() {
     if (this.pollInterval) window.clearInterval(this.pollInterval);
     this.pollInterval = window.setInterval(() => {
-      if (this.isPlaying && this.module) {
+      if (!this.module) return;
+      const current = typeof (this.module as any)._get_current_time === 'function' ? (this.module as any)._get_current_time() : 0;
+      if (this.isPlaying) {
         this.notifyStateChange();
+        // Detect end-of-track (small tolerance)
+        if (this.duration && current >= this.duration - 0.25) {
+          this.isPlaying = false;
+          this.notifyStateChange();
+          if (this.onEnded) {
+            try { this.onEnded(); } catch (err) { console.warn('onEnded handler threw', err); }
+          }
+        }
       }
     }, 100);
   }
@@ -126,8 +142,8 @@ export class SdlAudioPlayer {
   async loadAudio(arrayBuffer: ArrayBuffer): Promise<void> {
     console.log('[SdlAudioPlayer] loadAudio called with ArrayBuffer of size:', arrayBuffer.byteLength);
     if (!this.module || !this.isReady) {
-        console.warn('[SdlAudioPlayer] Module not ready during loadAudio call.');
-        if (!this.module) throw new Error('SDL Module not initialized');
+      console.warn('[SdlAudioPlayer] Module not ready during loadAudio call.');
+      if (!this.module) throw new Error('SDL Module not initialized');
     }
 
     this.stop();

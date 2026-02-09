@@ -24,13 +24,19 @@ export class AudioPlayer {
     this.gainNode = this.audioContext.createGain();
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = 2048;
-    
+
     this.gainNode.connect(this.analyser);
     this.analyser.connect(this.audioContext.destination);
   }
 
+  private onEndedCallback?: () => void;
+
   setStateChangeCallback(callback: (state: PlayerState) => void): void {
     this.onStateChange = callback;
+  }
+
+  setOnEndedCallback(callback?: () => void): void {
+    this.onEndedCallback = callback;
   }
 
   private notifyStateChange(): void {
@@ -41,7 +47,7 @@ export class AudioPlayer {
 
   async loadAudio(arrayBuffer: ArrayBuffer): Promise<void> {
     this.notifyStateChange();
-    
+
     try {
       // Stop current playback
       this.stop();
@@ -50,7 +56,7 @@ export class AudioPlayer {
       const decoder = new FlacDecoder();
       const decodedData = await decoder.decode(arrayBuffer);
       this.audioBuffer = await decoder.createAudioBuffer(decodedData);
-      
+
       this.pausedAt = 0;
       this.notifyStateChange();
     } catch (error) {
@@ -85,6 +91,9 @@ export class AudioPlayer {
         this.isPlaying = false;
         this.pausedAt = 0;
         this.notifyStateChange();
+        if (this.onEndedCallback) {
+          try { this.onEndedCallback(); } catch (err) { console.warn('onEnded callback threw', err); }
+        }
       }
     };
 
@@ -92,7 +101,7 @@ export class AudioPlayer {
     this.startTime = this.audioContext.currentTime - this.pausedAt;
     this.sourceNode.start(0, this.pausedAt);
     this.isPlaying = true;
-    
+
     this.notifyStateChange();
   }
 
@@ -103,12 +112,12 @@ export class AudioPlayer {
 
     // Calculate current position
     this.pausedAt = this.audioContext.currentTime - this.startTime;
-    
+
     // Stop the source node
     this.sourceNode.stop();
     this.sourceNode.disconnect();
     this.sourceNode = null;
-    
+
     this.isPlaying = false;
     this.notifyStateChange();
   }
@@ -119,7 +128,7 @@ export class AudioPlayer {
       this.sourceNode.disconnect();
       this.sourceNode = null;
     }
-    
+
     this.isPlaying = false;
     this.pausedAt = 0;
     this.startTime = 0;
@@ -132,17 +141,17 @@ export class AudioPlayer {
     }
 
     const wasPlaying = this.isPlaying;
-    
+
     if (this.isPlaying) {
       this.pause();
     }
 
     this.pausedAt = Math.max(0, Math.min(time, this.audioBuffer.duration));
-    
+
     if (wasPlaying) {
       this.play();
     }
-    
+
     this.notifyStateChange();
   }
 
@@ -157,7 +166,7 @@ export class AudioPlayer {
         this.audioBuffer.duration
       );
     }
-    
+
     return this.pausedAt;
   }
 

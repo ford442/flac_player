@@ -23,7 +23,11 @@ export const Player: React.FC = () => {
   const [playlist, setPlaylist] = useState<PlaylistTrack[]>([]);
   const [showPlaylist, setShowPlaylist] = useState<boolean>(false);
   const [isLoadingPlaylist, setIsLoadingPlaylist] = useState<boolean>(false);
-  
+  // Playlist playback state
+  const [currentIndex, setCurrentIndex] = useState<number | null>(null);
+  const [autoAdvance, setAutoAdvance] = useState<boolean>(true);
+  const [shuffle, setShuffle] = useState<boolean>(false);
+
   // Use a generic type or union for playerRef
   const playerRef = useRef<AudioPlayer | SdlAudioPlayer | Sdl2AudioPlayer | null>(null);
   const visualizerRef = useRef<WebGPUVisualizer | null>(null);
@@ -41,6 +45,31 @@ export const Player: React.FC = () => {
     }
 
     player.setStateChangeCallback(setPlayerState);
+
+    // register ended callback (all player implementations now expose setOnEndedCallback)
+    if ((player as any).setOnEndedCallback) {
+      (player as any).setOnEndedCallback(() => {
+        // advance playlist when a track ends
+        if (!autoAdvance) return;
+        if (!playlist || playlist.length === 0) return;
+        // Respect shuffle when auto-advancing
+        if (shuffle) {
+          if (playlist.length === 1) {
+            playTrackAtIndex(0, true).catch(err => console.warn('auto-advance failed', err));
+            return;
+          }
+          let next;
+          do { next = Math.floor(Math.random() * playlist.length); } while (next === currentIndex);
+          playTrackAtIndex(next, true).catch(err => console.warn('auto-advance failed', err));
+          return;
+        }
+
+        const next = currentIndex === null ? 0 : currentIndex + 1;
+        const nextIndex = next >= playlist.length ? 0 : next; // wrap-to-start
+        playTrackAtIndex(nextIndex, true).catch(err => console.warn('auto-advance failed', err));
+      });
+    }
+
     playerRef.current = player;
 
     // If we have an existing visualizer, we might need to re-init it if the analyser changed
@@ -49,11 +78,12 @@ export const Player: React.FC = () => {
     // For now, switching modes resets the player.
 
     return () => {
+      (player as any).setOnEndedCallback?.(undefined);
       player.destroy();
       // We don't necessarily destroy visualizer here as it's bound to canvas,
       // but we might need to re-hook the analyser.
     };
-  }, [outputMode]);
+  }, [outputMode, autoAdvance, playlist, currentIndex]);
 
   useEffect(() => {
     // Initialize WebGPU visualizer
@@ -74,21 +104,21 @@ export const Player: React.FC = () => {
 
       const success = await visualizerRef.current.initialize(analyser);
       if (success) {
-          visualizerRef.current.startAnimation();
-          visualizerRef.current.setMode(visualizerMode);
-          visualizerRef.current.setTogglePlayCallback(() => {
-              // Toggle Play callback from 3D interaction
-              if (playerRef.current) {
-                  const state = playerRef.current.getState();
-                   if (state.isPlaying) {
-                       playerRef.current.pause();
-                   } else if (state.duration > 0) {
-                       playerRef.current.play();
-                   }
-              }
-          });
+        visualizerRef.current.startAnimation();
+        visualizerRef.current.setMode(visualizerMode);
+        visualizerRef.current.setTogglePlayCallback(() => {
+          // Toggle Play callback from 3D interaction
+          if (playerRef.current) {
+            const state = playerRef.current.getState();
+            if (state.isPlaying) {
+              playerRef.current.pause();
+            } else if (state.duration > 0) {
+              playerRef.current.play();
+            }
+          }
+        });
       } else {
-          setWebGPUSupported(false);
+        setWebGPUSupported(false);
       }
     };
 
@@ -97,9 +127,9 @@ export const Player: React.FC = () => {
 
   // Update visualizer mode when state changes
   useEffect(() => {
-      if (visualizerRef.current) {
-          visualizerRef.current.setMode(visualizerMode);
-      }
+    if (visualizerRef.current) {
+      visualizerRef.current.setMode(visualizerMode);
+    }
   }, [visualizerMode]);
 
   const loadAudioFromUrl = async (url: string) => {
@@ -116,12 +146,14 @@ export const Player: React.FC = () => {
       await playerRef.current.loadAudio(arrayBuffer);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load audio');
+      throw err;
     } finally {
       setPlayerState(prev => ({ ...prev, isLoading: false }));
     }
   };
 
   const handleLoadAudio = async () => {
+    setCurrentIndex(null);
     await loadAudioFromUrl(audioUrl);
   };
 
@@ -132,11 +164,21 @@ export const Player: React.FC = () => {
       const tracks = await loader.fetchPlaylist('music');
       setPlaylist(tracks);
       setShowPlaylist(true);
+      setCurrentIndex(tracks.length ? 0 : null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load playlist');
     } finally {
       setIsLoadingPlaylist(false);
     }
+  };
+
+  const playTrackAtIndex = async (index: number, autoPlay = true) => {
+    if (!playlist || index < 0 || index >= playlist.length) return;
+    const track = playlist[index];
+    setCurrentIndex(index);
+    setAudioUrl(track.url);
+    await loadAudioFromUrl(track.url);
+    if (autoPlay) playerRef.current?.play();
   };
 
   const handlePlay = () => {
@@ -145,6 +187,35 @@ export const Player: React.FC = () => {
 
   const handlePause = () => {
     playerRef.current?.pause();
+  };
+
+  const handleNext = () => {
+    if (!playlist || playlist.length === 0) return;
+    if (shuffle) {
+      if (playlist.length === 1) {
+        playTrackAtIndex(0).catch(() => { });
+        return;
+      }
+      let next: number;
+      do { next = Math.floor(Math.random() * playlist.length); } while (next === currentIndex);
+      playTrackAtIndex(next).catch(() => { });
+    } else {
+      const next = currentIndex === null ? 0 : currentIndex + 1;
+      const nextIndex = next >= playlist.length ? 0 : next; // wrap
+      playTrackAtIndex(nextIndex).catch(() => { });
+    }
+  };
+
+  const handlePrev = () => {
+    if (!playlist || playlist.length === 0) return;
+    if (shuffle) {
+      const idx = Math.floor(Math.random() * playlist.length);
+      playTrackAtIndex(idx).catch(() => { });
+    } else {
+      const prev = currentIndex === null ? 0 : currentIndex - 1;
+      const prevIndex = prev < 0 ? playlist.length - 1 : prev;
+      playTrackAtIndex(prevIndex).catch(() => { });
+    }
   };
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,6 +261,7 @@ export const Player: React.FC = () => {
                   key={index}
                   className={`playlist-item ${audioUrl === track.url ? 'active' : ''}`}
                   onClick={() => {
+                    setCurrentIndex(index);
                     setAudioUrl(track.url);
                     loadAudioFromUrl(track.url);
                   }}
@@ -198,7 +270,7 @@ export const Player: React.FC = () => {
                 </div>
               ))}
               {playlist.length === 0 && !isLoadingPlaylist && (
-                <div style={{color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: '2rem'}}>
+                <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: '2rem' }}>
                   No tracks found
                 </div>
               )}
@@ -209,88 +281,88 @@ export const Player: React.FC = () => {
 
       <div className="player-controls">
 
-        <div className="mode-toggle-container" style={{display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginBottom: '1rem'}}>
+        <div className="mode-toggle-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
 
-            {/* Visualizer Mode Toggle */}
-            <div className="mode-toggle">
-                <button
-                    className={`toggle-btn ${visualizerMode === 'flat' ? 'active' : ''}`}
-                    onClick={() => setVisualizerMode('flat')}
-                    style={{
-                        padding: '0.5rem 1rem',
-                        background: visualizerMode === 'flat' ? '#0084ff' : 'rgba(255,255,255,0.1)',
-                        border: 'none',
-                        borderTopLeftRadius: '8px',
-                        borderBottomLeftRadius: '8px',
-                        color: 'white',
-                        cursor: 'pointer'
-                    }}
-                >
-                    Flat Mode
-                </button>
-                <button
-                    className={`toggle-btn ${visualizerMode === '3D' ? 'active' : ''}`}
-                    onClick={() => setVisualizerMode('3D')}
-                    style={{
-                        padding: '0.5rem 1rem',
-                        background: visualizerMode === '3D' ? '#0084ff' : 'rgba(255,255,255,0.1)',
-                        border: 'none',
-                        borderTopRightRadius: '8px',
-                        borderBottomRightRadius: '8px',
-                        color: 'white',
-                        cursor: 'pointer'
-                    }}
-                >
-                    3D Device
-                </button>
-            </div>
+          {/* Visualizer Mode Toggle */}
+          <div className="mode-toggle">
+            <button
+              className={`toggle-btn ${visualizerMode === 'flat' ? 'active' : ''}`}
+              onClick={() => setVisualizerMode('flat')}
+              style={{
+                padding: '0.5rem 1rem',
+                background: visualizerMode === 'flat' ? '#0084ff' : 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderTopLeftRadius: '8px',
+                borderBottomLeftRadius: '8px',
+                color: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              Flat Mode
+            </button>
+            <button
+              className={`toggle-btn ${visualizerMode === '3D' ? 'active' : ''}`}
+              onClick={() => setVisualizerMode('3D')}
+              style={{
+                padding: '0.5rem 1rem',
+                background: visualizerMode === '3D' ? '#0084ff' : 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderTopRightRadius: '8px',
+                borderBottomRightRadius: '8px',
+                color: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              3D Device
+            </button>
+          </div>
 
-            {/* Audio Output Toggle */}
-            <div className="mode-toggle">
-                <button
-                    className={`toggle-btn ${outputMode === 'web-audio' ? 'active' : ''}`}
-                    onClick={() => setOutputMode('web-audio')}
-                    style={{
-                        padding: '0.5rem 1rem',
-                        background: outputMode === 'web-audio' ? '#28a745' : 'rgba(255,255,255,0.1)',
-                        border: 'none',
-                        borderTopLeftRadius: '8px',
-                        borderBottomLeftRadius: '8px',
-                        color: 'white',
-                        cursor: 'pointer'
-                    }}
-                >
-                    Web Audio
-                </button>
-                <button
-                    className={`toggle-btn ${outputMode === 'sdl' ? 'active' : ''}`}
-                    onClick={() => setOutputMode('sdl')}
-                    style={{
-                        padding: '0.5rem 1rem',
-                        background: outputMode === 'sdl' ? '#28a745' : 'rgba(255,255,255,0.1)',
-                        border: 'none',
-                        color: 'white',
-                        cursor: 'pointer'
-                    }}
-                >
-                    SDL3 (WASM)
-                </button>
-                <button
-                    className={`toggle-btn ${outputMode === 'sdl2' ? 'active' : ''}`}
-                    onClick={() => setOutputMode('sdl2')}
-                    style={{
-                        padding: '0.5rem 1rem',
-                        background: outputMode === 'sdl2' ? '#28a745' : 'rgba(255,255,255,0.1)',
-                        border: 'none',
-                        borderTopRightRadius: '8px',
-                        borderBottomRightRadius: '8px',
-                        color: 'white',
-                        cursor: 'pointer'
-                    }}
-                >
-                    SDL2 (WASM)
-                </button>
-            </div>
+          {/* Audio Output Toggle */}
+          <div className="mode-toggle">
+            <button
+              className={`toggle-btn ${outputMode === 'web-audio' ? 'active' : ''}`}
+              onClick={() => setOutputMode('web-audio')}
+              style={{
+                padding: '0.5rem 1rem',
+                background: outputMode === 'web-audio' ? '#28a745' : 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderTopLeftRadius: '8px',
+                borderBottomLeftRadius: '8px',
+                color: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              Web Audio
+            </button>
+            <button
+              className={`toggle-btn ${outputMode === 'sdl' ? 'active' : ''}`}
+              onClick={() => setOutputMode('sdl')}
+              style={{
+                padding: '0.5rem 1rem',
+                background: outputMode === 'sdl' ? '#28a745' : 'rgba(255,255,255,0.1)',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              SDL3 (WASM)
+            </button>
+            <button
+              className={`toggle-btn ${outputMode === 'sdl2' ? 'active' : ''}`}
+              onClick={() => setOutputMode('sdl2')}
+              style={{
+                padding: '0.5rem 1rem',
+                background: outputMode === 'sdl2' ? '#28a745' : 'rgba(255,255,255,0.1)',
+                border: 'none',
+                borderTopRightRadius: '8px',
+                borderBottomRightRadius: '8px',
+                color: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              SDL2 (WASM)
+            </button>
+          </div>
         </div>
 
         <div className="url-input-container">
@@ -314,8 +386,8 @@ export const Player: React.FC = () => {
             onClick={handleLoadPlaylist}
             disabled={isLoadingPlaylist}
             style={{
-                marginLeft: '0.5rem',
-                background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)'
+              marginLeft: '0.5rem',
+              background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)'
             }}
           >
             {isLoadingPlaylist ? 'Loading...' : 'Playlist'}
@@ -325,13 +397,43 @@ export const Player: React.FC = () => {
         {error && <div className="error-message">{error}</div>}
 
         <div className="playback-controls">
-          <button
-            className="control-button"
-            onClick={playerState.isPlaying ? handlePause : handlePlay}
-            disabled={!playerState.duration}
-          >
-            {playerState.isPlaying ? '⏸ Pause' : '▶ Play'}
-          </button>
+          <div className="control-group">
+            <button
+              className="small-button"
+              onClick={handlePrev}
+              disabled={!playlist.length}
+              title="Previous"
+            >
+              « Prev
+            </button>
+
+            <button
+              className="control-button"
+              onClick={playerState.isPlaying ? handlePause : handlePlay}
+              disabled={!playerState.duration}
+            >
+              {playerState.isPlaying ? '⏸ Pause' : '▶ Play'}
+            </button>
+
+            <button
+              className="small-button"
+              onClick={handleNext}
+              disabled={!playlist.length}
+              title="Next"
+            >
+              Next »
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <button
+              className={`shuffle-btn ${shuffle ? 'active' : ''}`}
+              onClick={() => setShuffle(s => !s)}
+              title="Shuffle"
+            >
+              🔀
+            </button>
+          </div>
         </div>
 
         <div className="seek-container">
@@ -352,7 +454,7 @@ export const Player: React.FC = () => {
         <div className="info-panel">
           <p className="info-text">
             Supports FLAC and WAV files. Use &apos;gs://&apos; for Google Cloud Storage.
-            <br/>
+            <br />
             <strong>3D Mode:</strong> Drag to rotate, Click on device screen to Play/Pause.
           </p>
         </div>
