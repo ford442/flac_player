@@ -350,6 +350,20 @@
   font-size: 0.75em;
 }
 
+.track-info {
+  user-select: none;
+}
+
+.track-info:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.track-filename {
+  color: #666;
+  font-size: 0.8em;
+}
+
 .playlist-controls {
   padding: 0.75rem;
   background: rgba(0, 0, 0, 0.2);

@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { AudioPlayer, PlayerState } from '../audioPlayer';
 import { SdlAudioPlayer } from '../sdlAudioPlayer';
 import { Sdl2AudioPlayer } from '../sdl2AudioPlayer';
+import { AudioWorkletPlayer } from '../audioWorkletPlayer';
 import { AudioLoader, PlaylistTrack, SortBy, RepeatMode } from '../audioLoader';
 import { WebGPUVisualizer, VisualizerMode } from '../webgpuVisualizer';
 import './Player.css';
 
-type AudioOutputMode = 'web-audio' | 'sdl' | 'sdl2';
+type AudioOutputMode = 'web-audio' | 'worklet' | 'sdl' | 'sdl2';
 
 export const Player: React.FC = () => {
   const [playerState, setPlayerState] = useState<PlayerState>({
@@ -41,19 +42,33 @@ export const Player: React.FC = () => {
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
 
   // Use a generic type or union for playerRef
-  const playerRef = useRef<AudioPlayer | SdlAudioPlayer | Sdl2AudioPlayer | null>(null);
+  const playerRef = useRef<AudioPlayer | AudioWorkletPlayer | SdlAudioPlayer | Sdl2AudioPlayer | null>(null);
+  // Track edit state for double-click
+  const [lastClickTime, setLastClickTime] = useState<number>(0);
+  const [lastClickIndex, setLastClickIndex] = useState<number>(-1);
   const visualizerRef = useRef<WebGPUVisualizer | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     // Initialize player based on mode
-    let player: AudioPlayer | SdlAudioPlayer | Sdl2AudioPlayer;
-    if (outputMode === 'sdl') {
+    let player: AudioPlayer | AudioWorkletPlayer | SdlAudioPlayer | Sdl2AudioPlayer;
+    if (outputMode === 'worklet') {
+      player = new AudioWorkletPlayer();
+    } else if (outputMode === 'sdl') {
       player = new SdlAudioPlayer();
     } else if (outputMode === 'sdl2') {
       player = new Sdl2AudioPlayer();
     } else {
       player = new AudioPlayer();
+    }
+
+    // Initialize AudioWorklet if needed
+    if (outputMode === 'worklet') {
+      (player as AudioWorkletPlayer).initialize().then(ok => {
+        if (!ok) {
+          setError('AudioWorklet initialization failed');
+        }
+      });
     }
 
     player.setStateChangeCallback(setPlayerState);
@@ -228,6 +243,26 @@ export const Player: React.FC = () => {
     setAudioUrl(track.url);
     await loadAudioFromUrl(track.url);
     if (autoPlay) playerRef.current?.play();
+  };
+
+  const handleTrackClick = (index: number, e: React.MouseEvent) => {
+    const now = Date.now();
+    const timeDiff = now - lastClickTime;
+    
+    if (lastClickIndex === index && timeDiff < 300) {
+      // Double click detected - start editing
+      e.stopPropagation();
+      handleStartEdit(index);
+      setLastClickTime(0);
+      setLastClickIndex(-1);
+    } else {
+      // Single click - just play
+      setLastClickTime(now);
+      setLastClickIndex(index);
+      setCurrentIndex(index);
+      setAudioUrl(playlist[index].url);
+      loadAudioFromUrl(playlist[index].url);
+    }
   };
 
   const handleStartEdit = (index: number) => {
@@ -451,12 +486,9 @@ export const Player: React.FC = () => {
                   ) : (
                     <div
                       className="track-info"
-                      onClick={() => {
-                        setCurrentIndex(index);
-                        setAudioUrl(track.url);
-                        loadAudioFromUrl(track.url);
-                      }}
-                      style={{ flex: 1 }}
+                      onClick={(e) => handleTrackClick(index, e)}
+                      style={{ flex: 1, cursor: 'pointer' }}
+                      title="Double-click to edit"
                     >
                       <div className="track-title" style={{ fontWeight: 500 }}>
                         {track.title || track.name}
@@ -483,27 +515,7 @@ export const Player: React.FC = () => {
                       )}
                     </div>
                   )}
-                  {editingTrack !== index && (
-                    <button
-                      className="edit-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartEdit(index);
-                      }}
-                      style={{
-                        marginLeft: '0.5rem',
-                        padding: '0.25rem 0.5rem',
-                        background: 'rgba(255,255,255,0.1)',
-                        border: 'none',
-                        borderRadius: '4px',
-                        color: 'rgba(255,255,255,0.7)',
-                        cursor: 'pointer',
-                        fontSize: '0.8rem'
-                      }}
-                    >
-                      Edit
-                    </button>
-                  )}
+
                 </div>
               ))}
               {playlist.length === 0 && !isLoadingPlaylist && (
@@ -572,6 +584,19 @@ export const Player: React.FC = () => {
               Web Audio
             </button>
             <button
+              className={`toggle-btn ${outputMode === 'worklet' ? 'active' : ''}`}
+              onClick={() => setOutputMode('worklet')}
+              style={{
+                padding: '0.5rem 1rem',
+                background: outputMode === 'worklet' ? '#28a745' : 'rgba(255,255,255,0.1)',
+                border: 'none',
+                color: 'white',
+                cursor: 'pointer'
+              }}
+            >
+              AudioWorklet
+            </button>
+            <button
               className={`toggle-btn ${outputMode === 'sdl' ? 'active' : ''}`}
               onClick={() => setOutputMode('sdl')}
               style={{
@@ -582,7 +607,7 @@ export const Player: React.FC = () => {
                 cursor: 'pointer'
               }}
             >
-              SDL3 (WASM)
+              SDL3
             </button>
             <button
               className={`toggle-btn ${outputMode === 'sdl2' ? 'active' : ''}`}
@@ -597,7 +622,7 @@ export const Player: React.FC = () => {
                 cursor: 'pointer'
               }}
             >
-              SDL2 (WASM)
+              SDL2
             </button>
           </div>
         </div>
@@ -703,6 +728,8 @@ export const Player: React.FC = () => {
             Supports FLAC and WAV files. Use &apos;gs://&apos; for Google Cloud Storage.
             <br />
             <strong>3D Mode:</strong> Drag to rotate, Click on device screen to Play/Pause.
+            <br />
+            <strong>Playlist:</strong> Double-click a track to edit title, rating & genre.
           </p>
         </div>
       </div>
