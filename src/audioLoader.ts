@@ -8,6 +8,7 @@ export interface AudioSource {
 export interface PlaylistTrack {
   id: string;
   name: string;
+  title?: string;  // Display title separate from filename
   url: string;
   rating?: number;
   description?: string;

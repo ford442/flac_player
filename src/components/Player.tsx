@@ -30,6 +30,7 @@ export const Player: React.FC = () => {
   // Editing state
   const [editingTrack, setEditingTrack] = useState<number | null>(null);
   const [editName, setEditName] = useState<string>('');
+  const [editTitle, setEditTitle] = useState<string>('');
   const [editRating, setEditRating] = useState<number | null>(null);
   const [editGenre, setEditGenre] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -233,6 +234,7 @@ export const Player: React.FC = () => {
     const track = playlist[index];
     setEditingTrack(index);
     setEditName(track.name);
+    setEditTitle(track.title || '');
     setEditRating(track.rating || null);
     setEditGenre(track.genre || '');
   };
@@ -247,17 +249,21 @@ export const Player: React.FC = () => {
     setIsSaving(true);
     try {
       const loader = new AudioLoader();
-      await loader.updateSampleMetadata(track.id, {
-        name: editName,
-        rating: editRating,
-        genre: editGenre || undefined
-      });
+      const updates: any = {};
+      if (editName !== track.name) updates.name = editName;
+      if (editTitle !== (track.title || '')) updates.title = editTitle || undefined;
+      if (editRating !== track.rating) updates.rating = editRating;
+      if (editGenre !== (track.genre || '')) updates.genre = editGenre || undefined;
+      
+      console.log('Saving updates:', updates);
+      await loader.updateSampleMetadata(track.id, updates);
       
       // Update local playlist
       const updatedPlaylist = [...playlist];
       updatedPlaylist[index] = {
         ...track,
         name: editName,
+        title: editTitle || undefined,
         rating: editRating,
         genre: editGenre || undefined
       };
@@ -376,10 +382,17 @@ export const Player: React.FC = () => {
                     <div className="edit-form" onClick={(e) => e.stopPropagation()}>
                       <input
                         type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        placeholder="Display Title"
+                        style={{ width: '100%', marginBottom: '0.5rem', padding: '0.25rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
+                      />
+                      <input
+                        type="text"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        placeholder="Song name"
-                        style={{ width: '100%', marginBottom: '0.5rem', padding: '0.25rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
+                        placeholder="Filename (optional)"
+                        style={{ width: '100%', marginBottom: '0.5rem', padding: '0.25rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#aaa', fontSize: '0.9em' }}
                       />
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                         <label style={{ color: 'rgba(255,255,255,0.8)' }}>Rating:</label>
@@ -445,7 +458,14 @@ export const Player: React.FC = () => {
                       }}
                       style={{ flex: 1 }}
                     >
-                      <div className="track-name">{track.name}</div>
+                      <div className="track-title" style={{ fontWeight: 500 }}>
+                        {track.title || track.name}
+                      </div>
+                      {track.title && (
+                        <div className="track-filename" style={{ color: '#888', fontSize: '0.8em' }}>
+                          {track.name}
+                        </div>
+                      )}
                       {track.rating && (
                         <div className="track-rating" style={{ color: '#FFD700', fontSize: '0.85em' }}>
                           {'★'.repeat(track.rating)}{'☆'.repeat(10 - track.rating)}
