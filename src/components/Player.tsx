@@ -28,13 +28,21 @@ export const Player: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState<number | null>(null);
   const [autoAdvance, setAutoAdvance] = useState<boolean>(true);
   const [shuffle, setShuffle] = useState<boolean>(false);
-  // Editing state
+  // Editing state (playlist items)
   const [editingTrack, setEditingTrack] = useState<number | null>(null);
   const [editName, setEditName] = useState<string>('');
   const [editTitle, setEditTitle] = useState<string>('');
   const [editRating, setEditRating] = useState<number | null>(null);
   const [editGenre, setEditGenre] = useState<string>('');
   const [isSaving, setIsSaving] = useState<boolean>(false);
+
+  // Currently-loaded (single) track — may be transient (no server id)
+  const [currentTrack, setCurrentTrack] = useState<Partial<PlaylistTrack> | null>(null);
+  const [isEditingCurrent, setIsEditingCurrent] = useState<boolean>(false);
+  const [currentEditName, setCurrentEditName] = useState<string>('');
+  const [currentEditTitle, setCurrentEditTitle] = useState<string>('');
+  const [currentEditRating, setCurrentEditRating] = useState<number | null>(null);
+  const [currentEditGenre, setCurrentEditGenre] = useState<string>('');
   // Sorting & filtering
   const [sortBy, setSortBy] = useState<SortBy>('date');
   const [sortDesc, setSortDesc] = useState<boolean>(true);
@@ -182,6 +190,21 @@ export const Player: React.FC = () => {
   const handleLoadAudio = async () => {
     setCurrentIndex(null);
     await loadAudioFromUrl(audioUrl);
+
+    // Create a transient currentTrack for standalone-loaded URLs so the user
+    // can edit display metadata even when the source isn't in the remote DB.
+    try {
+      const name = decodeURIComponent((audioUrl.split('/').pop() || audioUrl).split('?')[0]);
+      setCurrentTrack({ name, url: audioUrl });
+      // populate current edit fields from inferred values
+      setCurrentEditName(name);
+      setCurrentEditTitle('');
+      setCurrentEditGenre('');
+      setCurrentEditRating(null);
+    } catch (err) {
+      // ignore parsing errors
+      setCurrentTrack({ url: audioUrl });
+    }
   };
 
   const handleLoadPlaylist = async () => {
@@ -241,6 +264,12 @@ export const Player: React.FC = () => {
     const track = playlist[index];
     setCurrentIndex(index);
     setAudioUrl(track.url);
+    // reflect playlist metadata as the current track
+    setCurrentTrack(track);
+    setCurrentEditName(track.name);
+    setCurrentEditTitle(track.title || '');
+    setCurrentEditGenre(track.genre || '');
+    setCurrentEditRating(track.rating || null);
     await loadAudioFromUrl(track.url);
     if (autoPlay) playerRef.current?.play();
   };
@@ -248,7 +277,7 @@ export const Player: React.FC = () => {
   const handleTrackClick = (index: number, e: React.MouseEvent) => {
     const now = Date.now();
     const timeDiff = now - lastClickTime;
-    
+
     if (lastClickIndex === index && timeDiff < 300) {
       // Double click detected - start editing
       e.stopPropagation();
@@ -261,6 +290,12 @@ export const Player: React.FC = () => {
       setLastClickIndex(index);
       setCurrentIndex(index);
       setAudioUrl(playlist[index].url);
+      // reflect playlist metadata as the current track
+      setCurrentTrack(playlist[index]);
+      setCurrentEditName(playlist[index].name || '');
+      setCurrentEditTitle(playlist[index].title || '');
+      setCurrentEditGenre(playlist[index].genre || '');
+      setCurrentEditRating(playlist[index].rating || null);
       loadAudioFromUrl(playlist[index].url);
     }
   };
@@ -280,7 +315,7 @@ export const Player: React.FC = () => {
       setError('Cannot edit: Track has no ID');
       return;
     }
-    
+
     setIsSaving(true);
     try {
       const loader = new AudioLoader();
@@ -289,10 +324,10 @@ export const Player: React.FC = () => {
       if (editTitle !== (track.title || '')) updates.title = editTitle || undefined;
       if (editRating !== track.rating) updates.rating = editRating;
       if (editGenre !== (track.genre || '')) updates.genre = editGenre || undefined;
-      
+
       console.log('Saving updates:', updates);
       await loader.updateSampleMetadata(track.id, updates);
-      
+
       // Update local playlist
       const updatedPlaylist = [...playlist];
       updatedPlaylist[index] = {
@@ -304,6 +339,53 @@ export const Player: React.FC = () => {
       };
       setPlaylist(updatedPlaylist);
       setEditingTrack(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save changes');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // --- Current (standalone) track edit handlers ---
+  const handleStartEditCurrent = () => {
+    if (!currentTrack) return;
+    setIsEditingCurrent(true);
+    setCurrentEditName(currentTrack.name || '');
+    setCurrentEditTitle(currentTrack.title || '');
+    setCurrentEditGenre(currentTrack.genre || '');
+    setCurrentEditRating(currentTrack.rating || null);
+  };
+
+  const handleSaveEditCurrent = async () => {
+    if (!currentTrack) return;
+    setIsSaving(true);
+    try {
+      // If this track has a server-side ID, persist; otherwise keep local-only
+      if (currentTrack.id) {
+        const loader = new AudioLoader();
+        const updates: any = {};
+        if (currentEditName !== currentTrack.name) updates.name = currentEditName;
+        if (currentEditTitle !== (currentTrack.title || '')) updates.title = currentEditTitle || undefined;
+        if (currentEditRating !== currentTrack.rating) updates.rating = currentEditRating;
+        if (currentEditGenre !== (currentTrack.genre || '')) updates.genre = currentEditGenre || undefined;
+        await loader.updateSampleMetadata(currentTrack.id as string, updates);
+
+        // If this track exists in the playlist, update that item too
+        const idx = playlist.findIndex(t => t.id === currentTrack.id);
+        if (idx !== -1) {
+          const updated = { ...playlist[idx], name: currentEditName, title: currentEditTitle || undefined, genre: currentEditGenre || undefined, rating: currentEditRating };
+          const updatedPlaylist = [...playlist];
+          updatedPlaylist[idx] = updated;
+          setPlaylist(updatedPlaylist);
+        }
+      } else {
+        // Local-only update: reflect in currentTrack and (optionally) UI
+        setCurrentTrack({ ...currentTrack, name: currentEditName, title: currentEditTitle || undefined, genre: currentEditGenre || undefined, rating: currentEditRating });
+      }
+
+      // Reflect edits in UI
+      setCurrentTrack(prev => prev ? { ...prev, name: currentEditName, title: currentEditTitle || undefined, genre: currentEditGenre || undefined, rating: currentEditRating } : prev);
+      setIsEditingCurrent(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save changes');
     } finally {
@@ -655,6 +737,54 @@ export const Player: React.FC = () => {
             {isLoadingPlaylist ? 'Loading...' : 'Playlist'}
           </button>
         </div>
+
+        {/* Current track info + inline editor (visible when a song is loaded) */}
+        {currentTrack && (
+          <div className="current-track" style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.75rem', marginBottom: '0.75rem' }}>
+            {isEditingCurrent ? (
+              <div className="edit-form" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flex: 1 }}>
+                <input
+                  type="text"
+                  value={currentEditTitle}
+                  onChange={(e) => setCurrentEditTitle(e.target.value)}
+                  placeholder="Display Title"
+                  style={{ padding: '0.35rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'white', flex: 2 }}
+                />
+                <input
+                  type="text"
+                  value={currentEditName}
+                  onChange={(e) => setCurrentEditName(e.target.value)}
+                  placeholder="Filename (optional)"
+                  style={{ padding: '0.35rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ccc', flex: 1 }}
+                />
+                <input
+                  type="text"
+                  value={currentEditGenre}
+                  onChange={(e) => setCurrentEditGenre(e.target.value)}
+                  placeholder="Genre"
+                  style={{ padding: '0.35rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ccc', width: '10rem' }}
+                />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button onClick={handleSaveEditCurrent} disabled={isSaving} style={{ padding: '0.35rem 0.6rem', background: '#28a745', border: 'none', borderRadius: '4px', color: 'white' }}>{isSaving ? '...' : 'Save'}</button>
+                  <button onClick={() => setIsEditingCurrent(false)} disabled={isSaving} style={{ padding: '0.35rem 0.6rem', background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '4px', color: 'white' }}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div className="track-info" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <div className="track-title" style={{ fontWeight: 600, color: 'white' }}>{currentTrack.title || currentTrack.name || (currentTrack.url?.split('/').pop() || '')}</div>
+                  {currentTrack.title && <div className="track-filename" style={{ color: '#888', fontSize: '0.8em' }}>{currentTrack.name}</div>}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <button onClick={handleStartEditCurrent} className="small-button" title="Edit song info">✏️ Edit</button>
+                  {/* If server ID exists, show a hint that edits will persist */}
+                  {currentTrack.id ? <div style={{ color: '#9fd', fontSize: '0.85em' }}>Saved</div> : <div style={{ color: '#aaa', fontSize: '0.85em' }}>Local</div>}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {error && <div className="error-message">{error}</div>}
 
