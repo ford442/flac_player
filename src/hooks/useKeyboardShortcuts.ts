@@ -95,17 +95,13 @@ export function useKeyboardShortcuts({
         break;
         
       case 'ArrowRight':
-        if (e.shiftKey) {
-          e.preventDefault();
-          callbacks.onSeekForward?.();
-        }
+        e.preventDefault();
+        callbacks.onSeekForward?.();
         break;
         
       case 'ArrowLeft':
-        if (e.shiftKey) {
-          e.preventDefault();
-          callbacks.onSeekBackward?.();
-        }
+        e.preventDefault();
+        callbacks.onSeekBackward?.();
         break;
         
       case 'ArrowUp':

@@ -655,7 +655,11 @@ async def get_songs(
     # Search
     search: Optional[str] = Query(None, description="Fuzzy search in name/author/title"),
     # Sorting
-    sort_by: str = Query("date", enum=["date", "rating", "name", "last_played", "genre", "play_count", "random"]),
+    sort_by: str = Query(
+        "date",
+        enum=["date", "added_date", "rating", "rating_desc", "name", "last_played", "genre", "play_count", "random"]
+    ),
+    sort: Optional[str] = Query(None, enum=["random"], description="Legacy sort alias"),
     sort_desc: bool = Query(True),
     # Exclude specific ID (for smart mix)
     exclude_id: Optional[str] = Query(None),
@@ -719,21 +723,30 @@ async def get_songs(
             songs = [s for s in songs if (bool(s.get('prompt')) == has_prompt)]
         
         # Sorting
-        if sort_by == "random":
+        effective_sort = sort_by
+        if sort == "random":
+            effective_sort = "random"
+        if effective_sort == "added_date":
+            effective_sort = "date"
+        force_descending_order = effective_sort == "rating_desc"
+        if force_descending_order:
+            effective_sort = "rating"
+
+        if effective_sort == "random":
             random.shuffle(songs)
         else:
-            reverse = sort_desc
-            if sort_by == "date":
+            reverse = True if force_descending_order else sort_desc
+            if effective_sort == "date":
                 songs.sort(key=lambda x: x.get('created_at', ''), reverse=reverse)
-            elif sort_by == "rating":
+            elif effective_sort == "rating":
                 songs.sort(key=lambda x: x.get('rating') or 0, reverse=reverse)
-            elif sort_by == "name":
+            elif effective_sort == "name":
                 songs.sort(key=lambda x: (x.get('title') or x.get('name', '')).lower(), reverse=reverse)
-            elif sort_by == "last_played":
+            elif effective_sort == "last_played":
                 songs.sort(key=lambda x: x.get('last_played', ''), reverse=reverse)
-            elif sort_by == "genre":
+            elif effective_sort == "genre":
                 songs.sort(key=lambda x: x.get('genre', '').lower(), reverse=reverse)
-            elif sort_by == "play_count":
+            elif effective_sort == "play_count":
                 songs.sort(key=lambda x: x.get('play_count', 0), reverse=reverse)
         
         # Pagination
@@ -744,6 +757,15 @@ async def get_songs(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to load songs: {str(e)}")
+
+
+@app.get("/api/library/songs", response_model=List[SongMetadata])
+async def get_library_songs(
+    limit: int = Query(1000, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+):
+    """Backward-compatible library endpoint."""
+    return await get_songs(limit=limit, offset=offset)
 
 
 @app.get("/api/songs/tags", response_model=TagListResponse)
