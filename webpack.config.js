@@ -59,6 +59,14 @@ module.exports = {
     compress: true,
     port: 3000,
     hot: true,
+    // Proxy API requests to the backend server
+    proxy: {
+      '/api': {
+        target: 'http://localhost:7860',
+        changeOrigin: true,
+        secure: false
+      }
+    },
     // Required for AudioWorklet and cross-origin isolation during development
     headers: {
       "Cross-Origin-Opener-Policy": "same-origin",
