@@ -130,3 +130,102 @@ These impositions spark originality—record demos and seek feedback to refine t
 - **Expand Further:** If you have a specific song idea or base MD, provide details for tailored expansions!
 
 This expanded guide turns standard song creation into an adventure of the unexpected.
+
+## Submitted Song Suggestions
+
+### Title: Concrete Raga
+
+**Service:** Minimax Audio
+
+**Prompt:**
+Industrial Techno blended with classical Indian Sitar. Heavy, distorted 4/4 kick drums (130 BPM) and metallic clanks providing the rhythm for intricate, fast-paced sitar ragas. The atmosphere is cold, brutalist, and mechanical, juxtaposed with the organic resonance of the strings.
+
+**Lyrics:**
+(Verse)
+Rust on the lotus, steam in the shrine
+The conveyor belt hums a mantra divine
+Gears grinding slow in the key of the void
+Enlightenment built, destruction employed
+(Chorus)
+Shiva dances in the smokestack shade
+Concrete petals that never fade
+Om Mani Padme Doom
+Echoing inside the engine room
+
+**Additional Notes:**
+- Mood: Ominous, spiritual yet industrialized.
+- Instrumentation: Distorted synth bass, drum machines, clean sitar lead.
+- Cultural Imposition: Sitar placed in a Soviet Brutalist factory setting.
+
+### Title: High Noon in Bali
+
+**Service:** Minimax Audio
+
+**Prompt:**
+A cinematic fusion of Spaghetti Western and Indonesian Gamelan. Twangy reverb-drenched electric guitar melodies playing pentatonic scales over metallic gamelan percussion and gong cycles. Atmospheric desert wind sounds mixed with tropical jungle ambience. 110 BPM.
+
+**Lyrics:**
+(Verse)
+Dust devil dancing on the shimmering sand
+Stranger with a kris in a barren land
+The clock strikes twelve, the sun beats down
+Gong cycle ringing through the ghost town
+(Chorus)
+Wayang kulit shadows on the saloon wall
+Hearing the spirits and the deserts call
+Revolver loaded with a mystic sound
+Buried in the heat of the unholy ground
+
+**Additional Notes:**
+- Mood: Tense, mysterious, sweltering.
+- Instrumentation: Fender Stratocaster with spring reverb, bonang, gender, gong.
+- Cultural Imposition: Gamelan ensemble performing the soundtrack for a duel in the Arizona desert.
+
+### Title: Monk's Funk
+
+**Service:** Minimax Audio
+
+**Prompt:**
+A mix of Gregorian Chants and 70s Funk. Deep, resonant monophonic male choir singing Latin verses over a groovy, syncopated slap-bass line and tight drum kit. The acoustic reverb of a cathedral meets the dry, punchy production of a funk record.
+
+**Lyrics:**
+(Verse)
+Benedicamus Domino, get down on the floor
+Spirit is willing but the bass is wanting more
+Incense burning, disco ball turning
+For the holy groove, my soul is yearning
+(Bridge)
+Slap that string, ring that bell
+Saving us from a rhythmic hell
+
+**Additional Notes:**
+- Mood: Groovy, solemn, ironic.
+- Instrumentation: Choir, electric bass, wah-wah guitar, drums.
+- Cultural Imposition: American Funk band jamming in a remote Tibetan monastery (or European Cathedral context, leaning into the Gregorian aspect more directly).
+
+### Title: Seoul Piper
+
+**Service:** Minimax Audio
+
+**Prompt:**
+High-energy K-Pop production featuring Scottish Great Highland Bagpipes. Glossy synthesizers, trap beats, and auto-tuned vocals layered with the loud, droning melody of bagpipes. Upbeat, chaotic, and catchy. 130 BPM.
+
+**Lyrics:**
+(Verse 1)
+Neon lights and tartan plaid
+The wildest dream I ever had
+Gangnam style meets highland fling
+Listen to the chanter sing!
+(Pre-Chorus)
+Oppa's got a bagpipe, hey! hey!
+Blowing all the clouds away
+(Chorus)
+Saranghae, Scotland! Drone it up high
+Sugar rush melody touching the sky
+Pop the bubble, hear the skirl
+Party at the end of the world!
+
+**Additional Notes:**
+- Mood: Hyperactive, joyful, loud.
+- Instrumentation: Synths, sub-bass, bagpipes, drum machine.
+- Cultural Imposition: Bagpipes dominating the soundscape of a modern Seoul arcade.
