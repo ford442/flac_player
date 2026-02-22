@@ -213,8 +213,8 @@ export const Player: React.FC = () => {
   
   // Save queue to storage
   useEffect(() => {
-    saveQueueToStorage({ tracks: queue, currentIndex: queueCurrentIndex, shuffle, repeat });
-  }, [queue, queueCurrentIndex, shuffle, repeat]);
+    saveQueueToStorage({ tracks: queue, currentIndex: queueCurrentIndex, shuffle, repeat: repeatMode });
+  }, [queue, queueCurrentIndex, shuffle, repeatMode]);
   
   // =============================================================================
   // Player Initialization
