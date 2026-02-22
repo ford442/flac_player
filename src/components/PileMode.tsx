@@ -45,10 +45,19 @@ export const PileMode: React.FC<PileModeProps> = ({
         sortBy: 'random',
         limit: 50
       });
-      const deduped = [...lowRated, ...untaggedTracks].filter(
-        (track, index, arr) => arr.findIndex(t => t.id === track.id) === index
-      );
-      const tracks = deduped.sort(() => Math.random() - 0.5).slice(0, 50);
+      const seenTrackIds = new Set<string>();
+      const deduped = [...lowRated, ...untaggedTracks].filter((track) => {
+        if (seenTrackIds.has(track.id)) {
+          return false;
+        }
+        seenTrackIds.add(track.id);
+        return true;
+      });
+      for (let i = deduped.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deduped[i], deduped[j]] = [deduped[j], deduped[i]];
+      }
+      const tracks = deduped.slice(0, 50);
       setTracks(tracks);
       
       // Load available tags
@@ -210,7 +219,7 @@ export const PileMode: React.FC<PileModeProps> = ({
           <div className="bg-gradient-to-br from-purple-500 to-blue-500 text-white px-8 py-6 rounded-2xl shadow-2xl animate-bounce">
             <div className="text-4xl mb-2">🔥</div>
             <p className="text-xl font-bold">Nice!</p>
-            <p>Nice! {celebrationPercent}% of your pile is now 4+ 🔥</p>
+            <p>{celebrationPercent}% of your pile is now 4+ 🔥</p>
           </div>
         </div>
       )}

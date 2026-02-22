@@ -106,7 +106,6 @@ export const Player: React.FC = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [untaggedOnly, setUntaggedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>('date');
-  const [sortDesc] = useState(true);
   const [volume, setVolume] = useState(1);
   
   // Queue state
@@ -162,7 +161,7 @@ export const Player: React.FC = () => {
         untagged: untaggedOnly,
         search: searchQuery || undefined,
         sortBy,
-        sortDesc,
+        sortDesc: true,
         limit: 200
       });
       setLibrary(tracks);
@@ -172,7 +171,7 @@ export const Player: React.FC = () => {
     } finally {
       setIsLoadingLibrary(false);
     }
-  }, [loader, minRating, selectedTags, untaggedOnly, searchQuery, sortBy, sortDesc]);
+  }, [loader, minRating, selectedTags, untaggedOnly, searchQuery, sortBy]);
   
   const loadTags = useCallback(async () => {
     try {
@@ -751,8 +750,7 @@ export const Player: React.FC = () => {
                 currentTrackId={currentTrack?.id}
                 isPlaying={playerState.isPlaying}
                 viewMode={libraryViewMode}
-                onTrackClick={(track, index) => {
-                  void index;
+                onTrackClick={(track) => {
                   addToQueue(track);
                   playTrack(track, queue.length);
                 }}

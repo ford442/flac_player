@@ -10,7 +10,7 @@ interface LibraryViewProps {
   currentTrackId?: string;
   isPlaying: boolean;
   viewMode: 'grid' | 'list';
-  onTrackClick: (track: PlaylistTrack, index: number) => void;
+  onTrackClick: (track: PlaylistTrack) => void;
   onTrackDoubleClick: (track: PlaylistTrack) => void;
   onUpdateTrack: (id: string, updates: Partial<PlaylistTrack>) => Promise<void>;
   onTrashTrack: (id: string) => Promise<void>;
@@ -112,7 +112,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           return (
             <div
               key={track.id}
-              onClick={() => onTrackClick(track, index)}
+              onClick={() => onTrackClick(track)}
               onDoubleClick={() => onTrackDoubleClick(track)}
               className={`library-card group relative bg-white/5 rounded-lg overflow-hidden cursor-pointer transition-all hover:bg-white/10 ${
                 isCurrent ? 'ring-2 ring-purple-500' : ''
@@ -282,7 +282,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             return (
               <tr
                 key={track.id}
-                onClick={() => onTrackClick(track, index)}
+              onClick={() => onTrackClick(track)}
                 onDoubleClick={() => onTrackDoubleClick(track)}
                 className={`group border-b border-white/5 hover:bg-white/5 cursor-pointer ${
                   isCurrent ? 'bg-purple-500/10' : ''

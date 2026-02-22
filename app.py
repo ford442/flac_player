@@ -728,14 +728,14 @@ async def get_songs(
             effective_sort = "random"
         if effective_sort == "added_date":
             effective_sort = "date"
-        force_desc = effective_sort == "rating_desc"
-        if force_desc:
+        force_descending_order = effective_sort == "rating_desc"
+        if force_descending_order:
             effective_sort = "rating"
 
         if effective_sort == "random":
             random.shuffle(songs)
         else:
-            reverse = sort_desc or force_desc
+            reverse = True if force_descending_order else sort_desc
             if effective_sort == "date":
                 songs.sort(key=lambda x: x.get('created_at', ''), reverse=reverse)
             elif effective_sort == "rating":
@@ -760,9 +760,12 @@ async def get_songs(
 
 
 @app.get("/api/library/songs", response_model=List[SongMetadata])
-async def get_library_songs():
+async def get_library_songs(
+    limit: int = Query(1000, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+):
     """Backward-compatible library endpoint."""
-    return await get_songs(limit=1000, offset=0)
+    return await get_songs(limit=limit, offset=offset)
 
 
 @app.get("/api/songs/tags", response_model=TagListResponse)
