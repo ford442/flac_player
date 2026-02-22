@@ -1,15 +1,77 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AudioPlayer, PlayerState } from '../audioPlayer';
 import { SdlAudioPlayer } from '../sdlAudioPlayer';
 import { Sdl2AudioPlayer } from '../sdl2AudioPlayer';
 import { AudioWorkletPlayer } from '../audioWorkletPlayer';
-import { AudioLoader, PlaylistTrack, SortBy, RepeatMode } from '../audioLoader';
+import { 
+  AudioLoader, 
+  PlaylistTrack, 
+  SortBy, 
+  RepeatMode, 
+  LibraryStats, 
+  TagInfo,
+  saveQueueToStorage,
+  loadQueueFromStorage,
+  clearQueueStorage
+} from '../audioLoader';
 import { WebGPUVisualizer, VisualizerMode } from '../webgpuVisualizer';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { LibraryView } from './LibraryView';
+import { QueuePanel } from './QueuePanel';
+import { PileMode } from './PileMode';
+import { StarRating } from './StarRating';
 import './Player.css';
 
+// =============================================================================
+// Types & Constants
+// =============================================================================
+
 type AudioOutputMode = 'web-audio' | 'worklet' | 'sdl' | 'sdl2';
+type ViewTab = 'library' | 'now-playing' | 'queue';
+type LibraryViewMode = 'grid' | 'list';
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+
+// =============================================================================
+// Toast Notification Component (Simple inline version)
+// =============================================================================
+
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
+
+const ToastContainer: React.FC<{ toasts: Toast[]; onRemove: (id: string) => void }> = ({ toasts, onRemove }) => {
+  useEffect(() => {
+    toasts.forEach(toast => {
+      setTimeout(() => onRemove(toast.id), 3000);
+    });
+  }, [toasts, onRemove]);
+  
+  return (
+    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
+      {toasts.map(toast => (
+        <div
+          key={toast.id}
+          className={`px-4 py-2 rounded-lg shadow-lg text-white text-sm animate-slide-in ${
+            toast.type === 'success' ? 'bg-green-500' :
+            toast.type === 'error' ? 'bg-red-500' : 'bg-blue-500'
+          }`}
+        >
+          {toast.message}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// =============================================================================
+// Main Player Component
+// =============================================================================
 
 export const Player: React.FC = () => {
+  // Player state
   const [playerState, setPlayerState] = useState<PlayerState>({
     isPlaying: false,
     currentTime: 0,
@@ -21,44 +83,144 @@ export const Player: React.FC = () => {
   const [webGPUSupported, setWebGPUSupported] = useState<boolean>(true);
   const [visualizerMode, setVisualizerMode] = useState<VisualizerMode>('flat');
   const [outputMode, setOutputMode] = useState<AudioOutputMode>('web-audio');
-  const [playlist, setPlaylist] = useState<PlaylistTrack[]>([]);
-  const [showPlaylist, setShowPlaylist] = useState<boolean>(false);
-  const [isLoadingPlaylist, setIsLoadingPlaylist] = useState<boolean>(false);
-  // Playlist playback state
-  const [currentIndex, setCurrentIndex] = useState<number | null>(null);
-  const [autoAdvance, setAutoAdvance] = useState<boolean>(true);
-  const [shuffle, setShuffle] = useState<boolean>(false);
-  // Editing state (playlist items)
-  const [editingTrack, setEditingTrack] = useState<number | null>(null);
-  const [editName, setEditName] = useState<string>('');
-  const [editTitle, setEditTitle] = useState<string>('');
-  const [editRating, setEditRating] = useState<number | null>(null);
-  const [editGenre, setEditGenre] = useState<string>('');
-  const [isSaving, setIsSaving] = useState<boolean>(false);
-
-  // Currently-loaded (single) track — may be transient (no server id)
-  const [currentTrack, setCurrentTrack] = useState<Partial<PlaylistTrack> | null>(null);
-  const [isEditingCurrent, setIsEditingCurrent] = useState<boolean>(false);
-  const [currentEditName, setCurrentEditName] = useState<string>('');
-  const [currentEditTitle, setCurrentEditTitle] = useState<string>('');
-  const [currentEditRating, setCurrentEditRating] = useState<number | null>(null);
-  const [currentEditGenre, setCurrentEditGenre] = useState<string>('');
-  // Sorting & filtering
+  
+  // View state
+  const [activeTab, setActiveTab] = useState<ViewTab>('library');
+  const [libraryViewMode, setLibraryViewMode] = useState<LibraryViewMode>('grid');
+  
+  // Library state
+  const [library, setLibrary] = useState<PlaylistTrack[]>([]);
+  const [allTags, setAllTags] = useState<TagInfo[]>([]);
+  const [stats, setStats] = useState<LibraryStats>({
+    total_tracks: 0,
+    rated_4plus: 0,
+    total_duration_hours: 0,
+    total_play_count: 0,
+    untagged_count: 0,
+    trash_count: 0,
+    unique_tags: 0,
+    top_tags: []
+  });
+  const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
+  
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [minRating, setMinRating] = useState<number>(1);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [untaggedOnly, setUntaggedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>('date');
-  const [sortDesc, setSortDesc] = useState<boolean>(true);
-  const [filterGenre, setFilterGenre] = useState<string>('');
+  const [sortDesc, setSortDesc] = useState(true);
+  
+  // Queue state
+  const [queue, setQueue] = useState<PlaylistTrack[]>([]);
+  const [queueCurrentIndex, setQueueCurrentIndex] = useState<number>(-1);
+  const [showQueue, setShowQueue] = useState(false);
+  const [shuffle, setShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
-
-  // Use a generic type or union for playerRef
+  
+  // Pile mode
+  const [showPileMode, setShowPileMode] = useState(false);
+  
+  // Current track
+  const [currentTrack, setCurrentTrack] = useState<PlaylistTrack | null>(null);
+  
+  // Toasts
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  
+  // Refs
   const playerRef = useRef<AudioPlayer | AudioWorkletPlayer | SdlAudioPlayer | Sdl2AudioPlayer | null>(null);
-  // Track edit state for double-click
-  const [lastClickTime, setLastClickTime] = useState<number>(0);
-  const [lastClickIndex, setLastClickIndex] = useState<number>(-1);
   const visualizerRef = useRef<WebGPUVisualizer | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  
+  const loader = useMemo(() => new AudioLoader(), []);
+  
+  // =============================================================================
+  // Toast Helpers
+  // =============================================================================
+  
+  const addToast = useCallback((message: string, type: Toast['type'] = 'info') => {
+    const id = Math.random().toString(36).substring(7);
+    setToasts(prev => [...prev, { id, message, type }]);
+  }, []);
+  
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  }, []);
+  
+  // =============================================================================
+  // Data Loading
+  // =============================================================================
+  
+  const loadLibrary = useCallback(async () => {
+    setIsLoadingLibrary(true);
+    try {
+      const { tracks } = await loader.fetchLibrary({
+        ratingGte: minRating,
+        tags: selectedTags.length > 0 ? selectedTags : undefined,
+        untagged: untaggedOnly,
+        search: searchQuery || undefined,
+        sortBy,
+        sortDesc,
+        limit: 200
+      });
+      setLibrary(tracks);
+    } catch (err) {
+      setError('Failed to load library');
+      console.error(err);
+    } finally {
+      setIsLoadingLibrary(false);
+    }
+  }, [loader, minRating, selectedTags, untaggedOnly, searchQuery, sortBy, sortDesc]);
+  
+  const loadTags = useCallback(async () => {
+    try {
+      const tags = await loader.fetchTags();
+      setAllTags(tags);
+    } catch (err) {
+      console.error('Failed to load tags:', err);
+    }
+  }, [loader]);
+  
+  const loadStats = useCallback(async () => {
+    try {
+      const s = await loader.fetchStats();
+      setStats(s);
+    } catch (err) {
+      console.error('Failed to load stats:', err);
+    }
+  }, [loader]);
+  
   useEffect(() => {
-    // Initialize player based on mode
+    loadLibrary();
+  }, [loadLibrary]);
+  
+  useEffect(() => {
+    loadTags();
+    loadStats();
+  }, [loadTags, loadStats]);
+  
+  // Load queue from storage
+  useEffect(() => {
+    const saved = loadQueueFromStorage();
+    if (saved) {
+      setQueue(saved.tracks);
+      setQueueCurrentIndex(saved.currentIndex);
+      setShuffle(saved.shuffle);
+      setRepeatMode(saved.repeat);
+    }
+  }, []);
+  
+  // Save queue to storage
+  useEffect(() => {
+    saveQueueToStorage({ tracks: queue, currentIndex: queueCurrentIndex, shuffle, repeat });
+  }, [queue, queueCurrentIndex, shuffle, repeat]);
+  
+  // =============================================================================
+  // Player Initialization
+  // =============================================================================
+  
+  useEffect(() => {
     let player: AudioPlayer | AudioWorkletPlayer | SdlAudioPlayer | Sdl2AudioPlayer;
     if (outputMode === 'worklet') {
       player = new AudioWorkletPlayer();
@@ -70,62 +232,27 @@ export const Player: React.FC = () => {
       player = new AudioPlayer();
     }
 
-    // Initialize AudioWorklet if needed
     if (outputMode === 'worklet') {
       (player as AudioWorkletPlayer).initialize().then(ok => {
-        if (!ok) {
-          setError('AudioWorklet initialization failed');
-        }
+        if (!ok) setError('AudioWorklet initialization failed');
       });
     }
 
     player.setStateChangeCallback(setPlayerState);
-
-    // register ended callback (all player implementations now expose setOnEndedCallback)
-    if ((player as any).setOnEndedCallback) {
-      (player as any).setOnEndedCallback(() => {
-        // advance playlist when a track ends
-        if (!autoAdvance) return;
-        if (!playlist || playlist.length === 0) return;
-        // Respect shuffle when auto-advancing
-        if (shuffle) {
-          if (playlist.length === 1) {
-            playTrackAtIndex(0, true).catch(err => console.warn('auto-advance failed', err));
-            return;
-          }
-          let next;
-          do { next = Math.floor(Math.random() * playlist.length); } while (next === currentIndex);
-          playTrackAtIndex(next, true).catch(err => console.warn('auto-advance failed', err));
-          return;
-        }
-
-        const next = currentIndex === null ? 0 : currentIndex + 1;
-        const nextIndex = next >= playlist.length ? 0 : next; // wrap-to-start
-        playTrackAtIndex(nextIndex, true).catch(err => console.warn('auto-advance failed', err));
-      });
-    }
+    
+    (player as any).setOnEndedCallback?.(() => {
+      handleAutoAdvance();
+    });
 
     playerRef.current = player;
-
-    // If we have an existing visualizer, we might need to re-init it if the analyser changed
-    // But SdlAudioPlayer returns a dummy analyser or null.
-    // If outputMode changed, we might want to reload audio if it was loaded?
-    // For now, switching modes resets the player.
 
     return () => {
       (player as any).setOnEndedCallback?.(undefined);
       player.destroy();
-      // We don't necessarily destroy visualizer here as it's bound to canvas,
-      // but we might need to re-hook the analyser.
     };
-  }, [outputMode, autoAdvance, playlist, currentIndex]);
-
+  }, [outputMode]);
+  
   useEffect(() => {
-    // Initialize WebGPU visualizer
-    // We need to re-run this when player reference changes (which happens on mode switch)
-    // but playerRef.current is mutable.
-    // Better to depend on outputMode to trigger re-init of visualizer source.
-
     const initVisualizer = async () => {
       if (!canvasRef.current || !playerRef.current) return;
 
@@ -135,21 +262,15 @@ export const Player: React.FC = () => {
       }
 
       const analyser = playerRef.current.getAnalyser();
-      // If analyser is dummy (SDL), visualizer might just show nothing or flat line.
-
       const success = await visualizerRef.current.initialize(analyser);
       if (success) {
         visualizerRef.current.startAnimation();
         visualizerRef.current.setMode(visualizerMode);
         visualizerRef.current.setTogglePlayCallback(() => {
-          // Toggle Play callback from 3D interaction
           if (playerRef.current) {
             const state = playerRef.current.getState();
-            if (state.isPlaying) {
-              playerRef.current.pause();
-            } else if (state.duration > 0) {
-              playerRef.current.play();
-            }
+            if (state.isPlaying) playerRef.current.pause();
+            else if (state.duration > 0) playerRef.current.play();
           }
         });
       } else {
@@ -158,27 +279,30 @@ export const Player: React.FC = () => {
     };
 
     initVisualizer();
-  }, [outputMode]); // Re-run when output mode changes
-
-  // Update visualizer mode when state changes
-  useEffect(() => {
-    if (visualizerRef.current) {
-      visualizerRef.current.setMode(visualizerMode);
-    }
-  }, [visualizerMode]);
-
-  const loadAudioFromUrl = async (url: string) => {
-    if (!url.trim() || !playerRef.current) {
-      return;
-    }
+  }, [outputMode, visualizerMode]);
+  
+  // =============================================================================
+  // Playback Controls
+  // =============================================================================
+  
+  const loadAudioFromUrl = async (url: string, track?: PlaylistTrack) => {
+    if (!url.trim() || !playerRef.current) return;
 
     setPlayerState(prev => ({ ...prev, isLoading: true }));
     setError('');
 
     try {
-      const loader = new AudioLoader();
       const arrayBuffer = await loader.loadFromURL(url);
       await playerRef.current.loadAudio(arrayBuffer);
+      
+      if (track) {
+        setCurrentTrack(track);
+        // Record play
+        if (track.id) {
+          await loader.recordPlay(track.id);
+          addToast('Playing: ' + (track.title || track.name), 'info');
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load audio');
       throw err;
@@ -186,683 +310,646 @@ export const Player: React.FC = () => {
       setPlayerState(prev => ({ ...prev, isLoading: false }));
     }
   };
-
-  const handleLoadAudio = async () => {
-    setCurrentIndex(null);
-    await loadAudioFromUrl(audioUrl);
-
-    // Create a transient currentTrack for standalone-loaded URLs so the user
-    // can edit display metadata even when the source isn't in the remote DB.
+  
+  const playTrack = async (track: PlaylistTrack, index?: number) => {
     try {
-      const name = decodeURIComponent((audioUrl.split('/').pop() || audioUrl).split('?')[0]);
-      setCurrentTrack({ name, url: audioUrl });
-      // populate current edit fields from inferred values
-      setCurrentEditName(name);
-      setCurrentEditTitle('');
-      setCurrentEditGenre('');
-      setCurrentEditRating(null);
-    } catch (err) {
-      // ignore parsing errors
-      setCurrentTrack({ url: audioUrl });
-    }
-  };
-
-  const handleLoadPlaylist = async () => {
-    setIsLoadingPlaylist(true);
-    try {
-      const loader = new AudioLoader();
-      const tracks = await loader.fetchPlaylist(sortBy, sortDesc, filterGenre || undefined);
-      setPlaylist(tracks);
-      setShowPlaylist(true);
-      setCurrentIndex(tracks.length ? 0 : null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load playlist');
-    } finally {
-      setIsLoadingPlaylist(false);
-    }
-  };
-
-  const handlePlayTrack = async (index: number, autoPlay = true) => {
-    await playTrackAtIndex(index, autoPlay);
-    // Record play
-    const track = playlist[index];
-    if (track?.id) {
-      const loader = new AudioLoader();
-      loader.recordPlay(track.id);
-    }
-  };
-
-
-
-  const handlePlay = () => {
-    playerRef.current?.play();
-  };
-
-  const handlePause = () => {
-    playerRef.current?.pause();
-  };
-
-  const handleNext = () => {
-    if (!playlist || playlist.length === 0) return;
-    if (shuffle) {
-      if (playlist.length === 1) {
-        playTrackAtIndex(0).catch(() => { });
-        return;
+      await loadAudioFromUrl(track.url, track);
+      playerRef.current?.play();
+      
+      if (index !== undefined) {
+        setQueueCurrentIndex(index);
       }
-      let next: number;
-      do { next = Math.floor(Math.random() * playlist.length); } while (next === currentIndex);
-      playTrackAtIndex(next).catch(() => { });
-    } else {
-      const next = currentIndex === null ? 0 : currentIndex + 1;
-      const nextIndex = next >= playlist.length ? 0 : next; // wrap
-      playTrackAtIndex(nextIndex).catch(() => { });
+      
+      // Update stats after a short delay
+      setTimeout(loadStats, 500);
+    } catch (err) {
+      console.error('Failed to play track:', err);
     }
   };
-
-  const playTrackAtIndex = async (index: number, autoPlay = true) => {
-    if (!playlist || index < 0 || index >= playlist.length) return;
-    const track = playlist[index];
-    setCurrentIndex(index);
-    setAudioUrl(track.url);
-    // reflect playlist metadata as the current track
-    setCurrentTrack(track);
-    setCurrentEditName(track.name);
-    setCurrentEditTitle(track.title || '');
-    setCurrentEditGenre(track.genre || '');
-    setCurrentEditRating(track.rating || null);
-    await loadAudioFromUrl(track.url);
-    if (autoPlay) playerRef.current?.play();
-  };
-
-  const handleTrackClick = (index: number, e: React.MouseEvent) => {
-    const now = Date.now();
-    const timeDiff = now - lastClickTime;
-
-    if (lastClickIndex === index && timeDiff < 300) {
-      // Double click detected - start editing
-      e.stopPropagation();
-      handleStartEdit(index);
-      setLastClickTime(0);
-      setLastClickIndex(-1);
-    } else {
-      // Single click - just play
-      setLastClickTime(now);
-      setLastClickIndex(index);
-      setCurrentIndex(index);
-      setAudioUrl(playlist[index].url);
-      // reflect playlist metadata as the current track
-      setCurrentTrack(playlist[index]);
-      setCurrentEditName(playlist[index].name || '');
-      setCurrentEditTitle(playlist[index].title || '');
-      setCurrentEditGenre(playlist[index].genre || '');
-      setCurrentEditRating(playlist[index].rating || null);
-      loadAudioFromUrl(playlist[index].url);
-    }
-  };
-
-  const handleStartEdit = (index: number) => {
-    const track = playlist[index];
-    setEditingTrack(index);
-    setEditName(track.name);
-    setEditTitle(track.title || '');
-    setEditRating(track.rating || null);
-    setEditGenre(track.genre || '');
-  };
-
-  const handleSaveEdit = async (index: number) => {
-    const track = playlist[index];
-    if (!track.id) {
-      setError('Cannot edit: Track has no ID');
+  
+  const handleAutoAdvance = () => {
+    if (queue.length === 0) return;
+    
+    if (repeatMode === 'one') {
+      playerRef.current?.play();
       return;
     }
-
-    setIsSaving(true);
-    try {
-      const loader = new AudioLoader();
-      const updates: any = {};
-      if (editName !== track.name) updates.name = editName;
-      if (editTitle !== (track.title || '')) updates.title = editTitle || undefined;
-      if (editRating !== track.rating) updates.rating = editRating;
-      if (editGenre !== (track.genre || '')) updates.genre = editGenre || undefined;
-
-      console.log('Saving updates:', updates);
-      await loader.updateSampleMetadata(track.id, updates);
-
-      // Update local playlist
-      const updatedPlaylist = [...playlist];
-      updatedPlaylist[index] = {
-        ...track,
-        name: editName,
-        title: editTitle || undefined,
-        rating: editRating,
-        genre: editGenre || undefined
-      };
-      setPlaylist(updatedPlaylist);
-      setEditingTrack(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save changes');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  // --- Current (standalone) track edit handlers ---
-  const handleStartEditCurrent = () => {
-    if (!currentTrack) return;
-    setIsEditingCurrent(true);
-    setCurrentEditName(currentTrack.name || '');
-    setCurrentEditTitle(currentTrack.title || '');
-    setCurrentEditGenre(currentTrack.genre || '');
-    setCurrentEditRating(currentTrack.rating || null);
-  };
-
-  const handleSaveEditCurrent = async () => {
-    if (!currentTrack) return;
-    setIsSaving(true);
-    try {
-      // If this track has a server-side ID, persist; otherwise keep local-only
-      if (currentTrack.id) {
-        const loader = new AudioLoader();
-        const updates: any = {};
-        if (currentEditName !== currentTrack.name) updates.name = currentEditName;
-        if (currentEditTitle !== (currentTrack.title || '')) updates.title = currentEditTitle || undefined;
-        if (currentEditRating !== currentTrack.rating) updates.rating = currentEditRating;
-        if (currentEditGenre !== (currentTrack.genre || '')) updates.genre = currentEditGenre || undefined;
-        await loader.updateSampleMetadata(currentTrack.id as string, updates);
-
-        // If this track exists in the playlist, update that item too
-        const idx = playlist.findIndex(t => t.id === currentTrack.id);
-        if (idx !== -1) {
-          const updated = { ...playlist[idx], name: currentEditName, title: currentEditTitle || undefined, genre: currentEditGenre || undefined, rating: currentEditRating };
-          const updatedPlaylist = [...playlist];
-          updatedPlaylist[idx] = updated;
-          setPlaylist(updatedPlaylist);
-        }
-      } else {
-        // Local-only update: reflect in currentTrack and (optionally) UI
-        setCurrentTrack({ ...currentTrack, name: currentEditName, title: currentEditTitle || undefined, genre: currentEditGenre || undefined, rating: currentEditRating });
-      }
-
-      // Reflect edits in UI
-      setCurrentTrack(prev => prev ? { ...prev, name: currentEditName, title: currentEditTitle || undefined, genre: currentEditGenre || undefined, rating: currentEditRating } : prev);
-      setIsEditingCurrent(false);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save changes');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handlePrev = () => {
-    if (!playlist || playlist.length === 0) return;
+    
+    let nextIndex: number;
+    
     if (shuffle) {
-      const idx = Math.floor(Math.random() * playlist.length);
-      playTrackAtIndex(idx).catch(() => { });
+      if (queue.length === 1) {
+        nextIndex = 0;
+      } else {
+        do {
+          nextIndex = Math.floor(Math.random() * queue.length);
+        } while (nextIndex === queueCurrentIndex && queue.length > 1);
+      }
     } else {
-      const prev = currentIndex === null ? 0 : currentIndex - 1;
-      const prevIndex = prev < 0 ? playlist.length - 1 : prev;
-      playTrackAtIndex(prevIndex).catch(() => { });
+      nextIndex = queueCurrentIndex + 1;
+      if (nextIndex >= queue.length) {
+        if (repeatMode === 'all') {
+          nextIndex = 0;
+        } else {
+          return; // Stop at end
+        }
+      }
+    }
+    
+    const nextTrack = queue[nextIndex];
+    if (nextTrack) {
+      playTrack(nextTrack, nextIndex);
     }
   };
-
-  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const time = parseFloat(e.target.value);
-    playerRef.current?.seek(time);
+  
+  // =============================================================================
+  // Queue Management
+  // =============================================================================
+  
+  const addToQueue = (track: PlaylistTrack) => {
+    setQueue(prev => {
+      if (prev.some(t => t.id === track.id)) return prev;
+      return [...prev, track];
+    });
+    addToast('Added to queue', 'success');
   };
-
+  
+  const removeFromQueue = (index: number) => {
+    setQueue(prev => prev.filter((_, i) => i !== index));
+    if (index < queueCurrentIndex) {
+      setQueueCurrentIndex(prev => prev - 1);
+    }
+  };
+  
+  const clearQueue = () => {
+    setQueue([]);
+    setQueueCurrentIndex(-1);
+    clearQueueStorage();
+  };
+  
+  const handleSmartMix = async () => {
+    if (!currentTrack || !currentTrack.tags) {
+      addToast('No tags to base mix on', 'error');
+      return;
+    }
+    
+    try {
+      const similar = await loader.findSimilarTracks(
+        currentTrack.id,
+        currentTrack.tags,
+        4,
+        20
+      );
+      
+      if (similar.length > 0) {
+        setQueue(prev => {
+          const newTracks = similar.filter(t => !prev.some(p => p.id === t.id));
+          return [...prev, ...newTracks];
+        });
+        addToast(`Added ${similar.length} tracks to queue`, 'success');
+      } else {
+        addToast('No similar tracks found', 'info');
+      }
+    } catch (err) {
+      addToast('Failed to create smart mix', 'error');
+    }
+  };
+  
+  // =============================================================================
+  // Track Updates
+  // =============================================================================
+  
+  const updateTrack = async (id: string, updates: Partial<PlaylistTrack>) => {
+    try {
+      await loader.updateSampleMetadata(id, updates);
+      
+      // Update local state
+      setLibrary(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+      if (currentTrack?.id === id) {
+        setCurrentTrack(prev => prev ? { ...prev, ...updates } : null);
+      }
+      
+      // Refresh tags and stats
+      loadTags();
+      loadStats();
+      
+      addToast('Changes saved', 'success');
+    } catch (err) {
+      addToast('Failed to save changes', 'error');
+      throw err;
+    }
+  };
+  
+  const trashTrack = async (id: string) => {
+    try {
+      await loader.trashTrack(id);
+      setLibrary(prev => prev.filter(t => t.id !== id));
+      loadStats();
+      addToast('Moved to trash', 'success');
+    } catch (err) {
+      addToast('Failed to trash track', 'error');
+    }
+  };
+  
+  // =============================================================================
+  // Keyboard Shortcuts
+  // =============================================================================
+  
+  useKeyboardShortcuts({
+    onPlayPause: () => {
+      if (playerState.isPlaying) playerRef.current?.pause();
+      else playerRef.current?.play();
+    },
+    onSeekForward: () => {
+      if (playerRef.current) {
+        const newTime = Math.min(playerState.currentTime + 10, playerState.duration);
+        playerRef.current.seek(newTime);
+      }
+    },
+    onSeekBackward: () => {
+      if (playerRef.current) {
+        const newTime = Math.max(playerState.currentTime - 10, 0);
+        playerRef.current.seek(newTime);
+      }
+    },
+    onNext: () => {
+      if (queue.length > 0 && queueCurrentIndex < queue.length - 1) {
+        playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1);
+      }
+    },
+    onPrevious: () => {
+      if (queue.length > 0 && queueCurrentIndex > 0) {
+        playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1);
+      }
+    },
+    onSearchFocus: () => searchInputRef.current?.focus(),
+    onToggleQueue: () => setShowQueue(prev => !prev),
+    onTogglePile: () => setShowPileMode(true),
+    isEnabled: !showPileMode
+  });
+  
+  // =============================================================================
+  // Render Helpers
+  // =============================================================================
+  
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-
+  
+  // =============================================================================
+  // Render
+  // =============================================================================
+  
   return (
-    <div className="player">
-      <div className="visualizer-container">
-        <canvas
-          ref={canvasRef}
-          width={800}
-          height={400}
-          className="visualizer-canvas"
-        />
-        {!webGPUSupported && (
-          <div className="webgpu-warning">
-            WebGPU not supported in this browser
+    <div className="player min-h-screen bg-[#0f0f1e] text-white flex flex-col">
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      
+      {/* Pile Mode Overlay */}
+      <PileMode
+        isActive={showPileMode}
+        onClose={() => setShowPileMode(false)}
+        onTrackRated={() => {
+          loadLibrary();
+          loadStats();
+        }}
+        stats={stats}
+      />
+      
+      {/* Queue Panel */}
+      <QueuePanel
+        queue={queue}
+        currentIndex={queueCurrentIndex}
+        isOpen={showQueue}
+        onClose={() => setShowQueue(false)}
+        onTrackClick={(index) => playTrack(queue[index], index)}
+        onRemoveTrack={removeFromQueue}
+        onClearQueue={clearQueue}
+        onShuffle={() => setShuffle(s => !s)}
+        onSmartMix={handleSmartMix}
+        shuffle={shuffle}
+        repeatMode={repeatMode}
+        onToggleRepeat={() => setRepeatMode(m => m === 'off' ? 'all' : m === 'all' ? 'one' : 'off')}
+      />
+      
+      {/* Header */}
+      <header className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0f0f1e]/95 backdrop-blur">
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+            🎵 FLAC Player
+          </h1>
+          
+          {/* Stats */}
+          <div className="hidden md:flex items-center gap-4 text-sm text-gray-400">
+            <span>{stats.total_tracks} tracks</span>
+            <span className="text-purple-400">{stats.rated_4plus} rated 4+</span>
+            <span>{stats.total_duration_hours}h total</span>
           </div>
-        )}
-
-        {showPlaylist && (
-          <div className="playlist-container">
-            <div className="playlist-header">
-              <h3>Playlist</h3>
+        </div>
+        
+        {/* Search */}
+        <div className="flex-1 max-w-md mx-4">
+          <input
+            ref={searchInputRef}
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search tracks... (Ctrl+K)"
+            className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
+          />
+        </div>
+        
+        {/* Actions */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowPileMode(true)}
+            className="px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
+          >
+            📦 Sort Pile ({stats.untagged_count})
+          </button>
+          <button
+            onClick={() => setShowQueue(true)}
+            className="relative px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm"
+          >
+            📋 Queue
+            {queue.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-purple-500 rounded-full text-xs flex items-center justify-center">
+                {queue.length}
+              </span>
+            )}
+          </button>
+        </div>
+      </header>
+      
+      {/* Main Content */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar */}
+        <aside className="w-64 border-r border-white/10 bg-[#0a0a18] flex flex-col">
+          {/* Tabs */}
+          <nav className="p-4 space-y-1">
+            {[
+              { id: 'library', label: '📚 Library', count: library.length },
+              { id: 'now-playing', label: '▶️ Now Playing' },
+              { id: 'queue', label: '📋 Queue', count: queue.length }
+            ].map(tab => (
               <button
-                className="close-playlist-btn"
-                onClick={() => setShowPlaylist(false)}
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as ViewTab)}
+                className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-left transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-purple-500/20 text-purple-300'
+                    : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                }`}
               >
-                &times;
+                <span>{tab.label}</span>
+                {tab.count !== undefined && (
+                  <span className="text-xs bg-white/10 px-2 py-0.5 rounded-full">
+                    {tab.count}
+                  </span>
+                )}
               </button>
+            ))}
+          </nav>
+          
+          {/* Filters */}
+          <div className="p-4 border-t border-white/10 space-y-4">
+            <div>
+              <label className="text-xs text-gray-500 uppercase">Min Rating</label>
+              <input
+                type="range"
+                min="0"
+                max="5"
+                step="1"
+                value={minRating}
+                onChange={(e) => setMinRating(parseInt(e.target.value))}
+                className="w-full mt-1"
+              />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>Any</span>
+                <span>{minRating}+ stars</span>
+              </div>
             </div>
-            <div className="playlist-controls" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            
+            <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={untaggedOnly}
+                onChange={(e) => setUntaggedOnly(e.target.checked)}
+                className="rounded border-white/20 bg-white/10"
+              />
+              Untagged only
+            </label>
+            
+            <div>
+              <label className="text-xs text-gray-500 uppercase">Sort By</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortBy)}
-                style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', color: 'white' }}
+                className="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm"
               >
-                <option value="date">Sort by Date</option>
-                <option value="rating">Sort by Rating</option>
-                <option value="name">Sort by Name</option>
-                <option value="last_played">Sort by Last Played</option>
-                <option value="genre">Sort by Genre</option>
+                <option value="date">Date Added</option>
+                <option value="rating">Rating</option>
+                <option value="name">Name</option>
+                <option value="play_count">Play Count</option>
+                <option value="last_played">Last Played</option>
+                <option value="random">Random</option>
               </select>
-              <button
-                onClick={() => setSortDesc(d => !d)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  background: sortDesc ? 'rgba(0,132,255,0.3)' : 'rgba(255,255,255,0.1)',
-                  border: 'none',
-                  borderRadius: '4px',
-                  color: 'white',
-                  cursor: 'pointer'
-                }}
-              >
-                {sortDesc ? '↓ Desc' : '↑ Asc'}
-              </button>
-              <input
-                type="text"
-                value={filterGenre}
-                onChange={(e) => setFilterGenre(e.target.value)}
-                placeholder="Filter by genre..."
-                style={{ padding: '0.5rem', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', color: 'white', flex: 1, minWidth: '100px' }}
-              />
-              <button
-                onClick={handleLoadPlaylist}
-                disabled={isLoadingPlaylist}
-                style={{
-                  padding: '0.5rem 1rem',
-                  background: '#28a745',
-                  border: 'none',
-                  borderRadius: '4px',
-                  color: 'white',
-                  cursor: isLoadingPlaylist ? 'not-allowed' : 'pointer'
-                }}
-              >
-                {isLoadingPlaylist ? '...' : 'Apply'}
-              </button>
             </div>
-            <div className="playlist-items">
-              {playlist.map((track, index) => (
-                <div
-                  key={index}
-                  className={`playlist-item ${audioUrl === track.url ? 'active' : ''}`}
+          </div>
+          
+          {/* Top Tags */}
+          <div className="flex-1 p-4 border-t border-white/10 overflow-auto">
+            <label className="text-xs text-gray-500 uppercase">Filter Tags</label>
+            <div className="flex flex-wrap gap-1 mt-2">
+              {allTags.slice(0, 15).map(tag => (
+                <button
+                  key={tag.name}
+                  onClick={() => {
+                    setSelectedTags(prev => 
+                      prev.includes(tag.name)
+                        ? prev.filter(t => t !== tag.name)
+                        : [...prev, tag.name]
+                    );
+                  }}
+                  className={`px-2 py-1 text-xs rounded-full transition-colors ${
+                    selectedTags.includes(tag.name)
+                      ? 'bg-purple-500 text-white'
+                      : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                  }`}
                 >
-                  {editingTrack === index ? (
-                    <div className="edit-form" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="text"
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        placeholder="Display Title"
-                        style={{ width: '100%', marginBottom: '0.5rem', padding: '0.25rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
-                      />
-                      <input
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        placeholder="Filename (optional)"
-                        style={{ width: '100%', marginBottom: '0.5rem', padding: '0.25rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#aaa', fontSize: '0.9em' }}
-                      />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        <label style={{ color: 'rgba(255,255,255,0.8)' }}>Rating:</label>
-                        <select
-                          value={editRating || ''}
-                          onChange={(e) => setEditRating(e.target.value ? parseInt(e.target.value) : null)}
-                          style={{ padding: '0.25rem', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
-                        >
-                          <option value="">-</option>
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
-                            <option key={n} value={n}>{n}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                        <label style={{ color: 'rgba(255,255,255,0.8)' }}>Genre:</label>
-                        <input
-                          type="text"
-                          value={editGenre}
-                          onChange={(e) => setEditGenre(e.target.value)}
-                          placeholder="e.g., ambient, bass"
-                          style={{ padding: '0.25rem', flex: 1, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <button
-                          onClick={() => handleSaveEdit(index)}
-                          disabled={isSaving}
-                          style={{
-                            padding: '0.25rem 0.5rem',
-                            background: '#28a745',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: 'white',
-                            cursor: isSaving ? 'not-allowed' : 'pointer'
-                          }}
-                        >
-                          {isSaving ? '...' : 'Save'}
-                        </button>
-                        <button
-                          onClick={() => setEditingTrack(null)}
-                          disabled={isSaving}
-                          style={{
-                            padding: '0.25rem 0.5rem',
-                            background: 'rgba(255,255,255,0.2)',
-                            border: 'none',
-                            borderRadius: '4px',
-                            color: 'white',
-                            cursor: isSaving ? 'not-allowed' : 'pointer'
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      className="track-info"
-                      onClick={(e) => handleTrackClick(index, e)}
-                      style={{ flex: 1, cursor: 'pointer' }}
-                      title="Double-click to edit"
+                  {tag.name} ({tag.count})
+                </button>
+              ))}
+            </div>
+          </div>
+        </aside>
+        
+        {/* Main Area */}
+        <main className="flex-1 flex flex-col overflow-hidden">
+          {activeTab === 'library' && (
+            <>
+              {/* Library Toolbar */}
+              <div className="flex items-center justify-between px-6 py-3 border-b border-white/10">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setLibraryViewMode('grid')}
+                    className={`p-2 rounded ${libraryViewMode === 'grid' ? 'bg-white/20' : 'hover:bg-white/10'}`}
+                  >
+                    ⊞ Grid
+                  </button>
+                  <button
+                    onClick={() => setLibraryViewMode('list')}
+                    className={`p-2 rounded ${libraryViewMode === 'list' ? 'bg-white/20' : 'hover:bg-white/10'}`}
+                  >
+                    ☰ List
+                  </button>
+                </div>
+                
+                {selectedTags.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-400">Filtered by:</span>
+                    {selectedTags.map(tag => (
+                      <button
+                        key={tag}
+                        onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
+                        className="px-2 py-1 text-xs bg-purple-500/30 text-purple-200 rounded-full hover:bg-purple-500/50"
+                      >
+                        {tag} ×
+                      </button>
+                    ))}
+                    <button
+                      onClick={() => setSelectedTags([])}
+                      className="text-xs text-gray-500 hover:text-white"
                     >
-                      <div className="track-title" style={{ fontWeight: 500 }}>
-                        {track.title || track.name}
-                      </div>
-                      {track.title && (
-                        <div className="track-filename" style={{ color: '#888', fontSize: '0.8em' }}>
-                          {track.name}
-                        </div>
-                      )}
-                      {track.rating && (
-                        <div className="track-rating" style={{ color: '#FFD700', fontSize: '0.85em' }}>
-                          {'★'.repeat(track.rating)}{'☆'.repeat(10 - track.rating)}
-                        </div>
-                      )}
-                      {track.genre && (
-                        <div className="track-genre" style={{ color: '#aaa', fontSize: '0.8em' }}>
-                          {track.genre}
-                        </div>
-                      )}
-                      {track.last_played && (
-                        <div className="track-last-played" style={{ color: '#666', fontSize: '0.75em' }}>
-                          Last: {new Date(track.last_played).toLocaleDateString()}
-                        </div>
-                      )}
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {/* Library View */}
+              <LibraryView
+                tracks={library}
+                allTags={allTags}
+                stats={stats}
+                currentTrackId={currentTrack?.id}
+                isPlaying={playerState.isPlaying}
+                viewMode={libraryViewMode}
+                onTrackClick={(track, index) => {
+                  addToQueue(track);
+                  playTrack(track, queue.length);
+                }}
+                onTrackDoubleClick={(track) => {
+                  addToQueue(track);
+                  playTrack(track, queue.length);
+                }}
+                onUpdateTrack={updateTrack}
+                onTrashTrack={trashTrack}
+                isLoading={isLoadingLibrary}
+              />
+            </>
+          )}
+          
+          {activeTab === 'now-playing' && (
+            <div className="flex-1 flex items-center justify-center">
+              {currentTrack ? (
+                <div className="text-center">
+                  <div className="w-64 h-64 mx-auto mb-6 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center text-6xl shadow-2xl">
+                    🎵
+                  </div>
+                  <h2 className="text-2xl font-bold text-white mb-2">
+                    {currentTrack.title || currentTrack.name}
+                  </h2>
+                  <p className="text-gray-400 mb-4">{currentTrack.author || 'Unknown'}</p>
+                  
+                  {currentTrack.tags && (
+                    <div className="flex justify-center gap-2 mb-6">
+                      {currentTrack.tags.map(tag => (
+                        <span key={tag} className="px-3 py-1 bg-white/10 rounded-full text-sm">
+                          {tag}
+                        </span>
+                      ))}
                     </div>
                   )}
-
+                  
+                  <div className="flex items-center justify-center gap-4">
+                    <StarRating
+                      rating={currentTrack.rating}
+                      maxRating={5}
+                      size="lg"
+                      onRate={(r) => updateTrack(currentTrack.id, { rating: r })}
+                    />
+                  </div>
                 </div>
-              ))}
-              {playlist.length === 0 && !isLoadingPlaylist && (
-                <div style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: '2rem' }}>
-                  No tracks found
+              ) : (
+                <div className="text-center text-gray-500">
+                  <div className="text-6xl mb-4">🎵</div>
+                  <p>No track playing</p>
+                  <p className="text-sm">Select a track from the library</p>
                 </div>
               )}
             </div>
-          </div>
+          )}
+          
+          {activeTab === 'queue' && (
+            <div className="flex-1 overflow-auto p-6">
+              <QueuePanel
+                queue={queue}
+                currentIndex={queueCurrentIndex}
+                isOpen={true}
+                onClose={() => {}}
+                onTrackClick={(index) => playTrack(queue[index], index)}
+                onRemoveTrack={removeFromQueue}
+                onClearQueue={clearQueue}
+                onShuffle={() => setShuffle(s => !s)}
+                onSmartMix={handleSmartMix}
+                shuffle={shuffle}
+                repeatMode={repeatMode}
+                onToggleRepeat={() => setRepeatMode(m => m === 'off' ? 'all' : m === 'all' ? 'one' : 'off')}
+              />
+            </div>
+          )}
+        </main>
+        
+        {/* Visualizer Sidebar (Now Playing) */}
+        {activeTab === 'now-playing' && (
+          <aside className="w-80 border-l border-white/10 bg-[#0a0a18] p-4">
+            <canvas
+              ref={canvasRef}
+              width={300}
+              height={400}
+              className="w-full rounded-lg"
+            />
+            {!webGPUSupported && (
+              <p className="text-xs text-yellow-500 mt-2">WebGPU not supported</p>
+            )}
+            
+            <div className="mt-4 space-y-2">
+              <button
+                onClick={() => setVisualizerMode('flat')}
+                className={`w-full px-4 py-2 rounded text-left ${visualizerMode === 'flat' ? 'bg-purple-500' : 'bg-white/10'}`}
+              >
+                Flat Waveform
+              </button>
+              <button
+                onClick={() => setVisualizerMode('3D')}
+                className={`w-full px-4 py-2 rounded text-left ${visualizerMode === '3D' ? 'bg-purple-500' : 'bg-white/10'}`}
+              >
+                3D Device
+              </button>
+            </div>
+          </aside>
         )}
       </div>
-
-      <div className="player-controls">
-
-        <div className="mode-toggle-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-
-          {/* Visualizer Mode Toggle */}
-          <div className="mode-toggle">
-            <button
-              className={`toggle-btn ${visualizerMode === 'flat' ? 'active' : ''}`}
-              onClick={() => setVisualizerMode('flat')}
-              style={{
-                padding: '0.5rem 1rem',
-                background: visualizerMode === 'flat' ? '#0084ff' : 'rgba(255,255,255,0.1)',
-                border: 'none',
-                borderTopLeftRadius: '8px',
-                borderBottomLeftRadius: '8px',
-                color: 'white',
-                cursor: 'pointer'
-              }}
-            >
-              Flat Mode
-            </button>
-            <button
-              className={`toggle-btn ${visualizerMode === '3D' ? 'active' : ''}`}
-              onClick={() => setVisualizerMode('3D')}
-              style={{
-                padding: '0.5rem 1rem',
-                background: visualizerMode === '3D' ? '#0084ff' : 'rgba(255,255,255,0.1)',
-                border: 'none',
-                borderTopRightRadius: '8px',
-                borderBottomRightRadius: '8px',
-                color: 'white',
-                cursor: 'pointer'
-              }}
-            >
-              3D Device
-            </button>
-          </div>
-
-          {/* Audio Output Toggle */}
-          <div className="mode-toggle">
-            <button
-              className={`toggle-btn ${outputMode === 'web-audio' ? 'active' : ''}`}
-              onClick={() => setOutputMode('web-audio')}
-              style={{
-                padding: '0.5rem 1rem',
-                background: outputMode === 'web-audio' ? '#28a745' : 'rgba(255,255,255,0.1)',
-                border: 'none',
-                borderTopLeftRadius: '8px',
-                borderBottomLeftRadius: '8px',
-                color: 'white',
-                cursor: 'pointer'
-              }}
-            >
-              Web Audio
-            </button>
-            <button
-              className={`toggle-btn ${outputMode === 'worklet' ? 'active' : ''}`}
-              onClick={() => setOutputMode('worklet')}
-              style={{
-                padding: '0.5rem 1rem',
-                background: outputMode === 'worklet' ? '#28a745' : 'rgba(255,255,255,0.1)',
-                border: 'none',
-                color: 'white',
-                cursor: 'pointer'
-              }}
-            >
-              AudioWorklet
-            </button>
-            <button
-              className={`toggle-btn ${outputMode === 'sdl' ? 'active' : ''}`}
-              onClick={() => setOutputMode('sdl')}
-              style={{
-                padding: '0.5rem 1rem',
-                background: outputMode === 'sdl' ? '#28a745' : 'rgba(255,255,255,0.1)',
-                border: 'none',
-                color: 'white',
-                cursor: 'pointer'
-              }}
-            >
-              SDL3
-            </button>
-            <button
-              className={`toggle-btn ${outputMode === 'sdl2' ? 'active' : ''}`}
-              onClick={() => setOutputMode('sdl2')}
-              style={{
-                padding: '0.5rem 1rem',
-                background: outputMode === 'sdl2' ? '#28a745' : 'rgba(255,255,255,0.1)',
-                border: 'none',
-                borderTopRightRadius: '8px',
-                borderBottomRightRadius: '8px',
-                color: 'white',
-                cursor: 'pointer'
-              }}
-            >
-              SDL2
-            </button>
-          </div>
-        </div>
-
-        <div className="url-input-container">
-          <input
-            type="text"
-            className="url-input"
-            placeholder="Enter audio URL (Google Bucket, FTP, or direct URL)"
-            value={audioUrl}
-            onChange={(e) => setAudioUrl(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleLoadAudio()}
-          />
-          <button
-            className="load-button"
-            onClick={handleLoadAudio}
-            disabled={playerState.isLoading || !audioUrl.trim()}
-          >
-            {playerState.isLoading ? 'Loading...' : 'Load'}
-          </button>
-          <button
-            className="load-button"
-            onClick={handleLoadPlaylist}
-            disabled={isLoadingPlaylist}
-            style={{
-              marginLeft: '0.5rem',
-              background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)'
-            }}
-          >
-            {isLoadingPlaylist ? 'Loading...' : 'Playlist'}
-          </button>
-        </div>
-
-        {/* Current track info + inline editor (visible when a song is loaded) */}
-        {currentTrack && (
-          <div className="current-track" style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.75rem', marginBottom: '0.75rem' }}>
-            {isEditingCurrent ? (
-              <div className="edit-form" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flex: 1 }}>
-                <input
-                  type="text"
-                  value={currentEditTitle}
-                  onChange={(e) => setCurrentEditTitle(e.target.value)}
-                  placeholder="Display Title"
-                  style={{ padding: '0.35rem', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'white', flex: 2 }}
-                />
-                <input
-                  type="text"
-                  value={currentEditName}
-                  onChange={(e) => setCurrentEditName(e.target.value)}
-                  placeholder="Filename (optional)"
-                  style={{ padding: '0.35rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ccc', flex: 1 }}
-                />
-                <input
-                  type="text"
-                  value={currentEditGenre}
-                  onChange={(e) => setCurrentEditGenre(e.target.value)}
-                  placeholder="Genre"
-                  style={{ padding: '0.35rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', color: '#ccc', width: '10rem' }}
-                />
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button onClick={handleSaveEditCurrent} disabled={isSaving} style={{ padding: '0.35rem 0.6rem', background: '#28a745', border: 'none', borderRadius: '4px', color: 'white' }}>{isSaving ? '...' : 'Save'}</button>
-                  <button onClick={() => setIsEditingCurrent(false)} disabled={isSaving} style={{ padding: '0.35rem 0.6rem', background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: '4px', color: 'white' }}>Cancel</button>
+      
+      {/* Player Bar */}
+      <footer className="border-t border-white/10 bg-[#0a0a18] px-6 py-4">
+        <div className="flex items-center justify-between">
+          {/* Track Info */}
+          <div className="w-1/3 flex items-center gap-3">
+            {currentTrack && (
+              <>
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded flex items-center justify-center">
+                  🎵
                 </div>
-              </div>
-            ) : (
-              <div className="track-info" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <div className="track-title" style={{ fontWeight: 600, color: 'white' }}>{currentTrack.title || currentTrack.name || (currentTrack.url?.split('/').pop() || '')}</div>
-                  {currentTrack.title && <div className="track-filename" style={{ color: '#888', fontSize: '0.8em' }}>{currentTrack.name}</div>}
+                <div className="min-w-0">
+                  <div className="font-medium truncate">{currentTrack.title || currentTrack.name}</div>
+                  <div className="text-sm text-gray-400 truncate">{currentTrack.author}</div>
                 </div>
-
-                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <button onClick={handleStartEditCurrent} className="small-button" title="Edit song info">✏️ Edit</button>
-                  {/* If server ID exists, show a hint that edits will persist */}
-                  {currentTrack.id ? <div style={{ color: '#9fd', fontSize: '0.85em' }}>Saved</div> : <div style={{ color: '#aaa', fontSize: '0.85em' }}>Local</div>}
-                </div>
-              </div>
+              </>
             )}
           </div>
-        )}
-
-        {error && <div className="error-message">{error}</div>}
-
-        <div className="playback-controls">
-          <div className="control-group">
-            <button
-              className="small-button"
-              onClick={handlePrev}
-              disabled={!playlist.length}
-              title="Previous"
-            >
-              « Prev
-            </button>
-
-            <button
-              className="control-button"
-              onClick={playerState.isPlaying ? handlePause : handlePlay}
-              disabled={!playerState.duration}
-            >
-              {playerState.isPlaying ? '⏸ Pause' : '▶ Play'}
-            </button>
-
-            <button
-              className="small-button"
-              onClick={handleNext}
-              disabled={!playlist.length}
-              title="Next"
-            >
-              Next »
-            </button>
+          
+          {/* Controls */}
+          <div className="w-1/3 flex flex-col items-center">
+            <div className="flex items-center gap-4 mb-2">
+              <button
+                onClick={() => {
+                  if (queue.length > 0 && queueCurrentIndex > 0) {
+                    playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1);
+                  }
+                }}
+                className="text-gray-400 hover:text-white"
+                disabled={queueCurrentIndex <= 0}
+              >
+                ⏮
+              </button>
+              <button
+                onClick={() => {
+                  if (playerState.isPlaying) playerRef.current?.pause();
+                  else playerRef.current?.play();
+                }}
+                className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center text-xl hover:scale-105 transition-transform"
+              >
+                {playerState.isPlaying ? '⏸' : '▶'}
+              </button>
+              <button
+                onClick={() => {
+                  if (queue.length > 0 && queueCurrentIndex < queue.length - 1) {
+                    playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1);
+                  }
+                }}
+                className="text-gray-400 hover:text-white"
+                disabled={queueCurrentIndex >= queue.length - 1}
+              >
+                ⏭
+              </button>
+            </div>
+            
+            <div className="w-full max-w-md flex items-center gap-3">
+              <span className="text-xs text-gray-400 w-10 text-right">
+                {formatTime(playerState.currentTime)}
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={playerState.duration || 0}
+                value={playerState.currentTime}
+                onChange={(e) => playerRef.current?.seek(parseFloat(e.target.value))}
+                className="flex-1 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer"
+              />
+              <span className="text-xs text-gray-400 w-10">
+                {formatTime(playerState.duration)}
+              </span>
+            </div>
           </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          
+          {/* Extra Controls */}
+          <div className="w-1/3 flex items-center justify-end gap-4">
             <button
-              className={`shuffle-btn ${shuffle ? 'active' : ''}`}
               onClick={() => setShuffle(s => !s)}
+              className={`text-sm ${shuffle ? 'text-purple-400' : 'text-gray-400'}`}
               title="Shuffle"
             >
               🔀
             </button>
             <button
-              className={`shuffle-btn ${repeatMode !== 'off' ? 'active' : ''}`}
               onClick={() => setRepeatMode(m => m === 'off' ? 'all' : m === 'all' ? 'one' : 'off')}
+              className={`text-sm ${repeatMode !== 'off' ? 'text-purple-400' : 'text-gray-400'}`}
               title={`Repeat: ${repeatMode}`}
-              style={{
-                background: repeatMode === 'one' ? 'linear-gradient(135deg, #00c853 0%, #64dd17 100%)' : undefined
-              }}
             >
-              {repeatMode === 'off' ? '🔁' : repeatMode === 'all' ? '🔁' : '🔂'}
+              {repeatMode === 'one' ? '🔂' : '🔁'}
             </button>
+            
+            {/* Audio Output Select */}
+            <select
+              value={outputMode}
+              onChange={(e) => setOutputMode(e.target.value as AudioOutputMode)}
+              className="px-3 py-1 bg-white/10 rounded text-sm"
+            >
+              <option value="web-audio">Web Audio</option>
+              <option value="worklet">AudioWorklet</option>
+              <option value="sdl">SDL3</option>
+              <option value="sdl2">SDL2</option>
+            </select>
           </div>
         </div>
-
-        <div className="seek-container">
-          <span className="time-display">{formatTime(playerState.currentTime)}</span>
-          <input
-            type="range"
-            className="seek-slider"
-            min="0"
-            max={playerState.duration || 0}
-            step="0.1"
-            value={playerState.currentTime}
-            onChange={handleSeek}
-            disabled={!playerState.duration}
-          />
-          <span className="time-display">{formatTime(playerState.duration)}</span>
-        </div>
-
-        <div className="info-panel">
-          <p className="info-text">
-            Supports FLAC and WAV files. Use &apos;gs://&apos; for Google Cloud Storage.
-            <br />
-            <strong>3D Mode:</strong> Drag to rotate, Click on device screen to Play/Pause.
-            <br />
-            <strong>Playlist:</strong> Double-click a track to edit title, rating & genre.
-          </p>
-        </div>
-      </div>
+        
+        {error && (
+          <div className="mt-2 text-center text-red-400 text-sm">{error}</div>
+        )}
+      </footer>
     </div>
   );
 };

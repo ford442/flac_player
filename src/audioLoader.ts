@@ -1,4 +1,6 @@
 // Audio loader for Google Cloud Storage and FTP sources
+// Enhanced with AI track support and library management
+
 export interface AudioSource {
   url: string;
   type: 'google-bucket' | 'ftp' | 'http' | 'https';
@@ -8,37 +10,51 @@ export interface AudioSource {
 export interface PlaylistTrack {
   id: string;
   name: string;
-  title?: string;  // Display title separate from filename
+  title?: string;
   url: string;
   rating?: number;
   description?: string;
   author?: string;
   genre?: string;
   last_played?: string;
-  type?: string;  // For debugging
+  type?: string;
+  // New fields for library management
+  duration?: number;
+  play_count?: number;
+  tags?: string[];
+  created_at?: string;
+  // AI-generated track fields
+  generation_model?: string;
+  version?: string;
+  prompt?: string;
 }
 
-export type SortBy = 'date' | 'rating' | 'name' | 'last_played' | 'genre';
-export type RepeatMode = 'off' | 'one' | 'all';
-
-interface ApiFile {
-  filename: string;
-  size: number;
-  updated: string;
-  url: string;
+export interface LibraryStats {
+  total_tracks: number;
+  rated_4plus: number;
+  total_duration_hours: number;
+  total_play_count: number;
+  untagged_count: number;
+  trash_count: number;
+  unique_tags: number;
+  top_tags: { name: string; count: number }[];
 }
 
-interface ApiResponse {
-  folder: string;
+export interface TagInfo {
+  name: string;
   count: number;
-  files: ApiFile[];
 }
+
+export type SortBy = 'date' | 'rating' | 'name' | 'last_played' | 'genre' | 'play_count' | 'random';
+export type RepeatMode = 'off' | 'one' | 'all';
+export type ViewMode = 'library' | 'now-playing' | 'queue' | 'pile';
+
+// API Configuration
+const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
 export class AudioLoader {
   async loadAudio(source: AudioSource): Promise<ArrayBuffer> {
     try {
-      // For browser-based loading, we'll use fetch for all sources
-      // CORS must be properly configured on the source server
       const response = await fetch(source.url, {
         mode: 'cors',
         credentials: 'omit'
@@ -58,7 +74,6 @@ export class AudioLoader {
       return arrayBuffer;
     } catch (error) {
       console.error('Error loading audio:', error);
-      // Re-throw if it's already our custom error
       if (error instanceof Error && error.message.includes('File not found')) {
         throw error;
       }
@@ -67,15 +82,11 @@ export class AudioLoader {
   }
 
   async loadFromGoogleBucket(bucketUrl: string, filename: string): Promise<ArrayBuffer> {
-    // Google Cloud Storage URLs typically follow this pattern:
-    // https://storage.googleapis.com/bucket-name/file-path
     const url = `${bucketUrl}/${filename}`;
     return this.loadAudio({ url, type: 'google-bucket', name: filename });
   }
 
   async loadFromFTP(ftpUrl: string): Promise<ArrayBuffer> {
-    // FTP URLs need to be proxied through HTTP/HTTPS for browser access
-    // The URL should already be in a browser-accessible format
     return this.loadAudio({ url: ftpUrl, type: 'ftp' });
   }
 
@@ -84,7 +95,6 @@ export class AudioLoader {
     let type: 'google-bucket' | 'ftp' | 'http' | 'https' = 'http';
 
     if (url.startsWith('gs://')) {
-        // Convert gs://bucket/path to https://storage.googleapis.com/bucket/path
         finalUrl = url.replace('gs://', 'https://storage.googleapis.com/');
         type = 'google-bucket';
     } else if (url.startsWith('https')) {
@@ -94,6 +104,101 @@ export class AudioLoader {
     return this.loadAudio({ url: finalUrl, type });
   }
 
+  // =============================================================================
+  // Library API Methods
+  // =============================================================================
+
+  async fetchLibrary(
+    options: {
+      limit?: number;
+      offset?: number;
+      ratingGte?: number;
+      ratingLt?: number;
+      tags?: string[];
+      tagsMatch?: number;
+      untagged?: boolean;
+      search?: string;
+      sortBy?: SortBy;
+      sortDesc?: boolean;
+      excludeId?: string;
+      generationModel?: string;
+    } = {}
+  ): Promise<{ tracks: PlaylistTrack[]; total: number }> {
+    try {
+      const params = new URLSearchParams();
+      
+      if (options.limit) params.append('limit', options.limit.toString());
+      if (options.offset) params.append('offset', options.offset.toString());
+      if (options.ratingGte !== undefined) params.append('rating_gte', options.ratingGte.toString());
+      if (options.ratingLt !== undefined) params.append('rating_lt', options.ratingLt.toString());
+      if (options.tags?.length) params.append('tags', options.tags.join(','));
+      if (options.tagsMatch) params.append('tags_match', options.tagsMatch.toString());
+      if (options.untagged) params.append('untagged', 'true');
+      if (options.search) params.append('search', options.search);
+      if (options.sortBy) params.append('sort_by', options.sortBy);
+      if (options.sortDesc !== undefined) params.append('sort_desc', options.sortDesc.toString());
+      if (options.excludeId) params.append('exclude_id', options.excludeId);
+      if (options.generationModel) params.append('generation_model', options.generationModel);
+
+      const url = `${API_BASE_URL}/api/songs?${params}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch library: ${response.status} ${response.statusText}`);
+      }
+      
+      const tracks = await response.json();
+      
+      // Map to add URLs
+      const tracksWithUrls = tracks.map((item: any) => ({
+        ...item,
+        url: item.url || `${API_BASE_URL}/api/music/${item.id}`
+      }));
+      
+      return { tracks: tracksWithUrls, total: tracks.length };
+    } catch (error) {
+      console.error('Error fetching library:', error);
+      throw error;
+    }
+  }
+
+  async fetchTags(): Promise<TagInfo[]> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/songs/tags`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch tags: ${response.status}`);
+      }
+      const data = await response.json();
+      return data.tags || [];
+    } catch (error) {
+      console.error('Error fetching tags:', error);
+      return [];
+    }
+  }
+
+  async fetchStats(): Promise<LibraryStats> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/songs/stats`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch stats: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      // Return default stats on error
+      return {
+        total_tracks: 0,
+        rated_4plus: 0,
+        total_duration_hours: 0,
+        total_play_count: 0,
+        untagged_count: 0,
+        trash_count: 0,
+        unique_tags: 0,
+        top_tags: []
+      };
+    }
+  }
+
   async fetchPlaylist(
     sortBy: SortBy = 'date',
     sortDesc: boolean = true,
@@ -101,52 +206,12 @@ export class AudioLoader {
     minRating?: number
   ): Promise<PlaylistTrack[]> {
     try {
-      // First check health
-      const healthRes = await fetch('https://ford442-storage-manager.hf.space/api/health');
-      if (healthRes.ok) {
-        const health = await healthRes.json();
-        console.log('Storage manager health:', health);
-      }
-
-      // Build query params
-      const params = new URLSearchParams({ type: 'music', sort_by: sortBy });
-      if (sortDesc) params.append('sort_desc', 'true');
-      if (genre) params.append('genre', genre);
-      if (minRating) params.append('min_rating', minRating.toString());
-
-      const url = `https://ford442-storage-manager.hf.space/api/songs?${params}`;
-      console.log('Fetching playlist from:', url);
-
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch playlist: ${response.status} ${response.statusText}`);
-      }
-      const data = await response.json();
-      console.log('Raw API response:', data);
-      console.log('Number of items:', data.length);
-
-      // Map API response to PlaylistTrack format
-      const tracks: PlaylistTrack[] = data
-        .filter((item: any) => {
-          const lowerName = (item.name || item.filename || '').toLowerCase();
-          const isAudio = lowerName.endsWith('.flac') || lowerName.endsWith('.wav');
-          if (!isAudio) {
-            console.log('Filtering out (not audio):', item.name || item.filename);
-          }
-          return isAudio;
-        })
-        .map((item: any) => ({
-          id: item.id,
-          name: item.name || item.filename,
-          url: `https://ford442-storage-manager.hf.space/api/music/${item.id}`,
-          rating: item.rating,
-          description: item.description,
-          author: item.author,
-          genre: item.genre,
-          last_played: item.last_played
-        }));
-
-      console.log('Filtered tracks:', tracks.length);
+      const { tracks } = await this.fetchLibrary({
+        sortBy,
+        sortDesc,
+        ratingGte: minRating,
+        limit: 200
+      });
       return tracks;
     } catch (error) {
       console.error('Error fetching playlist:', error);
@@ -154,24 +219,38 @@ export class AudioLoader {
     }
   }
 
+  // =============================================================================
+  // Track CRUD
+  // =============================================================================
+
   async recordPlay(musicId: string): Promise<void> {
     try {
-      // Use the update endpoint to set last_played
-      await fetch(`https://ford442-storage-manager.hf.space/api/music/${musicId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ last_played: new Date().toISOString() })
+      await fetch(`${API_BASE_URL}/api/songs/${musicId}/play`, {
+        method: 'POST'
       });
     } catch (error) {
-      // Silently fail - play recording is not critical
       console.warn('Failed to record play:', error);
     }
   }
 
-  async updateSampleMetadata(musicId: string, updates: { name?: string; rating?: number; description?: string; genre?: string; last_played?: string }): Promise<void> {
+  async updateSampleMetadata(
+    musicId: string, 
+    updates: { 
+      name?: string; 
+      title?: string;
+      rating?: number; 
+      description?: string; 
+      genre?: string; 
+      tags?: string[];
+      last_played?: string;
+      generation_model?: string;
+      version?: string;
+      prompt?: string;
+    }
+  ): Promise<void> {
     try {
-      const response = await fetch(`https://ford442-storage-manager.hf.space/api/music/${musicId}`, {
-        method: 'PUT',
+      const response = await fetch(`${API_BASE_URL}/api/songs/${musicId}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
       });
@@ -184,4 +263,142 @@ export class AudioLoader {
       throw error;
     }
   }
+
+  async trashTrack(musicId: string): Promise<void> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/songs/${musicId}/trash`, {
+        method: 'POST'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to trash track: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error trashing track:', error);
+      throw error;
+    }
+  }
+
+  async suggestTags(musicId: string): Promise<{ suggestions: string[]; source: string }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/songs/${musicId}/suggest-tags`);
+      if (!response.ok) {
+        throw new Error(`Failed to get suggestions: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error('Error getting tag suggestions:', error);
+      return { suggestions: [], source: 'error' };
+    }
+  }
+
+  // =============================================================================
+  // Smart Mix - Find similar tracks
+  // =============================================================================
+
+  async findSimilarTracks(
+    trackId: string,
+    trackTags: string[],
+    minRating: number = 4,
+    limit: number = 20
+  ): Promise<PlaylistTrack[]> {
+    try {
+      const { tracks } = await this.fetchLibrary({
+        tags: trackTags.slice(0, 3), // Use top 3 tags
+        tagsMatch: 2, // At least 2 matching tags
+        ratingGte: minRating,
+        excludeId: trackId,
+        limit,
+        sortBy: 'random'
+      });
+      return tracks;
+    } catch (error) {
+      console.error('Error finding similar tracks:', error);
+      return [];
+    }
+  }
+
+  // =============================================================================
+  // Legacy Methods (Backward Compatibility)
+  // =============================================================================
+
+  async fetchLegacyPlaylist(
+    sortBy: SortBy = 'date',
+    sortDesc: boolean = true,
+    genre?: string,
+    minRating?: number
+  ): Promise<PlaylistTrack[]> {
+    // Fallback to external storage manager if configured
+    try {
+      const params = new URLSearchParams({ type: 'music', sort_by: sortBy });
+      if (sortDesc) params.append('sort_desc', 'true');
+      if (genre) params.append('genre', genre);
+      if (minRating) params.append('min_rating', minRating.toString());
+
+      const url = `https://ford442-storage-manager.hf.space/api/songs?${params}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch playlist: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      return data
+        .filter((item: any) => {
+          const lowerName = (item.name || item.filename || '').toLowerCase();
+          return lowerName.endsWith('.flac') || lowerName.endsWith('.wav');
+        })
+        .map((item: any) => ({
+          id: item.id,
+          name: item.name || item.filename,
+          url: `https://ford442-storage-manager.hf.space/api/music/${item.id}`,
+          rating: item.rating,
+          description: item.description,
+          author: item.author,
+          genre: item.genre,
+          last_played: item.last_played
+        }));
+    } catch (error) {
+      console.error('Error fetching legacy playlist:', error);
+      throw error;
+    }
+  }
+}
+
+// =============================================================================
+// Queue Management Utilities
+// =============================================================================
+
+const QUEUE_STORAGE_KEY = 'flac_player_queue';
+
+export interface QueueState {
+  tracks: PlaylistTrack[];
+  currentIndex: number;
+  shuffle: boolean;
+  repeat: RepeatMode;
+}
+
+export function saveQueueToStorage(state: QueueState): void {
+  try {
+    localStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.warn('Failed to save queue:', e);
+  }
+}
+
+export function loadQueueFromStorage(): QueueState | null {
+  try {
+    const data = localStorage.getItem(QUEUE_STORAGE_KEY);
+    if (data) {
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.warn('Failed to load queue:', e);
+  }
+  return null;
+}
+
+export function clearQueueStorage(): void {
+  localStorage.removeItem(QUEUE_STORAGE_KEY);
 }

@@ -1,6 +1,16 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CopyPlugin = require('copy-webpack-plugin');
+const webpack = require('webpack');
+
+// Load environment variables from .env file for frontend build
+require('dotenv').config();
+
+// Build env vars for DefinePlugin
+const envVars = {};
+['REACT_APP_API_URL', 'REACT_APP_GA_ID', 'REACT_APP_MIXPANEL_TOKEN'].forEach(key => {
+  envVars[`process.env.${key}`] = JSON.stringify(process.env[key] || '');
+});
 
 module.exports = {
   entry: './src/index.tsx',
@@ -31,6 +41,8 @@ module.exports = {
       template: './public/index.html',
       filename: 'index.html'
     }),
+    // Inject environment variables into the bundle
+    new webpack.DefinePlugin(envVars),
     // Ensure sdl-audio.* and script processor files from public/ are copied into dist/
     new CopyPlugin({
       patterns: [
