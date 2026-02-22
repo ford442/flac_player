@@ -20,6 +20,7 @@ export const PileMode: React.FC<PileModeProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationPercent, setCelebrationPercent] = useState(0);
   const [allTags, setAllTags] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [editing, setEditing] = useState({
@@ -34,12 +35,20 @@ export const PileMode: React.FC<PileModeProps> = ({
     setIsLoading(true);
     try {
       // Fetch tracks with rating < 4 OR no tags
-      const { tracks } = await loader.fetchLibrary({
+      const { tracks: lowRated } = await loader.fetchLibrary({
         ratingLt: 4,
+        sortBy: 'random',
+        limit: 50
+      });
+      const { tracks: untaggedTracks } = await loader.fetchLibrary({
         untagged: true,
         sortBy: 'random',
         limit: 50
       });
+      const deduped = [...lowRated, ...untaggedTracks].filter(
+        (track, index, arr) => arr.findIndex(t => t.id === track.id) === index
+      );
+      const tracks = deduped.sort(() => Math.random() - 0.5).slice(0, 50);
       setTracks(tracks);
       
       // Load available tags
@@ -99,9 +108,10 @@ export const PileMode: React.FC<PileModeProps> = ({
       
       // Show celebration every 20 tracks
       if ((currentIndex + 1) % 20 === 0) {
-        const percentage = stats.total_tracks > 0 
-          ? Math.round((ratedCount / stats.total_tracks) * 100)
+        const percentage = stats.total_tracks > 0
+          ? Math.round(((stats.rated_4plus + ratedCount) / stats.total_tracks) * 100)
           : 0;
+        setCelebrationPercent(percentage);
         setShowCelebration(true);
         setTimeout(() => setShowCelebration(false), 3000);
       }
@@ -200,7 +210,7 @@ export const PileMode: React.FC<PileModeProps> = ({
           <div className="bg-gradient-to-br from-purple-500 to-blue-500 text-white px-8 py-6 rounded-2xl shadow-2xl animate-bounce">
             <div className="text-4xl mb-2">🔥</div>
             <p className="text-xl font-bold">Nice!</p>
-            <p>{ratedCount} tracks rated 4+</p>
+            <p>Nice! {celebrationPercent}% of your pile is now 4+ 🔥</p>
           </div>
         </div>
       )}
@@ -278,7 +288,7 @@ export const PileMode: React.FC<PileModeProps> = ({
             </p>
             {currentTrack.prompt && (
               <p className="mt-2 text-sm text-gray-500 italic max-w-lg mx-auto">
-                "{currentTrack.prompt.substring(0, 100)}..."
+                &quot;{currentTrack.prompt.substring(0, 100)}...&quot;
               </p>
             )}
           </div>

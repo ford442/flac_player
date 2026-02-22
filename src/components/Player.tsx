@@ -30,8 +30,6 @@ type AudioOutputMode = 'web-audio' | 'worklet' | 'sdl' | 'sdl2';
 type ViewTab = 'library' | 'now-playing' | 'queue';
 type LibraryViewMode = 'grid' | 'list';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
-
 // =============================================================================
 // Toast Notification Component (Simple inline version)
 // =============================================================================
@@ -78,7 +76,6 @@ export const Player: React.FC = () => {
     duration: 0,
     isLoading: false
   });
-  const [audioUrl, setAudioUrl] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [webGPUSupported, setWebGPUSupported] = useState<boolean>(true);
   const [visualizerMode, setVisualizerMode] = useState<VisualizerMode>('flat');
@@ -109,7 +106,8 @@ export const Player: React.FC = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [untaggedOnly, setUntaggedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>('date');
-  const [sortDesc, setSortDesc] = useState(true);
+  const [sortDesc] = useState(true);
+  const [volume, setVolume] = useState(1);
   
   // Queue state
   const [queue, setQueue] = useState<PlaylistTrack[]>([]);
@@ -134,6 +132,9 @@ export const Player: React.FC = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
   
   const loader = useMemo(() => new AudioLoader(), []);
+  type EndCallbackPlayer = {
+    setOnEndedCallback?: (callback?: () => void) => void;
+  };
   
   // =============================================================================
   // Toast Helpers
@@ -213,8 +214,8 @@ export const Player: React.FC = () => {
   
   // Save queue to storage
   useEffect(() => {
-    saveQueueToStorage({ tracks: queue, currentIndex: queueCurrentIndex, shuffle, repeat });
-  }, [queue, queueCurrentIndex, shuffle, repeat]);
+    saveQueueToStorage({ tracks: queue, currentIndex: queueCurrentIndex, shuffle, repeat: repeatMode });
+  }, [queue, queueCurrentIndex, shuffle, repeatMode]);
   
   // =============================================================================
   // Player Initialization
@@ -240,14 +241,14 @@ export const Player: React.FC = () => {
 
     player.setStateChangeCallback(setPlayerState);
     
-    (player as any).setOnEndedCallback?.(() => {
+    (player as EndCallbackPlayer).setOnEndedCallback?.(() => {
       handleAutoAdvance();
     });
 
     playerRef.current = player;
 
     return () => {
-      (player as any).setOnEndedCallback?.(undefined);
+      (player as EndCallbackPlayer).setOnEndedCallback?.(undefined);
       player.destroy();
     };
   }, [outputMode]);
@@ -483,6 +484,20 @@ export const Player: React.FC = () => {
       }
     },
     onSearchFocus: () => searchInputRef.current?.focus(),
+    onVolumeUp: () => {
+      setVolume(prev => {
+        const next = Math.min(1, prev + 0.1);
+        playerRef.current?.setVolume(next);
+        return next;
+      });
+    },
+    onVolumeDown: () => {
+      setVolume(prev => {
+        const next = Math.max(0, prev - 0.1);
+        playerRef.current?.setVolume(next);
+        return next;
+      });
+    },
     onToggleQueue: () => setShowQueue(prev => !prev),
     onTogglePile: () => setShowPileMode(true),
     isEnabled: !showPileMode
@@ -737,6 +752,7 @@ export const Player: React.FC = () => {
                 isPlaying={playerState.isPlaying}
                 viewMode={libraryViewMode}
                 onTrackClick={(track, index) => {
+                  void index;
                   addToQueue(track);
                   playTrack(track, queue.length);
                 }}
@@ -933,18 +949,19 @@ export const Player: React.FC = () => {
             </button>
             
             {/* Audio Output Select */}
-            <select
-              value={outputMode}
-              onChange={(e) => setOutputMode(e.target.value as AudioOutputMode)}
-              className="px-3 py-1 bg-white/10 rounded text-sm"
-            >
+              <select
+                value={outputMode}
+                onChange={(e) => setOutputMode(e.target.value as AudioOutputMode)}
+                className="px-3 py-1 bg-white/10 rounded text-sm"
+              >
               <option value="web-audio">Web Audio</option>
               <option value="worklet">AudioWorklet</option>
               <option value="sdl">SDL3</option>
               <option value="sdl2">SDL2</option>
-            </select>
+              </select>
+              <span className="text-xs text-gray-400 w-12 text-right">{Math.round(volume * 100)}%</span>
+            </div>
           </div>
-        </div>
         
         {error && (
           <div className="mt-2 text-center text-red-400 text-sm">{error}</div>
