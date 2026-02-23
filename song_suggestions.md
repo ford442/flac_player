@@ -116,3 +116,85 @@ Highland melody on the Caribbean sea
 **Additional Notes:**
 - **Combo/Fusion:** Celtic / Reggae.
 - **Thematic Ties:** A displacement of the mournful bagpipe sound into a joyful, sunny context.
+
+### Title: The Alpine Bhangra
+
+**Service:** Minimax Audio
+
+**Prompt:** A high-energy Bhangra beat driven by Dhol drums, but the lead melody is performed by a Swiss yodeler with an accordion backing.
+
+**Lyrics:**
+(Verse 1)
+From the Bernese Oberland to the Punjab plains
+Snow on the peak, sun on the grains
+Heidi's in a sari, spinning round and round
+Hearing that Dhol beat, shaking the ground
+
+(Chorus)
+Yodel-ay-ee-hoo! Balle Balle!
+Echo in the valley, dance in the alley
+
+**Additional Notes:**
+- **Combo/Fusion:** Swiss Yodeling / Punjabi Bhangra.
+- **Thematic Ties:** Mountain folk traditions colliding across continents.
+
+### Title: Requiem for a Glitch
+
+**Service:** Minimax Audio
+
+**Prompt:** A solemn, polyphonic choir singing in Latin, interrupted and chopped by aggressive digital artifacts, bit-crushed snares, and stuttering bass.
+
+**Lyrics:**
+(Chant)
+Dies irae, dies illa
+Solvet saeclum in favilla
+(Glitch breakdown)
+S-s-system failure. Rebooting the soul.
+Error 404: Salvation not found.
+Data corruption in the holy ground.
+
+**Additional Notes:**
+- **Combo/Fusion:** Renaissance Choral / Glitch Hop.
+- **Thematic Ties:** The sacred eternal versus the transient digital decay.
+
+### Title: Samba of the Tundra
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced Samba rhythm played on ice percussion and bone shakers, accompanied by deep, guttural throat singing melodies instead of brass.
+
+**Lyrics:**
+(Verse 1)
+Frozen breath, burning feet
+Rhythm of the ice, tropical heat
+Reindeer watching, wondering why
+Carnival under the polar sky
+
+(Chorus)
+Samba! In the permafrost
+Nothing is stolen, nothing is lost
+Throat singing deep, spirit awake
+Dancing all night on a frozen lake
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Samba / Siberian Throat Singing.
+- **Thematic Ties:** Tropical rhythm imposed on an arctic landscape.
+
+### Title: Victorian Dubstep
+
+**Service:** Minimax Audio
+
+**Prompt:** A delicate string quartet playing a waltz that slowly disintegrates into a massive, wobbling bass drop. The cello takes the role of the sub-bass.
+
+**Lyrics:**
+(Spoken in proper Queen's English)
+Ladies and gentlemen,
+I present to you a most curious vibration.
+One must mind the gap...
+Between the treble and the drop.
+(WUB WUB WUB)
+Quite exquisite, don't you think?
+
+**Additional Notes:**
+- **Combo/Fusion:** 19th Century Chamber Music / Dubstep.
+- **Thematic Ties:** High society etiquette meets filthy bass culture.
