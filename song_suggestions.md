@@ -198,3 +198,89 @@ Quite exquisite, don't you think?
 **Additional Notes:**
 - **Combo/Fusion:** 19th Century Chamber Music / Dubstep.
 - **Thematic Ties:** High society etiquette meets filthy bass culture.
+
+### Title: Sahara Surf Rock
+
+**Service:** Minimax Audio
+
+**Prompt:** A psychedelic surf rock track where the reverb-heavy guitars play desert blues scales. Hand claps and calabash provide the rhythm instead of a drum kit.
+
+**Lyrics:**
+(Verse 1)
+No waves on this horizon, just heatwaves on the sand
+Board waxed with camel tallow, riding through the land
+The dune is rising high, a breaker made of gold
+Stories of the nomads, in the reverb told
+
+(Chorus)
+Surf's up in Timbuktu
+Where the sky is burning blue
+Hanging ten on a shifting grain
+Waiting for the phantom rain
+
+**Additional Notes:**
+- **Combo/Fusion:** Surf Rock / Tuareg Desert Blues
+- **Thematic Ties:** The vast "ocean" of sand instead of water.
+
+### Title: Gregorian Trap
+
+**Service:** Minimax Audio
+
+**Prompt:** Deep, resonant Gregorian monk chants layered over a hard-hitting trap beat with rattling hi-hats and booming 808s. Occasional auto-tuned vocal ad-libs.
+
+**Lyrics:**
+(Chant - Latin)
+In nomine Patris...
+(Ad-lib)
+Yeah! Skrt!
+(Verse 1)
+Sanctuary moving fast, stained glass on the dash
+Praying for the spirit, not the petty cash
+Cloister is the trap house, silence is the loud
+Incense smoke is thick, floating like a cloud
+
+**Additional Notes:**
+- **Combo/Fusion:** Gregorian Chant / Trap Music
+- **Thematic Ties:** Medieval piety meets modern street bravado.
+
+### Title: Polka Noir
+
+**Service:** Minimax Audio
+
+**Prompt:** A slow, brooding jazz noir track, but the rhythm section is a tuba and accordion playing a slowed-down, minor-key polka beat. A muted trumpet plays a lonely melody.
+
+**Lyrics:**
+(Spoken in a gravelly voice)
+It was raining. It's always raining in this town.
+She walked in with an accordion case and a tuba player named Hans.
+They said they wanted to dance.
+But nobody dances to a polka in the shadows.
+One, two, hop. One, two, drop.
+The rhythm of a crime scene.
+
+**Additional Notes:**
+- **Combo/Fusion:** Polka / Film Noir Jazz
+- **Thematic Ties:** A cheerful dance turned into a detective mystery backdrop.
+
+### Title: Didgeridoo Disco
+
+**Service:** Minimax Audio
+
+**Prompt:** A funky 1970s disco track with a four-on-the-floor kick, but the bassline is entirely replaced by the rhythmic drone of a didgeridoo. Funky guitar scratches and orchestral hits.
+
+**Lyrics:**
+(Verse 1)
+Underneath the disco ball, the ancient earth is calling
+Bell bottoms flaring, but the sky is never falling
+Circular breathing, keeping the groove alive
+Saturday Night Fever in the Outback drive
+
+(Chorus)
+Didgeridoo it!
+Feel the drone in your bones
+Spin around, touch the ground
+Ancestral tones on the microphone
+
+**Additional Notes:**
+- **Combo/Fusion:** Aboriginal Australian / 70s Disco
+- **Thematic Ties:** Ancient earth vibrations on a glittery dance floor.
