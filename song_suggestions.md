@@ -284,3 +284,81 @@ Ancestral tones on the microphone
 **Additional Notes:**
 - **Combo/Fusion:** Aboriginal Australian / 70s Disco
 - **Thematic Ties:** Ancient earth vibrations on a glittery dance floor.
+
+### Title: Pixel Matador
+
+**Service:** Minimax Audio
+
+**Prompt:** A fiery Flamenco track where the palmas (handclaps) are bit-crushed and the nylon string guitar battles a chiptune lead synthesizer.
+
+**Lyrics:**
+(Verse 1)
+Level one, the bull enters the ring
+A sprite of red, a dangerous thing
+Press start to dodge, press A to dance
+In the pixel dust, a romance of chance
+
+(Chorus)
+Olé! Game Over? Never say die
+8-bit passion under a Seville sky
+
+**Additional Notes:**
+- **Combo/Fusion:** Flamenco / Chiptune
+- **Thematic Ties:** Passionate Spanish dance meets retro gaming intensity.
+
+### Title: Baroque Mosh Pit
+
+**Service:** Minimax Audio
+
+**Prompt:** A Harpsichord concerto played through a wall of distortion amps. Double-kick drum blast beats accompany intricate counterpoint melodies.
+
+**Lyrics:**
+(Growling)
+Counterpoint! Chaos!
+Fugue state of aggression!
+(Harpsichord solo shredding)
+The wig is off! The pit is open!
+Bach is back and he's broken the unspoken!
+
+**Additional Notes:**
+- **Combo/Fusion:** Baroque / Thrash Metal
+- **Thematic Ties:** The intricate complexity of Bach played with the aggression of Slayer.
+
+### Title: Red Planet Ranchero
+
+**Service:** Minimax Audio
+
+**Prompt:** A mournful Mariachi ballad set in a sci-fi soundscape. Theremins replace the violins, and the Guitarrón bass is a deep synth pulse.
+
+**Lyrics:**
+(Verse 1)
+Ay, mi amor, left me on Earth
+While I herd the rovers for what it's worth
+Dust storms blowing, rust in my heart
+Light years keep us worlds apart
+
+(Chorus)
+Cantaré to the moons, Phobos and Deimos
+Lonely vaquero in the cosmos
+
+**Additional Notes:**
+- **Combo/Fusion:** Mariachi / Space Synth
+- **Thematic Ties:** A festive earthly celebration transported to a lonely, alien landscape.
+
+### Title: Aria of the Amen Break
+
+**Service:** Minimax Audio
+
+**Prompt:** A dramatic Operatic Soprano singing a tragic aria over a frenetic 170 BPM Drum and Bass rhythm. Sub-bass wobbles underneath the high notes.
+
+**Lyrics:**
+(Operatic Soprano)
+Veloce! Veloce!
+The rhythm accelerates my fate!
+(Rapid fire breakbeat)
+My heart beats like the snare!
+Tragedy in the drop! Beware!
+
+**Additional Notes:**
+- **Combo/Fusion:** Opera / Drum and Bass
+- **Thematic Ties:** High art vocal discipline contrasting with raw, primal rhythmic energy.
