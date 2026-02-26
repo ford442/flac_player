@@ -362,3 +362,86 @@ Tragedy in the drop! Beware!
 **Additional Notes:**
 - **Combo/Fusion:** Opera / Drum and Bass
 - **Thematic Ties:** High art vocal discipline contrasting with raw, primal rhythmic energy.
+
+### Title: Seoul of the Citadel
+
+**Service:** Minimax Audio
+
+**Prompt:** A glossy, high-energy K-Pop track, but the synthesizer hooks are replaced by medieval lutes and recorders. The beat is a trap rhythm played on bodhráns.
+
+**Lyrics:**
+(Verse 1)
+Oppa's in the castle, armor shining bright
+Defending the kingdom, dancing through the night
+Drawbridge down, speakers up, hear the trumpet blow
+Royal decree says we gotta let it go
+
+(Chorus)
+Saranghae, my lady fair!
+Put your hands up in the air!
+Citadel pop, shining star
+Dancing near and dancing far
+
+**Additional Notes:**
+- **Combo/Fusion:** K-Pop / Medieval Folk
+- **Thematic Ties:** Modern idol culture transposed into a feudal court.
+
+### Title: The Good, The Bad, and The Soggy
+
+**Service:** Minimax Audio
+
+**Prompt:** A classic Spaghetti Western theme, but performed underwater. The whistle melody is muffled and bubbly, accompanied by sonar pings and whale song instead of acoustic guitar.
+
+**Lyrics:**
+(Spoken)
+The ocean is a cruel mistress, partner.
+(Bubble sounds)
+Draw your harpoon.
+(Whale moan)
+It's high tide at the O.K. Coral.
+
+**Additional Notes:**
+- **Combo/Fusion:** Spaghetti Western / Ambient Underwater
+- **Thematic Ties:** The vast, lawless frontier of the ocean floor.
+
+### Title: Java Grindhouse
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive Industrial Metal track where the metallic percussion is provided by a traditional Indonesian Gamelan ensemble. Distorted guitars mimic the Gamelan scales.
+
+**Lyrics:**
+(Screaming)
+STEEL! BRONZE! FIRE!
+Gong ageng strikes the hour of doom!
+Metallurgy of the soul!
+Create! Destroy! Cycle!
+(Gamelan rapid fire breakdown)
+
+**Additional Notes:**
+- **Combo/Fusion:** Industrial Metal / Indonesian Gamelan
+- **Thematic Ties:** The shared metallic timbres of heavy industry and traditional bronze percussion.
+
+### Title: Ipanema Ice Case
+
+**Service:** Minimax Audio
+
+**Prompt:** A soft, whispering Bossa Nova track with gentle nylon guitar chords. The lyrics, however, detail a grim, Nordic Noir murder mystery investigation.
+
+**Lyrics:**
+(Verse 1 - Soft and breathy)
+Tall and tan and young and lovely
+The detective found the body
+In the snow... in the snow...
+Blue eyes staring at the fjord
+A crime of passion, untoward
+Ah, sad... so sad...
+
+(Chorus)
+Girl from the crime scene goes walking
+And when she passes, the police start talking
+About the blood... on the ice...
+
+**Additional Notes:**
+- **Combo/Fusion:** Bossa Nova / Nordic Noir
+- **Thematic Ties:** The warmth of Brazil juxtaposed with the cold, dark themes of Scandinavian crime fiction.
