@@ -445,3 +445,87 @@ About the blood... on the ice...
 **Additional Notes:**
 - **Combo/Fusion:** Bossa Nova / Nordic Noir
 - **Thematic Ties:** The warmth of Brazil juxtaposed with the cold, dark themes of Scandinavian crime fiction.
+
+### Title: The Kyoto Crank
+
+**Service:** Minimax Audio
+
+**Prompt:** A high-energy J-Pop idol anthem where the primary melodic driving force is a medieval hurdy-gurdy instead of a synthesizer. The beat is a fast-paced electronic pop rhythm.
+
+**Lyrics:**
+(Verse 1)
+Kira kira shining in the marketplace
+Turning the wheel, keeping up the pace
+The resin is fresh, the strings are so tight
+We're dancing in the neon light!
+
+(Chorus)
+Crank it up, crank it up, kawaii so sweet!
+Hurdy-gurdy playing to the Tokyo beat
+Spinning round and round, a magical sound
+The cutest little instrument that can be found!
+
+**Additional Notes:**
+- **Combo/Fusion:** J-Pop / Medieval Folk
+- **Thematic Ties:** Hyper-modern, cute idol aesthetic powered by a crude, ancient mechanical instrument.
+
+### Title: Calypso of the Damned
+
+**Service:** Minimax Audio
+
+**Prompt:** A brutal Death Metal track featuring guttural vocals and heavily distorted blast beats, but the underlying musical structure and lead instrumentation are played on a traditional Caribbean steel pan.
+
+**Lyrics:**
+(Growling)
+SUNSHINE! BLOODY SUNSHINE!
+THE COCONUT FALLS! THE PALM TREE BLEEDS!
+(Steel pan breakdown with double kick drums)
+CARNIVAL OF CHAOS!
+ROAST THE PIG IN THE FIRE OF HELL!
+
+**Additional Notes:**
+- **Combo/Fusion:** Death Metal / Calypso
+- **Thematic Ties:** Tropical vacation relaxation violently interrupted by extreme metal aggression.
+
+### Title: Appalachian Steppe
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast, plucky Appalachian Bluegrass tune played on banjo and upright bass, but the lead vocals are entirely performed in deep, resonant Mongolian throat singing.
+
+**Lyrics:**
+(Verse 1 - Bluegrass harmony style but throat sung)
+[Guttural rhythmic chanting]
+Riding the horse through the bluegrass fields
+[Deep drone over banjo roll]
+Moonshine in the yurt, seeing what it yields
+
+(Chorus)
+[Polyphonic throat singing melody matching a fiddle tune]
+Yeee-haw, from the holler to the plains
+[Low rumbling bass vocal]
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Mongolian Throat Singing
+- **Thematic Ties:** Merging two distinct, deep-rooted rural folk traditions from opposite sides of the world.
+
+### Title: Delta Cyber-Blues
+
+**Service:** Minimax Audio
+
+**Prompt:** A gritty, acoustic 1920s Delta Blues track recorded with vinyl crackle, but it stutters and glitches wildly. The slide guitar melodies are occasionally replaced by dial-up modem sounds and 8-bit chip noises.
+
+**Lyrics:**
+(Verse 1)
+Woke up this mornin', my connection was slow
+[Glitch] Woke up this mornin', my connection was slow
+Devil on my hard drive, nowhere left to go
+
+(Chorus)
+I got those 404 blues, my baby left me offline
+[Modem screech replacing guitar solo]
+She took my bandwidth, now I'm losin' my mind
+
+**Additional Notes:**
+- **Combo/Fusion:** 1920s Delta Blues / Glitchcore
+- **Thematic Ties:** Early 20th-century analog sorrow expressed through late 20th-century digital decay.
