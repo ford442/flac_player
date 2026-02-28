@@ -529,3 +529,95 @@ She took my bandwidth, now I'm losin' my mind
 **Additional Notes:**
 - **Combo/Fusion:** 1920s Delta Blues / Glitchcore
 - **Thematic Ties:** Early 20th-century analog sorrow expressed through late 20th-century digital decay.
+
+### Title: Tango of the Abyss
+
+**Service:** Minimax Audio
+
+**Prompt:** A passionate Argentine Tango played with traditional bandoneon and acoustic guitar, but backed by a sludgy, downtempo Doom Metal rhythm section. The tempo drags heavily, creating an oppressive atmosphere.
+
+**Lyrics:**
+(Verse 1)
+One step forward, a thousand years down
+The gravity pulls me, but I never drown
+Hold me close in this sulfurous air
+A dance of the shadows, a heavy despair
+
+(Chorus)
+Baila! Baila! In the ash and the bone
+A slow, crushing rhythm we face all alone
+The bandoneon bleeds a sorrowful chord
+While the double-kick drum is our dark overlord
+
+**Additional Notes:**
+- **Combo/Fusion:** Argentine Tango / Doom Metal
+- **Thematic Ties:** The passion of the dance slowed down and weighted by a crushing existential dread.
+
+### Title: Galleon Drill
+
+**Service:** Minimax Audio
+
+**Prompt:** A classic, rowdy Sea Shanty sung by a choir of gruff sailors, but laid over a menacing UK Drill beat with sliding 808s and skittering hi-hats.
+
+**Lyrics:**
+(Chant)
+Heave away, my bullies! Heave away!
+(Ad-lib)
+Bow bow bow!
+(Verse 1)
+Man down the hatches, the storm is movin' fast
+Run up on the galleon, shadows on the mast
+Got the cutlass swingin', takin' all the loot
+Broadside cannon ready, watch the captain shoot
+
+(Chorus)
+We rollin' with the tide, we stayin' in the deep
+No rest for the wicked, the ocean don't sleep
+So haul on the bowline, and tighten up the grip
+It's a drill on the water, aboard this ghost ship
+
+**Additional Notes:**
+- **Combo/Fusion:** Sea Shanty / UK Drill
+- **Thematic Ties:** The harsh, gang-like camaraderie of 18th-century sailors merged with modern street gang aesthetics.
+
+### Title: Volcanic Factory
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy Industrial Techno track driven by pounding mechanical synths, but the rhythm is entirely provided by a traditional Polynesian percussion ensemble playing log drums and split bamboo.
+
+**Lyrics:**
+(Verse 1)
+Fire in the mountain, steel in the vein
+The factory is breathing, a beast without a chain
+Beat the wooden drum, let the pistons fly
+Smoke stack rising, blocking out the sky
+
+(Chorus)
+Haka of the machine, warrior of the gear
+The rhythm of the earth is what you gonna hear
+Strike the bamboo loud, let the engine roar
+Island of iron, a technological shore
+
+**Additional Notes:**
+- **Combo/Fusion:** Polynesian Folk / Industrial Techno
+- **Thematic Ties:** The raw, rhythmic power of island traditions powering a massive, futuristic machine.
+
+### Title: Neon Shtetl
+
+**Service:** Minimax Audio
+
+**Prompt:** A lively, fast-paced Klezmer tune played with clarinet and accordion, but slowed down and drenched in heavy reverb and chorus effects, set against a classic Vaporwave drum machine beat.
+
+**Lyrics:**
+(Spoken, echoing)
+Do you remember the village?
+The one that only exists... on a VHS tape?
+(Clarinet wails slowly, heavily delayed)
+The past is just a mall... closing at midnight.
+Mazel tov, my digital friend.
+Let's dance in the pastel rain.
+
+**Additional Notes:**
+- **Combo/Fusion:** Klezmer / Vaporwave
+- **Thematic Ties:** Nostalgia for a lost Eastern European past filtered through the hazy, synthetic nostalgia of 80s mall culture.
