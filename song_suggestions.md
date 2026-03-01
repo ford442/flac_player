@@ -621,3 +621,90 @@ Let's dance in the pastel rain.
 **Additional Notes:**
 - **Combo/Fusion:** Klezmer / Vaporwave
 - **Thematic Ties:** Nostalgia for a lost Eastern European past filtered through the hazy, synthetic nostalgia of 80s mall culture.
+
+### Title: The Monastery Bounce
+
+**Service:** Minimax Audio
+
+**Prompt:** An upbeat, lively 1920s Electro-Swing track driven by a bouncy upright bass and brass section. However, the lead vocal melody and harmonies are performed entirely by a solemn choir singing in Gregorian Chant.
+
+**Lyrics:**
+(Chorus - Gregorian Chant style, but rhythmic)
+Dominus vobiscum, tap your feet
+Spiritus sanctus on the beat
+(Ad-lib: Yeah, swing it, brother!)
+Kyrie eleison on the floor
+Brass is blaring, we want more!
+
+**Additional Notes:**
+- **Combo/Fusion:** Electro-Swing / Gregorian Chant
+- **Thematic Ties:** The energetic, sinful vibe of a speakeasy colliding with the pious, austere atmosphere of a medieval monastery.
+
+### Title: Tokyo Skank
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced third-wave Ska song featuring a frantic horn section and an upstroke electric guitar. The primary lead instrument taking the solos, however, is a traditional Japanese Koto.
+
+**Lyrics:**
+(Verse 1)
+Pick it up, pick it up, underneath the cherry tree
+Riding on the bullet train, feeling wild and free
+Brass is sounding heavy, but the strings are plucking light
+Skanking through Shinjuku in the neon of the night
+
+(Chorus)
+Oi! Oi! Pluck that string!
+Make the ancient temple ring!
+Black and white checkers on a silken gown
+The fastest little Koto in the whole damn town!
+
+**Additional Notes:**
+- **Combo/Fusion:** Ska / Traditional Koto
+- **Thematic Ties:** The hyperactive, rude-boy energy of Ska injected into the refined, delicate tradition of Japanese court music.
+
+### Title: Reverb Ranchera
+
+**Service:** Minimax Audio
+
+**Prompt:** A lush, atmospheric Shoegaze track characterized by a massive wall of distorted, reverb-drenched guitars. Peeking through the dense noise are the triumphant blasts of a Mariachi trumpet and the strumming of a Vihuela.
+
+**Lyrics:**
+(Verse 1 - Vocals buried in reverb)
+Cactus shadows in the fuzz
+Remembering the love that was
+Distortion pedal on the floor
+Tears are falling, por favor
+
+(Chorus - Distant and dreamy)
+Ay, ay, ay, ay... floating away
+In a sea of feedback, where I'll stay
+The trumpet calls through the haze
+Lost forever in the agave maze
+
+**Additional Notes:**
+- **Combo/Fusion:** Shoegaze / Mariachi
+- **Thematic Ties:** The extroverted, celebratory nature of Mariachi swallowed by the introverted, melancholic wall of sound of Shoegaze.
+
+### Title: Neon Highlander
+
+**Service:** Minimax Audio
+
+**Prompt:** A driving, retro-futuristic Synthwave track with a pulsating 16th-note bassline and gated snare drums. The main melodic hook and solos are blared out by Great Highland Bagpipes.
+
+**Lyrics:**
+(Verse 1)
+Cruising down the grid in a Testarossa dream
+Tartan on the dashboard, laser in the stream
+Fog on the loch, but the grid is glowing pink
+Pushing past the redline, faster than you think
+
+(Chorus)
+Synth and the drone, bone and the chrome
+Digital highlander, finding his way home
+Pump the bag, hit the sequence, let the analog scream
+Riding out the outrun in a retro-scottish dream
+
+**Additional Notes:**
+- **Combo/Fusion:** Synthwave / Bagpipes
+- **Thematic Ties:** The neon-drenched, synthesizer-heavy nostalgia of the 1980s retro-future fused with the ancient, analog continuous drone of the Scottish highlands.
