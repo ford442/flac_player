@@ -782,3 +782,92 @@ Dans cette ville de chrome, tu es mon étincelle
 **Additional Notes:**
 - **Combo/Fusion:** 1930s French Chanson / Darksynth Cyberpunk
 - **Thematic Ties:** Bringing the bohemian, romantic nostalgia of old Paris into a bleak, high-tech dystopian future.
+
+### Title: Tuvan Tu-Step
+
+**Service:** Minimax Audio
+
+**Prompt:** A classic UK Garage track with shuffling 2-step beats and a heavy sub-bass line, but the soulful R&B vocal chops are completely replaced by deep, resonating Tuvan throat singing and overtone whistles.
+
+**Lyrics:**
+(Verse 1)
+[Rhythmic guttural throat singing matching a 2-step flow]
+London rain on the window pane
+Steppes are calling out my name
+[High-pitched overtone whistle ad-lib]
+
+(Chorus)
+[Deep Sygyt overtone melody]
+Bassline wobbling under the tent
+Ancestral echoes, heavily sent
+Skip to the rhythm, breathe from the chest
+UK flavor, Mongolian quest
+
+**Additional Notes:**
+- **Combo/Fusion:** UK Garage / Tuvan Throat Singing
+- **Thematic Ties:** The modern, urban club environment pulsating with ancient, nomadic resonance.
+
+### Title: The Pharaoh's Fandango
+
+**Service:** Minimax Audio
+
+**Prompt:** An intense Spanish Flamenco track where the rapid acoustic guitar strumming is accompanied by the ancient Egyptian Ney (flute) and Sistrum (rattle). The clapping (palmas) drives an odd-metered desert rhythm.
+
+**Lyrics:**
+(Verse 1)
+Under the Andalusian moon, the pyramids rise
+Castanets clicking, reflecting the skies
+The Nile is flowing through the heart of the dance
+A pharaoh's passion, a Matador's stance
+
+(Chorus)
+Olé! The sun god Ra!
+Stamping the dust, burning the star
+From the sands of Giza to the streets of Seville
+The rhythm is ancient, the spirit is still
+
+**Additional Notes:**
+- **Combo/Fusion:** Spanish Flamenco / Ancient Egyptian Folk
+- **Thematic Ties:** The fiery, dramatic flair of Spanish dance infused with the mystical, arid tones of ancient Egypt.
+
+### Title: Appalachian Gamelan
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark Appalachian Murder Ballad played at a slow, deliberate pace. The traditional banjo and fiddle are replaced by an Indonesian Gamelan ensemble, playing microtonal, metallic, and hauntingly dissonant chords to tell a tragic story.
+
+**Lyrics:**
+(Verse 1 - Sung in a high, lonesome mountain style)
+Down in the valley, where the shadow lies deep
+The bronze gongs are ringing, putting her to sleep
+He took her down by the river so cold
+A story of sorrow, eternally told
+
+(Chorus)
+Strike the saron, let the bonang weep
+A secret the mountains and metallophones keep
+No pine box for Mary, just the riverbed stone
+And the microtone ring of a love overthrown
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Murder Ballad / Indonesian Gamelan
+- **Thematic Ties:** Merging the dark, tragic storytelling of American folk with the eerie, shimmering resonance of Southeast Asian bronze.
+
+### Title: Intergalactic Raga
+
+**Service:** Minimax Audio
+
+**Prompt:** A blistering Breakcore track with erratic, chopped-up Amen breaks played at 200 BPM, overlaid with a highly technical, virtuosic Indian Classical Raga performed on a Sitar and Tabla.
+
+**Lyrics:**
+(Vocals - Rapid Konnakol rhythmic vocalization)
+Ta-ka-di-mi Ta-ka-ju-nu!
+(Breakbeat stuttering matches the vocal syllables)
+(Sitar shredding at hyper-speed)
+The cosmos is tearing, the rhythm divine
+A glitch in the matrix, the planets align
+(Tabla blast beat)
+
+**Additional Notes:**
+- **Combo/Fusion:** Indian Classical Raga / Breakcore
+- **Thematic Ties:** The strict, complex rhythmic structures of traditional Indian music accelerating into hyper-digital, chaotic entropy.
