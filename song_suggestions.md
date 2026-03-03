@@ -708,3 +708,77 @@ Riding out the outrun in a retro-scottish dream
 **Additional Notes:**
 - **Combo/Fusion:** Synthwave / Bagpipes
 - **Thematic Ties:** The neon-drenched, synthesizer-heavy nostalgia of the 1980s retro-future fused with the ancient, analog continuous drone of the Scottish highlands.
+
+### Title: The Sub-Saharan Symphony
+
+**Service:** Minimax Audio
+
+**Prompt:** A grand Classical Symphony, but the lead violin sections are entirely replaced by the intricate, cascading melodies of a West African Kora. Orchestral swells accompany the rapid acoustic plucking.
+
+**Lyrics:**
+(Soprano Soloist)
+The savanna stretches, a canvas of gold
+The strings of the ancestors, a story told
+(Kora rapid arpeggio)
+A minuet in the dust, a waltz on the plain
+The symphony of the sun, the rhythm of the rain
+
+**Additional Notes:**
+- **Combo/Fusion:** Classical Symphony / West African Kora
+- **Thematic Ties:** Imposing the delicate, polyrhythmic nature of West African harp-lute into the structured grandeur of European classical music.
+
+### Title: Gamelan Grindcore
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive, chaotic Grindcore track played at blistering speeds, but the distorted guitars and blast beats are performed by an Indonesian Gamelan ensemble. Gongs crash like cymbals, and metallophones are struck with intense fury.
+
+**Lyrics:**
+(Screaming)
+BRONZE! MICROTONAL CHAOS!
+STRIKE THE SARON! SHATTER THE PEACE!
+(Frantic Gamelan blast beat)
+MEDITATION IS DEAD!
+THE TEMPLE IS BURNING WITH NOISE!
+
+**Additional Notes:**
+- **Combo/Fusion:** Grindcore Metal / Indonesian Gamelan
+- **Thematic Ties:** Taking meditative, microtonal bronze instruments and pushing them to the absolute extreme of speed and aggression.
+
+### Title: Bossa Nova Boreal
+
+**Service:** Minimax Audio
+
+**Prompt:** A relaxing, sunny Bossa Nova track with gentle nylon guitar and soft percussion, but the smooth vocals are replaced by the rhythmic, guttural breathing and chanting of Inuit Throat Singing.
+
+**Lyrics:**
+(Soft, rhythmic throat singing replacing the melody)
+[Deep inhaling and exhaling rhythms]
+The girl from Ipanema wears a parka today
+[Guttural rhythmic chanting]
+Snow on the beach, the ice starts to sway
+
+**Additional Notes:**
+- **Combo/Fusion:** Bossa Nova / Inuit Throat Singing
+- **Thematic Ties:** Contrasting the tropical, breezy warmth of Brazilian Bossa Nova with the stark, rhythmic cold of Arctic vocal traditions.
+
+### Title: Cyberpunk Chanson
+
+**Service:** Minimax Audio
+
+**Prompt:** A moody, nostalgic 1930s French Chanson played with a wheezing accordion, but the backing track is a heavy, pulsating Darksynth Cyberpunk beat. The singer croons in a synthesized, vocoded French.
+
+**Lyrics:**
+(Vocoded French Crooner)
+Sous le ciel de néon, l'amour est digital
+(Under the neon sky, love is digital)
+L'accordéon pleure une larme de cristal
+(The accordion cries a crystal tear)
+Mon cœur mécanique bat pour toi, ma belle
+(My mechanical heart beats for you, my beauty)
+Dans cette ville de chrome, tu es mon étincelle
+(In this city of chrome, you are my spark)
+
+**Additional Notes:**
+- **Combo/Fusion:** 1930s French Chanson / Darksynth Cyberpunk
+- **Thematic Ties:** Bringing the bohemian, romantic nostalgia of old Paris into a bleak, high-tech dystopian future.
