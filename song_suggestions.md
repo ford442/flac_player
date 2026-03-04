@@ -871,3 +871,92 @@ A glitch in the matrix, the planets align
 **Additional Notes:**
 - **Combo/Fusion:** Indian Classical Raga / Breakcore
 - **Thematic Ties:** The strict, complex rhythmic structures of traditional Indian music accelerating into hyper-digital, chaotic entropy.
+
+### Title: The Bourbon Street Replicant
+
+**Service:** Minimax Audio
+
+**Prompt:** A classic Dixieland Jazz ensemble, but the upright bass and tuba are replaced by a heavy, pulsing Synthwave bassline. The clarinet and trumpet play traditional counterpoint over a strict electronic 4/4 beat.
+
+**Lyrics:**
+(Spoken in a raspy, robotic voice)
+Down in the quarter, where the neon weeps.
+(Trumpet glissando)
+The brass is alive, but the battery sleeps.
+Marching to the funeral of a silicon soul.
+Saints go marching out of control.
+(Clarinet wails)
+
+**Additional Notes:**
+- **Combo/Fusion:** Dixieland Jazz / Synthwave
+- **Thematic Ties:** The lively, organic improvisation of early New Orleans jazz rigidly confined within a cold, mechanical, electronic grid.
+
+### Title: Andes Drill
+
+**Service:** Minimax Audio
+
+**Prompt:** A menacing UK Drill beat characterized by sliding 808s and fast hi-hats. The primary melodic hook, however, is played on a traditional Andean Pan Flute (Zampoña) and a Charango.
+
+**Lyrics:**
+(Verse 1 - Aggressive and fast-paced)
+High altitude, mask on the face
+Condor flying over the drill space
+Step to the block in the mountain cold
+Alpaca wool keeping me bold
+
+(Chorus)
+(Pan flute rapid melody over sliding 808s)
+Summit drillin', we stay chillin'
+Ice on the peak, yeah we steady building
+
+**Additional Notes:**
+- **Combo/Fusion:** Andean Folk / UK Drill
+- **Thematic Ties:** The high-altitude, wind-swept chill of the Andes mountains matching the cold, aggressive, sparse production style of UK Drill.
+
+### Title: The Court of Perreo
+
+**Service:** Minimax Audio
+
+**Prompt:** A sensual, driving Reggaeton beat (Dem Bow rhythm), but all harmonic and melodic accompaniment is provided by a Renaissance lute and a consort of viols playing complex, contrapuntal madrigal harmonies.
+
+**Lyrics:**
+(Verse 1 - Sung in a formal, vibrato-heavy tenor)
+Verily, she doth move with grace upon the floor
+Her garments spinning, I can but adore
+(Reggaeton beat kicks in)
+Hark! The rhythm calls, a scandalous decree
+Prithee, fair maiden, back it up for me
+
+(Chorus)
+Baila, my lady, in the court of the king
+Let the lute strum and the viols sing
+(Dem Bow beat mixed with lute strumming)
+A secret rendezvous behind the tapestry
+
+**Additional Notes:**
+- **Combo/Fusion:** Reggaeton / Renaissance Madrigal
+- **Thematic Ties:** The explicit, physical club dancing of Reggaeton transposed into the formal, highly repressed environment of a 16th-century royal court.
+
+### Title: Appalachian Ayahuasca
+
+**Service:** Minimax Audio
+
+**Prompt:** A driving Psychedelic Trance track with a fast, rolling baseline. The lead synthesizer, however, is replaced by a furiously picked acoustic mandolin, and the atmospheric sounds are provided by a droning mountain dulcimer.
+
+**Lyrics:**
+(Verse 1 - Echoing, high-lonesome voice)
+Grandpappy's brew in the Mason jar
+Takes your mind out past the farthest star
+(Psytrance bass kicks in hard)
+Blue Ridge mountains starting to melt
+Seeing the spirits that the ancestors felt
+
+(Chorus)
+Pick it fast! The colors bleed!
+Mandolin trance is all you need
+Pine trees breathing in the fractal night
+Dancing round the fire till the morning light
+
+**Additional Notes:**
+- **Combo/Fusion:** Psychedelic Trance / Old-Time Bluegrass
+- **Thematic Ties:** Rural Appalachian mountain spirituality colliding with modern, synthetic, global festival trance culture.
