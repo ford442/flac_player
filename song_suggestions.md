@@ -960,3 +960,93 @@ Dancing round the fire till the morning light
 **Additional Notes:**
 - **Combo/Fusion:** Psychedelic Trance / Old-Time Bluegrass
 - **Thematic Ties:** Rural Appalachian mountain spirituality colliding with modern, synthetic, global festival trance culture.
+
+### Title: Kyoto Delta
+
+**Service:** Minimax Audio
+
+**Prompt:** A gritty, lo-fi Delta Blues track recorded with analog crackle. The slide guitar and standard acoustic strumming are entirely replaced by the sharp, plucking twang and pitch-bending techniques of a traditional Japanese Koto.
+
+**Lyrics:**
+(Verse 1 - Raspy, seasoned Blues vocal)
+Woke up this morning, Sakura falling down
+Woke up this morning, Sakura falling down
+Got the Shinkansen blues, headin' for another town
+(Koto slide replicating a bottleneck slide guitar)
+
+(Chorus)
+Crossroads spirit in a paper house
+Quiet as a temple, quiet as a mouse
+But the devil's at the torii gate, waitin' on my soul
+Koto strings a-bendin', paying the toll
+
+**Additional Notes:**
+- **Combo/Fusion:** Delta Blues / Japanese Koto
+- **Thematic Ties:** Transplanting the sorrowful, solitary storytelling of the American deep south into the refined, ancient aesthetic of a Japanese temple garden.
+
+### Title: The Outback Waltz
+
+**Service:** Minimax Audio
+
+**Prompt:** A sweeping, romantic Viennese Waltz played in ¾ time. The grand string section is anchored not by cellos and basses, but by the deep, rhythmic, and continuous circular-breathing drone of an Australian Didgeridoo.
+
+**Lyrics:**
+(Soprano Chorus - Elegant and soaring)
+Whirling around the ballroom floor
+The red earth calls, forevermore
+(Deep, rhythmic Didgeridoo drone keeping the waltz time)
+Under the chandeliers of crystal light
+The ancient spirits dance tonight
+
+**Additional Notes:**
+- **Combo/Fusion:** Viennese Waltz / Australian Didgeridoo
+- **Thematic Ties:** Merging the high-society elegance of 19th-century Austrian ballrooms with the primal, grounding resonance of Indigenous Australian instrumentation.
+
+### Title: Mariachi of the Abyss
+
+**Service:** Minimax Audio
+
+**Prompt:** A terrifying, blast-beat driven Black Metal song with shrieking vocals and relentless tremolo picking. The lead melodies, however, are triumphantly played by a full Mexican Mariachi horn section (trumpets and violins) matching the hyper-fast metal tempo.
+
+**Lyrics:**
+(Verse 1 - High-pitched Black Metal shriek)
+FROST AND FIRE! THE SUN IS DEAD!
+RIDE THE PALE HORSE, PAINT THE DESERT RED!
+(Furious Mariachi trumpet blast matching the guitar riff)
+
+(Chorus)
+El Diablo comes in corpse paint tonight!
+Guitarrón of doom, eclipsing the light!
+(Violins playing a frenzied, dark melody)
+A serenade for the end of days!
+Burn the plaza, watch it ablaze!
+
+**Additional Notes:**
+- **Combo/Fusion:** Black Metal / Mexican Mariachi
+- **Thematic Ties:** The grim, frosty despair of Scandinavian extreme metal aggressively colliding with the vibrant, celebratory, and brassy energy of traditional Mexican folk music.
+
+### Title: Disco Domine
+
+**Service:** Minimax Audio
+
+**Prompt:** A groovy, infectious 1970s Disco Funk track with a prominent slapping bassline, four-on-the-floor beat, and wah-wah guitar. The lead vocals are a choir of monks singing solemn Gregorian Chants in Latin.
+
+**Lyrics:**
+(Verse 1 - Solemn, unhurried Gregorian chant by a male choir)
+Kyrie eleison
+(Funky bass slap and brass hit)
+Christe eleison
+(Wah-wah guitar scratches)
+In nomine Patris, under the mirror ball
+Sanctus, Sanctus, we answer the call
+
+(Chorus)
+(Choir singing in tight, solemn unison over a driving disco beat)
+Gloria in excelsis Deo!
+Dancing in the spirit, letting it go!
+Requiem for the shadows, light on the floor!
+Hallelujah, we're begging for more!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Disco Funk / Gregorian Chant
+- **Thematic Ties:** The sacred, austere, and deeply serious religious chanting of medieval monks juxtaposed with the secular, flamboyant, and physical hedonism of a 70s discotheque.
