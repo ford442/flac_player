@@ -1050,3 +1050,85 @@ Hallelujah, we're begging for more!
 **Additional Notes:**
 - **Combo/Fusion:** 1970s Disco Funk / Gregorian Chant
 - **Thematic Ties:** The sacred, austere, and deeply serious religious chanting of medieval monks juxtaposed with the secular, flamboyant, and physical hedonism of a 70s discotheque.
+
+### Title: The Nordic Tabla
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive, frostbitten Viking Metal track characterized by tremolo-picked electric guitars and distorted blast beats, but the relentless percussion is performed entirely on a set of traditional Indian Tablas and a Mridangam.
+
+**Lyrics:**
+(Growling)
+Odin's ravens take to the sky!
+Valhalla awaits where the brave will die!
+(Frenzied Tabla blast beat and Mridangam fills)
+The longship cuts through the freezing sea!
+Raga of blood, setting us free!
+
+**Additional Notes:**
+- **Combo/Fusion:** Viking Metal / Indian Classical Percussion
+- **Thematic Ties:** The icy, aggressive, and pagan warfare themes of Scandinavian Viking Metal driven by the intricate, deeply rhythmic and warm percussion of classical India.
+
+### Title: Mariachi Cyber-Heist
+
+**Service:** Minimax Audio
+
+**Prompt:** A tense, pulsating Darksynth cyberpunk track meant for a futuristic heist, but all the melodic synthesizer leads and bass lines are replaced by a traditional Mexican Mariachi ensemble playing trumpets, violins, and a Guitarrón over a heavy electronic beat.
+
+**Lyrics:**
+(Spoken, robotic voice)
+Uploading the virus to the mainframe.
+(Mariachi trumpet sting)
+Security breached in sector four.
+(Violins playing a fast, tense arpeggio)
+El Hacker has the data. Let's ride the neon highway.
+(Guitarrón bassline drops over electronic drums)
+
+**Additional Notes:**
+- **Combo/Fusion:** Darksynth Cyberpunk / Mexican Mariachi
+- **Thematic Ties:** The stealthy, high-tech, and dystopian atmosphere of a cyberpunk heist completely reimagined with the acoustic, celebratory, and analog instrumentation of Mexico.
+
+### Title: The Polka Samurai
+
+**Service:** Minimax Audio
+
+**Prompt:** A frantic, upbeat polka tune driven by a bouncy accordion and tuba, but the melody is fiercely played on a traditional Japanese Shakuhachi flute, while shouts of martial arts kiai periodically punctuate the rhythm.
+
+**Lyrics:**
+(Verse 1 - Fast, cheerful)
+Drawing the katana with a one, two, three!
+A barrel of ale under the cherry blossom tree!
+(Accordion and tuba play a bouncing oom-pah beat)
+(Shakuhachi plays a fast, trilling melody)
+(Shouts)
+Ha! Ya!
+Slicing the cabbage for the sauerkraut tonight!
+
+(Chorus)
+Polka in Kyoto, spinning round the dojo!
+Watch out for the shuriken, let the good times flow-jo!
+(Tuba bassline mixed with Shakuhachi flourish)
+
+**Additional Notes:**
+- **Combo/Fusion:** European Polka / Japanese Traditional Folk
+- **Thematic Ties:** The disciplined, ancient, and deadly serious world of the samurai hilariously mashed up with the goofy, bouncy, beer-hall energy of a polka dance.
+
+### Title: The Flamenco Astronaut
+
+**Service:** Minimax Audio
+
+**Prompt:** A grand, cinematic Space Ambient track composed of sweeping synthesizers and ethereal choirs, anchored by the passionate, fiery acoustic guitar strumming and rhythmic palmas (handclaps) of an Andalusian Flamenco dancer in zero gravity.
+
+**Lyrics:**
+(Ethereal, floating choir)
+Aah... the stars are aligning...
+(Rapid, passionate Flamenco guitar run)
+(Echoing palmas)
+(Verse 1 - Solemn Flamenco singer)
+Baila en el vacío, my love
+Where the nebula weeps silver tears
+Castanets echo in the cosmic dust
+
+**Additional Notes:**
+- **Combo/Fusion:** Space Ambient / Andalusian Flamenco
+- **Thematic Ties:** The vast, cold, and slow-moving emptiness of outer space contrasted with the intense, localized, and fiery passion of traditional Spanish Flamenco.
