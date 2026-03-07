@@ -1132,3 +1132,90 @@ Castanets echo in the cosmic dust
 **Additional Notes:**
 - **Combo/Fusion:** Space Ambient / Andalusian Flamenco
 - **Thematic Ties:** The vast, cold, and slow-moving emptiness of outer space contrasted with the intense, localized, and fiery passion of traditional Spanish Flamenco.
+
+### Title: The Bossa Nova Warlord
+
+**Service:** Minimax Audio
+
+**Prompt:** An epic, high-fantasy Power Metal anthem driven by double-kick drums and soaring vocals, but the blistering distorted guitar solos and heavy rhythm section are entirely replaced by the gentle, syncopated strumming of a nylon-string acoustic guitar playing Bossa Nova chords.
+
+**Lyrics:**
+(Verse 1 - Gentle, breathy Bossa Nova croon)
+The dragon descends from the mountain of fire
+His scales are like rubies, burning with ire
+I draw my broadsword, soft as the breeze
+Under the shade of the coconut trees
+
+(Chorus)
+(Double-kick drum pattern played lightly on a pandeiro)
+Valhalla awaits, but the sun is so warm
+Drinking a caipirinha in the eye of the storm
+Slay the dark wizard, but take it quite slow
+The beaches of Asgard are calling, you know
+
+**Additional Notes:**
+- **Combo/Fusion:** Power Metal / Bossa Nova
+- **Thematic Ties:** The epic, high-fantasy grandiosity of Power Metal subdued by the gentle, laid-back atmosphere of Brazilian beach music.
+
+### Title: Barbershop Nu-Metal
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, angst-ridden Nu-Metal track featuring turntable scratches, detuned bass grooves, and a screaming, emotional breakdown. However, all the vocals—including the screams and raps—are performed a cappella by a dapper 1910s Barbershop Quartet in perfect four-part harmony.
+
+**Lyrics:**
+(Verse 1 - Four-part harmony, very cheerful)
+Well, hello there, mother! Well, hello there, dad!
+I'm feeling quite angry, I'm feeling quite mad!
+(Turntable scratch vocalized: wiki-wiki-wiki)
+You just don't understand the pain in my soul!
+I'm losing my grip, I'm out of control!
+
+(Chorus)
+(Harmonizing an intense scream)
+CRAWWWWWWWLLLLL-ing in my skin!
+These wounds, they will not heal, good sir!
+I've become so numb! (Bum-bum-bum-bum!)
+Yes, I'm breaking the habit tonight!
+
+**Additional Notes:**
+- **Combo/Fusion:** Nu-Metal / Barbershop Quartet
+- **Thematic Ties:** The extreme teenage angst and aggression of late 90s Nu-Metal delivered with the cheerful, dapper vocal harmonies of a 1910s Barbershop Quartet.
+
+### Title: Trip-Hop Dynasty
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, brooding 1990s Trip-Hop track with a slow, heavy breakbeat and deep sub-bass. The mysterious atmosphere is enhanced by a traditional Chinese Guzheng playing melancholic, pitch-bending melodies instead of a turntable or synthesizer.
+
+**Lyrics:**
+(Verse 1 - Smooth, detached female vocal)
+Rain on the concrete, neon on the street
+Walking through the alley with lead in my feet
+(Guzheng glissando)
+The emperor's ghost in the smoke of the club
+Bass vibrating in the Bristol pub
+
+(Chorus)
+Silk and the vinyl, spinning so slow
+Where did the ancient dynasties go?
+Caught in the loop of a digital snare
+Plucking the strings in the cold city air
+
+**Additional Notes:**
+- **Combo/Fusion:** 90s Trip-Hop / Traditional Chinese Folk
+- **Thematic Ties:** The dark, urban alienation of British trip-hop combined with the historical, meditative elegance of a traditional Chinese Guzheng.
+
+### Title: Ragtime Goa
+
+**Service:** Minimax Audio
+
+**Prompt:** A pulsating, hypnotic Goa Trance track played at 145 BPM with a driving four-on-the-floor kick drum. Instead of swirling analog synthesizers, the complex, arpeggiated melodies and acid lines are furiously played on a slightly out-of-tune saloon piano in a strict Ragtime syncopation.
+
+**Lyrics:**
+(No lyrics, instrumental track with occasional vocal samples)
+(Sample: "Step right up, folks, and expand your mind!")
+
+**Additional Notes:**
+- **Combo/Fusion:** Goa Trance / 1910s Ragtime
+- **Thematic Ties:** The bouncy, piano-driven syncopation of early American ragtime transplanted into the hypnotic, synthetic repetition of 90s psychedelic trance.
