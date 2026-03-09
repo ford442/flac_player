@@ -1319,3 +1319,85 @@ Stomping the floor to the heavy beats
 **Additional Notes:**
 - **Combo/Fusion:** Flamenco / UK Drill
 - **Thematic Ties:** The intense, emotional guitar work and percussive dancing of Spanish Flamenco fused with the cold, syncopated aggression of British Drill music.
+
+### Title: The Appalachian Abbey
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced Appalachian bluegrass tune driven by a frantic banjo roll and upright bass, but the lead vocals are entirely performed by a solemn choir of monks singing polyphonic Gregorian Chants.
+
+**Lyrics:**
+(Chorus - Gregorian Chant style, but rhythmic)
+Kyrie eleison, down in the holler
+(Banjo solo)
+Christe eleison, chasing the dollar
+Sanctus, Sanctus, brewing the shine
+Holy spirit on the county line
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Gregorian Chant
+- **Thematic Ties:** The pious, ancient reverence of a medieval monastery dropped into a rowdy, moonshine-fueled mountain hoedown.
+
+### Title: Neon Mesa
+
+**Service:** Minimax Audio
+
+**Prompt:** A driving, retro-futuristic Synthwave track featuring a pulsing 16th-note bassline and gated snare drums. The main melodic hook and soaring solos are performed entirely on a resonant Native American wooden flute.
+
+**Lyrics:**
+(Verse 1)
+Cruising the grid in a canyon of light
+Eagle feathers catching the neon bright
+Digital sunset, painted in red
+Ancestral voices inside my head
+
+(Chorus)
+(Soaring flute melody over a driving synth beat)
+Cyber-shaman on the digital trail
+Where the analog spirits never fail
+
+**Additional Notes:**
+- **Combo/Fusion:** Synthwave / Native American Folk
+- **Thematic Ties:** The hyper-synthetic, 1980s retro-future colliding with the deeply organic, earthy resonance of indigenous American instrumentation.
+
+### Title: The Brass Behemoth
+
+**Service:** Minimax Audio
+
+**Prompt:** A terrifying, blast-beat driven Death Metal song with guttural growls and extreme speed. However, all distorted guitars are entirely replaced by a frantic 1920s Dixieland Jazz brass section—tubas, trombones, and clarinets—playing diminished chords at blistering tempos.
+
+**Lyrics:**
+(Death Growl)
+SUFFER! THE SPEAKEASY BURNS!
+(Frantic clarinet and trombone blast beat section)
+THE SAINTS GO MARCHING INTO THE ABYSS!
+BATHTUB GIN AND HELLFIRE!
+(Tuba breakdown)
+
+**Additional Notes:**
+- **Combo/Fusion:** Death Metal / 1920s Dixieland Jazz
+- **Thematic Ties:** The horrifying, abrasive aggression of extreme metal delivered through the joyful, bouncy, acoustic instrumentation of early New Orleans jazz.
+
+### Title: Seoul of the Holler
+
+**Service:** Minimax Audio
+
+**Prompt:** A glossy, high-energy K-Pop idol anthem with synchronized dance beats and rap verses, but all synthesizer hooks and drops are replaced by blistering Appalachian bluegrass instrumentation: banjo, fiddle, and mandolin.
+
+**Lyrics:**
+(Verse 1 - Upbeat idol rap)
+Oppa's on the porch, picking on the strings
+Gucci overalls, watch the bling bling
+
+(Pre-Chorus)
+Saranghae, my mountain queen
+Cutest little blossom that I've ever seen
+
+(Chorus)
+(Fiddle and banjo drop mixed with heavy 808s)
+Yee-haw! Kawaii in the pines!
+Dancing all night where the moonshine shines!
+
+**Additional Notes:**
+- **Combo/Fusion:** K-Pop / Appalachian Bluegrass
+- **Thematic Ties:** The highly manufactured, ultra-modern perfection of Korean pop idol culture dumped straight into a rustic, dirt-road mountain jam.
