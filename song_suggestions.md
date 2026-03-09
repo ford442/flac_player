@@ -1219,3 +1219,103 @@ Plucking the strings in the cold city air
 **Additional Notes:**
 - **Combo/Fusion:** Goa Trance / 1910s Ragtime
 - **Thematic Ties:** The bouncy, piano-driven syncopation of early American ragtime transplanted into the hypnotic, synthetic repetition of 90s psychedelic trance.
+
+### Title: Bossa Nova Blight
+
+**Service:** Minimax Audio
+
+**Prompt:** A jarring fusion of smooth Bossa Nova and brutal Death Metal. Features gentle nylon-string acoustic guitar and soft percussion, suddenly contrasted with blast beats and deep guttural growls.
+
+**Lyrics:**
+(Verse 1 - Soft, whispered vocals over gentle acoustic guitar)
+The sun sets on Copacabana
+Sipping a cold caipirinha
+The breeze is warm and sweet
+(Sudden blast beats and heavy distortion)
+(Death growl)
+BUT THE SAND IS MADE OF ASHES!
+THE OCEAN BOILS WITH BLOOD!
+WE DANCE INTO THE ABYSS!
+
+(Chorus - Bossa Nova rhythm with blast beats layered underneath)
+(Death growl)
+Swaying to the rhythm of doom!
+Swaying to the rhythm of doom!
+
+**Additional Notes:**
+- **Combo/Fusion:** Bossa Nova / Death Metal
+- **Thematic Ties:** The relaxing, tropical lounge atmosphere of Brazilian Bossa Nova violently interrupted by the apocalyptic themes and vocal style of Death Metal.
+
+### Title: Cybernetic Shanty
+
+**Service:** Minimax Audio
+
+**Prompt:** A traditional maritime Sea Shanty set to a pulsing Synthwave beat. Features a gruff, a cappella chorus of sailors over a 1980s retro-futuristic synthesizer bassline and electronic drums.
+
+**Lyrics:**
+(Verse 1)
+Now I'm a brave cyber-whaler, I sail the data sea
+(Heave away, haul away!)
+I'm hunting for the leviathan that swallowed all my keys
+(And we're bound for the neon bay!)
+
+(Chorus)
+So boot up the mainframe and hoist the solar sail
+We're riding on the datastream to catch the crypto-whale
+With a yo-ho-ho and a gigabyte of rum
+We'll hack into the syndicate before the morning sun!
+
+**Additional Notes:**
+- **Combo/Fusion:** Sea Shanty / Synthwave
+- **Thematic Ties:** The communal, rhythmic work songs of 19th-century sailors transposed into a futuristic, neon-soaked cyberpunk setting.
+
+### Title: Mariachi Void
+
+**Service:** Minimax Audio
+
+**Prompt:** A haunting blend of festive Mariachi music and terrifying Dark Ambient. Features slow, echoing trumpets and a mournful vihuela swallowed by massive, reverberating drones and industrial textures.
+
+**Lyrics:**
+(Verse 1 - Distant, echoing baritone vocal)
+Ay, mis hermanos
+The plaza is empty tonight
+The stars have fallen from the sky
+(Deep, rumbling synth drone)
+Only the shadows remain to dance
+
+(Chorus)
+(Trumpet wails, extremely delayed and distorted)
+Canta y no llores
+For the silence is louder than our song
+The festival of the end of time
+Ay, ay, ay, ay... (Fades into white noise)
+
+**Additional Notes:**
+- **Combo/Fusion:** Mariachi / Dark Ambient
+- **Thematic Ties:** The lively, celebratory sounds of traditional Mexican Mariachi stripped of their joy and placed in a vast, desolate, post-apocalyptic soundscape.
+
+### Title: Flamenco Drill
+
+**Service:** Minimax Audio
+
+**Prompt:** A high-energy collision of traditional Spanish Flamenco and modern UK Drill. Features aggressive, sliding 808 sub-bass and rapid hi-hats layered with virtuosic acoustic guitar picados, rhythmic palmas (handclaps), and passionate, dramatic vocals.
+
+**Lyrics:**
+(Verse 1)
+Oye, step in the ends with the castanets
+Mandem talking, but they pose no threats
+(Rapid guitar flurry)
+Bailaora spinning in the red dress
+Sliding the 808, leaving a mess
+
+(Chorus)
+(Passionate, wailing Flamenco vocal)
+Ay, el fuego en mi corazón!
+(Drill rapper over sliding bass)
+Yeah, we bring the fire, we run the zone
+From Andalucía to the London streets
+Stomping the floor to the heavy beats
+
+**Additional Notes:**
+- **Combo/Fusion:** Flamenco / UK Drill
+- **Thematic Ties:** The intense, emotional guitar work and percussive dancing of Spanish Flamenco fused with the cold, syncopated aggression of British Drill music.
