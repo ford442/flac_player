@@ -1497,3 +1497,93 @@ Trapped inside this bronze shell!
 **Additional Notes:**
 - **Combo/Fusion:** 90s Grunge / Balinese Gamelan
 - **Thematic Ties:** The apathetic, flannel-clad teenage alienation of the Pacific Northwest expressed through the deeply communal, highly structured, and resonant bronze instruments of Bali.
+
+### Title: Cumbia of the Cossacks
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, driving Colombian Cumbia rhythm played on traditional alegre and llamador drums, but the lead melodies are performed by a frantic Russian Balalaika ensemble and a soaring Bayan (accordion).
+
+**Lyrics:**
+(Verse 1)
+Dancing by the fire on the frozen steppe tonight
+Sipping on aguardiente in the pale moonlight
+The troika is rolling, but the hips sway slow
+(Frantic balalaika strumming over a heavy Cumbia beat)
+From Bogotá to Moscow, watch the embers glow
+
+(Chorus)
+Baila, babushka, spin around the snow!
+The rhythm is sweating, but the wind is blowing cold!
+(Bayan and Guiro solo)
+
+**Additional Notes:**
+- **Combo/Fusion:** Colombian Cumbia / Russian Folk
+- **Thematic Ties:** The tropical, hip-swaying heat of South American Cumbia superimposed onto the freezing, high-energy, knee-slapping dances of the Russian Cossacks.
+
+### Title: The Clockwork Qawwali
+
+**Service:** Minimax Audio
+
+**Prompt:** A passionate, deeply spiritual Sufi Qawwali performance, but instead of traditional handclaps and tablas, the rhythm is a heavy, metallic, Steampunk industrial beat. The harmonium is replaced by a sputtering, steam-powered synthesizer.
+
+**Lyrics:**
+(Verse 1 - Passionate, soaring tenor)
+Oh, the gears of the heavens are turning for Thee!
+(Heavy metallic clank on the downbeat)
+The steam from the engine is setting me free!
+(Choir repeating the phrase over grinding gears)
+
+(Chorus)
+(Frantic vocal improvisation)
+Spin the brass wheel! Let the pressure release!
+In the heart of the machine, I am finding my peace!
+(Steam whistle blows in key with the vocal)
+
+**Additional Notes:**
+- **Combo/Fusion:** Sufi Qawwali / Steampunk Industrial
+- **Thematic Ties:** The organic, repetitive, trance-inducing devotion of Sufi music driven by the literal, physical repetition of a massive Victorian steam engine.
+
+### Title: Polynesian Post-Punk
+
+**Service:** Minimax Audio
+
+**Prompt:** A gloomy, atmospheric 1980s Post-Punk track with a driving, chorus-drenched bassline and a sparse drum machine. The ethereal, angular guitar lines are entirely replaced by the sweet, plucking chords of a traditional Hawaiian Ukulele, played with a melancholic edge.
+
+**Lyrics:**
+(Verse 1 - Deep, detached baritone)
+Black sand beach under a gray sky
+The tiki torches flicker, wondering why
+(Ukulele playing a minor, chorus-heavy arpeggio)
+Surfing on the waves of my own despair
+Aloha means goodbye in the cold salt air
+
+(Chorus)
+(Driving 80s bassline under a sad ukulele strum)
+Tears in my Mai Tai, shadow on the reef
+Dancing in the dark with my island grief
+Isolation in paradise, miles from the shore
+Don't wear the flower crown anymore
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Post-Punk / Polynesian Folk
+- **Thematic Ties:** The sunny, welcoming, and relaxed aesthetic of a tropical island vacation swallowed by the gloomy, introverted depression of 80s Post-Punk.
+
+### Title: Alpine Dub
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, psychedelic Jamaican Dub Reggae track with massive, echoing sub-bass and spacey tape delays. The skanking rhythm and melodic stabs, however, are provided by a traditional Swiss Alphorn and a reverberating yodel that bounces through the mix.
+
+**Lyrics:**
+(Spoken, heavily delayed)
+Echo... echo in the valley, mon...
+(Alphorn blasts, echoing out into space)
+(Deep sub-bass drops)
+Step to the mountain... roots and culture...
+(Yodeling, heavily filtered and sent through a tape delay)
+Yodel-ay-ee-hoo... hoo... hoo...
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Dub Reggae / Swiss Alpine Folk
+- **Thematic Ties:** The deep, spatial, and mind-expanding production techniques of Jamaican Dub applied to the literal acoustic space and echoes of the Swiss Alps.
