@@ -1401,3 +1401,99 @@ Dancing all night where the moonshine shines!
 **Additional Notes:**
 - **Combo/Fusion:** K-Pop / Appalachian Bluegrass
 - **Thematic Ties:** The highly manufactured, ultra-modern perfection of Korean pop idol culture dumped straight into a rustic, dirt-road mountain jam.
+
+### Title: Holler-Core
+
+**Service:** Minimax Audio
+
+**Prompt:** An erratic, hyper-fast Breakcore track with chopped-up 220 BPM Amen breaks, but the manic synthesizer melodies and heavy basslines are completely replaced by furious Appalachian bluegrass banjo picking, a frantic washboard rhythm, and an upright bass.
+
+**Lyrics:**
+(Verse 1 - High lonesome bluegrass style sung at hyper-speed)
+Well I went down to the holler just to see my gal!
+(Glitchy, stuttering Amen break)
+But the devil was there and he was her pal!
+(Frantic banjo shredding over a 220 BPM blast beat)
+Oh lordy! The moonshine's making me glitch!
+
+(Chorus)
+(Banjo and fiddle playing a complex melody chopped and screwed into breakcore)
+Yee-haw in the matrix, tearing up the pine!
+Running from the law on a digital line!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Breakcore
+- **Thematic Ties:** The high-speed, virtuosic finger-picking of traditional mountain music pushed to the absolute breaking point by chaotic, digital drum programming.
+
+### Title: Neon Steppes
+
+**Service:** Minimax Audio
+
+**Prompt:** A glossy, upbeat 1980s Synthpop track with shimmering arpeggiators and a driving drum machine. The bright, melodic lead synthesizer is entirely replaced by the deep, resonant drone and overtone whistles of traditional Mongolian throat singing.
+
+**Lyrics:**
+(Verse 1 - Bright synthpop melody, but sung with deep throat singing)
+[Guttural rhythmic chanting]
+Riding the neon horse across the digital plain
+[Deep drone over synth arpeggios]
+Laser lasso swinging, out in the acid rain
+
+(Chorus)
+[Polyphonic throat singing melody matching a bright pop hook]
+Oh, the yurt is glowing in the retro light!
+[High-pitched overtone whistle over a gated snare]
+Galloping into the synthetic night!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Synthpop / Mongolian Throat Singing
+- **Thematic Ties:** The vast, ancient emptiness of the Eurasian steppes illuminated by the bright, artificial, and optimistic neon glow of 80s pop culture.
+
+### Title: The Calypso Coven
+
+**Service:** Minimax Audio
+
+**Prompt:** A cheerful, bouncy Caribbean Calypso song played with a steel pan ensemble and upbeat percussion. However, the vocals are delivered by a brooding, dramatic Goth Rock singer in a deep baritone, singing about despair, vampires, and eternal darkness.
+
+**Lyrics:**
+(Verse 1 - Deep, mournful baritone vocal)
+The sun is shining on the crystal sea
+But the shadows are the only home for me
+(Upbeat steel pan riff)
+Drinking coconut water mixed with a tear
+The eternal night is finally here
+
+(Chorus)
+Oh, tragedy under the palm tree shade!
+The light of the day is a cruel charade!
+(Bouncy marimba and steel pan solo)
+I wear my black velvet on the sandy shore
+A creature of the night forevermore!
+
+**Additional Notes:**
+- **Combo/Fusion:** Goth Rock / Calypso
+- **Thematic Ties:** The sunny, carefree, and tropical vacation vibes of Calypso music hilariously clashing with the melodramatic, sun-avoidant, and depressing aesthetic of 1980s Goth culture.
+
+### Title: Seattle Saron
+
+**Service:** Minimax Audio
+
+**Prompt:** A sludgy, angst-ridden 1990s Grunge rock track with heavy, distorted power chords and a slow, dragging tempo. The distorted guitar solos and heavy drum fills are entirely performed by an Indonesian Gamelan ensemble, crashing their gongs and metallophones with angsty fury.
+
+**Lyrics:**
+(Verse 1 - Apathetic, drawling vocal)
+Staring at the ceiling, feeling so bronze
+Striking the bonang, breaking the bonds
+(Heavy, distorted guitar riff played on a massive Gong Ageng)
+Everything's muddy, everything's gray
+Just another microtonal rainy day
+
+(Chorus)
+(Frantic Gamelan crashing over a sludgy rock beat)
+I don't care! I don't care!
+Smells like teen spirit in the temple air!
+Wear my flannel, strike the bell!
+Trapped inside this bronze shell!
+
+**Additional Notes:**
+- **Combo/Fusion:** 90s Grunge / Balinese Gamelan
+- **Thematic Ties:** The apathetic, flannel-clad teenage alienation of the Pacific Northwest expressed through the deeply communal, highly structured, and resonant bronze instruments of Bali.
