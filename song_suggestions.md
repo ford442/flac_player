@@ -1587,3 +1587,102 @@ Yodel-ay-ee-hoo... hoo... hoo...
 **Additional Notes:**
 - **Combo/Fusion:** Jamaican Dub Reggae / Swiss Alpine Folk
 - **Thematic Ties:** The deep, spatial, and mind-expanding production techniques of Jamaican Dub applied to the literal acoustic space and echoes of the Swiss Alps.
+
+### Title: Salsa of the Northmen
+
+**Service:** Minimax Audio
+
+**Prompt:** A fiery Salsa track driven by complex conga rhythms, cowbell, and a bright brass section, but the lead vocals are aggressive, guttural Scandinavian death growls singing about raiding and Valhalla.
+
+**Lyrics:**
+(Verse 1)
+(Salsa piano montuno)
+(Growled Vocals)
+BLOOD ON THE AXE!
+(Brass section stab)
+WE SAIL TO THE WEST!
+(Conga fill)
+Baila, my shield-maiden, baila!
+Odin watches from the tropical sky!
+
+(Chorus)
+Valhalla! Mambo!
+The longship rides the rhythm!
+Salsa of the fjords, destroying them all!
+
+**Additional Notes:**
+- **Combo/Fusion:** Salsa / Viking Death Metal
+- **Thematic Ties:** The energetic, hip-swaying joy of Caribbean dance violently interrupted by the bloodthirsty, frostbitten aggression of Norse mythology.
+
+### Title: The Celtic Trap House
+
+**Service:** Minimax Audio
+
+**Prompt:** A hard-hitting modern Trap beat with rattling hi-hats and booming 808 sub-bass, but the primary melodic loop is a lightning-fast, traditional Irish jig played on a tin whistle and a fiddle.
+
+**Lyrics:**
+(Verse 1)
+Leprechaun in the trap house, counting up the gold
+Four-leaf clover in my pocket, never folding, never fold
+(Rapid fiddle solo over trap hi-hats)
+Sipping on the stout, pouring out a pint
+Dublin to Atlanta, yeah we own the night
+
+(Chorus)
+Skrt! Skrt! Riverdance on the block!
+Emerald Isle shining, look at the clock!
+Tin whistle blowing, 808s are shaking
+Got the whole tavern and the club pulsating!
+
+**Additional Notes:**
+- **Combo/Fusion:** Trap / Traditional Irish Folk
+- **Thematic Ties:** The gritty, materialistic flex culture of modern Trap music paired with the whimsical, rural acoustic aesthetic of an Irish pub session.
+
+### Title: Shoegaze Polka
+
+**Service:** Minimax Audio
+
+**Prompt:** An overwhelming wall of fuzzy, distorted, reverb-drenched guitars typical of Shoegaze, but underneath the noise, the rhythm section relentlessly plays a bouncy, upbeat 2/4 Polka beat on a tuba and drum kit.
+
+**Lyrics:**
+(Verse 1 - Vocals buried in feedback, barely audible)
+Roll out the barrel...
+In a sea of noise...
+The accordion cries...
+A happy little dance of existential dread...
+
+(Chorus)
+(Massive wave of distortion)
+Oom-pah, oom-pah, fading away...
+Oom-pah, oom-pah, nothing left to say...
+The beer is warm, the fuzz is loud
+Dancing alone in a feedback cloud
+
+**Additional Notes:**
+- **Combo/Fusion:** Shoegaze / Polka
+- **Thematic Ties:** The introspective, melancholic wash of Shoegaze constantly clashing with the obnoxiously cheerful, bouncy rhythm of a beer-hall Polka.
+
+### Title: Cyber-Goth Yodel
+
+**Service:** Minimax Audio
+
+**Prompt:** A pounding, aggressive Industrial EBM (Electronic Body Music) track designed for a dark underground rave, but the menacing vocals are replaced entirely by virtuosic, high-speed Alpine yodeling processed through a bit-crusher.
+
+**Lyrics:**
+(Verse 1)
+(Pounding industrial bassline and mechanical stomping beat)
+(Aggressive synthesizer sequence)
+(Yodeler)
+Yodel-ay-ee-hoo! (Echoing through digital distortion)
+Yodel-ay-ee-hoo-hoo-hoo!
+
+(Chorus)
+(Heavy distorted snare)
+Cyber-Alps are burning!
+Yodel-ay-ee-hoo!
+Dancing in the matrix, lederhosen tight!
+Neon mountains in the synthetic night!
+
+**Additional Notes:**
+- **Combo/Fusion:** Industrial EBM / Alpine Yodeling
+- **Thematic Ties:** The grim, futuristic, and highly mechanical atmosphere of a cyber-goth rave punctured by the ridiculous, joyful vocal acrobatics of mountain folk singing.
