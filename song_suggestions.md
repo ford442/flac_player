@@ -1686,3 +1686,103 @@ Neon mountains in the synthetic night!
 **Additional Notes:**
 - **Combo/Fusion:** Industrial EBM / Alpine Yodeling
 - **Thematic Ties:** The grim, futuristic, and highly mechanical atmosphere of a cyber-goth rave punctured by the ridiculous, joyful vocal acrobatics of mountain folk singing.
+
+### Title: Delta Idol
+
+**Service:** Minimax Audio
+
+**Prompt:** A glossy, high-energy K-Pop idol anthem, but the entire instrumental is stripped down to raw, 1920s acoustic Delta Blues. The syncopated dance rhythms are played on a battered Dobro, and a wailing harmonica replaces the synthesizer drops.
+
+**Lyrics:**
+(Verse 1 - Raspy, seasoned Blues vocal mixed with bright idol harmonies)
+Woke up this morning, checking my DMs
+Woke up this morning, checking my DMs
+My fans are waiting, polishing my gems
+(Harmonica wails over a stomping foot beat)
+
+(Chorus)
+Saranghae at the crossroads, singing in the dust!
+Got my photocards ready, the devil takes the crust!
+(Dobro slide mirroring a K-Pop hook)
+Dancing in the cotton field, camera on my face!
+Hwaiting! Hwaiting! Ain't got no saving grace!
+
+**Additional Notes:**
+- **Combo/Fusion:** K-Pop / Delta Blues
+- **Thematic Ties:** The ultra-modern, highly manicured, and digitally perfect world of Korean idol culture stripped down to the raw, analog, and suffering-soaked reality of the American deep south.
+
+### Title: The Ska Soprano
+
+**Service:** Minimax Audio
+
+**Prompt:** A frantic, upbeat Third-Wave Ska track featuring a blasting horn section, walking bassline, and fast upstroke guitar. The lead vocalist is a highly trained Operatic Soprano, singing dramatic Italian arias over the bouncing rhythm.
+
+**Lyrics:**
+(Verse 1 - Dramatic, vibrating Operatic Soprano)
+O mio babbino caro!
+(Trombone and trumpet play a bouncing counter-melody)
+Mi piace è bello, bello!
+(Walking bassline walking fast)
+Vo’andare in Porta Rossa
+A comperar l’anello!
+
+(Chorus)
+(Ska rhythm section going double-time)
+Pick it up, pick it up, Figaro!
+Skanking in the opera house, stealing the show!
+(High C note held over a frantic snare roll)
+Vincerò! Vincerò!
+
+**Additional Notes:**
+- **Combo/Fusion:** Classical Opera / Third-Wave Ska
+- **Thematic Ties:** The stiff, wealthy, and ultra-serious high-art environment of classical opera violently crashing into the hyperactive, goofy, and working-class energy of a ska punk show.
+
+### Title: Surfin' Sanctuary
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced, reverb-drenched 1960s Surf Rock instrumental with pounding tom-toms and a twangy Fender Stratocaster. The lead melody, however, is sung by a solemn choir of medieval monks performing polyphonic Gregorian Chants.
+
+**Lyrics:**
+(Verse 1 - Deep, unhurried monastic choir)
+Pater noster, qui es in caelis
+(Reverb-heavy guitar tremolo picking)
+Sanctificetur nomen tuum
+(Fast, rolling drum fill on the tom-toms)
+
+(Chorus)
+(Choir harmonizing tightly over a driving surf beat)
+Adveniat regnum tuum!
+Riding the holy wave into the sun!
+Fiat voluntas tua!
+Hanging ten until the kingdom is won!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1960s Surf Rock / Gregorian Chant
+- **Thematic Ties:** The pious, motionless, and deeply internal devotion of medieval monastic life strapped to a surfboard and forced to ride the sunny, extroverted, and fast-paced waves of 60s California.
+
+### Title: The Mariachi Machine
+
+**Service:** Minimax Audio
+
+**Prompt:** A cold, punishing Industrial Techno track with a repetitive, mechanical 4/4 beat and harsh metallic percussion. But all the synthesizer lines and pads are completely replaced by a warm, acoustic Mexican Mariachi ensemble playing trumpets and violins.
+
+**Lyrics:**
+(Verse 1)
+(Pounding 130 BPM mechanical kick drum)
+(Mariachi trumpet plays a sharp, repetitive, minor-key staccato riff)
+The gears are turning in the plaza
+(Violins sawing a tense, fast arpeggio over the beat)
+Metal and bone, the dance of the factory
+
+(Chorus)
+(Guitarrón playing a heavy bassline over industrial clanking)
+Baila con la máquina!
+The agave is burning in the furnace of steel!
+Baila con la máquina!
+(Trumpet blast echoing through digital distortion)
+The rhythm is synthetic, but the heart is real!
+
+**Additional Notes:**
+- **Combo/Fusion:** Industrial Techno / Mexican Mariachi
+- **Thematic Ties:** The cold, relentless, and soul-crushing repetition of a futuristic factory floor infused with the warm, passionate, and deeply human acoustic soul of traditional Mexican folk music.
