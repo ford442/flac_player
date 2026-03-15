@@ -1786,3 +1786,100 @@ The rhythm is synthetic, but the heart is real!
 **Additional Notes:**
 - **Combo/Fusion:** Industrial Techno / Mexican Mariachi
 - **Thematic Ties:** The cold, relentless, and soul-crushing repetition of a futuristic factory floor infused with the warm, passionate, and deeply human acoustic soul of traditional Mexican folk music.
+
+### Title: The Miami Gagaku
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, bass-driven Miami Bass track with booming Roland TR-808 kicks and frantic hi-hats. However, the prominent melodic hooks and sustained chords are provided by a traditional Japanese Gagaku ensemble featuring the Sho (mouth organ) and Hichiriki.
+
+**Lyrics:**
+(Verse 1 - Fast, rhythmic Miami Bass flow)
+Drop the top down, riding through the neon street
+Got the 808 kicking to the Gagaku beat
+Sho is blowing heavy, shaking up the trunk
+Imperial court royalty bringing the funk
+
+(Chorus)
+(Massive 808 sub-bass drops)
+Bounce it to the east, bounce it to the west!
+Hichiriki playing, yeah we passed the test!
+Drop it down low for the emperor's court!
+Miami to Kyoto, the bass is the sport!
+
+**Additional Notes:**
+- **Combo/Fusion:** Miami Bass / Japanese Gagaku
+- **Thematic Ties:** The frantic, deeply physical and low-end heavy world of Miami Bass abruptly fused with the slow, ethereal, and majestic atmosphere of Japanese imperial court music.
+
+### Title: G-Funk Renaissance
+
+**Service:** Minimax Audio
+
+**Prompt:** A smooth, laid-back 1990s G-Funk beat characterized by a heavy, sloping drum groove. The iconic high-pitched synthesizer lead is completely replaced by a delicate, plucking Renaissance Harpsichord, while a Viola da Gamba takes over the deep basslines.
+
+**Lyrics:**
+(Verse 1 - Smooth, effortless West Coast rap delivery)
+Rolling through the village in my horse-drawn ride
+Got the harpsichord bumping, feeling kingside
+Jousting at the tourney, sipping on the mead
+Dropping heavy stanzas, planting the seed
+
+(Chorus)
+(Harpsichord plays a classic G-Funk whine melody)
+Ain't nothing but a G-thing, baby
+The Renaissance era driving me crazy
+Chilling in the courtyard, keeping it real
+Viola da Gamba got the velvet appeal
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s G-Funk / Renaissance Chamber Music
+- **Thematic Ties:** The relaxed, sunny, and highly stylized swagger of West Coast hip-hop mapped onto the formal, aristocratic elegance of Renaissance chamber music.
+
+### Title: The Monastic Delta
+
+**Service:** Minimax Audio
+
+**Prompt:** A gritty, lo-fi Delta Blues track featuring a slow, stomping foot rhythm and a bottleneck slide guitar. The main vocals, rather than a raspy bluesmen, are sung by a solemn choir of monks in the style of polyphonic Gregorian Chant.
+
+**Lyrics:**
+(Verse 1 - Monastic choir singing over slide guitar)
+Kyrie eleison on the levee tonight
+Kyrie eleison on the levee tonight
+The river is rising, blocking out the light
+(Slide guitar wails with analog crackle)
+
+(Chorus)
+(Choir harmonies swell over the stomping beat)
+Domine, save me from the muddy water's hold!
+The devil's at the crossroads, getting mighty bold!
+Dies irae coming, the cotton is dead
+Ain't got no sanctuary to lay my weary head
+
+**Additional Notes:**
+- **Combo/Fusion:** Delta Blues / Gregorian Chant
+- **Thematic Ties:** The deeply personal, earthly sorrow and spiritual struggle of the Delta Blues elevated to the communal, cosmic, and highly structured devotion of medieval monastic chanting.
+
+### Title: City Pop Crank
+
+**Service:** Minimax Audio
+
+**Prompt:** A breezy, nostalgic 1980s Japanese City Pop track with slap bass, lush Rhodes piano chords, and a four-on-the-floor disco beat. The saxophone solo and lead synth melodies are surprisingly played on a raspy, droning medieval Hurdy-Gurdy.
+
+**Lyrics:**
+(Verse 1 - Smooth, airy female City Pop vocals)
+Midnight cruising down the Tokyo bay
+City lights reflecting in the cabaret
+(Hurdy-Gurdy drone softly underneath the Rhodes piano)
+Neon signs flashing, a pastel dream
+But I hear a crank turning in the modern scheme
+
+(Chorus)
+(Slap bass popping behind a soaring Hurdy-Gurdy melody)
+Plastic love in the castle keep!
+Turning the wheel while the city's asleep!
+Dancing in the twilight, feeling so free
+A medieval groove by the inland sea!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Japanese City Pop / Medieval Hurdy-Gurdy
+- **Thematic Ties:** The pristine, hyper-modern, and consumerist fantasy of Japanese City Pop interrupted by the crude, mechanical, and droning buzz of a peasant's instrument from the Middle Ages.
