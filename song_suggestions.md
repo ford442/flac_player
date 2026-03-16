@@ -1982,3 +1982,108 @@ But we swerving the galleon, making 'em pay!
 **Additional Notes:**
 - **Combo/Fusion:** Modern Trap / Traditional Sea Shanty
 - **Thematic Ties:** The rhythmic, communal labor of historic maritime work songs mapping perfectly onto the syncopated, bass-heavy bravado of modern Trap music.
+
+### Title: Monastic Lo-Fi
+
+**Service:** Minimax Audio
+
+**Prompt:** A relaxing, slow-tempo Lo-Fi Hip Hop track featuring a dusty, sampled drum break and a warm Rhodes electric piano. The central melodic elements and atmospheric drones, however, are provided by a deeply resonant choir of Tibetan monks chanting and striking heavy brass singing bowls.
+
+**Lyrics:**
+(Verse 1 - Whispered, rhythmic spoken word)
+Rain on the window, coffee in the cup
+Scrolling through the feed, never looking up
+(Deep, rumbling Tibetan throat singing drone)
+The singing bowl rings, clearing out the mind
+Leaving all the noise and the static behind
+
+(Chorus)
+(Rhodes piano playing a chillhop progression over a dusty beat)
+Om mani padme hum in the digital stream
+Finding a little peace in a late-night dream
+(Singing bowl strikes in time with the snare drum)
+
+**Additional Notes:**
+- **Combo/Fusion:** Lo-Fi Hip Hop / Tibetan Monastic Meditation
+- **Thematic Ties:** The modern, isolated comfort of studying/relaxing to Lo-Fi beats fused with the ancient, communal, and spiritually resonant atmosphere of a Tibetan monastery.
+
+### Title: Doo-Wop of the Damned
+
+**Service:** Minimax Audio
+
+**Prompt:** A classic, upbeat 1950s Doo-Wop progression sung by a slickly dressed vocal group in four-part harmony. However, the backing instrumentation is a terrifying, blast-beat driven Black Metal onslaught with tremolo-picked, heavily distorted guitars and aggressive blast beats.
+
+**Lyrics:**
+(Verse 1 - Sweet, crooning tenor over a wall of Black Metal noise)
+Oh, my darling, underneath the pale moonlight!
+(Blast beat section)
+I promised you my soul, and it feels so right!
+(Bass singer: Bop-bop-bop-bop-sh-bop!)
+The cemetery gates are open wide for two!
+My little ghoul, I'm so in love with you!
+
+(Chorus)
+(Four-part harmony singing a catchy, upbeat melody)
+Sha-na-na-na, burn the church down!
+We're the cutest little demons in this whole damn town!
+(Tremolo guitar solo in a major key)
+Shoo-wop, shoo-wop, sacrifice the goat!
+Singing sweet nothings right up your throat!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1950s Doo-Wop / Black Metal
+- **Thematic Ties:** The innocent, wholesome, and overly romanticized world of 1950s teenage pop culture brutally dragged into the grim, satanic, and chaotic depths of Scandinavian extreme metal.
+
+### Title: The Harpsichord Hustle
+
+**Service:** Minimax Audio
+
+**Prompt:** A highly rhythmic, polyrhythmic Nigerian Afrobeat track heavily influenced by Fela Kuti. It features driving congas, shekeres, and a funky, syncopated bassline. The entire horn section and funk guitars, however, are replaced by a massive, plucking Renaissance Harpsichord playing complex contrapuntal melodies.
+
+**Lyrics:**
+(Verse 1 - Passionate, energetic Afrobeat vocal delivery)
+The sun is hot on the Lagos street!
+(Harpsichord playing a fast, funky counter-melody)
+Everybody moving to the ancient beat!
+The king is in the court, but he's wearing a crown of gold!
+Let the harpsichord sing, let the story be told!
+
+(Chorus)
+(Call and Response with a large choir)
+(Call) Shake it up!
+(Response) For the Renaissance!
+(Call) Move your feet!
+(Response) To the elegant dance!
+(Harpsichord solo matching an Afrobeat horn line)
+
+**Additional Notes:**
+- **Combo/Fusion:** Nigerian Afrobeat / Baroque Chamber Music
+- **Thematic Ties:** The relentless, sweating, and politically charged groove of 1970s West African Afrobeat paired with the stiff, highly ornamented, and aristocratic sound of European Baroque music.
+
+### Title: Theremin Perreo
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, driving Reggaeton beat (Dem Bow rhythm) designed for a sweaty club floor. The heavy synth bass and bright brass stabs are completely absent, replaced entirely by the eerie, swooping, and sliding pitch-bends of an early Sci-Fi Theremin.
+
+**Lyrics:**
+(Verse 1 - Rhythmic, confident Reggaeton flow)
+Mami, step onto the floor in the ultraviolet light
+(Eerie, wailing Theremin slide mimicking a siren)
+We dancing in the cosmos, yeah we taking flight
+Got the Dem Bow bumping from an alien ship
+(Theremin matching the vocal melody)
+Intergalactic flavor, watch the saucer dip
+
+(Chorus)
+(Heavy Reggaeton beat drops)
+Baila con el marciano! (Dance with the Martian!)
+(High-pitched Theremin vibrato)
+Perreo in the saucer, moving la mano!
+(Theremin doing a fast, rhythmic stutter)
+From San Juan to Saturn, we breaking the mold
+The Theremin is singing, a story untold!
+
+**Additional Notes:**
+- **Combo/Fusion:** Reggaeton / 1950s Sci-Fi Theremin
+- **Thematic Ties:** The deeply physical, grounded, and modern Latin club energy of Reggaeton abducted by the spooky, untouchable, and vintage-futuristic wail of a 1950s B-movie alien soundtrack.
