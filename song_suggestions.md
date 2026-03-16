@@ -1883,3 +1883,102 @@ A medieval groove by the inland sea!
 **Additional Notes:**
 - **Combo/Fusion:** 1980s Japanese City Pop / Medieval Hurdy-Gurdy
 - **Thematic Ties:** The pristine, hyper-modern, and consumerist fantasy of Japanese City Pop interrupted by the crude, mechanical, and droning buzz of a peasant's instrument from the Middle Ages.
+
+### Title: Neon Taiko
+
+**Service:** Minimax Audio
+
+**Prompt:** A high-energy 1980s Synthwave track with pulsating analog basslines and glittering arpeggiators. The driving rhythm section, however, is entirely performed by an ensemble of traditional Japanese Taiko drums instead of a drum machine.
+
+**Lyrics:**
+(Verse 1)
+Neon grid lighting up the midnight sky
+Driving fast, watching the holograms fly
+(Massive Taiko drum fill)
+Digital dreams in a world of chrome
+Ancient thunder bringing me home
+
+(Chorus)
+Strike the drum, feel the synth wave roll!
+Analog heart and a warrior's soul!
+Cruising Shinjuku in the ultraviolet light
+Taiko warriors of the endless night!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Synthwave / Japanese Taiko Drums
+- **Thematic Ties:** The hyper-futuristic, synthetic world of 80s retro-futurism propelled by the ancient, organic, and earth-shaking power of traditional Japanese festival drums.
+
+### Title: The Barbershop Doom
+
+**Service:** Minimax Audio
+
+**Prompt:** A crushing, agonizingly slow Doom Metal track with heavily distorted, down-tuned guitars. The vocals, instead of guttural growls, are delivered by a cheerful, dapper Barbershop Quartet singing in perfect four-part harmony about existential dread.
+
+**Lyrics:**
+(Verse 1 - Cheerful Barbershop Harmony over sludgy Doom riffs)
+Hello, my baby, hello, my honey!
+The universe is cold and dark!
+(Crushing guitar breakdown)
+Our mortal coils are merely dust!
+In the void, we leave our mark!
+
+(Chorus)
+(Sweet four-part harmony)
+Oh, the abyss is staring back at me!
+(Bum-bum-bum!)
+Meaningless is all that we can see!
+Pass the pomade, watch the heavens fall
+Nothing really matters after all!
+
+**Additional Notes:**
+- **Combo/Fusion:** Doom Metal / Barbershop Quartet
+- **Thematic Ties:** The bleak, oppressive, and miserable weight of Doom Metal contrasting hilariously with the upbeat, well-groomed, and performative cheer of a 1910s vocal quartet.
+
+### Title: Bossa Nova Cossack
+
+**Service:** Minimax Audio
+
+**Prompt:** A smooth, relaxing Bossa Nova track with a gentle tempo, but the lead instrument is a rapid-fire Russian Balalaika playing melancholic Eastern European melodies. The soft percussion includes a traditional tambourine (buben).
+
+**Lyrics:**
+(Verse 1 - Soft, breathy Bossa Nova croon)
+The snow falls softly on Ipanema
+Drinking vodka under the sun
+The girl from the steppe is dancing so slow
+The Siberian winter has just begun
+
+(Chorus)
+(Balalaika plays a smooth, syncopated solo)
+Ah, the taiga is warm today
+Swaying like the birch trees, finding our way
+A quiet kalinka on the sandy shore
+I couldn't ask for anything more
+
+**Additional Notes:**
+- **Combo/Fusion:** Bossa Nova / Russian Balalaika
+- **Thematic Ties:** The warm, tropical, and effortless cool of Brazilian beach music fused with the freezing, melancholic, and frantic stringed instruments of the Russian winter.
+
+### Title: Sea Shanty Trap
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, modern Trap beat featuring sliding 808s and rapid hi-hats. The vocals are a gruff, multi-layered chorus of 18th-century sailors singing a rhythmic work song about slinging cargo and dodging the Royal Navy.
+
+**Lyrics:**
+(Chorus - Gruff sailor choir over rattling hi-hats)
+Heave away, haul away, pulling up the net!
+(Trap ad-lib: Skrt!)
+Got the dubloons, we ain't finished yet!
+Sliding on the waves with the 808 bump!
+Making the captain and the whole crew jump!
+
+(Verse 1)
+(Fast-paced sea shanty chant)
+Load up the barrel, stash it in the hold
+We moving the product, brave and bold
+Royal Navy ops trying to block the bay
+But we swerving the galleon, making 'em pay!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern Trap / Traditional Sea Shanty
+- **Thematic Ties:** The rhythmic, communal labor of historic maritime work songs mapping perfectly onto the syncopated, bass-heavy bravado of modern Trap music.
