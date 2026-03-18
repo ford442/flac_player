@@ -2087,3 +2087,81 @@ The Theremin is singing, a story untold!
 **Additional Notes:**
 - **Combo/Fusion:** Reggaeton / 1950s Sci-Fi Theremin
 - **Thematic Ties:** The deeply physical, grounded, and modern Latin club energy of Reggaeton abducted by the spooky, untouchable, and vintage-futuristic wail of a 1950s B-movie alien soundtrack.
+
+### Title: The Samurai's Sitar
+
+**Service:** Minimax Audio
+
+**Prompt:** A slow, meditative piece of traditional Japanese Gagaku court music, but the central melodic instrument is a virtuosic Indian Sitar instead of a Koto. The rhythm is softly kept by a complex Tabla pattern alongside the Japanese Kakko drum.
+
+**Lyrics:**
+(Verse 1 - Ethereal, slow vocalization)
+Cherry blossoms fall on the Ganges
+The emperor listens to the monsoon rain
+(Sitar bends a microtonal Japanese scale)
+Strings of silk and strings of bronze
+Two ancient worlds in a single breath
+
+**Additional Notes:**
+- **Combo/Fusion:** Japanese Gagaku / Indian Classical
+- **Thematic Ties:** The refined, breathy atmosphere of Japanese imperial court music intertwining with the complex, virtuosic string bending and mathematical percussion of classical India.
+
+### Title: Tundra Tango
+
+**Service:** Minimax Audio
+
+**Prompt:** A dramatic, passionate Argentine Tango played with traditional bandoneon and acoustic guitar. However, the vocals are entirely performed by a Siberian throat singer, delivering guttural, rhythmic drones instead of a smooth tenor.
+
+**Lyrics:**
+(Verse 1 - Deep, rumbling Sygyt overtone singing)
+[Low guttural drone holding the rhythm]
+Footsteps in the permafrost, a dance of fire and ice
+[High overtone whistle tracing the bandoneon melody]
+Holding you close where the reindeer roam
+
+(Chorus)
+[Rhythmic throat singing mimicking a Tango staccato]
+Baila, my snow queen, baila!
+The taiga is our ballroom tonight!
+
+**Additional Notes:**
+- **Combo/Fusion:** Argentine Tango / Siberian Throat Singing
+- **Thematic Ties:** The fiery, passionate precision of the South American Tango displaced into the vast, freezing desolation of the Siberian taiga.
+
+### Title: Victorian Voodoo
+
+**Service:** Minimax Audio
+
+**Prompt:** A polite, restrained 19th-century string quartet playing a delicate waltz in a minor key. Suddenly, it is overtaken by a massive, polyrhythmic ensemble of Haitian Vodou drums, driving the strings into a frenetic, possessed tempo.
+
+**Lyrics:**
+(Spoken in a posh British accent)
+More tea, Lord Reginald?
+(Sudden crash of Rada drums)
+Heavens! The rhythm has taken the parlor!
+(String section begins playing wildly out of time)
+The spirits are in the china cabinet!
+
+**Additional Notes:**
+- **Combo/Fusion:** 19th Century Chamber Music / Haitian Vodou Drumming
+- **Thematic Ties:** The restrained, aristocratic elegance of Victorian London violently colliding with the hypnotic, polyrhythmic, and spiritually possessing drums of Haiti.
+
+### Title: The Orbital Oompah
+
+**Service:** Minimax Audio
+
+**Prompt:** A grand, cinematic Space Ambient track composed of sweeping synthesizers, zero-gravity drones, and ethereal choirs. This vast emptiness is suddenly interrupted by a lively, bouncing Bavarian Polka band playing tuba and accordion.
+
+**Lyrics:**
+(Ethereal, floating choir)
+Aah... drifting through the cosmos...
+(Sudden bouncy tuba bassline and accordion)
+(Verse 1 - Cheerful Bavarian vocalist)
+Prost from the space station!
+Floating with a pretzel in the Milky Way!
+No gravity to spill the beer!
+Oom-pah, oom-pah, in the stratosphere!
+
+**Additional Notes:**
+- **Combo/Fusion:** Space Ambient / Bavarian Polka
+- **Thematic Ties:** The vast, cold, zero-gravity isolation of deep space hilariously interrupted by a warm, lively, and gravity-defying Bavarian beer hall celebration.
