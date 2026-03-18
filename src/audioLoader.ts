@@ -50,7 +50,8 @@ export type RepeatMode = 'off' | 'one' | 'all';
 export type ViewMode = 'library' | 'now-playing' | 'queue' | 'pile';
 
 // API Configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+// Default to the storage manager API if no env var is set
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://ford442-storage-manager.hf.space';
 
 export class AudioLoader {
   async loadAudio(source: AudioSource): Promise<ArrayBuffer> {
