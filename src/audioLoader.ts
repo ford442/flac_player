@@ -127,7 +127,7 @@ export class AudioLoader {
   ): Promise<{ tracks: PlaylistTrack[]; total: number }> {
     try {
       const params = new URLSearchParams();
-      
+
       if (options.limit) params.append('limit', options.limit.toString());
       if (options.offset) params.append('offset', options.offset.toString());
       if (options.ratingGte !== undefined) params.append('rating_gte', options.ratingGte.toString());
@@ -142,20 +142,23 @@ export class AudioLoader {
       if (options.generationModel) params.append('generation_model', options.generationModel);
 
       const url = `${API_BASE_URL}/api/songs?${params}`;
-      const response = await fetch(url);
-      
+      const response = await fetch(url, {
+        mode: 'cors',
+        credentials: 'omit'
+      });
+
       if (!response.ok) {
         throw new Error(`Failed to fetch library: ${response.status} ${response.statusText}`);
       }
-      
+
       const tracks = await response.json();
-      
+
       // Map to add URLs
       const tracksWithUrls = tracks.map((item: any) => ({
         ...item,
         url: item.url || `${API_BASE_URL}/api/music/${item.id}`
       }));
-      
+
       return { tracks: tracksWithUrls, total: tracks.length };
     } catch (error) {
       console.error('Error fetching library:', error);
@@ -165,7 +168,10 @@ export class AudioLoader {
 
   async fetchTags(): Promise<TagInfo[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/songs/tags`);
+      const response = await fetch(`${API_BASE_URL}/api/songs/tags`, {
+        mode: 'cors',
+        credentials: 'omit'
+      });
       if (!response.ok) {
         throw new Error(`Failed to fetch tags: ${response.status}`);
       }
@@ -179,7 +185,10 @@ export class AudioLoader {
 
   async fetchStats(): Promise<LibraryStats> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/songs/stats`);
+      const response = await fetch(`${API_BASE_URL}/api/songs/stats`, {
+        mode: 'cors',
+        credentials: 'omit'
+      });
       if (!response.ok) {
         throw new Error(`Failed to fetch stats: ${response.status}`);
       }
@@ -227,7 +236,9 @@ export class AudioLoader {
   async recordPlay(musicId: string): Promise<void> {
     try {
       await fetch(`${API_BASE_URL}/api/songs/${musicId}/play`, {
-        method: 'POST'
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit'
       });
     } catch (error) {
       console.warn('Failed to record play:', error);
@@ -235,13 +246,13 @@ export class AudioLoader {
   }
 
   async updateSampleMetadata(
-    musicId: string, 
-    updates: { 
-      name?: string; 
+    musicId: string,
+    updates: {
+      name?: string;
       title?: string;
-      rating?: number; 
-      description?: string; 
-      genre?: string; 
+      rating?: number;
+      description?: string;
+      genre?: string;
       tags?: string[];
       last_played?: string;
       generation_model?: string;
@@ -252,10 +263,12 @@ export class AudioLoader {
     try {
       const response = await fetch(`${API_BASE_URL}/api/songs/${musicId}`, {
         method: 'PATCH',
+        mode: 'cors',
+        credentials: 'omit',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates)
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to update metadata: ${response.status} ${response.statusText}`);
       }
@@ -268,9 +281,11 @@ export class AudioLoader {
   async trashTrack(musicId: string): Promise<void> {
     try {
       const response = await fetch(`${API_BASE_URL}/api/songs/${musicId}/trash`, {
-        method: 'POST'
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit'
       });
-      
+
       if (!response.ok) {
         throw new Error(`Failed to trash track: ${response.status}`);
       }
@@ -282,7 +297,10 @@ export class AudioLoader {
 
   async suggestTags(musicId: string): Promise<{ suggestions: string[]; source: string }> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/songs/${musicId}/suggest-tags`);
+      const response = await fetch(`${API_BASE_URL}/api/songs/${musicId}/suggest-tags`, {
+        mode: 'cors',
+        credentials: 'omit'
+      });
       if (!response.ok) {
         throw new Error(`Failed to get suggestions: ${response.status}`);
       }
@@ -337,8 +355,11 @@ export class AudioLoader {
       if (minRating) params.append('min_rating', minRating.toString());
 
       const url = `https://ford442-storage-manager.hf.space/api/songs?${params}`;
-      const response = await fetch(url);
-      
+      const response = await fetch(url, {
+        mode: 'cors',
+        credentials: 'omit'
+      });
+
       if (!response.ok) {
         throw new Error(`Failed to fetch playlist: ${response.status}`);
       }
