@@ -2165,3 +2165,101 @@ Oom-pah, oom-pah, in the stratosphere!
 **Additional Notes:**
 - **Combo/Fusion:** Space Ambient / Bavarian Polka
 - **Thematic Ties:** The vast, cold, zero-gravity isolation of deep space hilariously interrupted by a warm, lively, and gravity-defying Bavarian beer hall celebration.
+
+### Title: The Outback Speakeasy
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced, swinging 1920s Dixieland Jazz band playing in a smoky speakeasy. The traditional upright bass is replaced by a massive, rhythmic Aboriginal Didgeridoo that drives the syncopated groove under the blaring trumpets.
+
+**Lyrics:**
+(Verse 1 - Smooth, jazzy crooner)
+Got my zoot suit on, step into the joint
+The brass is blazing, making a point
+(Deep, rhythmic Didgeridoo drone imitating a walking bassline)
+But feel that vibration shaking the floor?
+That's the sound of the outback roaring for more!
+
+(Chorus)
+Swing it, boys! Let the red dirt fly!
+Under a Chicago neon sky!
+(Didgeridoo rhythm intensifies, intertwining with a clarinet solo)
+Pass the bathtub gin, let the spirit roam
+The didgeridoo is calling us home!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1920s Dixieland Jazz / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The energetic, urban, and prohibited thrill of a Roaring Twenties American speakeasy anchored by the ancient, resonant, and deeply earthy frequencies of the Australian outback.
+
+### Title: The Byte-Sized Monastery
+
+**Service:** Minimax Audio
+
+**Prompt:** A solemn, reverberant, and a cappella Gregorian Chant sung in Latin by a choir of monks. The serene atmosphere is suddenly fractured by frantic, high-energy 8-bit Chiptune arpeggios that glitch and weave through the sacred harmonies.
+
+**Lyrics:**
+(Deep, resonant unison chant)
+Aeterna lux, in nocte fulget... (Eternal light, shines in the night...)
+(Sudden burst of rapid, blipping square waves)
+[Monotone robotic voice interjecting]
+System error. Sanctity corrupted. Rebooting faith.
+
+(Chorus - Monks singing over an aggressive Chiptune beat)
+Gloria in excelsis data! (Glory to data in the highest!)
+(Chiptune melody harmonizing perfectly with a medieval cadence)
+Press start to pray, continue the quest
+The motherboard is eternally blessed.
+
+**Additional Notes:**
+- **Combo/Fusion:** Gregorian Chant / 8-bit Chiptune
+- **Thematic Ties:** The profound, slow-moving reverence of medieval European monasticism colliding abruptly with the frantic, synthetic, and hyperactive dopamine rush of a retro arcade game.
+
+### Title: The Highlander's Flamenco
+
+**Service:** Minimax Audio
+
+**Prompt:** A passionate, percussive Spanish Flamenco dance driven by intricate acoustic guitar and castanets. Surprisingly, the main melody is fiercely wailed by a set of Great Highland Bagpipes playing complex, syncopated Phrygian scales.
+
+**Lyrics:**
+(Verse 1 - Raspy, emotional Flamenco cantaor singing)
+Ay! El viento sopla (The wind blows)
+Over the heather and the stone!
+(Bagpipes shriek an elaborate Flamenco run)
+My heart beats like a drum in the highlands!
+(Rapid rhythmic foot stomping and clapping)
+
+(Chorus)
+(Bagpipes leading a dramatic, stomping rhythm)
+Olé! From Andalusia to the glen!
+The tartan swirls with the dancer's spin!
+(Furious acoustic guitar rasgueado strumming)
+A fire burns in the misty rain!
+
+**Additional Notes:**
+- **Combo/Fusion:** Spanish Flamenco / Scottish Bagpipes
+- **Thematic Ties:** The fiery, precise, and emotionally raw intensity of southern Spanish street dance forcibly married to the martial, booming, and weather-beaten wail of the Scottish highlands.
+
+### Title: The Mariachi Maestro
+
+**Service:** Minimax Audio
+
+**Prompt:** A sweeping, tragic Italian Opera aria performed by a powerful dramatic tenor. However, the orchestral accompaniment is entirely replaced by a lively, boisterous Mariachi band featuring punchy trumpets, a bouncing guitarrón, and upbeat vihuelas.
+
+**Lyrics:**
+(Verse 1 - Deep, theatrical operatic tenor voice)
+O mio dolce amore, perché mi lasci? (Oh my sweet love, why do you leave me?)
+(Upbeat, bouncing guitarrón bassline and festive trumpets interject)
+Ay ay ay ay! Canta y no llores!
+(The tenor attempts to maintain a tragic tone over the cheerful rhythm)
+Il mio cuore si spezza! (My heart breaks!)
+(Mariachi band erupts into a joyous, fast-paced harmony)
+
+(Chorus)
+(Tenor belts a massive, sustained high C)
+Vincerò! Vincerò!!! (I will win! I will win!!!)
+(Trumpets immediately follow with a classic, celebratory Mariachi fanfare)
+Tequila for the maestro! Let the tears dry in the sun!
+
+**Additional Notes:**
+- **Combo/Fusion:** Italian Opera / Mexican Mariachi
+- **Thematic Ties:** The extreme, overwrought emotional tragedy of classical Italian theater hopelessly trying to maintain its seriousness while being dragged into a sunny, joyous, and alcohol-fueled Mexican fiesta.
