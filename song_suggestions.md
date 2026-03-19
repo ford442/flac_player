@@ -2263,3 +2263,85 @@ Tequila for the maestro! Let the tears dry in the sun!
 **Additional Notes:**
 - **Combo/Fusion:** Italian Opera / Mexican Mariachi
 - **Thematic Ties:** The extreme, overwrought emotional tragedy of classical Italian theater hopelessly trying to maintain its seriousness while being dragged into a sunny, joyous, and alcohol-fueled Mexican fiesta.
+
+### Title: The Tsar's Theremin
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, pulsating Dub Reggae track with deep sub-bass and space echo delays. However, the skanking guitar and horn sections are entirely replaced by a traditional Russian Orthodox male choir singing solemn polyphony, and the lead melody is performed on a wailing 1950s Sci-Fi Theremin.
+
+**Lyrics:**
+(Deep, resonant bass vocals - Russian Orthodox style)
+Gospodi pomiluy...
+(Sub-bass drops, heavy tape echo on the choir)
+(Theremin slides into a high-pitched, wailing vibrato)
+(Rhythmic chant)
+Hallelujah in the echo chamber
+Faith vibrating through the tape machine
+(Theremin solos over a heavy dub beat)
+
+**Additional Notes:**
+- **Combo/Fusion:** Russian Choral / Sci-Fi Theremin Dub
+- **Thematic Ties:** The deep, ancient spiritual resonance of Russian orthodoxy floating over a heavy Jamaican dub beat, pierced by the futuristic, alien wail of a Theremin.
+
+### Title: Hurdy-Gurdy Shogun
+
+**Service:** Minimax Audio
+
+**Prompt:** A blistering, aggressive Japanese Death Metal track with blast beats and guttural growls. The distorted guitars, however, are completely replaced by an incredibly distorted, furiously cranked Medieval European Hurdy-Gurdy playing hyper-fast minor scales.
+
+**Lyrics:**
+(Guttural Death Metal Growl - Japanese)
+[Incomprehensible roaring]
+THE SHOGUN DEMANDS BLOOD!
+(Frantic, buzzing Hurdy-Gurdy blast beat breakdown)
+TURN THE WHEEL OF DEATH!
+THE RESIN BURNS ON THE STRINGS OF WAR!
+(Hurdy-Gurdy solo mimicking a sweep-picked guitar solo)
+
+**Additional Notes:**
+- **Combo/Fusion:** Medieval Hurdy-Gurdy / Japanese Death Metal
+- **Thematic Ties:** The brutal, honor-bound aggression of a feudal Japanese warlord scored by the relentless, droning buzz of a European peasant's mechanical instrument pushed to its absolute limits.
+
+### Title: Bossa Nova on Mars
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, relaxing Bossa Nova rhythm, but completely stripped of its traditional acoustic instrumentation. Every element—the nylon guitar chords, the soft percussion, the breathy vocals—is recreated using heavily modulated, squelching analog synthesizers from the 1970s.
+
+**Lyrics:**
+(Vocoded, breathy synthesizer voice)
+Tall and tan and made of circuits
+The girl from the crater goes walking
+And when she passes, the rovers start talking
+Ah... (Synthesizer sweep)
+(Moog synthesizer plays a soft, syncopated solo)
+Sipping a synthetic caipirinha under a red sky
+
+**Additional Notes:**
+- **Combo/Fusion:** Bossa Nova / 70s Analog Synthesizers
+- **Thematic Ties:** The warm, effortless, and deeply human relaxation of Brazilian Bossa Nova artificially reconstructed by cold, electronic, and alien-sounding analog machinery.
+
+### Title: Appalachian Raga
+
+**Service:** Minimax Audio
+
+**Prompt:** A hypnotic, drone-heavy piece of Indian Classical Raga music played on a Sitar and Tabla. However, the Sitar is not playing Indian ragas, but rather fast-paced, bluesy Appalachian pentatonic scales, mimicking a high-speed bluegrass banjo roll.
+
+**Lyrics:**
+(Verse 1 - High, lonesome Appalachian vocal style)
+Well, I went down to the holler, where the lotus flower blooms
+Sitting by the river, chasing away my glooms
+(Sitar plays a furious, bending bluegrass lick)
+(Tabla matches the rhythm of a washboard)
+
+(Chorus)
+Pick it fast, brother! Bend that string!
+Hear the Appalachian mountains ring!
+(Sitar and Tabla break into a frantic, syncopated jam)
+From the Blue Ridge to the Ganges shore
+We're stomping our feet on the cabin floor!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Folk / Indian Classical Raga
+- **Thematic Ties:** Merging the fast, virtuosic, and deeply rural finger-picking of American mountain music with the complex, droning, and spiritual stringed instrumentation of classical India.
