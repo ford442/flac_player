@@ -2345,3 +2345,91 @@ We're stomping our feet on the cabin floor!
 **Additional Notes:**
 - **Combo/Fusion:** Appalachian Folk / Indian Classical Raga
 - **Thematic Ties:** Merging the fast, virtuosic, and deeply rural finger-picking of American mountain music with the complex, droning, and spiritual stringed instrumentation of classical India.
+
+### Title: The Geisha's Gamelan
+
+**Service:** Minimax Audio
+
+**Prompt:** A delicate, serene traditional Japanese Koto performance abruptly interrupted by the massive, overwhelming, and chaotic crashing of a full Indonesian Gamelan ensemble. The Koto struggles to maintain its tranquil melody against the heavy bronze metallophones.
+
+**Lyrics:**
+(Verse 1 - Soft, breathy traditional Japanese vocal)
+Sakura petals falling on the quiet pond
+(Sudden, deafening crash of a Gong Ageng and Bonang)
+The bronze shatters the water! The reflection is gone!
+(Koto plucks a frantic, uneven rhythm trying to keep up)
+
+(Chorus)
+(Massive, dissonant Gamelan chords masking the Koto)
+Strike the bronze, drown the silk!
+The storm of Bali sweeps through Kyoto!
+No peace in the garden tonight!
+
+**Additional Notes:**
+- **Combo/Fusion:** Japanese Koto / Indonesian Gamelan
+- **Thematic Ties:** The pristine, highly controlled, and solitary peace of a Japanese Zen garden completely annihilated by the loud, communal, and overwhelming physical power of Southeast Asian bronze percussion.
+
+### Title: Klezmer on the Moon
+
+**Service:** Minimax Audio
+
+**Prompt:** A classic, bouncy Eastern European Klezmer tune played at a frantic pace, but the clarinet and accordion are heavily processed through zero-gravity, spacey tape delays and phasing effects, backed by a driving, futuristic Drum and Bass beat.
+
+**Lyrics:**
+(Verse 1 - Fast-paced, rhythmic Yiddish-style vocal delivery)
+Oy vey, the rocket ship is shaking to the core!
+Dancing the hora on the lunar floor!
+(Clarinet wails, spinning out into endless, echoing space delays)
+The rabbi's in a spacesuit, the Torah's on a screen!
+Fastest little spaceship that you've ever seen!
+
+(Chorus)
+(Drum and Bass rhythm section kicks into overdrive)
+Mazel tov! We're breaking the atmosphere!
+(Accordion squeeze sent through a massive phaser effect)
+Zero gravity, grab a partner, pull 'em near!
+Klezmer in the cosmos, spinning round the stars!
+
+**Additional Notes:**
+- **Combo/Fusion:** Klezmer / Drum and Bass
+- **Thematic Ties:** The highly localized, rustic, and acoustic tradition of Jewish village celebrations blasted into the cold, hyper-fast, and synthetic environment of deep space.
+
+### Title: The Celtic Cyber-Heist
+
+**Service:** Minimax Audio
+
+**Prompt:** A tense, pulsating Darksynth cyberpunk track meant for a high-tech heist. The driving, arpeggiated synthesizer bassline is kept intact, but the main melodic leads, solos, and tense stings are performed by a frantic, virtuosic Irish fiddle and a Bodhrán (frame drum) instead of electronic percussion.
+
+**Lyrics:**
+(Spoken - Slick, robotic voice)
+Accessing the mainframe. Bypassing the firewall.
+(Irish fiddle plays a tense, rapid, minor-key jig)
+The data is secured. Let's make a run for the pub.
+(Bodhrán beats furiously against a heavy synthetic sub-bass)
+(Fiddle solo matching the intensity of a synthesizer solo)
+
+**Additional Notes:**
+- **Combo/Fusion:** Darksynth Cyberpunk / Traditional Irish Folk
+- **Thematic Ties:** The gritty, futuristic, and highly digital tension of a cyberpunk infiltration scored by the organic, frantic, and beer-soaked energy of a traditional Irish pub session.
+
+### Title: Mariachi of the Tundra
+
+**Service:** Minimax Audio
+
+**Prompt:** A triumphant, festive Mariachi song with full brass and string sections. However, the cheerful, celebratory shouts and vocals are replaced by the deep, resonant, and continuous drone of Tuvan throat singing, creating a bizarre juxtaposition of joy and ancient, earthy grounding.
+
+**Lyrics:**
+(Verse 1 - Deep, rumbling Sygyt overtone singing)
+[Low guttural drone holding the fundamental note]
+(Bright, festive Mariachi trumpet fanfare)
+[High overtone whistle tracing the trumpet melody]
+(Guitarrón playing a bouncing, joyful bassline)
+
+(Chorus)
+[Rhythmic throat singing mimicking a celebratory Mariachi shout: "Ay, ay, ay!"]
+(Violins sawing a fast, happy melody)
+The fiesta is warm, but the breath is cold!
+
+**Additional Notes:**
+- **Combo/Fusion:** Mexican Mariachi / Tuvan Throat Singing
+- **Thematic Ties:** The extroverted, sunny, and highly social joy of a Mexican fiesta anchored by the introverted, ancient, and solitary resonance of the Mongolian steppes.
