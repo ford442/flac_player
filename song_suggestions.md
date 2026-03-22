@@ -2531,3 +2531,520 @@ Got the whole desert and the club pulsating!
 **Additional Notes:**
 - **Combo/Fusion:** Trap / Australian Aboriginal Didgeridoo
 - **Thematic Ties:** The gritty, materialistic flex culture of modern Trap music paired with the ancient, earthy, and deeply resonant frequencies of the Australian outback.
+
+---
+
+## Trance Variations: All I Need
+
+*Seven sub-genre variations of "All I Need" (styled after Trance Girl Voices – All I Need), each optimised for MiniMax Audio Music 2.5+. Every entry includes a text Prompt, a detailed Styles descriptor, and adapted Lyrics.*
+
+---
+
+### Title: All I Need [Classic Vocal Trance Mix]
+
+**Service:** Minimax Audio
+
+**Prompt:** Euphoric classic Vocal Trance, 138 BPM, Roland JP-8000 supersaw chords, angelic English female vocals, emotional breakdown and massive drop, early 2000s Euro-Trance club anthem. Lush reverb-soaked pads, rolling 16th-note sub-bass, white-noise sweeps, dramatic 8-bar build, cathartic release at the drop.
+
+**Styles:** Classic Vocal Trance, Uplifting Trance, Euro-Trance, early 2000s nostalgia, euphoric, emotional, atmospheric, driving, 138 BPM, four-on-the-floor rhythm, rolling 16th-note sub-bass, punchy TR-909 kick drum, bright off-beat open hi-hats, classic Roland JP-8000 supersaw chords, pulsing trance plucks, sweeping analog arpeggios, lush reverb-soaked Korg Triton pad, ethereal English female vocals, angelic, breathy verses, soaring emotional chorus, heavy ping-pong delay on vocals, cavernous hall reverb, white-noise risers, snare fill into breakdown, euphoric 8-bar build, massive emotional drop, club anthem structure, wide stereo imaging, sidechain compression on pads
+
+**Lyrics:**
+[Verse 1]
+Shadows fall across the room
+I am waiting here for you
+Every second feels like hours
+In this quiet solitude
+
+[Pre-Chorus]
+And the world begins to fade
+When I hear you call my name
+Drawing closer to the edge
+Nothing else will be the same
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Verse 2]
+Closing my eyes I feel the rush
+Like a river breaking through
+Nothing else can touch us now
+It is only me and you
+
+[Pre-Chorus]
+And the world begins to fade
+When I hear you call my name
+Drawing closer to the edge
+Nothing else will be the same
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Bridge]
+Through the darkness through the night
+You are the guiding light
+Take my hand and pull me in
+Let the symphony begin
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Outro]
+All I need
+Set me free
+In this endless space
+All I need
+
+**Additional Notes:**
+- **Sub-genre / BPM:** Classic Vocal Trance, 138 BPM
+- **Reference:** ATB, Rank 1, Delerium, Trance Girl Voices – All I Need (direct stylistic mirror)
+- **Structure:** Intro → V1 → Pre-Ch → Ch → V2 → Pre-Ch → Ch → Breakdown → Bridge → Ch × 2 → Outro
+- **Vocal direction:** Angelic, breathy on verses; full, soaring power on chorus
+
+---
+
+### Title: All I Need [Progressive Mix]
+
+**Service:** Minimax Audio
+
+**Prompt:** Hypnotic Progressive Trance, 132 BPM, deep rolling Moog bassline, minimalist layered Juno-106 pads, breathy restrained female vocals, long atmospheric 32-bar breakdown, gradual filter sweeps, emotional payoff at drop.
+
+**Styles:** Progressive Trance, 132 BPM, four-on-the-floor, deep pulsing sub-bass, Moog Voyager low-pass filtered bass, subtle TR-909 kick (low velocity), closed hi-hats, slow-evolving Juno-106 warm pad, layered soft supersaw (narrow detune), delayed guitar-style pluck, hypnotic 16-bar loop structure, breathy restrained female vocals (low in mix, intimate), long 32-bar breakdowns, gradual resonant filter sweeps, minimal white-noise, soft warm room reverb, subtle delay tails, understated drop with deep bass re-entry, emotional payoff through restraint, dark progressive atmosphere
+
+**Lyrics:**
+[Verse 1]
+Shadows fall across the room
+I am waiting here for you
+Every second feels like hours
+In this quiet solitude
+
+[Pre-Chorus]
+And the world begins to fade
+When I hear you call my name
+Drawing closer to the edge
+Nothing else will be the same
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Bridge]
+Through the darkness through the night
+You are the guiding light
+Take my hand and pull me in
+Let the symphony begin
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Outro]
+All I need
+Set me free
+In this endless space
+All I need
+
+**Additional Notes:**
+- **Sub-genre / BPM:** Progressive Trance, 132 BPM
+- **Reference:** Sasha, John Digweed, Rank 1 (progressive side), BT – Dreaming
+- **Structure:** Long instrumental intro → V1 → Pre-Ch → Ch → 32-bar breakdown → Bridge → Ch × 2 → Outro (verse 2 replaced with extended instrumental)
+- **Vocal direction:** Intimate, restrained; vocals sit back in reverb, not upfront
+
+---
+
+### Title: All I Need [Uplifting Anthem Mix]
+
+**Service:** Minimax Audio
+
+**Prompt:** Massive Uplifting Anthem Trance, 140 BPM, orchestral strings and brass stabs, Access Virus TI euphoric lead synth, soaring angelic female vocals with choir backing, 16-bar orchestral build, 8-bar silent breakdown, stadium drop with full orchestra and supersaw unison.
+
+**Styles:** Uplifting Trance, Anthem Trance, 140 BPM, four-on-the-floor, powerful TR-909 kick with sidechain compression, punchy snare, rolling 16th-note sub-bass, Roland JP-8000 supersaw chords, orchestral string section (cinematic, full ensemble), brass stabs (punchy horns), lead melodic synth (Access Virus TI sawtooth, high-pass filtered), soaring angelic female vocals, full choir harmony backing on chorus, massive white-noise sweeps, 16-bar orchestral crescendo build, 8-bar near-silent breakdown (solo piano or strings), euphoric full drop with orchestra plus synth unison, stadium hall reverb, extreme wide stereo imaging, powerful emotional uplift
+
+**Lyrics:**
+[Verse 1]
+Shadows fall across the room
+I am waiting here for you
+Every second feels like hours
+In this quiet solitude
+
+[Pre-Chorus]
+And the world begins to fade
+When I hear you call my name
+Drawing closer to the edge
+Nothing else will be the same
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Verse 2]
+Closing my eyes I feel the rush
+Like a river breaking through
+Nothing else can touch us now
+It is only me and you
+
+[Pre-Chorus]
+And the world begins to fade
+When I hear you call my name
+Drawing closer to the edge
+Nothing else will be the same
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Bridge]
+Through the darkness through the night
+You are the guiding light
+Take my hand and pull me in
+Let the symphony begin
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Chorus]
+You are all I need
+Hold me close and set me free
+
+[Outro]
+All I need
+Set me free
+In this endless space
+All I need
+
+**Additional Notes:**
+- **Sub-genre / BPM:** Uplifting / Anthem Trance, 140 BPM
+- **Reference:** Above & Beyond, Armin van Buuren, Ferry Corsten, Cosmic Gate
+- **Structure:** Orchestral intro → V1 → Pre-Ch → Ch → V2 → Pre-Ch → Ch → 16-bar orchestral build → 8-bar breakdown → Bridge → Ch × 3 → Outro
+- **Vocal direction:** Full operatic power; choir doubles on every chorus repeat
+
+---
+
+### Title: All I Need [Psytrance Full-On Mix]
+
+**Service:** Minimax Audio
+
+**Prompt:** Full-On Psytrance, 145 BPM, distorted TB-303 acid bassline, detuned FM psychedelic lead, swirling LFO filter modulation, female vocals processed with chorus and pitch-shift into ethereal chant, cosmic forest-trance atmosphere, hypnotic breakdown, intense full drop.
+
+**Styles:** Psytrance, Full-On Psytrance, 145 BPM, four-on-the-floor, distorted punchy kick with sub click, TB-303 acid bassline (heavily overdriven, resonant filter), driving 16th-note bass pattern with hard compression, detuned FM synthesis psychedelic lead (Astrix / Infected Mushroom style), swirling LFO filter modulation, cosmic synth pad textures, female vocals heavily processed (chorus, pitch-shift, tape delay, ethereal chant quality), delay-saturated percussive FX hits, hypnotic groove, psychedelic frequency sweeps, forest-trance dark atmosphere, cosmic breakdown with pitch-bent filtered lead, full drop with all elements slamming in, no mercy compression
+
+**Lyrics:**
+[Verse 1]
+Darkness drifts across the void
+I am floating here for you
+Every moment bends like starlight
+In this cosmic solitude
+
+[Pre-Chorus]
+And the universe begins to breathe
+When I hear you call my name
+Spiralling towards the infinite
+Nothing will ever be the same
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Verse 2]
+Closing my eyes I feel the pulse
+Like a comet breaking through
+Nothing in this cosmos holds us now
+It is only me and you
+
+[Pre-Chorus]
+And the universe begins to breathe
+When I hear you call my name
+Spiralling towards the infinite
+Nothing will ever be the same
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Bridge]
+Through the darkness through the night
+You are the cosmic light
+Take my hand pull me beyond
+Let the frequencies respond
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Outro]
+All I need
+Set me free
+In this endless space
+All I need
+
+**Additional Notes:**
+- **Sub-genre / BPM:** Full-On Psytrance, 145 BPM
+- **Reference:** Infected Mushroom, Astrix, Ace Ventura, Vini Vici
+- **Lyric adaptation:** Verses rewritten with cosmic/mystical imagery; chorus kept verbatim for hook integrity
+- **Vocal direction:** Processed ethereal chant quality, layered pitch-shifted harmonics
+
+---
+
+### Title: All I Need [Tech Trance Mix]
+
+**Service:** Minimax Audio
+
+**Prompt:** Dark Tech Trance, 138 BPM, hard distorted industrial kick, Minimoog Model D tech bassline with saturation, razor supersaw stabs, cold Omnisphere pads, female vocals dual-processed with bitcrush grit and clean layer, stutter vocal chops on pre-chorus, Reese bass breakdown, massive sidechain-pumping tech drop.
+
+**Styles:** Tech Trance, Dark Trance, 138 BPM, hard four-on-the-floor kick (distorted low-end punch with transient shaper), industrial snare with metallic overtones, 16th-note tech bassline (Minimoog Model D with tape saturation), razor-sharp supersaw stabs (short attack, hard clip), cold dark Omnisphere atmospheric pads, industrial noise textures, female vocals dual-processed (gritty bitcrusher layer + clean bright layer mixed), stutter vocal chops on pre-chorus phrases, dark tension-building risers, hard compressed mixdown, Reese bass on breakdown, massive tech drop with bass and stabs slamming in unison, wide aggressive sidechain pumping, clinical cold mix aesthetic
+
+**Lyrics:**
+[Verse 1]
+Shadows fall across the room
+I am waiting here for you
+Every second feels like hours
+In this quiet solitude
+
+[Pre-Chorus]
+And the world begins to fade
+(the world begins to fade)
+When I hear you call my name
+(hear you call my name)
+Drawing closer to the edge
+(closer to the edge)
+Nothing else will be the same
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Verse 2]
+Closing my eyes I feel the rush
+Like a river breaking through
+Nothing else can touch us now
+It is only me and you
+
+[Pre-Chorus]
+And the world begins to fade
+(the world begins to fade)
+When I hear you call my name
+(hear you call my name)
+Drawing closer to the edge
+(closer to the edge)
+Nothing else will be the same
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Bridge]
+Through the darkness through the night
+You are the guiding light
+Take my hand and pull me in
+Let the symphony begin
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Outro]
+All I need
+Set me free
+In this endless space
+All I need
+
+**Additional Notes:**
+- **Sub-genre / BPM:** Tech Trance, 138 BPM
+- **Reference:** Mauro Picotto, Marco V, Filterheadz, Umek
+- **Lyric adaptation:** Pre-chorus gains cold spoken/whispered echo doubling each sung phrase (shown in parentheses)
+- **Vocal direction:** Assertive, cutting through industrial grit; dual-processed for cold/warm contrast
+
+---
+
+### Title: All I Need [Dream Trance Balearic Mix]
+
+**Service:** Minimax Audio
+
+**Prompt:** Ethereal Dream Trance downtempo, 105 BPM, Steinway grand piano melody, lush Roland JD-800 warm pad, slow-attack strings, Fender Rhodes chords, breathy intimate close-mic female vocals with whisper-to-sing dynamic, Balearic Ibiza sunset atmosphere, spring reverb, soft emotional resolution.
+
+**Styles:** Dream Trance, Balearic Chill, Ambient Trance, 105 BPM, soft four-on-the-floor (brushed electronic kick, low velocity), gentle shaker groove, acoustic piano melody (Steinway grand, long hall reverb), lush Roland JD-800 warm choir pad, slow-attack cinematic strings, Fender Rhodes electric piano chords, breathy intimate female vocals (close-mic, whisper dynamic on verses, open singing on chorus), soft ping-pong delay (long quarter-note), spring reverb on piano, waterfall ambient sound textures, Ibiza Balearic sunset mood, long 8-bar atmospheric intros, gentle breakdown with solo piano and vocals, soft warm build into full pads drop, emotional resolution, no hard transients, everything warm and spacious
+
+**Lyrics:**
+[Verse 1]
+Shadows fall across the room
+I am waiting here for you
+Every second feels like hours
+In this quiet solitude
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Verse 2]
+Closing my eyes I feel the rush
+Like a river breaking through
+Nothing else can touch us now
+It is only me and you
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Bridge]
+Through the darkness through the night
+You are the guiding light
+Take my hand and pull me in
+Let the symphony begin
+
+[Outro]
+All I need
+Set me free
+In this endless space
+All I need
+
+**Additional Notes:**
+- **Sub-genre / BPM:** Dream Trance / Balearic Chill, 105 BPM
+- **Reference:** BT – Movement in Still Life, Delerium feat. Sarah McLachlan, Robert Miles, Age Of Love
+- **Lyric adaptation:** Pre-choruses removed; structure simplified for dreamy flow; instrumental space expands between sections
+- **Vocal direction:** Whispered intimacy on verses; gently soaring (never belted) on chorus
+
+---
+
+### Title: All I Need [Hard Trance NRG Mix]
+
+**Service:** Minimax Audio
+
+**Prompt:** Hard Trance NRG, 150 BPM, pounding TR-909 kick with hard clipper distortion, screaming Roland JP-8000 and Access Virus supersaw riff, rolling hard-driven bassline, powerful assertive female vocals with pitch-shifted doubles, aggressive reverse-reverb impacts, short 4-bar breakdown, massive wall-of-sound NRG drop, relentless peak-time rave energy.
+
+**Styles:** Hard Trance, NRG Trance, 150 BPM, relentless four-on-the-floor, pounding TR-909 kick with hard clipper and sub reinforcement, snappy layered snare (tight, punchy), rolling 16th-note hard bassline (overdriven), screaming Roland JP-8000 supersaw riff (bright, high in mix), Access Virus TI razor lead stabs, reverse reverb shock impacts, powerful compressed female vocals (assertive, bright, soaring), pitch-shifted vocal doubles for wide stereo, aggressive white-noise sweeps, hard reverse-snare fills, short sharp breakdown (4 bars only), wall-of-sound NRG drop (all elements in simultaneously), extreme sidechain pumping, euphoric rave energy, no let-up, relentless momentum throughout
+
+**Lyrics:**
+[Verse 1]
+Shadows fall across the room
+I am waiting here for you
+Every second feels like hours
+In this quiet solitude
+
+[Pre-Chorus]
+And the world begins to fade
+When I hear you call my name
+Drawing closer to the edge
+Nothing else will be the same
+And the world begins to fade
+When I hear you call my name
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Verse 2]
+Closing my eyes I feel the rush
+Like a river breaking through
+Nothing else can touch us now
+It is only me and you
+
+[Pre-Chorus]
+And the world begins to fade
+When I hear you call my name
+Drawing closer to the edge
+Nothing else will be the same
+And the world begins to fade
+When I hear you call my name
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Bridge]
+Through the darkness through the night
+You are the guiding light
+Take my hand and pull me in
+Let the symphony begin
+
+[Chorus]
+You are all I need
+The oxygen I breathe
+In this endless open space
+I am safe within your grace
+You are all I need
+Hold me close and set me free
+
+[Outro]
+You are all I need
+Hold me close and set me free
+
+**Additional Notes:**
+- **Sub-genre / BPM:** Hard Trance / NRG Trance, 150 BPM
+- **Reference:** Scooter, Klubbheads, Mark Breeze, Hixxy, Evolution
+- **Lyric adaptation:** Pre-chorus extended with a repeated couplet to maximise tension before the drop; outro condensed to single chorus hook for rave impact
+- **Vocal direction:** Assertive, powerful, bright — cut through the wall of sound; no softness
