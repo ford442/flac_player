@@ -2433,3 +2433,101 @@ The fiesta is warm, but the breath is cold!
 **Additional Notes:**
 - **Combo/Fusion:** Mexican Mariachi / Tuvan Throat Singing
 - **Thematic Ties:** The extroverted, sunny, and highly social joy of a Mexican fiesta anchored by the introverted, ancient, and solitary resonance of the Mongolian steppes.
+
+### Title: Hurdy-Gurdy Hyperpop
+
+**Service:** Minimax Audio
+
+**Prompt:** An abrasive, highly-processed hyperpop track packed with pitch-shifted vocals, massive auto-tune, and chaotic synthesizer blips. However, the foundational beat and lead melody are entirely driven by a distorted, furiously cranked Medieval European Hurdy-Gurdy rather than electronic synths.
+
+**Lyrics:**
+(Verse 1 - Chipmunk-pitched, heavily auto-tuned vocal)
+Cranking the wheel in the matrix, baby!
+(Furious, buzzing Hurdy-Gurdy blast over an 808 kick)
+Resin on the strings, catching all the feelings
+Castle walls melting in the neon glow!
+(Glitchy stuttering)
+1-2-3-4 turn it!
+
+(Chorus)
+(Hurdy-gurdy solo mimicking a hyper-speed synth arp)
+Dial up the peasant groove!
+Kawaii in the courtyard, making my move!
+We're glitching out the renaissance!
+(Heavy bass drop with Hurdy-Gurdy drone)
+
+**Additional Notes:**
+- **Combo/Fusion:** Medieval Hurdy-Gurdy / Hyperpop
+- **Thematic Ties:** The hyper-modern, digital chaos of hyperpop artificially reconstructed using a crude, buzzing, analog stringed instrument from the Middle Ages.
+
+### Title: The Shoegaze Sitar
+
+**Service:** Minimax Audio
+
+**Prompt:** A dense, atmospheric Shoegaze track characterized by a massive wall of fuzzy, reverb-drenched noise. Peeking through the dense fog of distortion are the intricate, pitch-bending melodies of an Indian Sitar, struggling to maintain its delicate microtonal raga.
+
+**Lyrics:**
+(Verse 1 - Vocals completely buried in feedback, barely audible)
+Lotus floating in the static...
+(Massive wave of distortion pedal fuzz)
+Third eye blinded by the strobe...
+(Sitar wails softly, heavily delayed)
+
+(Chorus - Distant and dreamy)
+(Sitar plays a slow, bending scale over a sluggish beat)
+Karma washing out to sea...
+In the fuzz, we are free...
+(Feedback swell swallowing the instruments)
+
+**Additional Notes:**
+- **Combo/Fusion:** Shoegaze / Indian Classical Sitar
+- **Thematic Ties:** The introverted, melancholic wall of sound of Shoegaze swallowing the deeply complex, spiritual resonance of classical Indian instrumentation.
+
+### Title: The Viking Bossa
+
+**Service:** Minimax Audio
+
+**Prompt:** A smooth, sunny Bossa Nova track with a gentle tempo, soft percussion, and gentle nylon guitar chords. The vocals, however, are aggressive, guttural Scandinavian death growls singing about raiding and Valhalla.
+
+**Lyrics:**
+(Verse 1 - Death growl over gentle acoustic guitar)
+THE LONGSHIP SAILS TO IPANEMA!
+(Soft pandeiro rhythm)
+WE COME FOR THE GOLD AND THE SAND!
+ODIN WATCHES THE WAVES GENTLY CRASH!
+
+(Chorus)
+(Bossa Nova rhythm continues smoothly)
+(Death growl)
+Swaying to the rhythm of the raid!
+Swaying to the rhythm of the raid!
+(Acoustic guitar plays a smooth, syncopated solo)
+
+**Additional Notes:**
+- **Combo/Fusion:** Bossa Nova / Viking Death Metal
+- **Thematic Ties:** The relaxing, tropical lounge atmosphere of Brazilian Bossa Nova violently interrupted by the bloodthirsty, frostbitten aggression of Norse mythology.
+
+### Title: The Didgeridoo Trap House
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, modern Trap beat featuring sliding 808s, rapid hi-hats, and a booming sub-bass. The primary melodic loop and foundational drone, however, are entirely performed by an Australian Aboriginal Didgeridoo rather than a synthesizer.
+
+**Lyrics:**
+(Verse 1)
+Trap house shaking, outback quaking
+(Didgeridoo drone bending with the 808 glide)
+Boomerang flying, no mistaking
+Ice on my wrist, dust on my boots
+Connecting the trap to the ancient roots
+
+(Chorus)
+Skrt! Skrt! Circular breathing on the block!
+(Rapid hi-hats over a rhythmic Didgeridoo pattern)
+Red dirt shining, look at the clock!
+Didgeridoo blowing, 808s are shaking
+Got the whole desert and the club pulsating!
+
+**Additional Notes:**
+- **Combo/Fusion:** Trap / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The gritty, materialistic flex culture of modern Trap music paired with the ancient, earthy, and deeply resonant frequencies of the Australian outback.
