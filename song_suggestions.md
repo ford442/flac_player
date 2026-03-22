@@ -3048,3 +3048,93 @@ Hold me close and set me free
 - **Reference:** Scooter, Klubbheads, Mark Breeze, Hixxy, Evolution
 - **Lyric adaptation:** Pre-chorus extended with a repeated couplet to maximise tension before the drop; outro condensed to single chorus hook for rave impact
 - **Vocal direction:** Assertive, powerful, bright — cut through the wall of sound; no softness
+
+### Title: The Flamenco Frost
+
+**Service:** Minimax Audio
+
+**Prompt:** A blistering Black Metal track with blast beats and tremolo-picked electric guitars. However, the furious acoustic strumming and intricate finger-picking of Spanish Flamenco guitar completely replace the lead electric guitar lines, accompanied by rhythmic castanets.
+
+**Lyrics:**
+(Verse 1 - Raspy, blackened shriek)
+Shadows fall on the Andalusian stone
+Fire and blood, we dance alone
+The winter wind bites at the heel
+(Intense, rapid Flamenco guitar solo)
+But the stomp of the boot is all we feel!
+
+(Chorus)
+(Castanets clacking over a furious blast beat)
+Olé the dark, Olé the cold!
+A frozen tale of passion told
+Blackened strings and crimson wine
+In the Flamenco frost, our souls intertwine
+
+**Additional Notes:**
+- **Combo/Fusion:** Spanish Flamenco / Black Metal
+- **Thematic Ties:** The fiery, passionate, and sun-drenched intensity of Andalusian Flamenco clashing with the freezing, misanthropic, and blistering aggression of Scandinavian Black Metal.
+
+### Title: The Mongolian Surf
+
+**Service:** Minimax Audio
+
+**Prompt:** A classic, reverb-drenched 1960s Surf Rock instrumental track, complete with driving drum beats and a walking bassline. But the iconic twangy Fender Stratocaster melody is replaced entirely by a traditional Mongolian Morin Khuur (horsehead fiddle) played with aggressive, surf-style bends.
+
+**Lyrics:**
+(Spoken - A 1960s radio announcer voice)
+And now, cats and kittens, grabbing a wave on the endless steppe... Let's ride!
+(Morin Khuur plays a fast, reverb-heavy surf melody)
+
+(Chorus)
+(Choir of deep throat singers chanting a rhythmic "Wipeout!")
+(Morin Khuur mimics the sound of a crashing wave)
+Riding the dunes, catching the breeze!
+No water needed on a sea like these!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1960s Surf Rock / Traditional Mongolian Morin Khuur
+- **Thematic Ties:** The sunny, beach-bound, and purely aquatic energy of Californian surf culture superimposed onto the vast, dry, and endless ocean of grass of the Mongolian steppe.
+
+### Title: The Dixie Tuvan
+
+**Service:** Minimax Audio
+
+**Prompt:** An upbeat, lively 1920s Dixieland Jazz ensemble playing a bouncy ragtime tune. The swinging clarinet and muted trumpet take turns soloing, but the rhythmic anchor and counter-melodies are provided by the deep, continuous drone and piercing overtones of Tuvan throat singing.
+
+**Lyrics:**
+(Verse 1 - A smooth, swinging jazz vocal)
+Well, I took a walk down Bourbon Street, looking for a brand new beat
+Heard a sound from far away, rolling in like a bail of hay
+(Deep, rumbling Kargyraa throat singing matches the walking bass)
+
+(Chorus)
+Oh, the tuba's pumping, the trumpet's high
+But there's a hum coming from the sky!
+(High-pitched Sygyt overtone singing harmonizes with the clarinet)
+Swing that steppe, let the river flow
+From New Orleans to the Tuvan snow!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1920s Dixieland Jazz / Tuvan Throat Singing
+- **Thematic Ties:** The bustling, chaotic, and highly urbanized party atmosphere of early New Orleans jazz grounded by the slow, natural, and immense acoustic space of Central Asian nomadic traditions.
+
+### Title: The Trap Abbey
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, modern Trap beat featuring sliding 808 sub-bass, rattling hi-hats, and sharp snare rolls. The main sample and melodic hook, however, is a solemn, unedited recording of a medieval Gregorian Chant performed by a choir of monks in a highly reverberant cathedral.
+
+**Lyrics:**
+(Chant - Monks singing in unison, heavily reverberated)
+Kyrie eleison, Christe eleison...
+(Beat drops: Massive 808s and fast hi-hat triplets kick in)
+
+(Verse 1 - Deep, pitched-down Trap vocal)
+Yeah, walking through the cloisters, looking for the light
+Got the holy water, stepping through the night
+Monks in the back, chanting on the track
+808s booming, there's no turning back!
+
+**Additional Notes:**
+- **Combo/Fusion:** Medieval Gregorian Chant / Modern Trap
+- **Thematic Ties:** The sacred, austere, and deeply spiritual devotion of medieval monastic life colliding with the heavy, materialistic, and high-energy bounce of modern trap music.
