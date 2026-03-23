@@ -3138,3 +3138,103 @@ Monks in the back, chanting on the track
 **Additional Notes:**
 - **Combo/Fusion:** Medieval Gregorian Chant / Modern Trap
 - **Thematic Ties:** The sacred, austere, and deeply spiritual devotion of medieval monastic life colliding with the heavy, materialistic, and high-energy bounce of modern trap music.
+
+### Title: Cyber-Shtetl Groove
+
+**Service:** Minimax Audio
+
+**Prompt:** An insanely upbeat, bouncy Klezmer dance tune played at a frantic pace, but the traditional acoustic instruments are entirely replaced by bright, neon 1980s Synthwave synthesizers. A driving, 4/4 electronic drum machine keeps the party moving.
+
+**Lyrics:**
+(Verse 1 - Fast-paced, cheerful vocal delivery)
+Boot up the mainframe, plug in the drive!
+The neon village is coming alive!
+(Bouncy synthesizer plays a frantic Klezmer melody)
+Synth-rabbi spinning the records tonight!
+Dancing the hora in the ultraviolet light!
+
+(Chorus)
+(Drum machine kicks into a rapid disco beat)
+Mazel tov in the matrix, baby!
+8-bit bagels driving me crazy!
+Digital dreidel, spin it around!
+The happiest glitch in the whole damn town!
+
+**Additional Notes:**
+- **Combo/Fusion:** Klezmer / 1980s Synthwave
+- **Thematic Ties:** The wildly joyful, communal circle-dancing energy of Eastern European Jewish celebrations transplanted into the bright, synthetic, and futuristic world of 1980s cyberpunk arcades.
+
+### Title: Gamelan Skank
+
+**Service:** Minimax Audio
+
+**Prompt:** A ridiculously cheerful, fast-paced Jamaican Ska track featuring a walking bassline and a bouncing rhythm. The blaring horn section and upstroke guitars, however, are completely replaced by a massive, clanging Indonesian Gamelan ensemble playing bright, metallic stabs on the off-beats.
+
+**Lyrics:**
+(Verse 1 - Energetic, upbeat Jamaican vocal style)
+Pick it up, pick it up, underneath the palm tree!
+Sun is shining bright, everybody feeling free!
+(Gong Ageng crashes on the downbeat)
+Bronze is ringing out, metallophones on the rise!
+Skanking in Bali, right before my very eyes!
+
+(Chorus)
+(Frantic Gamelan ensemble playing a Ska chord progression)
+Oi! Oi! Strike the saron now!
+Wipe the tropical sweat right off your brow!
+Two-tone island, feeling so grand!
+The heaviest bronze in the ska-punk band!
+
+**Additional Notes:**
+- **Combo/Fusion:** Third-Wave Ska / Indonesian Gamelan
+- **Thematic Ties:** The hyperactive, goofy, and relentlessly upbeat energy of 90s ska-punk colliding with the highly structured, communal, and massive acoustic presence of Southeast Asian bronze percussion.
+
+### Title: Tokyo Crank-Pop
+
+**Service:** Minimax Audio
+
+**Prompt:** A diabetes-inducing, hyper-energetic Japanese Shibuya-kei pop song with bright, jazzy chord progressions and a fast, driving beat. The lead melodic instrument taking the flashy solos is a buzzing, furiously cranked Medieval European Hurdy-Gurdy.
+
+**Lyrics:**
+(Verse 1 - Sweet, hyper-energetic female Shibuya-kei vocal)
+Walking down the crossing, feeling so kawaii!
+Looking at the sky, wondering how and why!
+(Hurdy-Gurdy buzzes a bright, jazzy arpeggio)
+Turning up the handle, let the resin fly!
+A medieval groove that'll never die!
+
+(Chorus)
+(Bossa-pop beat kicks into high gear)
+Crank it up! Spin the wheel of love!
+Like a techno-peasant from the stars above!
+Harajuku fashion, wooden strings attached!
+The cutest little sound that can never be matched!
+
+**Additional Notes:**
+- **Combo/Fusion:** Japanese Shibuya-kei Pop / Medieval Hurdy-Gurdy
+- **Thematic Ties:** The ultra-modern, relentlessly cheerful, and heavily stylized aesthetic of 90s Tokyo pop culture injected with the crude, droning, and anachronistic buzz of a peasant's mechanical instrument.
+
+### Title: Celtic Fever
+
+**Service:** Minimax Audio
+
+**Prompt:** A wildly uplifting 1970s Disco Funk track with a pulsing four-on-the-floor beat, sweeping strings, and a slap bass. The main melodic hooks and solos, however, are furiously performed by an ensemble of traditional Irish fiddles, tin whistles, and Uilleann pipes.
+
+**Lyrics:**
+(Verse 1 - Smooth, soulful Disco vocal)
+Saturday night under the mirror ball!
+Hear the fiddle crying, answering the call!
+(Slap bass pops under a rapid tin whistle melody)
+Got my bell-bottoms and my dancing shoes!
+Shaking off the rain and the Dublin blues!
+
+(Chorus)
+(Uilleann pipes harmonize over a massive disco beat)
+Do the Riverdance, do the hustle now!
+Sweat is dripping off the leprechaun's brow!
+Emerald Isle shining in the neon light!
+We're gonna jig until the morning is bright!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Disco / Traditional Celtic Folk
+- **Thematic Ties:** The flamboyant, highly produced, and ecstatic dance floor energy of 70s Disco merged seamlessly with the fast-paced, foot-stomping joy of a traditional Irish pub session.
