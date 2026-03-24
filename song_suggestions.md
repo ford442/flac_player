@@ -3238,3 +3238,100 @@ We're gonna jig until the morning is bright!
 **Additional Notes:**
 - **Combo/Fusion:** 1970s Disco / Traditional Celtic Folk
 - **Thematic Ties:** The flamboyant, highly produced, and ecstatic dance floor energy of 70s Disco merged seamlessly with the fast-paced, foot-stomping joy of a traditional Irish pub session.
+
+### Title: The Bushido Polka
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast, bouncy European Polka driven by a lively accordion and a tuba bassline. The upbeat, 2/4 rhythm is abruptly and frequently punctuated by the sharp, dramatic twang of a Japanese Shamisen and the sudden, intense shouts of a samurai warrior preparing for battle.
+
+**Lyrics:**
+(Verse 1 - Cheerful, slightly drunk Bavarian vocal style)
+Pour the beer and pass the sausage, everybody dance!
+Grab your partner by the hand and take a little chance!
+(Accordion plays a happy, bouncing riff)
+(Suddenly: A fierce Shamisen glissando and a loud "Kiai!" shout)
+Whoa there, fella! Watch the sword!
+
+(Chorus)
+(Tuba pumps the bassline while Shamisen plays a fast melody)
+Oom-pah, oom-pah, bowing to the east!
+Dancing with the shogun at the harvest feast!
+Lederhosen spinning, katana shining bright!
+The craziest little polka in Edo tonight!
+
+**Additional Notes:**
+- **Combo/Fusion:** European Polka / Traditional Japanese Folk
+- **Thematic Ties:** The goofy, heavily intoxicated, and clumsy joy of a Bavarian beer hall constantly interrupted by the hyper-disciplined, lethal, and deadly serious focus of a samurai.
+
+### Title: Gregorian Grindhouse
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive, blast-beat driven Grindcore Metal track with overwhelmingly distorted guitars and a chaotic, 220 BPM tempo. However, the vocals are not screamed or growled; they are entirely performed by a solemn choir of monks singing polyphonic, highly reverberant Gregorian Chants in Latin.
+
+**Lyrics:**
+(Chorus - Monks singing in slow, sustained harmony despite the musical chaos)
+Dies irae, dies illa... (Day of wrath, that day...)
+(Frantic blast beats and a dissonant guitar squeal)
+Solvet saeclum in favilla... (Shall dissolve the world in ashes...)
+(Double-kick drums firing like machine guns)
+
+(Verse 1)
+(The monks maintain absolute, eerie calmness)
+Quantus tremor est futurus... (How great a tremor is to be...)
+Quando judex est venturus... (When the judge is to come...)
+(Guitarist plays a blistering, noisy solo over the chant)
+
+**Additional Notes:**
+- **Combo/Fusion:** Grindcore Metal / Gregorian Chant
+- **Thematic Ties:** The absolute, chaotic, and ear-splitting violence of extreme metal attempting (and failing) to disturb the immovable, ancient, and deeply serene spiritual focus of monastic chanting.
+
+### Title: The Outback Speakeasy
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced, swinging 1920s Dixieland Jazz track featuring a lively clarinet and muted trumpet soloing over a shuffling snare drum. The traditional upright bass, however, is entirely replaced by the deep, continuous, and rhythmic drone of an Australian Aboriginal Didgeridoo.
+
+**Lyrics:**
+(Verse 1 - Smooth, jazzy 1920s crooner)
+Step right in, the password's "moonshine," friend!
+We're gonna swing and sway until the very end!
+(Clarinet wails a fast, syncopated lick)
+But listen to the floorboards shaking from below...
+That ain't the upright bass putting on the show!
+
+(Chorus)
+(Didgeridoo provides a heavy, rhythmic pulse under the jazz ensemble)
+It's the Outback drone in the city of sin!
+Circular breathing where the gangsters spin!
+From the red dirt desert to the neon light!
+The didgeridoo is keeping the rhythm tonight!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1920s Dixieland Jazz / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The nervous, high-energy, and highly urbanized party atmosphere of a prohibition-era American speakeasy anchored by the ancient, resonant, and deeply earthy frequencies of the Australian outback.
+
+### Title: Cyber-Samba 2099
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, pulsating Darksynth Cyberpunk beat with heavily synthesized, aggressive basslines and gated snare drums. In stark contrast, the lead melodies, solos, and harmonic padding are provided by a wildly passionate Brazilian Samba ensemble featuring a cavaquinho and a cuíca.
+
+**Lyrics:**
+(Verse 1 - Sensual, slightly robotic female vocal)
+Neon rain falling on the favela grid.
+(Cavaquinho aggressively strums a bright, major-key rhythm)
+Uploading the rhythm that the syndicate hid.
+(Cuíca squeaks rhythmically over the heavy electronic kick drum)
+
+(Chorus)
+(Heavy synth bass drops alongside a barrage of acoustic Samba percussion)
+Baila, replicant, baila in the dark!
+Ignite the circuitry, leave a brilliant spark!
+Carnival of data, dancing in the stream!
+A synthetic heart dreaming a tropical dream!
+
+**Additional Notes:**
+- **Combo/Fusion:** Darksynth Cyberpunk / Brazilian Samba
+- **Thematic Ties:** The bleak, rainy, and oppressive high-tech dystopia of cyberpunk infused with the colorful, massive, and overwhelmingly organic joy of a street-level Brazilian Carnival.
