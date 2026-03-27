@@ -3434,3 +3434,98 @@ The bossa nova rhythm is the pulse of the damned!
 **Additional Notes:**
 - **Combo/Fusion:** Brazilian Bossa Nova / Scandinavian Black Metal Vocals and Lyrics
 - **Thematic Ties:** The ultimate juxtaposition: the warm, relaxed, and deeply romantic musicality of a sunny Brazilian beach paired with the freezing, misanthropic, and aggressively evil lyrical and vocal delivery of black metal.
+
+### Title: The Bluegrass Pharaoh
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced Appalachian bluegrass tune driven by a frantic banjo roll and an upright bass. However, the lead melodies are performed entirely on an ancient Egyptian Ney (flute) and the rhythmic accompaniment includes the metallic shaking of a Sistrum.
+
+**Lyrics:**
+(Verse 1 - High, lonesome Appalachian vocal style)
+Well, I built my cabin by the muddy Nile!
+(Banjo roll mixed with the airy, breathy tone of the Ney)
+Working on the pyramid, mile by mile!
+Mummy in the holler, curses in the breeze!
+Picking on the strings under the palm trees!
+
+(Chorus)
+(Ney plays a fast, complex bluegrass solo)
+Yee-haw, Osiris! Weigh my heart tonight!
+Feather on the scale in the pale moonlight!
+Appalachian pharaoh, wearing overalls of gold!
+The strangest little story that the desert ever told!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Ancient Egyptian Folk
+- **Thematic Ties:** The rustic, front-porch picking of American mountain music superimposed onto the grand, mystical, and arid antiquity of ancient Egypt.
+
+### Title: Andean Shoegaze
+
+**Service:** Minimax Audio
+
+**Prompt:** A massive wall of fuzzy, distorted, reverb-drenched guitars typical of Shoegaze. The melancholic, buried vocals are replaced by the breathy, echoing melodies of an Andean Pan Flute (Zampoña), piercing through the dense fog of distortion, accompanied by the gentle strumming of a Charango.
+
+**Lyrics:**
+(Verse 1 - Vocals buried in feedback, barely audible)
+Lost in the clouds of the Altiplano...
+(Massive wave of distortion pedal fuzz)
+The condor flies through the static...
+(Pan flute wails softly, heavily delayed)
+
+(Chorus - Distant and dreamy)
+(Charango plays a slow, strummed rhythm over a sluggish beat)
+Echoes of the mountain, fading into noise...
+A wall of sound for the Incan boys...
+(Feedback swell swallowing the pan flute)
+
+**Additional Notes:**
+- **Combo/Fusion:** Shoegaze / Andean Folk
+- **Thematic Ties:** The introspective, melancholic wash of Shoegaze swallowing the breathy, high-altitude resonance of traditional South American mountain music.
+
+### Title: Sea Shanty of the Steppes
+
+**Service:** Minimax Audio
+
+**Prompt:** A traditional maritime Sea Shanty set to the driving, galloping rhythm of Mongolian throat singing and the Morin Khuur (horsehead fiddle). Features a gruff, a cappella chorus of sailors harmonizing with deep, resonant Sygyt overtone singing.
+
+**Lyrics:**
+(Verse 1)
+Now I'm a brave sailor, I ride the green sea
+(Heave away, haul away!)
+But the ocean I sail is as grassy as can be
+(And we're bound for the yurt today!)
+
+(Chorus)
+So saddle the horse and hoist the white sail
+We're riding on the steppes to catch the great gale
+With a yo-ho-ho and a bowl of fermented mare's milk
+We'll conquer the plains wrapped in Chinese silk!
+
+**Additional Notes:**
+- **Combo/Fusion:** Sea Shanty / Mongolian Folk
+- **Thematic Ties:** The communal, rhythmic work songs of ocean-faring sailors transposed onto the vast, endless, and completely dry "ocean" of the Central Asian steppes.
+
+### Title: Polka of the Sahara
+
+**Service:** Minimax Audio
+
+**Prompt:** A frantic, upbeat European Polka driven by a lively accordion and tuba. However, the melody is fiercely played on a West African Kora, and the percussion is provided by a Talking Drum, giving the bouncy 2/4 rhythm an entirely new polyrhythmic texture.
+
+**Lyrics:**
+(Verse 1 - Cheerful, bouncy vocal style)
+Pour the water, pitch the tent, everybody dance!
+Grab your camel by the reins and take a little chance!
+(Accordion plays a happy, bouncing riff alongside complex Kora plucks)
+(Talking drum squeezes out a high-pitched rhythm)
+
+(Chorus)
+(Tuba pumps the bassline while the Kora plays a fast melody)
+Oom-pah, oom-pah, dunes are rolling by!
+Dancing with the nomads under the desert sky!
+Lederhosen sweating in the midday heat!
+The craziest little polka with a Saharan beat!
+
+**Additional Notes:**
+- **Combo/Fusion:** European Polka / West African Folk
+- **Thematic Ties:** The goofy, bouncy, and heavily clothed joy of a Central European beer hall transported into the vast, scorching, and rhythmically complex environment of the Sahara desert.
