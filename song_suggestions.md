@@ -3335,3 +3335,102 @@ A synthetic heart dreaming a tropical dream!
 **Additional Notes:**
 - **Combo/Fusion:** Darksynth Cyberpunk / Brazilian Samba
 - **Thematic Ties:** The bleak, rainy, and oppressive high-tech dystopia of cyberpunk infused with the colorful, massive, and overwhelmingly organic joy of a street-level Brazilian Carnival.
+
+### Title: The Viking Mariachi
+
+**Service:** Minimax Audio
+
+**Prompt:** An epic, high-energy fusion of traditional Mexican Mariachi and Scandinavian Viking Metal. Features sweeping, dramatic string sections and bright trumpets played at a blistering tempo alongside heavily distorted electric guitars, double-kick blast beats, and a mix of guttural growls and passionate, soaring Grito vocals.
+
+**Lyrics:**
+(Verse 1 - Epic, booming baritone)
+We sail the longships through the desert sand!
+(Furious trumpet blast, rapid guitar chugging)
+With vihuelas forged from the frozen land!
+To conquer the cantina, our final quest!
+A mariachi raid from the bloody west!
+
+(Chorus)
+(Harmonized trumpets over double-kick drums)
+Odin's sombrero! The twilight of the gods!
+Drinking the tequila, defying the odds!
+(Passionate Grito yell transitioning into a metal growl)
+Valhalla awaits, but the fiesta is now!
+The mariachi warriors are taking a bow!
+
+**Additional Notes:**
+- **Combo/Fusion:** Viking Metal / Traditional Mexican Mariachi
+- **Thematic Ties:** The grim, bloody, and frostbitten aesthetic of Viking conquest clashing hilariously and intensely with the vibrant, joyful, and intensely passionate romance of Mariachi music.
+
+### Title: Hurdy-Gurdy Geisha
+
+**Service:** Minimax Audio
+
+**Prompt:** A delicate, ambient piece evoking a traditional Japanese tea ceremony, featuring minimal, sparse plucking on a Koto and gentle, breathing Shakuhachi flute notes. However, the serene atmosphere is persistently interrupted by the loud, continuous, and gritty buzzing drone of a medieval European Hurdy-Gurdy taking the lead melody.
+
+**Lyrics:**
+(Verse 1 - Soft, whispered, almost spoken)
+Cherry blossoms fall... a single leaf touches the pond.
+The tea is poured. The silence speaks.
+(The jarring, mechanical whine of the Hurdy-Gurdy begins, playing a vaguely Eastern scale)
+But wait... what crank turns in the bamboo grove?
+
+(Chorus)
+(Koto plucks frantically to keep up with the Hurdy-Gurdy's relentless drone)
+A wheel of rosin spins beneath the paper moon!
+The troubadour has wandered far too soon!
+From the cobblestone streets to the Kyoto gate!
+The Hurdy-Gurdy spins, deciding our fate!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Japanese Ambient / Medieval European Folk (Hurdy-Gurdy)
+- **Thematic Ties:** The stark contrast between the disciplined, minimalist, and deeply quiet aesthetic of feudal Japan and the loud, rustic, and mechanically complex sound of medieval Europe.
+
+### Title: The Gregorian Dubstep
+
+**Service:** Minimax Audio
+
+**Prompt:** A slow, deeply atmospheric and reverberating piece featuring authentic, a cappella Gregorian chanting by a male choir in a massive stone cathedral. The solemn chanting builds in intensity until an absolutely massive, aggressive, and highly distorted Dubstep "drop" shatters the peace, featuring heavily modulated wobble basses and syncopated trap beats, while the chanting continues underneath.
+
+**Lyrics:**
+(Verse 1 - Deep, resonant, slow Latin chanting)
+Requiem aeternam dona eis...
+In paradisum deducant te angeli...
+(The chanting begins to stutter and glitch rhythmically)
+
+(Chorus)
+(The bass drops: a monstrous, aggressive, mechanical wobble bass)
+[Bass sound effect: WUB-WUB-SCREEEECH-WUB]
+(The choir continues, unbothered by the chaos)
+Sanctus! Sanctus!
+[High-pitched, aggressive synth lead stabs]
+Dominus Deus Sabaoth!
+(Heavy, slow-tempo trap beat kicks in)
+
+**Additional Notes:**
+- **Combo/Fusion:** A Cappella Gregorian Chant / Aggressive Brostep/Dubstep
+- **Thematic Ties:** The ancient, sacred, and entirely acoustic solemnity of medieval religious chanting violently colliding with the secular, hyper-modern, and intensely synthetic aggression of 2010s electronic bass music.
+
+### Title: Bossa Nova Black Metal
+
+**Service:** Minimax Audio
+
+**Prompt:** A relaxing, breezy Bossa Nova track featuring gentle, complex nylon-string acoustic guitar chords, soft brushed snare drums, and a quiet, whispering vocal style. However, the vocals are delivered exclusively in the harsh, high-pitched, shrieking rasp of Scandinavian Black Metal, and the lyrics are grimly obsessed with darkness and despair, despite the sunny, beachfront instrumentation.
+
+**Lyrics:**
+(Verse 1 - Soft Bossa Nova rhythm, gentle guitar, but the vocals are a terrifying shriek)
+The girl from Ipanema... walks by the freezing fjord!
+(Gentle, jazzy flute solo)
+Her heart is as black... as the ancient pagan sword!
+
+(Chorus)
+(Complex jazz chords continue, brushed snare keeps a lazy tempo)
+[Shrieking]
+Sip the caipirinha in the endless night!
+Burn the cathedral in the pale moonlight!
+The bossa nova rhythm is the pulse of the damned!
+(Soft, melodic acoustic guitar solo)
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Bossa Nova / Scandinavian Black Metal Vocals and Lyrics
+- **Thematic Ties:** The ultimate juxtaposition: the warm, relaxed, and deeply romantic musicality of a sunny Brazilian beach paired with the freezing, misanthropic, and aggressively evil lyrical and vocal delivery of black metal.
