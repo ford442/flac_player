@@ -3613,3 +3613,98 @@ The cutest little sound that can never be matched!
 **Additional Notes:**
 - **Combo/Fusion:** Japanese Shibuya-kei Pop / Medieval Hurdy-Gurdy
 - **Thematic Ties:** The ultra-modern, relentlessly cheerful, and heavily stylized aesthetic of 90s Tokyo pop culture injected with the crude, droning, and anachronistic buzz of a peasant's mechanical instrument.
+
+### Title: Outback Overdrive
+
+**Service:** Minimax Audio
+
+**Prompt:** A pulsating Synthwave track driven by an arpeggiated analog bassline, featuring a deeply resonant, rhythmic Australian Didgeridoo as the lead melody. The track slowly builds into a retro-futuristic climax.
+
+**Lyrics:**
+(Verse 1 - Robocoded vocal)
+Red dust settles on the neon grid
+Binary sunset where the shadows hid
+The outback stretches to the data core
+A sound we haven't heard since before
+
+(Chorus)
+(Didgeridoo rhythm intensifies over synth toms)
+Breathe in the digital air
+Ancient echoes everywhere
+Neon lights on the desert sand
+The oldest sound in a brand new land
+
+**Additional Notes:**
+- **Combo/Fusion:** Synthwave / Traditional Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The pristine, synthetic, retro-futuristic aesthetic of 80s cyberpunk colliding with the raw, earthy, and ancient resonance of the Australian outback.
+
+### Title: Vespers of Velocity
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced Liquid Drum and Bass track featuring complex breakbeats and deep sub-bass. The main melodic and harmonic element is a massive choir singing solemn, reverb-drenched Gregorian Chants in Latin.
+
+**Lyrics:**
+(Verse 1 - Deep, reverberating male choir in unison)
+In silva obscura, machina canit
+(In the dark forest, the machine sings)
+Lux aeterna in filis fluit
+(Eternal light flows in the wires)
+
+(Chorus - Choir harmonies split into glorious chords over a frantic 174 BPM breakbeat)
+Sanctus, sanctus, rhythm divine
+Speeding through the temple of time
+Echoes of stone and electric sound
+Heavenly bass shakes the holy ground
+
+**Additional Notes:**
+- **Combo/Fusion:** Gregorian Chant / Liquid Drum & Bass
+- **Thematic Ties:** The solemn, ancient reverberations of a medieval monastery violently contrasted with the hyper-fast, syncopated, and futuristic rhythms of an underground electronic rave.
+
+### Title: El Abismo Trompeta
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive, blast-beat driven Atmospheric Black Metal track played entirely by a Mariachi band. Features rapid-fire vihuela strumming, distorted trumpet melodies, and guttural mariachi gritos over a wall of blast-beat drumming.
+
+**Lyrics:**
+(Verse 1 - Harsh, raspy vocal delivery but in Spanish)
+El sol se muere en la montaña helada
+(The sun dies on the frozen mountain)
+La vihuela sangra en la noche estrellada
+(The vihuela bleeds in the starry night)
+No hay luz, solo la trompeta del dolor
+(There is no light, only the trumpet of pain)
+
+(Chorus - Tremolo-picked guitars replaced by furious trumpet lines, with traditional 'gritos' turning into black metal shrieks)
+¡Ay, ay, ay! (guttural shriek)
+Cantando al vacío eternal
+The charro of the northern frost
+In the blizzard, all is lost!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Mexican Mariachi / Atmospheric Black Metal
+- **Thematic Ties:** The joyful, bright orchestration of a traditional Mexican mariachi ensemble completely corrupted by the freezing, desolate, and misanthropic atmosphere of Scandinavian black metal.
+
+### Title: The Dapper Drop
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy Atlanta Trap beat with rattling hi-hats and booming 808s, where all the musical loops, leads, and backing tracks are performed acapella by a perfectly in-tune, smiling 1920s Barbershop Quartet.
+
+**Lyrics:**
+(Verse 1 - Four-part harmony, very upbeat and old-fashioned)
+Well, hello there mister, step into the shop!
+We've got the freshest cuts and the heaviest drop!
+(Bass singer drops an incredibly low, booming "Doom, doom, doom" mimicking an 808)
+
+(Chorus - Triplet flow delivered in perfect barbershop harmony)
+Ice on the boater hat, cane in my hand
+Rolling through the city with the finest barbers band
+Snip, snip, clip, we're making it clean
+The dapperest fellas that you've ever seen
+(Tenor hits a spectacular high note while the beat drops)
+
+**Additional Notes:**
+- **Combo/Fusion:** 1920s Barbershop Quartet / Modern Atlanta Trap
+- **Thematic Ties:** The squeaky-clean, meticulously groomed, and overly polite aesthetic of a vintage barbershop quartet clashing with the aggressive bass and boastful swagger of modern trap music.
