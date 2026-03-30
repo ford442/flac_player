@@ -3529,3 +3529,87 @@ The craziest little polka with a Saharan beat!
 **Additional Notes:**
 - **Combo/Fusion:** European Polka / West African Folk
 - **Thematic Ties:** The goofy, bouncy, and heavily clothed joy of a Central European beer hall transported into the vast, scorching, and rhythmically complex environment of the Sahara desert.
+
+### Title: Gregorian Synthwave
+
+**Service:** Minimax Audio
+
+**Prompt:** A driving, retro-futuristic Synthwave track with a pulsating 16th-note bassline and gated snare drums. The main melodic hook and solos are performed entirely by a solemn choir singing in polyphonic Gregorian Chants.
+
+**Lyrics:**
+(Deep, resonant unison chant)
+Aeterna lux, in nocte fulget...
+(Sudden burst of a heavy, arpeggiated analog synth)
+(Choir harmonizing over the driving beat)
+Gloria in excelsis data!
+The neon cross shines in the dark
+Cruising the grid on a holy spark
+
+**Additional Notes:**
+- **Combo/Fusion:** Gregorian Chant / Synthwave
+- **Thematic Ties:** The pious, motionless, and deeply internal devotion of medieval monastic life strapped into a neon-soaked, high-speed retro-future car chase.
+
+### Title: Mariachi Black Metal
+
+**Service:** Minimax Audio
+
+**Prompt:** A terrifying, blast-beat driven Black Metal song with shrieking vocals and relentless tremolo picking. The lead melodies, however, are triumphantly played by a full Mexican Mariachi horn section (trumpets and violins) matching the hyper-fast metal tempo.
+
+**Lyrics:**
+(Verse 1 - High-pitched Black Metal shriek)
+FROST AND FIRE! THE SUN IS DEAD!
+RIDE THE PALE HORSE, PAINT THE DESERT RED!
+(Furious Mariachi trumpet blast matching the guitar riff)
+
+(Chorus)
+El Diablo comes in corpse paint tonight!
+Guitarrón of doom, eclipsing the light!
+(Violins playing a frenzied, dark melody)
+A serenade for the end of days!
+Burn the plaza, watch it ablaze!
+
+**Additional Notes:**
+- **Combo/Fusion:** Black Metal / Mexican Mariachi
+- **Thematic Ties:** The grim, frosty despair of Scandinavian extreme metal aggressively colliding with the vibrant, celebratory, and brassy energy of traditional Mexican folk music.
+
+### Title: Sea Shanty Bossa Nova
+
+**Service:** Minimax Audio
+
+**Prompt:** A relaxing, sunny Bossa Nova track with gentle nylon guitar and soft percussion. The smooth vocals, however, are replaced by a gruff, a cappella chorus of sailors harmonizing about whaling, mutiny, and hard labor on the high seas.
+
+**Lyrics:**
+(Soft, brushed snare keeping a lazy tempo)
+(Gruff, multi-layered chorus of sailors singing softly)
+Heave away, haul away, pulling up the net
+Sipping a cold caipirinha, no time to sweat
+(Gentle nylon guitar solo over the maritime harmony)
+
+**Additional Notes:**
+- **Combo/Fusion:** Sea Shanty / Bossa Nova
+- **Thematic Ties:** The communal, rhythmic, and physically demanding work songs of ocean-faring sailors transposed onto the relaxing, tropical, and deeply lazy atmosphere of a Brazilian beach lounge.
+
+### Title: Hurdy-Gurdy Idol
+
+**Service:** Minimax Audio
+
+**Prompt:** A diabetes-inducing, hyper-energetic Japanese Shibuya-kei pop song with bright, jazzy chord progressions and a fast, driving beat. The lead melodic instrument taking the flashy solos is a buzzing, furiously cranked Medieval European Hurdy-Gurdy.
+
+**Lyrics:**
+(Verse 1 - Sweet, hyper-energetic female Shibuya-kei vocal)
+Walking down the crossing, feeling so kawaii!
+Looking at the sky, wondering how and why!
+(Hurdy-Gurdy buzzes a bright, jazzy arpeggio)
+Turning up the handle, let the resin fly!
+A medieval groove that'll never die!
+
+(Chorus)
+(Bossa-pop beat kicks into high gear)
+Crank it up! Spin the wheel of love!
+Like a techno-peasant from the stars above!
+Harajuku fashion, wooden strings attached!
+The cutest little sound that can never be matched!
+
+**Additional Notes:**
+- **Combo/Fusion:** Japanese Shibuya-kei Pop / Medieval Hurdy-Gurdy
+- **Thematic Ties:** The ultra-modern, relentlessly cheerful, and heavily stylized aesthetic of 90s Tokyo pop culture injected with the crude, droning, and anachronistic buzz of a peasant's mechanical instrument.
