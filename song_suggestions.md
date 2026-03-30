@@ -3529,3 +3529,106 @@ The craziest little polka with a Saharan beat!
 **Additional Notes:**
 - **Combo/Fusion:** European Polka / West African Folk
 - **Thematic Ties:** The goofy, bouncy, and heavily clothed joy of a Central European beer hall transported into the vast, scorching, and rhythmically complex environment of the Sahara desert.
+
+### Title: The Duke's Cypher
+
+**Service:** Minimax Audio
+
+**Prompt:** A gritty 1990s boom-bap hip-hop beat with a heavy MPC swing, but the primary loop is a delicate, intricate Renaissance harpsichord playing Bach-style counterpoint. The DJ scratches are made by aggressively plucking a lute.
+
+**Lyrics:**
+(Verse 1 - 90s East Coast rap flow)
+Powdered wig on the dome, dropping knowledge from the throne
+Spitting fire in the courtyard, making the kingdom my own
+(Harpsichord plays a rapid, minor-key arpeggio)
+Call me the duke of the block, watch the pendulum rock
+Sixteenth notes in the chamber, keep the musket on lock
+
+(Chorus)
+(Heavy boom-bap drum break)
+Baroque and broke, but the flow is divine
+Harpsichord hustler, yeah I'm taking what's mine
+(Lute scratching: wiki-wiki-pluck!)
+From the palace to the pavement, watch the royalty shine
+
+**Additional Notes:**
+- **Combo/Fusion:** 90s Boom-Bap Hip Hop / Baroque Harpsichord
+- **Thematic Ties:** The aristocratic, highly ornamented elegance of 18th-century Europe clashing with the raw, rhythmic, street-level poetry of 90s hip-hop.
+
+### Title: Idol of the High Seas
+
+**Service:** Minimax Audio
+
+**Prompt:** A glossy, high-energy K-Pop track with heavy electronic dance beats and bright synthesizer hooks. However, the vocals are performed by a massive, booming choir of gruff 18th-century sailors, and the drop features a furious concertina solo.
+
+**Lyrics:**
+(Verse 1 - Booming, unison sailor shout)
+Heave away! Saranghae! Swabbing the deck in the neon light!
+(Bright, bubbly K-Pop synthesizer riff)
+We got the scurvy, but our choreo is tight!
+Pulling the rigging, winking at the cam!
+The saltiest idols in the whole damn jam!
+
+(Chorus)
+(EDM build-up with a snare roll)
+Oppa's got a harpoon! (Heave!)
+Sailing by the cartoon moon! (Ho!)
+(Beat drops into a massive concertina dance breakdown)
+Catch the leviathan, steal the show!
+K-Pop sailors, watch us go!
+
+**Additional Notes:**
+- **Combo/Fusion:** K-Pop / 18th-Century Sea Shanty
+- **Thematic Ties:** The hyper-manufactured, glossy perfection of Korean pop idol culture colliding with the gritty, communal, and salt-sprayed labor of historical sailors.
+
+### Title: Sh-Boom in the Steppe
+
+**Service:** Minimax Audio
+
+**Prompt:** A classic 1950s Doo-Wop progression with a walking upright bass and snapped fingers. The sweet, crooning lead vocalist is entirely replaced by a Tuvan throat singer performing high-pitched Sygyt overtone melodies, backed by a choir humming in sub-harmonic Kargyraa.
+
+**Lyrics:**
+(Intro - Deep, rumbling Kargyraa humming)
+Bom-ba-dom, bom-ba-dom...
+(Fingers snapping on the off-beat)
+(Verse 1 - High, piercing Sygyt overtone whistle mimicking a 50s crooner)
+[Whistling overtone melody matching "Life could be a dream"]
+(Backing singers in deep throat singing)
+Sh-boom, sh-boom! Yurt is feeling mighty warm!
+Sh-boom, sh-boom! Safe from the winter storm!
+
+(Chorus)
+(Upright bass walking a 1-6-4-5 progression)
+Oh, sweetheart of the taiga, hear my drone!
+Singing two notes at once, so you're never alone!
+(Throat singing solo over a doo-wop beat)
+
+**Additional Notes:**
+- **Combo/Fusion:** 1950s Doo-Wop / Tuvan Throat Singing
+- **Thematic Ties:** The wholesome, innocent, and harmonically sweet nostalgia of 50s American pop grounded by the ancient, resonating, and solitary drone of the Central Asian steppes.
+
+### Title: The Kingston Concerto
+
+**Service:** Minimax Audio
+
+**Prompt:** A laid-back, heavy Jamaican Reggae groove driven by a deep sub-bass and a one-drop drum beat. The skanking chords, stabs, and melodic solos are entirely performed by a stiff, formal 18th-century classical string quartet using violins and cellos.
+
+**Lyrics:**
+(Verse 1 - Relaxed, soulful Reggae vocalist)
+Jah provides the rosin, mon, shining in the sun
+Cello bowing heavy till the first movement is done
+(Violin section plays sharp, staccato off-beat skanks)
+Tuning up the viola, feeling the roots
+Powder on the wig, but we wearing the boots
+
+(Chorus)
+(Deep sub-bass drops alongside a soaring violin melody)
+Kingston concerto, playing in the yard!
+Mozart on the island, but the rhythm hitting hard!
+(Cello plays a syncopated, dub-style echo line)
+One love, four strings, harmony and peace
+Let the classical vibration never cease!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Reggae / Classical String Quartet
+- **Thematic Ties:** The relaxed, spiritual, and heavily syncopated roots reggae rhythm forcibly played by rigid, highly disciplined classical European strings.
