@@ -3810,3 +3810,98 @@ The dapperest fellas that you've ever seen
 **Additional Notes:**
 - **Combo/Fusion:** 1920s Barbershop Quartet / Modern Atlanta Trap
 - **Thematic Ties:** The squeaky-clean, meticulously groomed, and overly polite aesthetic of a vintage barbershop quartet clashing with the aggressive bass and boastful swagger of modern trap music.
+
+### Title: The Hurdy-Gurdy Ronin
+
+**Service:** Minimax Audio
+
+**Prompt:** A dramatic fusion of Medieval European folk and Japanese Enka. Features a droning hurdy-gurdy playing sorrowful, sweeping melodies, accompanied by the sharp twang of a shamisen and dramatic, vibrato-heavy Enka vocals.
+
+**Lyrics:**
+(Verse 1)
+The cherry blossoms fall on the crank of my wheel,
+A lonely knight in armor of bamboo and steel.
+From the foggy moors of Albion to the Edo streets,
+My heart turns the handle where the east and west meets.
+
+(Chorus)
+Turn the crank, let the rosin cry,
+Underneath the painted paper sky.
+A masterless samurai, a wandering bard,
+The path of the hurdy-gurdy is solitary and hard.
+
+**Additional Notes:**
+- **Combo/Fusion:** Medieval European Folk / Japanese Enka
+- **Thematic Ties:** The imposition of a quintessential medieval European drone instrument into the structured, emotional world of classical Japanese storytelling.
+
+### Title: Bossa Nova Permafrost
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive yet relaxing fusion of Brazilian Bossa Nova and Nordic Black Metal. Features lightning-fast blast beats played softly with jazz brushes, intricate acoustic guitar tremolo picking with complex jazz chords, and raspy, whispered harsh vocals.
+
+**Lyrics:**
+(Verse 1)
+[Whispered harsh vocals]
+The icy wind blows through the palm trees of my mind.
+A frozen cocktail, a darkness so refined.
+Swaying gently in the sub-zero breeze,
+Dancing the samba while our blackened hearts freeze.
+
+(Chorus)
+Girl from Ipanema, trapped in the ice,
+A dissonant chord, a wintery sacrifice.
+Whisper the bossa, scream for the snow,
+Where the dark sun sets, and the chill winds blow.
+
+**Additional Notes:**
+- **Combo/Fusion:** Bossa Nova / Black Metal
+- **Thematic Ties:** Juxtaposing the warm, rhythmic ease of Brazilian beaches with the cold, isolating aggression of Scandinavian winters.
+
+### Title: Deep Space Didgeridoo
+
+**Service:** Minimax Audio
+
+**Prompt:** A cosmic fusion of Aboriginal Australian music and 1970s Sci-Fi Synthwave. Features a deep, resonant didgeridoo providing the bassline, layered with analog synthesizers, theremin melodies, and robotic vocoder vocals.
+
+**Lyrics:**
+(Verse 1)
+[Vocoder vocals over rhythmic didgeridoo drone]
+Coordinates set for the Outback Nebula.
+Dust storms rising on a distant ringed planet.
+The ancestor spirits travel through the stargate.
+Breathing life into the vacuum of space.
+
+(Chorus)
+Circular breathing through the cosmos,
+Analog stars in a digital sky.
+The Dreamtime stretches across the galaxy,
+Where the synthetic comets fly.
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Aboriginal / 70s Synthwave
+- **Thematic Ties:** Connecting ancient earthly spiritual traditions with futuristic, space-age exploration.
+
+### Title: The Viennese Reggae Waltz
+
+**Service:** Minimax Audio
+
+**Prompt:** An upbeat, syncopated fusion of 19th-century Viennese Waltz and Jamaican Roots Reggae. A string quartet plays offbeat skanks while a heavy dub bassline and one-drop drum beat drive the 3/4 time signature.
+
+**Lyrics:**
+(Verse 1)
+[Smooth, soulful vocals in a waltz rhythm]
+Step, two, three, feeling the groove,
+Powdered wigs bobbing as the basslines move.
+The ballroom is smoky, the chandeliers sway,
+Dancing the waltz in a Kingston way.
+
+(Chorus)
+One, two, three, let the brass horns blow,
+A Viennese dub where the rivers flow.
+Spinning around to the sound of the snare,
+Classical roots in the mountain air.
+
+**Additional Notes:**
+- **Combo/Fusion:** Classical Viennese Waltz / Jamaican Roots Reggae
+- **Thematic Ties:** Forcing the rigid, aristocratic elegance of a waltz into the relaxed, spiritual groove of reggae.
