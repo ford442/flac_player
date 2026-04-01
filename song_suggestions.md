@@ -3905,3 +3905,96 @@ Classical roots in the mountain air.
 **Additional Notes:**
 - **Combo/Fusion:** Classical Viennese Waltz / Jamaican Roots Reggae
 - **Thematic Ties:** Forcing the rigid, aristocratic elegance of a waltz into the relaxed, spiritual groove of reggae.
+
+### Title: Appalachian Cyber-Drill
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive UK Drill beat with sliding sub-bass and frantic hi-hats, but the main melody is played by a furiously fingerpicked Appalachian banjo. Vocals are a fast-paced, rhythmic spoken-word delivery about moonshining, told through the lens of a neon-lit cyberpunk metropolis.
+
+**Lyrics:**
+(Verse 1 - Rhythmic, fast-paced drill flow but with a deep southern twang)
+Sliding down the holler in a hover-truck
+Neon shine brewing, pushing my luck
+Banjo plucking on the digital string
+Cyber-hillbilly making the sub-bass ring
+(Banjo goes into a rapid, frantic solo over the 808 slides)
+
+(Chorus)
+Drill it down deep in the Appalachian code
+Running from the law on the fury road
+Copper still bubbling with the cyber-sludge
+Mountain man hacking, holding a grudge
+
+**Additional Notes:**
+- **Combo/Fusion:** UK Drill / Appalachian Bluegrass
+- **Thematic Ties:** The outlaw, anti-authority nature of historical Appalachian moonshiners mapped onto the dystopian, high-tech underground of cyberpunk drill music.
+
+### Title: The Flamenco Shoegaze
+
+**Service:** Minimax Audio
+
+**Prompt:** A wall-of-sound Shoegaze track drowning in thick layers of fuzz, reverb, and distortion, driven by an impassioned, fiery Spanish Flamenco dancer clapping intricate palmas rhythms and stomping on a wooden floor instead of a drum kit. Ethereal, whispered vocals in Spanish drift above the noise.
+
+**Lyrics:**
+(Verse 1 - Barely audible, ethereal whispered vocals floating in reverb)
+En la niebla, bailo sola
+(In the fog, I dance alone)
+El fuego blanco, la ola
+(The white fire, the wave)
+
+(Chorus - The distortion thickens into a massive wall of noise, pierced only by sharp, rapid flamenco claps and stomps)
+Tacón, punta, en el ruido gris
+(Heel, toe, in the gray noise)
+Un fantasma roto en mi país
+(A broken ghost in my country)
+
+**Additional Notes:**
+- **Combo/Fusion:** Shoegaze / Spanish Flamenco
+- **Thematic Ties:** The passionate, sharp, and physically demanding percussive dance of Flamenco drowning in the detached, motionless, and introspective wash of Shoegaze distortion.
+
+### Title: Gregorian Disco Inferno
+
+**Service:** Minimax Audio
+
+**Prompt:** A funky, four-on-the-floor 1970s Disco track complete with walking basslines, sweeping strings, and a shimmering disco ball synth. The lead vocal is not a soul diva, but a solemn choir of medieval monks chanting polyphonic Latin hymns with strict devotion.
+
+**Lyrics:**
+(Verse 1 - Funky bassline grooves while a solemn male choir chants in unison)
+Pater noster, under the strobe light
+Dominus vobiscum, dancing through the night
+(Funky guitar wah-wah scratch)
+
+(Chorus - The choir splits into a glorious, reverent harmony over the four-on-the-floor beat)
+Gloria in excelsis disco!
+Sanctus spiritus, letting the rhythm flow
+Incense burning on the illuminated floor
+Cantate domino, give me some more!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Disco / Gregorian Chant
+- **Thematic Ties:** The austere, ascetic, and deeply spiritual devotion of medieval monastic life clashing hilariously with the glamorous, hedonistic, and brightly lit world of a 1970s discotheque.
+
+### Title: Polka-Dot Goth
+
+**Service:** Minimax Audio
+
+**Prompt:** A brooding, atmospheric Goth Rock track with chorus-drenched bass, wailing post-punk guitars, and a deeply melancholic, baritone vocal delivery. The beat, however, is a relentlessly cheerful, fast-paced accordion-driven Oompah Polka.
+
+**Lyrics:**
+(Verse 1 - Deep, dramatic goth baritone)
+The graveyard is cold, my heart is a tomb
+The ravens are circling in the gathering gloom
+But my feet cannot stop, they spin and they bound
+To the maddening cheer of this terrible sound
+
+(Chorus)
+(Accordion plays a hyper-happy, bouncy polka melody while the goth bass thumps)
+Oompah, oompah, dance with the dead
+A black velvet tear that I carefully shed
+Spinning around in my platform boots
+A miserable waltz in these joyful roots
+
+**Additional Notes:**
+- **Combo/Fusion:** Goth Rock / Traditional Bavarian Polka
+- **Thematic Ties:** The gloomy, dramatic, and self-serious aesthetic of 80s goth rock completely undermined by the boisterous, infectious, and relentlessly optimistic energy of a beer-hall polka.
