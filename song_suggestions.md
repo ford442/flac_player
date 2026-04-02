@@ -3998,3 +3998,83 @@ A miserable waltz in these joyful roots
 **Additional Notes:**
 - **Combo/Fusion:** Goth Rock / Traditional Bavarian Polka
 - **Thematic Ties:** The gloomy, dramatic, and self-serious aesthetic of 80s goth rock completely undermined by the boisterous, infectious, and relentlessly optimistic energy of a beer-hall polka.
+
+### Title: Bossa Nova Bloodbath
+
+**Service:** Minimax Audio
+
+**Prompt:** A relaxing Bossa Nova groove played with gentle nylon-string guitar and soft shakers, but the vocals are aggressive, guttural Death Metal growls.
+
+**Lyrics:**
+(Growled smoothly)
+The sun is warm on the Copacabana
+(Guttural roar)
+AND THE SEAS WILL BOIL WITH RAGE
+A gentle breeze swaying the palms
+(Screamed)
+AS WE ENTER THE FINAL AGE
+
+**Additional Notes:**
+- **Combo/Fusion:** Bossa Nova / Death Metal.
+- **Thematic Ties:** The ultimate juxtaposition of a relaxing beachside vacation with apocalyptic fury.
+
+### Title: The Lute and the Amen
+
+**Service:** Minimax Audio
+
+**Prompt:** Frantic, glitchy, 200 BPM breakcore drums combined with a delicate, intricately picked 16th-century lute melody.
+
+**Lyrics:**
+(Spoken, fast-paced and distorted)
+Verily, the tempo hastens.
+A glitch in the court of the King.
+My lute strings tremble under the weight of the Amen break.
+(Chorus - Choral samples chopped and stuttered)
+Dance, ye lords and ladies, to the shattered beat!
+Huzzah! (Crash) Huzzah! (Kick drum fill)
+
+**Additional Notes:**
+- **Combo/Fusion:** Renaissance Lute / Breakcore.
+- **Thematic Ties:** High-society court music interrupted by the frantic energy of internet-age electronic music.
+
+### Title: Idol of the High Seas
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavily produced, catchy K-Pop song featuring synchronized gang vocals and polished synths, but the subject matter, melody, and rhythm are that of a traditional 18th-century Sea Shanty.
+
+**Lyrics:**
+(Verse 1)
+Heave away, my shiny stars! (Annyeong!)
+Pull the ropes, we're going far
+Glitter on the ocean wave
+(Chorus)
+Oppa's on the starboard bow!
+Sing it loud, we'll show them how
+Sailing to the idol stage
+Yo-ho-ho and a finger heart!
+
+**Additional Notes:**
+- **Combo/Fusion:** K-Pop / Sea Shanty.
+- **Thematic Ties:** The highly manufactured and polished world of Korean idols imposed onto the rugged, labor-intensive life of sailors.
+
+### Title: Gamelan Cowboy
+
+**Service:** Minimax Audio
+
+**Prompt:** A classic twangy Country Western song about heartbreak and pickup trucks, accompanied entirely by a traditional Indonesian Gamelan ensemble of tuned bronze gongs and metallophones instead of guitars.
+
+**Lyrics:**
+(Verse 1 - sung with a southern drawl)
+My dog ran off, my tractor broke
+Left me here in a cloud of smoke
+But the gongs are ringing in the humid night
+(Chorus)
+Bali cowboy, shedding a tear
+Drinking rice wine instead of a beer
+Metallophones ringing out my sorrow
+Hope my baby comes back tomorrow
+
+**Additional Notes:**
+- **Combo/Fusion:** Country Western / Javanese Gamelan.
+- **Thematic Ties:** The lonesome cowboy archetype displaced into a Southeast Asian musical landscape.
