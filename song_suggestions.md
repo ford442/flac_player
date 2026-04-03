@@ -4078,3 +4078,103 @@ Hope my baby comes back tomorrow
 **Additional Notes:**
 - **Combo/Fusion:** Country Western / Javanese Gamelan.
 - **Thematic Ties:** The lonesome cowboy archetype displaced into a Southeast Asian musical landscape.
+
+### Title: The Bronx Abbey
+
+**Service:** Minimax Audio
+
+**Prompt:** A classic 90s Boom Bap hip-hop track with a heavy, dusty drum break and a deep upright bassline. The MC's flow is aggressive, but the hook and backing ad-libs are sung by a solemn choir of monks performing polyphonic Gregorian Chants.
+
+**Lyrics:**
+(Verse 1 - Gritty 90s MC)
+Stepping on the block, got the holy water flowing
+Microphone check, yeah the manuscript is glowing
+(Gregorian Chant ad-lib)
+Monks in the back with the hood on tight
+Illuminated letters in the city night
+
+(Chorus)
+(Heavy boom bap beat under a solemn choir)
+Domine, drop the beat!
+Preaching from the pulpit to the concrete street!
+We got the spirit, we got the rhyme!
+Chanting in the Bronx since the dawn of time!
+
+**Additional Notes:**
+- **Combo/Fusion:** 90s Boom Bap / Gregorian Chant.
+- **Thematic Ties:** The raw, street-level poetry of 90s New York hip-hop elevated by the ancient, sacred reverence of a medieval monastery.
+
+### Title: Neon Machu Picchu
+
+**Service:** Minimax Audio
+
+**Prompt:** A pulsating, high-tempo Darksynth Cyberpunk track featuring aggressive analog basslines and gated snare drums. The main melodic hook and solos, however, are played by a traditional Andean Pan Flute (Zampoña) and a Charango.
+
+**Lyrics:**
+(Spoken, robotic voice)
+Altitude at 8,000 feet. Oxygen levels nominal.
+(Pan Flute plays a fast, syncopated minor-key melody)
+The grid extends through the Sacred Valley.
+(Charango strumming over a heavy synth-bass drop)
+
+(Chorus - Vocoded voice)
+Neon lines on the Nazca plain!
+Digital llama in the acid rain!
+Inca tech in the mainframe core!
+We're opening the cosmic door!
+
+**Additional Notes:**
+- **Combo/Fusion:** Darksynth Cyberpunk / Andean Folk.
+- **Thematic Ties:** The ancient, high-altitude mysticism of the Inca civilization transposed into a gritty, neon-soaked dystopian future.
+
+### Title: The Glam Buccaneer
+
+**Service:** Minimax Audio
+
+**Prompt:** An over-the-top 1980s Hair Metal anthem with soaring, high-pitched vocals, massive stadium drums, and shredding guitar solos. The lyrics and vocal melodies, however, are strictly in the style of a traditional 18th-century maritime Sea Shanty.
+
+**Lyrics:**
+(Verse 1 - 80s Glam Metal singer with massive reverb)
+We set sail from Plymouth on a ship of steel!
+(Chugging guitar riff and thunderous drums)
+With a cargo of hairspray and a wicked feel!
+Heave away, my brothers, let the groupies scream!
+We're riding the ocean on a rock n' roll dream!
+
+(Chorus)
+(Massive stadium singalong with harmony)
+WAY, HAY, UP SHE RISES!
+Leather and lace and the ocean's prizes!
+(Eddie Van Halen style tapping solo)
+WAY, HAY, ROCK THE BOAT!
+The loudest damn pirates that ever did float!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Hair Metal / Traditional Sea Shanty.
+- **Thematic Ties:** The swashbuckling, hard-drinking camaraderie of historical pirates merged seamlessly with the theatrical, excessive lifestyle of 80s glam rock stars.
+
+### Title: P-Funk Highlander
+
+**Service:** Minimax Audio
+
+**Prompt:** A groovy, psychedelic 1970s P-Funk track featuring a thick, bouncing Moog bassline, wah-wah guitars, and a syncopated drum groove. The lead instrument, taking over the role of the horn section and synth solos, is a set of Great Highland Bagpipes.
+
+**Lyrics:**
+(Verse 1 - Smooth, eccentric funk vocalist)
+Yeah, baby, we landing the mothership in the glen
+Tell the Loch Ness monster to bring his friends
+(Bagpipes play a ridiculously funky, syncopated riff)
+Tear the roof off the castle, let the sunshine in
+We got the haggis bumping, where do we begin?
+
+(Chorus)
+(Choir singing in tight, funky harmony)
+Make my funk the highland funk!
+I wants to get plucked up!
+(Bagpipe solo bending notes with wah-wah effect)
+Plaid on the dancefloor, swinging the kilt
+This is the groove that the ancestors built!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s P-Funk / Scottish Bagpipes.
+- **Thematic Ties:** The bizarre, intergalactic mythology and deep grooves of Parliament-Funkadelic colliding with the earthy, droning tradition of the Scottish highlands.
