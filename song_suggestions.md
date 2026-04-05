@@ -4178,3 +4178,88 @@ This is the groove that the ancestors built!
 **Additional Notes:**
 - **Combo/Fusion:** 1970s P-Funk / Scottish Bagpipes.
 - **Thematic Ties:** The bizarre, intergalactic mythology and deep grooves of Parliament-Funkadelic colliding with the earthy, droning tradition of the Scottish highlands.
+
+### Title: Copacabana Frostbitten
+
+**Service:** Minimax Audio
+
+**Prompt:** A serene, acoustic Bossa Nova rhythm with gentle nylon-string guitar and brushed snare, contrasted by harsh, screeching Black Metal vocals and occasional blast beat interruptions.
+
+**Lyrics:**
+(Verse 1 - Harsh shrieked vocals)
+The girl from Ipanema walks to the abyss!
+A void of eternal cold in the tropical sun!
+(Gentle bossa nova guitar solo)
+
+(Chorus)
+Bossa, bossa of darkness!
+Sipping caipirinhas in the frozen forest!
+Samba of the unholy!
+
+**Additional Notes:**
+- **Combo/Fusion:** Bossa Nova / True Norwegian Black Metal.
+- **Thematic Ties:** The relaxing, sun-drenched beaches of Rio de Janeiro invaded by the cold, grim aesthetics of Scandinavian black metal.
+
+### Title: Monastic Neon
+
+**Service:** Minimax Audio
+
+**Prompt:** A pulsing 1980s synthwave track with driving arpeggios, gated reverb drums, and deep analog bass. The vocals are provided by a solemn choir of monks singing Gregorian chants in Latin.
+
+**Lyrics:**
+(Chant)
+In nomine machinae, et filii, et spiritus neonis.
+Kyrie eleison, over the digital grid.
+
+(Chorus)
+Cruising the data stream, absolve our sins
+Glowing magenta crosses where the night begins
+Sanctus, sanctus, synthesizer
+
+**Additional Notes:**
+- **Combo/Fusion:** Synthwave / Gregorian Chant.
+- **Thematic Ties:** Ancient monastic devotion transposed onto a futuristic, neon-drenched retro-cyberpunk landscape.
+
+### Title: Studio 54 Outback
+
+**Service:** Minimax Audio
+
+**Prompt:** A high-energy, classic 1970s Disco track complete with four-on-the-floor beat, sweeping string sections, and funky rhythm guitar. The lead bassline and primary solos are performed by a rhythmic, droning Didgeridoo.
+
+**Lyrics:**
+(Verse 1 - Soulful disco diva)
+Got my platform shoes, stepping on the red dirt!
+The mirror ball is shining, reflecting on the desert!
+(Didgeridoo solo mimicking a synth bassline)
+
+(Chorus)
+Burn, baby, burn, the bushfire inferno!
+Dancing with the kangaroos, we never gonna learn, oh!
+Do the hustle down under!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Disco / Australian Aboriginal Folk.
+- **Thematic Ties:** The glitter and glamour of classic disco juxtaposed with the ancient, earthy resonance of the Australian outback.
+
+### Title: Trap-Gurdy Kyoto
+
+**Service:** Minimax Audio
+
+**Prompt:** A modern trap beat with rolling 808s, rapid-fire hi-hats, and deep sub-bass. The main melodic loop and counter-melodies are played on a medieval European Hurdy-Gurdy, but the lyrics paint a picture of cruising through modern Kyoto.
+
+**Lyrics:**
+(Verse 1 - Rhythmic triplet flow)
+Rolling down the street in Kyoto, yeah
+Gurdy cranking, going loco, yeah
+Geisha looking, snapping photos, yeah
+Medieval crank in the dojo, yeah
+
+(Chorus)
+Spin that wheel, drop that bass
+808 bumping in the sacred place
+From the middle ages to the neon lights
+Hurdy-gurdy bumping through the Tokyo nights
+
+**Additional Notes:**
+- **Combo/Fusion:** Trap / Medieval Folk (Hurdy-Gurdy) in a Japanese setting.
+- **Thematic Ties:** Imposing medieval European instrumentation onto contemporary trap music within a modern Japanese cultural landscape.
