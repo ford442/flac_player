@@ -4263,3 +4263,96 @@ Hurdy-gurdy bumping through the Tokyo nights
 **Additional Notes:**
 - **Combo/Fusion:** Trap / Medieval Folk (Hurdy-Gurdy) in a Japanese setting.
 - **Thematic Ties:** Imposing medieval European instrumentation onto contemporary trap music within a modern Japanese cultural landscape.
+
+### Title: Fjords of Ipanema
+
+**Service:** Minimax Audio
+
+**Prompt:** A surreal blend of gentle Brazilian Bossa Nova and aggressive Norwegian Black Metal. Delicate classical nylon-string guitar chords and soft brushed snare drums are suddenly interrupted by blast beats, tremolo-picked electric guitars, and shrieked vocals.
+
+**Lyrics:**
+(Verse 1 - whispered, smooth)
+The sun sets slow over the icy sea
+A gentle breeze whispers to you and me
+
+(Chorus - screaming)
+FROST AND FIRE! THE MOUNTAINS BLEED!
+VALHALLA WEEPS!
+
+(Verse 2 - whispered, smooth)
+Sipping caipirinhas in the dark cold night
+Everything is peaceful, everything is bright
+
+**Additional Notes:**
+- **Combo/Fusion:** Bossa Nova / Norwegian Black Metal.
+- **Thematic Ties:** Tropical relaxation forcefully colliding with freezing, dark mythological anger.
+
+### Title: Speakeasy Opps
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive UK Drill beat with sliding sub-bass and syncopated hi-hats, but the melody and harmonic structure are driven by a lively 1920s Dixieland jazz band featuring clarinet, trumpet, and trombone.
+
+**Lyrics:**
+(Verse 1)
+Stepped in the joint with the pinstripe suit
+Got the tommy gun tucked, hear the trumpet toot
+Sliding on the opps in a Model T Ford
+Jazz band swinging while we secure the board
+
+(Chorus)
+Swing it out, drill it out
+Moonshine flowing, hear the trombone shout
+From the roaring twenties to the London streets
+Catch me stepping on these swinging beats
+
+**Additional Notes:**
+- **Combo/Fusion:** UK Drill / 1920s Dixieland Jazz.
+- **Thematic Ties:** Prohibition-era gangster tropes overlaid onto modern drill rap culture.
+
+### Title: The Neon Cloister
+
+**Service:** Minimax Audio
+
+**Prompt:** A driving 1980s synthwave track with pulsing arpeggios, gated reverb drums, and deep analog bass. The lead vocals are a choir of monks singing solemn Gregorian chants in Latin, heavily vocodered and harmonized.
+
+**Lyrics:**
+(Verse 1)
+Pater noster, qui es in caelis
+(Vocoder harmony: Uploading salvation...)
+Sanctificetur nomen tuum
+(Synth arpeggio intensifies)
+Fiat voluntas tua
+
+(Chorus)
+Sicut in caelo, et in terra
+In the matrix of the neon era
+Digital prayers in the sacred grid
+Unlocking secrets that the ancients hid
+
+**Additional Notes:**
+- **Combo/Fusion:** Synthwave / Gregorian Chant.
+- **Thematic Ties:** Ancient monastic devotion transposed into a cyberpunk virtual reality.
+
+### Title: Machu Picchu Juke
+
+**Service:** Minimax Audio
+
+**Prompt:** A frantic 160 BPM Chicago Footwork track featuring chopped vocal samples, heavy 808 toms, and rapid snare rolls. The primary melodic elements are sweeping, echoing pan flutes (Zampoña) and frantic charango strums from the Andes mountains.
+
+**Lyrics:**
+(Vocal samples chopped and stuttered)
+Con-con-condor flying high
+Step to the rhythm, touch the sky
+An-An-Andes stepping, juke it out
+Llama in the club, hear 'em shout
+
+(Chorus)
+Footwork on the mountain peak
+Ancient ruins, modern freak
+Pan flute blowing through the sub
+Footwork battle at the club
+
+**Additional Notes:**
+- **Combo/Fusion:** Chicago Footwork / Traditional Andean Folk.
+- **Thematic Ties:** Hyper-energetic urban dance music imposed onto the high-altitude tranquility of the Incan ruins.
