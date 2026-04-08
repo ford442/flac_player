@@ -74,7 +74,7 @@ export class AudioLoader {
       const response = await fetch(source.url, {
         mode: 'cors',
         credentials: 'omit'
-      }));
+      });
 
       if (!response.ok) {
         if (response.status === 404) {
