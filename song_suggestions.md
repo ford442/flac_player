@@ -225,3 +225,97 @@ So easy, love, the way we gently move.
 - **Thematic Ties:** The absolute, sunny, relaxed warmth of a tropical beach violently oscillating with the freezing, grim, and intensely aggressive atmosphere of a Scandinavian winter forest, creating a bizarrely jarring but fascinating contrast.
 - **Combo/Fusion:** K-Pop / Eastern European Klezmer
 - **Thematic Ties:** The ultra-modern, highly manicured world of Korean idol culture mashed up with the wild, communal circle-dancing energy of traditional Jewish celebrations.
+
+### Title: The Shogun's Hurdy-Gurdy
+
+**Service:** Minimax Audio
+
+**Prompt:** A solemn, slow-paced piece of traditional Japanese Gagaku court music featuring the piercing tones of the hichiriki and the rhythmic strikes of the kakko drum. However, the leading melody is completely taken over by a droning, mechanical Medieval European Hurdy-Gurdy, grinding out a haunting, microtonal scale over the ancient Asian rhythm.
+
+**Lyrics:**
+(Verse 1)
+Cherry blossoms fall on the castle wall...
+(Hurdy-gurdy grinds out a harsh, continuous drone)
+A stranger's wheel begins to crawl.
+Through the bamboo grove, a wooden crank,
+(Hichiriki and Hurdy-gurdy harmonize in a strange, dissonant wail)
+A strange new song on the river bank.
+
+(Chorus)
+Turn the handle, strike the taiko!
+The shogun's court in a dizzying flow!
+The crank and drone in the rising sun!
+
+**Additional Notes:**
+- **Combo/Fusion:** Edo-period Japanese Gagaku / Medieval European Hurdy-Gurdy
+- **Thematic Ties:** The highly structured, incredibly slow and refined atmosphere of Japanese court music clashing with the gritty, mechanical, continuous drone of a European peasant instrument.
+
+### Title: Celtic Cyber-Drill
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, aggressive UK Drill rap track with sliding 808 sub-basses and rapid, syncopated hi-hats. Instead of typical dark piano or synth melodies, the intense instrumental backing is entirely driven by a hyper-fast, upbeat traditional Irish Celtic folk session, featuring frantically bowed fiddles and energetic tin whistle solos playing alongside the heavy drill beat.
+
+**Lyrics:**
+(Verse 1 - Aggressive, rhythmic UK Drill rap flow)
+Step to the green, man's wearing the tweed,
+(Rapid fiddle solo slices through the sliding 808 bass)
+Bodhrán beating, supplying the speed!
+Pint in the hand, but we're out on the road,
+(Tin whistle hits a high, piercing trill)
+Emerald isle in a heavy mode!
+
+(Chorus)
+Slide the bass, rosin the bow!
+Catch the jig before we go!
+Drill in the pub, mandolin strike!
+
+**Additional Notes:**
+- **Combo/Fusion:** UK Drill Rap / Traditional Celtic Folk
+- **Thematic Ties:** The bleak, gritty urban intensity of modern London Drill infused with the fast-paced, communal, and highly energetic tradition of an Irish pub session.
+
+### Title: Appalachian Gregorian
+
+**Service:** Minimax Audio
+
+**Prompt:** A serene, echoing Gregorian chant performed by a choir of monks in a vast cathedral. Suddenly, a lightning-fast, highly technical Appalachian Bluegrass banjo picking pattern intertwines with the slow, monophonic Latin hymns, transforming the holy reverence into a foot-stomping, holy mountain hootenanny.
+
+**Lyrics:**
+(Verse 1 - Slow, reverberating Latin chant)
+Kyrie eleison... Dominus vobiscum...
+(A fast, twangy five-string banjo rolls in abruptly)
+
+(Chorus - Monks singing in harmony but with a bluegrass bounce)
+Praise the Lord on the mountain top!
+Don't let the holy banjo stop!
+Sanctus, Sanctus, rosin the string!
+Hear the brothers of the holler sing!
+Hallelujah in the pines!
+
+**Additional Notes:**
+- **Combo/Fusion:** Gregorian Chant / Appalachian Bluegrass
+- **Thematic Ties:** The solemn, echoing, monophonic spirituality of Medieval Latin chanting colliding with the rural, high-speed, technical virtuosic playing of American mountain bluegrass.
+
+### Title: Polka-Punk of the Caribbean
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, bass-driven Jamaican Dancehall track with classic syncopated reggae rhythms and echoing dub effects. However, the brass stabs and synth leads are entirely replaced by a bouncy, cheerful Eastern European Polka accordion and a lively tuba playing the basslines in off-beats.
+
+**Lyrics:**
+(Verse 1 - Rhythmic, echoing Dancehall toaster vocals)
+Watch out now, massive! The rhythm is sweet!
+(Bouncy accordion plays a cheerful, upbeat riff)
+We're mashing the pierogi right on the street!
+(Heavy dub delay on a tuba blast)
+Kingston town meets the Warsaw square!
+
+(Chorus)
+Jump to the polka, whine to the dub!
+Accordion squeezing inside the club!
+Pass me the kielbasa, light up the night!
+Two-step and skank till the morning light!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Dancehall / Eastern European Polka
+- **Thematic Ties:** The heavy, low-end sound system culture of the Caribbean mixed with the lighthearted, bouncy, accordion-driven celebration of Eastern European folk music.
