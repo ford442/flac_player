@@ -319,3 +319,98 @@ Two-step and skank till the morning light!
 **Additional Notes:**
 - **Combo/Fusion:** Jamaican Dancehall / Eastern European Polka
 - **Thematic Ties:** The heavy, low-end sound system culture of the Caribbean mixed with the lighthearted, bouncy, accordion-driven celebration of Eastern European folk music.
+
+### Title: The Outback Aria
+
+**Service:** Minimax Audio
+
+**Prompt:** A grand, soaring 19th-century Italian High Opera aria performed by a dramatic soprano. However, the delicate orchestral accompaniment of violins and cellos is entirely replaced by the deep, rhythmic, continuous, and earthy growl of a traditional Australian Aboriginal Didgeridoo, with occasional rhythmic clapsticks driving the tempo.
+
+**Lyrics:**
+(Verse 1 - Grand Italian Operatic Soprano)
+Oh, la terra rossa! The burning sun!
+(Didgeridoo pulses deeply, providing a resonant drone)
+Il cielo brucia! The day has begun!
+(Soprano hits a piercing high note)
+Nel deserto io canto per te!
+
+(Chorus)
+(Clapsticks accelerate as the Didgeridoo rhythm intensifies)
+Canta! Canta! The outback calls!
+Where the shadow of the red rock falls!
+Vincerò! Vincerò in the dust!
+
+**Additional Notes:**
+- **Combo/Fusion:** Italian High Opera / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The pristine, incredibly polished, and high-culture drama of European opera contrasting beautifully with the ancient, raw, and deeply resonant earthiness of the Australian outback.
+
+### Title: Neon Highlands
+
+**Service:** Minimax Audio
+
+**Prompt:** A gritty, high-tempo Cyberpunk Darksynth track with aggressive, distorted sawtooth basslines and pounding electronic drums. Instead of typical neon synth melodies, the intense lead lines are played by a frantic, incredibly loud Scottish Bagpipe, screaming over the digital dystopia.
+
+**Lyrics:**
+(Verse 1 - Heavily vocoded, robotic cyberpunk vocal)
+Scanning the sectors in the pouring rain...
+System overload, digital pain...
+(Bagpipes blast a hyper-fast, aggressive Celtic melody)
+Highlands glowing in the neon light!
+
+(Chorus)
+(Massive synth drop combined with a blaring bagpipe chorus)
+Cyber-clans rising from the smog!
+Marching through the synthetic bog!
+Pipes of the future, circuit and steel!
+Make the whole megacity feel!
+
+**Additional Notes:**
+- **Combo/Fusion:** Cyberpunk Darksynth / Scottish Bagpipes
+- **Thematic Ties:** The bleak, highly technological, and synthetic atmosphere of a cyberpunk megacity pierced by the fiercely independent, organic, and piercing battle-cry of a traditional Scottish instrument.
+
+### Title: Gamelan Grind
+
+**Service:** Minimax Audio
+
+**Prompt:** An ultra-fast, aggressive Grindcore Metal track with blistering blast beats and guttural death growls. However, instead of distorted electric guitars, the frantic, chaotic riffs and heavy breakdowns are completely performed by a massive, metallic Indonesian Gamelan ensemble, frantically striking bronze gongs and metallophones at extreme speeds.
+
+**Lyrics:**
+(Verse 1 - Guttural, indecipherable Death Metal growls)
+SHATTER THE BRONZE! THE HAMMER FALLS!
+(Frantic, chaotic Gamelan metallophones played at blast-beat speed)
+ECHOES OF THE TEMPLE! THE SULTAN CALLS!
+(Deep, massive gong strikes in time with a heavy double-kick drum breakdown)
+
+(Chorus)
+(High-pitched metal shrieks over a syncopated Gamelan rhythm)
+ISLAND OF FIRE! METALLIC STORM!
+THE ANCIENT BRASS TAKES A BRUTAL FORM!
+GRINDING THE GONGS INTO THE DUST!
+
+**Additional Notes:**
+- **Combo/Fusion:** Grindcore Metal / Indonesian Gamelan
+- **Thematic Ties:** The absolute brutal, chaotic aggression and speed of Grindcore unexpectedly matching the metallic, percussive, and highly rhythmic nature of a traditional Gamelan orchestra pushed to its absolute physical limits.
+
+### Title: Tango on the Tundra
+
+**Service:** Minimax Audio
+
+**Prompt:** A sensual, dramatic Argentine Tango with the classic staccato rhythm. But instead of the traditional bandoneon and violin, the sharp, passionate melodies are furiously plucked on a Russian Balalaika, and the dramatic background harmonies are sung by a deep, booming, resonant Siberian Men's Choir.
+
+**Lyrics:**
+(Verse 1 - Deep, booming Russian Choir singing in a rhythmic tango style)
+Cold is the wind, but the fire is bright!
+(Balalaika plucks a rapid, passionate, staccato tango melody)
+We dance on the ice in the pale moonlight!
+Hold me close in the freezing snow!
+
+(Chorus)
+(Choir hits a massive minor chord as the balalaika sweeps)
+Tango of the Taiga! The passion of the frost!
+In your freezing arms, I am totally lost!
+A rose in the teeth, a coat of bear!
+The wildest romance in the freezing air!
+
+**Additional Notes:**
+- **Combo/Fusion:** Argentine Tango / Russian Balalaika and Siberian Men's Choir
+- **Thematic Ties:** The intense, sultry, and physically close heat of a South American tango surviving and thriving in the expansive, freezing, and stoic environment of the Russian tundra.
