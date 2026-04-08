@@ -74,7 +74,7 @@ export class AudioLoader {
       const response = await fetch(source.url, {
         mode: 'cors',
         credentials: 'omit'
-      });
+      }));
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -189,7 +189,7 @@ export class AudioLoader {
       const tracksWithUrls = tracks.map((item: any) => ({
         ...item,
         url: item.url ? (item.url.startsWith('http') ? item.url : `${API_BASE_URL}${item.url}`) : `${API_BASE_URL}/api/music/${item.id}`
-      });
+      }));
 
       return { tracks: tracksWithUrls, total: tracks.length };
     } catch (error) {
