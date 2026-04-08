@@ -51,7 +51,7 @@ export type ViewMode = 'library' | 'now-playing' | 'queue' | 'pile';
 
 // API Configuration
 // Default to the storage manager API if no env var is set
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://ford442-storage-manager.hf.space';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://storage.noahcohn.com';
 
 // Debug mode - set to true to enable detailed logging
 const DEBUG_MODE = true;
@@ -185,11 +185,11 @@ export class AudioLoader {
       const tracks = await response.json();
       debug.log('FETCH_LIBRARY_PARSED', { trackCount: tracks.length });
 
-      // Map to add URLs
+      // Map to add URLs - use the song's URL or construct from base URL
       const tracksWithUrls = tracks.map((item: any) => ({
         ...item,
-        url: item.url || `${API_BASE_URL}/api/music/${item.id}`
-      }));
+        url: item.url ? (item.url.startsWith('http') ? item.url : `${API_BASE_URL}${item.url}`) : `${API_BASE_URL}/api/music/${item.id}`
+      });
 
       return { tracks: tracksWithUrls, total: tracks.length };
     } catch (error) {
@@ -549,7 +549,7 @@ export class AudioLoader {
       if (genre) params.append('genre', genre);
       if (minRating) params.append('min_rating', minRating.toString());
 
-      const url = `https://ford442-storage-manager.hf.space/api/songs?${params}`;
+      const url = `https://storage.noahcohn.com/api/songs?${params}`;
       const response = await fetch(url, {
         mode: 'cors',
         credentials: 'omit'
@@ -569,7 +569,7 @@ export class AudioLoader {
         .map((item: any) => ({
           id: item.id,
           name: item.name || item.filename,
-          url: `https://ford442-storage-manager.hf.space/api/music/${item.id}`,
+          url: `${API_BASE_URL}/api/music/${item.id}`,
           rating: item.rating,
           description: item.description,
           author: item.author,
