@@ -414,3 +414,105 @@ The wildest romance in the freezing air!
 **Additional Notes:**
 - **Combo/Fusion:** Argentine Tango / Russian Balalaika and Siberian Men's Choir
 - **Thematic Ties:** The intense, sultry, and physically close heat of a South American tango surviving and thriving in the expansive, freezing, and stoic environment of the Russian tundra.
+
+### Title: The Shoegaze Shamisen
+
+**Service:** Minimax Audio
+
+**Prompt:** A dense, ethereal Shoegaze track characterized by a massive wall of distorted, reverberating sound and a slow, driving drum beat. However, piercing through the wash of noise are the incredibly sharp, percussive twangs of a traditional Japanese Shamisen, aggressively played with a large bachi. The vocals are breathy and buried deep in the mix.
+
+**Lyrics:**
+(Verse 1 - Breathy, buried, ethereal vocals)
+Fading in the mist... the strings pull tight...
+(A massive wall of fuzz guitar, with a sharp shamisen plucking a complex melody on top)
+Lost inside the pedalboard, fading from sight.
+The silk string hums through the reverb tank...
+Standing on the edge of the river bank.
+
+(Chorus)
+(The wall of sound swells, the shamisen attacks ferociously)
+Noise and the blossom! The feedback screams!
+Drowning the Edo period in static dreams!
+Strumming the void in the endless haze!
+The ancient wooden neck catches the shoegaze!
+
+**Additional Notes:**
+- **Combo/Fusion:** Shoegaze / Traditional Japanese Shamisen
+- **Thematic Ties:** The overwhelming, blurry, and incredibly loud wash of 90s shoegaze aesthetics being sharply contrasted by the articulate, percussive, and intensely acoustic snap of a Japanese folk instrument.
+
+### Title: Funk of the Pharaohs
+
+**Service:** Minimax Audio
+
+**Prompt:** A tight, deeply grooving 1970s P-Funk track with slap bass, syncopated drum breaks, and a driving rhythm section. But instead of the classic Parliament-style synthesizer solos or James Brown horn section, the lead instruments are a swirling, mystical Middle Eastern Ney flute and a bright, resonant Qanun (zither), playing complex Arabic maqam scales over the heavy funk pocket.
+
+**Lyrics:**
+(Verse 1 - Raspy, energetic funk frontman vocal)
+Get down! The pyramid is shaking tonight!
+(A deep, slap bass groove locks in with a syncopated drum beat)
+The pharaoh's in the mothership, outta sight!
+(A complex, incredibly fast Ney flute solo weaves around the bassline)
+We're cruising down the Nile on a groove so deep!
+
+(Chorus)
+(Qanun plucks a rapid, funk-syncopated riff)
+Tear the roof off the sphinx! Let the mummy dance!
+Put the whole dynasty in a funky trance!
+Sand in the platform shoes, gold on the chain!
+The funk of the ancients is bringing the rain!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s P-Funk / Middle Eastern Ney and Qanun
+- **Thematic Ties:** The heavy, low-end, highly syncopated swagger of American 70s funk colliding with the ancient, microtonal, and deeply mystical scales of classical Arabic instrumentation.
+
+### Title: Salsa in the Shire
+
+**Service:** Minimax Audio
+
+**Prompt:** An explosive, high-energy Cuban Salsa track with complex polyrhythms, congas, and a driving piano montuno. However, the blaring brass section is completely replaced by a lively, rustic ensemble of Medieval instruments—crumhorns, recorders, and a bouncy hurdy-gurdy—playing the salsa melodies with a cheerful, Renaissance-fair tavern energy.
+
+**Lyrics:**
+(Verse 1 - Energetic Spanish-style sonero vocals, but with a slight tavern-bard flair)
+¡Oye, mi gente! The tavern is full!
+(Congas and timbales lock into a furious clave rhythm)
+The ale is flowing, pulling the wool!
+(A crumhorn and recorder section blasts a tight, staccato salsa horn line)
+Baila, my hobbits! Move your feet!
+
+(Chorus)
+(Piano montuno continues as the hurdy-gurdy takes a frantic solo)
+Salsa in the shire, the rhythm is hot!
+Stirring up the magic in the boiling pot!
+(Cowbell hits hard on the downbeat)
+The jester is dancing, the king is amazed!
+The medieval salsa has everyone crazed!
+
+**Additional Notes:**
+- **Combo/Fusion:** Cuban Salsa / Medieval Tavern Instruments
+- **Thematic Ties:** The complex, fiery, and intensely rhythmic Latin dance floor energy injected directly into the rustic, earthy, and whimsical setting of a medieval fantasy tavern.
+
+### Title: Synth-Pop Sitar
+
+**Service:** Minimax Audio
+
+**Prompt:** A bubbly, upbeat 1980s Synth-Pop track heavily featuring a bouncy drum machine, gated snares, and bright, pulsing analog bass lines. Instead of a classic DX7 or Jupiter synth providing the catchy lead hooks, the incredibly intricate and bending melodies are performed entirely by an amplified Classical Indian Sitar, sliding and twanging with pop sensibility.
+
+**Lyrics:**
+(Verse 1 - Smooth, dramatic 80s New Wave crooner vocal)
+Driving the Ferrari down the neon coast...
+(A gated snare hits hard on the two and four)
+You're the synthetic vision I wanted the most.
+(The sitar drops a bright, bending pop hook that sounds like a synth)
+But your heart is a microchip, cold to the touch!
+
+(Chorus)
+(The drum machine goes into a driving 16th-note hi-hat pattern)
+Oh, the electronic raga! The digital love!
+(Sitar plays a soaring, highly ornamented melody)
+Signals are beaming from the stars above!
+Synthesizer heartbreak on the ancient string!
+Listen to the glowing wire start to sing!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Synth-Pop / Classical Indian Sitar
+- **Thematic Ties:** The pristine, artificial, and incredibly catchy sheen of 80s commercial pop music grounded by the earthy, bending, and deeply expressive timbre of a traditional Indian sitar playing pop hooks.
