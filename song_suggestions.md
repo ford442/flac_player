@@ -516,3 +516,101 @@ Listen to the glowing wire start to sing!
 **Additional Notes:**
 - **Combo/Fusion:** 1980s Synth-Pop / Classical Indian Sitar
 - **Thematic Ties:** The pristine, artificial, and incredibly catchy sheen of 80s commercial pop music grounded by the earthy, bending, and deeply expressive timbre of a traditional Indian sitar playing pop hooks.
+
+### Title: The Highland Hustle
+
+**Service:** Minimax Audio
+
+**Prompt:** A laid-back, sun-drenched 1990s West Coast G-Funk track with a slow, heavy bassline and a whining Moog synthesizer lead. However, the melodic hooks and rhythmic accents are entirely performed by traditional Scottish Bagpipes and crisp highland marching snares, marching confidently through the West Coast groove.
+
+**Lyrics:**
+(Verse 1 - Smooth, rhythmic 90s rap flow)
+Cruising down the glen in the low-rider chariot...
+(Bagpipes hit a massive, sustained chord over the heavy bass)
+Tartan on the dash, pulling up to the Marriott!
+(Highland snare executes a crisp, rapid roll)
+From the lochs to the streets, we keep it so cool...
+
+(Chorus)
+(Moog synth and Bagpipes harmonize on the main hook)
+Highland hustle in the California sun!
+Riding with the clansmen, we're second to none!
+Drop the top, let the piper play!
+G-Funk and tartan, making our way!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s West Coast G-Funk / Traditional Scottish Bagpipes
+- **Thematic Ties:** The incredibly laid-back, smooth, and sunny vibe of 90s G-Funk swagger colliding with the loud, abrasive, and highly traditional military sound of Scottish highlands.
+
+### Title: The Emperor's Waltz in Kyoto
+
+**Service:** Minimax Audio
+
+**Prompt:** A sweeping, majestic 19th-century Viennese Waltz in 3/4 time, traditionally meant for grand ballrooms. However, the delicate string sections and woodwinds are entirely replaced by the breathy, haunting melodies of a Japanese Shakuhachi flute, while the sweeping orchestral rhythm is pounded out by a massive ensemble of thundering Taiko drums.
+
+**Lyrics:**
+(Verse 1 - Grand operatic tenor, singing in a lilting waltz rhythm)
+The cherry blossoms swirl in the ballroom light...
+(Shakuhachi flute sweeps up into a high, airy register)
+The courtiers are dancing into the night!
+(Taiko drums boom powerfully on the downbeat of the waltz)
+One, two, three, spin in the silk!
+
+(Chorus)
+(The Taiko drums swell, creating a massive, thunderous waltz feel)
+Waltz of the Shogun, elegant and grand!
+The heaviest rhythm in all of the land!
+Vienna is bowing to Kyoto's might!
+Dancing the waltz by the lantern light!
+
+**Additional Notes:**
+- **Combo/Fusion:** 19th-Century Viennese Waltz / Japanese Taiko and Shakuhachi
+- **Thematic Ties:** The pristine, aristocratic, and delicately sweeping motion of European high-society ballrooms grounded by the deeply resonant, physical, and thunderous impact of traditional Japanese festival drums.
+
+### Title: Ipanema Steppes
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, swaying Brazilian Bossa Nova track featuring complex, jazzy nylon-string guitar chords and light, brushed snare drums. The typically smooth, whispered Portuguese vocals are entirely replaced by the deep, rumbling, continuous sub-harmonic drone of Tuvan throat singing (Kargyraa), humming a strangely relaxing melody.
+
+**Lyrics:**
+(Verse 1 - Deep, rumbling Kargyraa throat singing acting as a soothing melody)
+(Nylon-string guitar plays a beautiful, extended jazz chord)
+The girl from the steppes goes walking by...
+(Throat singing drops to a sub-bass rumble, incredibly smooth)
+Under the warm, South American sky...
+
+(Chorus)
+(The brushed snare keeps a light, shuffling bossa rhythm)
+Throat singing softly on the Copacabana...
+Drinking the milk of the yak by the cabana...
+The deepest voice on the warmest shore...
+Leaving you always wanting some more.
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Bossa Nova / Tuvan Throat Singing
+- **Thematic Ties:** The ultimate beachside relaxation and soft, breezy romance of Bossa Nova given an incredibly earthy, ancient, and unnervingly deep resonance by nomadic throat singing.
+
+### Title: Caribbean Frostbite
+
+**Service:** Minimax Audio
+
+**Prompt:** A ferocious, blistering Norwegian Black Metal track featuring tremolo-picked distorted guitars, blast-beat drums, and freezing, atmospheric synthesizers. Astoundingly, the frantic, evil guitar melodies are perfectly doubled by the bright, metallic, and cheerful ringing of a Caribbean Steel Pan drum, played at impossible speeds.
+
+**Lyrics:**
+(Verse 1 - Shrieking, high-pitched Black Metal vocals over blast beats)
+WINTER DESCENDS ON THE TROPICAL SHORE!
+(Steel Pan furiously hammers out a minor-key, evil melody)
+THE FROZEN BANANA LEAVES TREMBLE AND ROAR!
+(Tremolo-picked guitar and Steel Pan harmonize in freezing unison)
+
+(Chorus)
+(Blast beats stop, dropping into a heavy, sludgy groove with Steel Pan leads)
+Frostbite in the islands! The rum turns to ice!
+A Caribbean blizzard, we roll the dark dice!
+The steel drum of doom, ringing so clear!
+The happiest instrument bringing the fear!
+
+**Additional Notes:**
+- **Combo/Fusion:** Norwegian Black Metal / Caribbean Steel Pan
+- **Thematic Ties:** The cold, misanthropic, and intensely evil atmosphere of Black Metal bizarrely clashing with the inherently joyful, bouncy, and sunny timbre of a calypso steel drum.
