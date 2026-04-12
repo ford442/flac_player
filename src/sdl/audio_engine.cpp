@@ -3,13 +3,12 @@
 #include <vector>
 #include <iostream>
 #include <cmath>
+#include <algorithm>
 
-// Define exports to ensure they are available to JS
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Global state
 struct PlayerState {
     SDL_AudioStream* stream = nullptr;
     std::vector<float> audioBuffer;
@@ -17,25 +16,50 @@ struct PlayerState {
     float volume = 1.0f;
     int sampleRate = 44100;
     int channels = 2;
-    // We track time manually based on how much data we've pushed or
-    // simply by the stream position if possible.
-    // However, SDL_AudioStream is a buffer.
-    // To implement "Play/Pause/Seek" accurately with a large buffer:
-    // We will clear the stream and push data from the current offset.
     size_t playHead = 0; // Index in float samples
     SDL_AudioDeviceID deviceId = 0;
 } g_state;
 
+// ---------------------------------------------------------
+// SDL3 Stream Callback
+// Automatically called by SDL's audio pump when it needs data
+// ---------------------------------------------------------
+void SDLCALL fill_audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount) {
+    if (!g_state.isPlaying || g_state.audioBuffer.empty()) {
+        // If not playing, we return without pushing data.
+        // SDL3 gracefully handles this by outputting silence.
+        return;
+    }
+
+    size_t samplesRemaining = g_state.audioBuffer.size() - g_state.playHead;
+    size_t bytesRemaining = samplesRemaining * sizeof(float);
+
+    if (bytesRemaining > 0) {
+        // Only push what is requested to prevent buffer bloat
+        int bytesToPush = std::min((int)bytesRemaining, additional_amount);
+
+        SDL_PutAudioStreamData(stream, &g_state.audioBuffer[g_state.playHead], bytesToPush);
+
+        // Update playhead by the amount of floats we just pushed
+        g_state.playHead += bytesToPush / sizeof(float);
+
+        // Handle end of track
+        if (g_state.playHead >= g_state.audioBuffer.size()) {
+            g_state.isPlaying = false;
+            // Optionally dispatch an event to JS
+            // EM_ASM({ if (window.onSdlAudioEnded) window.onSdlAudioEnded(); });
+        }
+    }
+}
+
 EMSCRIPTEN_KEEPALIVE
 int init_audio() {
     printf("[C++] init_audio called\n");
-    // SDL3 returns bool (true on success)
     if (!SDL_Init(SDL_INIT_AUDIO)) {
         std::cerr << "[C++] SDL_Init failed: " << SDL_GetError() << std::endl;
         return 0;
     }
 
-    // Open default playback device
     g_state.deviceId = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL);
     if (g_state.deviceId == 0) {
         std::cerr << "[C++] SDL_OpenAudioDevice failed: " << SDL_GetError() << std::endl;
@@ -48,10 +72,8 @@ int init_audio() {
 
 EMSCRIPTEN_KEEPALIVE
 float* create_audio_buffer(int length) {
-    printf("[C++] create_audio_buffer called with length: %d\n", length);
     try {
         g_state.audioBuffer.resize(length);
-        printf("[C++] Resized g_state.audioBuffer to %zu elements.\n", g_state.audioBuffer.size());
         return g_state.audioBuffer.data();
     } catch (const std::exception& e) {
         std::cerr << "[C++] Error resizing audio buffer: " << e.what() << std::endl;
@@ -61,19 +83,13 @@ float* create_audio_buffer(int length) {
 
 EMSCRIPTEN_KEEPALIVE
 void set_audio_data(int length, int channels, int sampleRate) {
-    printf("[C++] set_audio_data called. Length: %d, Channels: %d, Rate: %d\n", length, channels, sampleRate);
-
-    // Stop current playback
     if (g_state.stream) {
         SDL_DestroyAudioStream(g_state.stream);
         g_state.stream = nullptr;
     }
 
-    // Verify buffer size
     if (g_state.audioBuffer.size() != length) {
-        std::cerr << "[C++] Mismatch between provided length (" << length
-                  << ") and buffer size (" << g_state.audioBuffer.size()
-                  << "). Please call create_audio_buffer first." << std::endl;
+        std::cerr << "[C++] Buffer size mismatch." << std::endl;
         return;
     }
 
@@ -82,7 +98,6 @@ void set_audio_data(int length, int channels, int sampleRate) {
     g_state.playHead = 0;
     g_state.isPlaying = false;
 
-    // Create a new stream matching the audio format
     SDL_AudioSpec spec;
     spec.channels = channels;
     spec.format = SDL_AUDIO_F32;
@@ -94,37 +109,25 @@ void set_audio_data(int length, int channels, int sampleRate) {
         return;
     }
 
-    // Bind stream to device (SDL3 returns bool)
+    // Attach the callback to the stream
+    SDL_SetAudioStreamGetCallback(g_state.stream, fill_audio_callback, nullptr);
+
     if (!SDL_BindAudioStream(g_state.deviceId, g_state.stream)) {
         std::cerr << "[C++] SDL_BindAudioStream failed: " << SDL_GetError() << std::endl;
     }
-    printf("[C++] set_audio_data completed successfully.\n");
 }
 
 EMSCRIPTEN_KEEPALIVE
 void play() {
     if (!g_state.stream || g_state.audioBuffer.empty()) return;
 
-    if (g_state.isPlaying) return;
-
+    // The callback handles the actual data pushing now
     g_state.isPlaying = true;
-    SDL_ResumeAudioDevice(g_state.deviceId); // Ensure device is playing
-
-    // Check if stream is empty. If so, push data from playHead.
-    // How to check if stream is empty? SDL_GetAudioStreamAvailable(stream) (returns bytes queued)
-
-    int queued = SDL_GetAudioStreamAvailable(g_state.stream);
-    if (queued == 0 && g_state.playHead < g_state.audioBuffer.size()) {
-        // Push all remaining data
-        size_t samplesRemaining = g_state.audioBuffer.size() - g_state.playHead;
-        SDL_PutAudioStreamData(g_state.stream, &g_state.audioBuffer[g_state.playHead], samplesRemaining * sizeof(float));
-    }
+    SDL_ResumeAudioDevice(g_state.deviceId);
 }
 
 EMSCRIPTEN_KEEPALIVE
 void pause_audio() {
-    if (!g_state.isPlaying) return;
-
     g_state.isPlaying = false;
     SDL_PauseAudioDevice(g_state.deviceId);
 }
@@ -139,7 +142,6 @@ void resume_audio() {
 EMSCRIPTEN_KEEPALIVE
 void stop() {
     if (!g_state.stream) return;
-
     SDL_ClearAudioStream(g_state.stream);
     g_state.isPlaying = false;
     g_state.playHead = 0;
@@ -149,55 +151,34 @@ EMSCRIPTEN_KEEPALIVE
 void seek(float time) {
     if (!g_state.stream || g_state.audioBuffer.empty()) return;
 
-    // Calculate sample index
     size_t sampleIndex = (size_t)(time * g_state.sampleRate) * g_state.channels;
-
-    // Align to channels
     sampleIndex = sampleIndex - (sampleIndex % g_state.channels);
 
     if (sampleIndex >= g_state.audioBuffer.size()) {
         sampleIndex = g_state.audioBuffer.size();
     }
 
-    g_state.playHead = sampleIndex;
-
-    // Clear existing data in stream
+    // Clear existing data so the callback pulls fresh data from the new position
     SDL_ClearAudioStream(g_state.stream);
-
-    // If we are currently playing, push new data immediately
-    if (g_state.isPlaying) {
-        size_t samplesRemaining = g_state.audioBuffer.size() - g_state.playHead;
-        if (samplesRemaining > 0) {
-            SDL_PutAudioStreamData(g_state.stream, &g_state.audioBuffer[g_state.playHead], samplesRemaining * sizeof(float));
-        }
-    }
+    g_state.playHead = sampleIndex;
 }
 
 EMSCRIPTEN_KEEPALIVE
 float get_current_time() {
-    if (!g_state.stream) return 0.0f;
+    if (!g_state.stream || g_state.audioBuffer.empty()) return 0.0f;
 
-    if (g_state.audioBuffer.empty()) return 0.0f;
-
-    // Bytes currently in the stream (not yet played)
+    // Bytes currently sitting in the stream queue (pushed but not played)
     int queuedBytes = SDL_GetAudioStreamAvailable(g_state.stream);
+    size_t queuedSamples = queuedBytes / sizeof(float);
 
-    // Samples remaining to be played from what we pushed
-    size_t samplesQueued = queuedBytes / sizeof(float);
+    // The playhead has moved forward by what we've pushed, so we subtract
+    // what is still sitting in the queue to get the exact audible time.
+    size_t audibleSampleIndex = 0;
+    if (g_state.playHead > queuedSamples) {
+        audibleSampleIndex = g_state.playHead - queuedSamples;
+    }
 
-    // Samples we INTENDED to play (from playHead to end)
-    size_t totalSamplesToPlay = g_state.audioBuffer.size() - g_state.playHead;
-
-    // Samples actually played so far since the last seek/play
-    size_t samplesPlayedSinceSeek = totalSamplesToPlay - samplesQueued;
-
-    size_t currentSampleIndex = g_state.playHead + samplesPlayedSinceSeek;
-
-    if (currentSampleIndex > g_state.audioBuffer.size()) currentSampleIndex = g_state.audioBuffer.size();
-
-    // Convert to seconds
-    // Each frame has `channels` samples
-    size_t frames = currentSampleIndex / g_state.channels;
+    size_t frames = audibleSampleIndex / g_state.channels;
     return (float)frames / g_state.sampleRate;
 }
 
@@ -211,7 +192,6 @@ void set_volume(float vol) {
 
 EMSCRIPTEN_KEEPALIVE
 void cleanup() {
-    printf("[C++] cleanup called\n");
     if (g_state.stream) {
         SDL_DestroyAudioStream(g_state.stream);
         g_state.stream = nullptr;
