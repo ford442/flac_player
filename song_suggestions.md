@@ -614,3 +614,100 @@ The happiest instrument bringing the fear!
 **Additional Notes:**
 - **Combo/Fusion:** Norwegian Black Metal / Caribbean Steel Pan
 - **Thematic Ties:** The cold, misanthropic, and intensely evil atmosphere of Black Metal bizarrely clashing with the inherently joyful, bouncy, and sunny timbre of a calypso steel drum.
+
+### Title: The Monastic Lowrider
+
+**Service:** Minimax Audio
+
+**Prompt:** A laid-back, bouncing 1990s West Coast G-Funk track with a heavy sub-bass, slow rolling drum beat, and a high-pitched synthesizer whine. However, instead of a smooth rap delivery, the vocals are performed entirely by a choir of devout monks delivering a slow, reverberating Latin Gregorian chant perfectly in rhythm with the funk groove.
+
+**Lyrics:**
+(Verse 1 - Slow, echoing, multi-part monk harmony)
+Cruising down the nave... in the low-slung pew...
+(High-pitched G-Funk synth glides over the heavy bass)
+Dominus vobiscum, and a peace unto you.
+(Hydraulics hiss as the beat drops)
+Rolling on the holy spokes, shining so bright...
+
+(Chorus)
+(The bassline grooves deep under the solemn chanting)
+Sanctus in the streets! The monastery bounce!
+Weighing out the blessings by the holy ounce!
+West Coast abbey, where the incense blows!
+That's just the way the monastic lowrider goes!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s West Coast G-Funk / Latin Gregorian Chant
+- **Thematic Ties:** The slow, swaggering, sun-drenched cruising culture of California hip-hop merged seamlessly with the incredibly austere, slow, and solemn devotion of medieval monastic life.
+
+### Title: The Ghost of Andalusia
+
+**Service:** Minimax Audio
+
+**Prompt:** A fiery, passionate traditional Spanish Flamenco performance with blistering acoustic guitar runs (falsetas), rapid rhythmic hand-clapping (palmas), and percussive footwork. But replacing the raw, emotional wail of the traditional cantaor (singer) is the eerie, trembling, and sweeping vibrato of a 1950s Sci-Fi Theremin.
+
+**Lyrics:**
+(Verse 1 - There are no human vocals, only the Theremin 'singing' the lyrics)
+(Rapid, passionate flamenco guitar strumming begins)
+(Theremin swoops down from a high pitch, trembling with emotion)
+(Hand claps keep a tight, complex 12-beat compás)
+(Theremin wails in a minor key, mimicking a heartbroken lover's cry)
+
+(Chorus)
+(Guitar falseta accelerates to a dizzying speed)
+(Theremin spirals upwards, sounding like a hovering flying saucer)
+(Stomping feet build the tension)
+(Theremin drops an octave, shaking with intense vibrato)
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Spanish Flamenco / 1950s Sci-Fi Theremin
+- **Thematic Ties:** The intensely earthy, human, and sweat-drenched passion of southern Spanish folk music invaded by the disembodied, alien, and intensely synthetic sound of early science fiction film scores.
+
+### Title: Bourbon Street Koto
+
+**Service:** Minimax Audio
+
+**Prompt:** A raucous, improvisational 1920s New Orleans Dixieland Jazz tune with a bouncing tuba bassline and a swinging washboard rhythm. However, the intertwined, polyphonic solos typically played by trumpet, clarinet, and trombone are instead frantically plucked on a traditional Japanese Koto and aggressively strummed on a Shamisen, bending the blue notes on silk strings.
+
+**Lyrics:**
+(Verse 1 - Gravelly, enthusiastic jazz vocalist)
+Well grab your parasol, we're marching down the street!
+(Koto plucks a rapid, swinging jazz run)
+The Edo period is tapping its feet!
+(Shamisen answers with a bent, bluesy twang)
+From the French Quarter down to the Tokyo bay!
+
+(Chorus)
+(Tuba pumps the bass as Koto and Shamisen trade frantic jazz solos)
+Oh, the Bourbon Street Koto is swinging tonight!
+Plucking the silk in the pale moonlight!
+Gumbo and sushi, a crazy parade!
+The finest jazz that the shogun ever played!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1920s New Orleans Dixieland Jazz / Traditional Japanese Koto and Shamisen
+- **Thematic Ties:** The sweaty, improvisational, and joyous communal chaos of early American jazz colliding with the highly refined, delicate, and historically rigid stringed instruments of feudal Japan.
+
+### Title: The Sludge of Machu Picchu
+
+**Service:** Minimax Audio
+
+**Prompt:** An excruciatingly slow, incredibly heavy Sludge Metal track with thick, downtuned, fuzz-drenched guitars and a pounding, lethargic drum beat. Yet, slicing through this oppressive wall of doom-laden noise are the incredibly loud, breathy, and soaring melodies of a traditional Andean Pan Flute ensemble, playing cheerful Incan folk melodies over the crushing riffs.
+
+**Lyrics:**
+(Verse 1 - Guttural sludge metal roar)
+THE MOUNTAIN CRUMBLES IN THE ENDLESS FOG!
+(A cheerful, breathy Pan Flute melody echoes over the feedback)
+HEAVY STEPS UPON THE SACRED LOG!
+(The fuzz bass vibrates the ground, while the flutes trill)
+
+(Chorus)
+(Massive, distorted guitar chord rings out as the Pan Flutes play an upbeat jig)
+SLUDGE OF THE ANDES! THE ALPACA WEEPS!
+THE ANCIENT STONE CITY AWAKENS AND CREEPS!
+BREATH IN THE WOOD! FUZZ IN THE VEIN!
+THE HEAVIEST FLUTE IN THE FREEZING RAIN!
+
+**Additional Notes:**
+- **Combo/Fusion:** Sludge Metal / Traditional Andean Pan Flutes
+- **Thematic Ties:** The suffocating, massive, and earth-shattering weight of Sludge Metal completely undercut by the light, airy, breathy, and deeply pastoral sound of high-altitude South American folk flutes.
