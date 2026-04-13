@@ -1,28 +1,28 @@
 # FLAC Player API Documentation
 
-This document describes the FastAPI backend for the FLAC Player application.
+This document describes the API contract used by the `flac_player` client application.
+
+> **Architecture Note:** `flac_player` is strictly a **read-only client**. It does not manage uploads or library mutations directly. All music files and metadata are served from `storage.noahcohn.com` (the Contabo Storage Manager). Uploads and library management happen via the Storage Manager's `/admin` dashboard or by dropping files into the connected Google Cloud Storage bucket.
 
 ## Overview
 
-The backend provides:
-- **Music metadata management** with JSON file storage
+The Storage Manager backend provides:
+- **Music metadata management** with JSON file storage (`songs.json`)
 - **MusicBrainz API integration** for auto-populating song metadata
 - **Playlist sharing** with URL shortening support
 - **Analytics tracking** for play events
 
-## Quick Start
+## Quick Start (Local Development)
 
-### Installation
+If you need to run the Storage Manager API locally for development:
 
 ```bash
-# Install dependencies
+cd ../contabo_storage_manager/packages/python-bridge
 pip install -r requirements.txt
-
-# Run the server
-python app.py
+python main_gcs.py
 ```
 
-The server will start on `http://localhost:7860` by default.
+The server will start on `http://localhost:8000` by default.
 
 ### Environment Variables
 
@@ -33,7 +33,7 @@ cp .env.example .env
 ```
 
 Key variables:
-- `DATA_DIR`: Where to store song metadata JSON files
+- `FILES_DIR`: Where media files and `songs.json` are stored
 - `APP_BASE_URL`: Your deployment URL (for share links)
 - `TINYURL_API_KEY`: Optional TinyURL API key for URL shortening
 - `MUSICBRAINZ_USER_AGENT`: Required for MusicBrainz API access
@@ -71,8 +71,11 @@ Get all songs with optional filtering and sorting.
 #### GET `/api/songs/{item_id}`
 Get a specific song by ID.
 
-#### POST `/api/upload/songs`
-Create a new song entry with optional MusicBrainz enrichment.
+#### POST `/api/songs/upload` (Storage Manager only)
+> Managed exclusively through the Storage Manager (`/admin` dashboard or GCS bucket sync).  
+> `flac_player` does **not** call this endpoint.
+
+Creates a new song entry with optional MusicBrainz enrichment.
 
 **Request Body:** `SongCreate`
 ```json
@@ -255,35 +258,12 @@ await navigator.share({
 });
 ```
 
-## Hugging Face Spaces Deployment
+## Upload & Library Management
 
-1. **Create a new Space** with the FastAPI Docker template
-2. **Add your code** to `app.py`
-3. **Set secrets** in Space Settings:
-   - `APP_BASE_URL`: Your Space URL
-   - `TINYURL_API_KEY`: (Optional) For URL shortening
-4. **Persistent storage** is available at `/data`:
-   ```bash
-   DATA_DIR=/data
-   ```
+`flac_player` does not expose upload controls in the UI. To add or manage tracks, use one of the following methods:
 
-### Dockerfile (for HF Spaces)
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-COPY app.py .
-
-ENV DATA_DIR=/data
-ENV PORT=7860
-
-CMD ["python", "app.py"]
-```
+1. **Admin Dashboard** — Open `https://storage.noahcohn.com/admin`, drag audio files into the upload zone, and attach metadata (Title, Author, Tags).
+2. **Google Cloud Storage Bucket Sync** — Drop `.flac` or `.mp3` files into the bucket's `audio/music/` folder. The VPS file watcher will auto-detect them, generate a UUID and default title, and append them to `songs.json`.
 
 ## Error Handling
 
