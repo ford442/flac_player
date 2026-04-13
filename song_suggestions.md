@@ -711,3 +711,100 @@ THE HEAVIEST FLUTE IN THE FREEZING RAIN!
 **Additional Notes:**
 - **Combo/Fusion:** Sludge Metal / Traditional Andean Pan Flutes
 - **Thematic Ties:** The suffocating, massive, and earth-shattering weight of Sludge Metal completely undercut by the light, airy, breathy, and deeply pastoral sound of high-altitude South American folk flutes.
+
+### Title: Neon Taiko
+
+**Service:** Minimax Audio
+
+**Prompt:** A high-tempo 1970s Disco track with a prominent four-on-the-floor beat and funky slap bass. The bright string sections and brass hits are entirely replaced by the massive, booming strikes and intricate rhythms of a traditional Japanese Taiko drum ensemble, with musicians shouting enthusiastic kakegoe over the disco groove.
+
+**Lyrics:**
+(Verse 1 - Soulful 70s Disco falsetto)
+We're dancing beneath the cherry blossom light!
+(Massive Taiko drums hit on the off-beats)
+Got the groove and the spirit burning up the night!
+(Kakegoe shout: "Ha! Sore!")
+
+(Chorus)
+(Funky slap bass interlocking with a thunderous Taiko roll)
+Do the Tokyo hustle, let the big drums roll!
+Feel the rhythm of the ancestors down in your soul!
+Disco inferno meets the festival fire!
+Taking the energy higher and higher!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Disco / Traditional Japanese Taiko
+- **Thematic Ties:** The flamboyant, infectious, string-drenched groove of classic disco combined with the raw, thunderous, and physically demanding power of Japanese festival drumming.
+
+### Title: Alpine Trap
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, booming modern Trap hip-hop beat featuring frantic triplet hi-hats and deep 808 subs. The eerie, synthesized melodies are swapped out for the bright, echoing, wide-interval jumps of traditional Swiss Yodeling, acting as the main melodic hook over the gritty urban beat.
+
+**Lyrics:**
+(Verse 1 - Laid back, triplet-flow Trap rap)
+Rolling through the valley, iced out on the peak,
+(Bright, piercing yodel echoes: "Yodel-ay-hee-hoo!")
+Got the heavy 808s making the mountains speak.
+Ski mask on, but we're out in the snow,
+(Yodel loops as a haunting melodic sample)
+
+(Chorus)
+(Massive 808 drop with a multi-layered yodeling choir)
+Trap in the Alps, making the avalanche drop!
+We're yodeling loud and we ain't gonna stop!
+Ice on my neck, Swiss cheese on the grind!
+Leaving the regular synth leads behind!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern Trap / Traditional Swiss Yodeling
+- **Thematic Ties:** The gritty, bass-heavy, street-oriented sound of Trap rap contrasted with the cheerful, wide-open, and high-altitude vocal acrobatics of Alpine folk music.
+
+### Title: Delta Flamenco
+
+**Service:** Minimax Audio
+
+**Prompt:** A slow, brooding American Delta Blues song, traditionally featuring an acoustic guitar and a raspy vocal. Instead, the guitar is a fiery Spanish flamenco guitar, played with lightning-fast rasgueado strumming and intricate picado runs, while the percussion is provided entirely by rapid, rhythmic castanets and percussive footwork (zapateado).
+
+**Lyrics:**
+(Verse 1 - Gritty Delta Blues wail)
+Well I went down to the crossroads, fell down on my knees...
+(Lightning-fast flamenco guitar run)
+Yeah I went down to the crossroads, begging if you please.
+(Rhythmic castanets clacking over a slow, steady foot stomp)
+
+(Chorus)
+(Intense, passionate rasgueado strumming)
+Oh the devil's got a rhythm, and it burns like the Spanish sun!
+Got the Andalusian blues, nowhere left to run!
+Mississippi mud meets the dusty Madrid street!
+Listen to the sorrow in the rhythm of the feet!
+
+**Additional Notes:**
+- **Combo/Fusion:** American Delta Blues / Spanish Flamenco
+- **Thematic Ties:** The deep sorrow, raw emotion, and solitary struggle of the Delta Blues electrified by the aggressive, technically demanding, and fiercely passionate fire of Andalusian Flamenco.
+
+### Title: Synth-Punk Bagpipes
+
+**Service:** Minimax Audio
+
+**Prompt:** A frantic, lo-fi 1980s Synth-Punk track driven by distorted, aggressive analog synthesizers and a relentless, driving punk drum beat. The typical screaming vocals and jagged synth leads are entirely replaced by the deafening, continuous, and highly ornamented screech of Scottish Great Highland Bagpipes, playing chaotic, atonal melodies.
+
+**Lyrics:**
+(Verse 1 - Snarling punk vocal delivery)
+Anarchy in the glen! The system's breaking down!
+(Bagpipes blast a furious, screeching melody)
+Safety pins and tartan, taking over the town!
+(Distorted synth bass grinding underneath)
+
+(Chorus)
+(A wall of sound featuring blast-beat drums, distorted synths, and screaming bagpipes)
+Pogo in the kilt! Smash the state today!
+The pipes are going crazy in a cyber-punk display!
+No future, no past, just the drone and the noise!
+The ultimate rebellion for the highland boys!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Synth-Punk / Scottish Great Highland Bagpipes
+- **Thematic Ties:** The aggressive, DIY, anti-establishment fury of early synth-punk paired perfectly with the inherently loud, un-ignorable, and historically rebellious nature of the bagpipes.
