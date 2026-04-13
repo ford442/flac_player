@@ -1,0 +1,9 @@
+[     335ms] [LOG] [FLAC:FETCH_LIBRARY_REQUEST] {url: https://storage.noahcohn.com/api/songs?limit=200&rating_gte=1&sort_by=date&sort_desc=true, apiBase: https://storage.noahcohn.com, params: Object} @ https://test.1ink.us/flac-player/bundle.53c75fd6119973e7a43b.js:1
+[     357ms] [LOG] [FLAC:FETCH_TAGS_REQUEST] {url: https://storage.noahcohn.com/api/songs/tags, apiBase: https://storage.noahcohn.com} @ https://test.1ink.us/flac-player/bundle.53c75fd6119973e7a43b.js:1
+[     358ms] [LOG] [FLAC:FETCH_STATS_REQUEST] {url: https://storage.noahcohn.com/api/songs/stats, apiBase: https://storage.noahcohn.com} @ https://test.1ink.us/flac-player/bundle.53c75fd6119973e7a43b.js:1
+[     872ms] [LOG] [FLAC:FETCH_STATS_RESPONSE] {status: 200, statusText: OK, ok: true, contentType: application/json, corsOrigin: https://test.1ink.us} @ https://test.1ink.us/flac-player/bundle.53c75fd6119973e7a43b.js:1
+[     876ms] [LOG] [FLAC:FETCH_LIBRARY_RESPONSE] {status: 200, statusText: OK, ok: true, contentType: application/json, corsOrigin: https://test.1ink.us} @ https://test.1ink.us/flac-player/bundle.53c75fd6119973e7a43b.js:1
+[     877ms] [LOG] [FLAC:FETCH_TAGS_RESPONSE] {status: 200, statusText: OK, ok: true, contentType: application/json, corsOrigin: https://test.1ink.us} @ https://test.1ink.us/flac-player/bundle.53c75fd6119973e7a43b.js:1
+[     883ms] [LOG] [FLAC:FETCH_STATS_PARSED] {totalTracks: 0} @ https://test.1ink.us/flac-player/bundle.53c75fd6119973e7a43b.js:1
+[     883ms] [LOG] [FLAC:FETCH_LIBRARY_PARSED] {trackCount: 0} @ https://test.1ink.us/flac-player/bundle.53c75fd6119973e7a43b.js:1
+[     883ms] [LOG] [FLAC:FETCH_TAGS_PARSED] {tagCount: 0} @ https://test.1ink.us/flac-player/bundle.53c75fd6119973e7a43b.js:1

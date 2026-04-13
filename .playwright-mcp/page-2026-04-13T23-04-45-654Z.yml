@@ -1,0 +1,66 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - heading "FLAC Player with WebGPU" [level=1] [ref=e5]
+    - paragraph [ref=e6]: High-quality audio playback with shader visualization
+  - main [ref=e7]:
+    - generic [ref=e8]:
+      - generic [ref=e9]:
+        - generic [ref=e10]:
+          - heading "🎵 FLAC Player" [level=1] [ref=e11]
+          - generic [ref=e12]:
+            - generic [ref=e13]: 0 tracks
+            - generic [ref=e14]: 0 rated 4+
+            - generic [ref=e15]: 0h total
+        - textbox "Search tracks... (Ctrl+K)" [ref=e17]
+        - generic [ref=e18]:
+          - button "📦 Sort Pile (0)" [ref=e19]
+          - button "📋 Queue" [ref=e20]
+      - generic [ref=e21]:
+        - complementary [ref=e22]:
+          - navigation [ref=e23]:
+            - button "📚 Library0" [ref=e24]
+            - button "▶️ Now Playing" [ref=e25]
+            - button "📋 Queue0" [ref=e26]
+          - generic [ref=e27]:
+            - generic [ref=e28]:
+              - text: Min Rating
+              - slider [ref=e29]: "1"
+              - generic [ref=e30]:
+                - text: Any
+                - generic [ref=e31]: 1+ stars
+            - generic [ref=e32]:
+              - checkbox "Untagged only" [ref=e33]
+              - text: Untagged only
+            - generic [ref=e34]:
+              - text: Sort By
+              - combobox [ref=e35]:
+                - option "Date Added" [selected]
+                - option "Rating"
+                - option "Name"
+                - option "Play Count"
+                - option "Last Played"
+                - option "Random"
+          - generic [ref=e36]: Filter Tags
+        - main [ref=e37]:
+          - generic [ref=e39]:
+            - button "⊞ Grid" [ref=e40]
+            - button "☰ List" [ref=e41]
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - generic [ref=e45]:
+            - button "⏮" [disabled] [ref=e46]
+            - button "▶" [ref=e47]
+            - button "⏭" [disabled] [ref=e48]
+          - generic [ref=e49]:
+            - text: 0:00
+            - slider [ref=e50]: "0"
+            - text: 0:00
+        - generic [ref=e51]:
+          - button "🔀" [ref=e52]
+          - button "🔁" [ref=e53]
+          - combobox [ref=e54]:
+            - option "Web Audio" [selected]
+            - option "AudioWorklet"
+            - option "SDL3"
+            - option "SDL2"
+          - generic [ref=e55]: 100%
