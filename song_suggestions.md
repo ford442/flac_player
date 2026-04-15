@@ -808,3 +808,96 @@ The ultimate rebellion for the highland boys!
 **Additional Notes:**
 - **Combo/Fusion:** 1980s Synth-Punk / Scottish Great Highland Bagpipes
 - **Thematic Ties:** The aggressive, DIY, anti-establishment fury of early synth-punk paired perfectly with the inherently loud, un-ignorable, and historically rebellious nature of the bagpipes.
+
+### Title: Victorian Dubstep
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, floor-shaking Dubstep track with massive drops, aggressive wobbles, and stuttering drum beats. However, the entire instrumental arrangement is performed by a polite Victorian parlor ensemble, featuring a delicate harp, a tin-sounding upright piano, and a furiously bowed cello acting as the "wobble" bass.
+
+**Lyrics:**
+(Verse 1 - Spoken word, refined British accent)
+Pardon me, good sir, but the hour has grown quite late.
+(Harp plucks a fast, syncopated rhythm)
+It is time to unleash the bass and tempt our awful fate.
+(Cello begins to grind a low, menacing tone)
+
+(Chorus)
+(Massive, stuttering drop played by furiously bowing cellos and chaotic piano hammering)
+Drop the bass, my lord! Shatter the crystal glass!
+A most improper wobble as the heavy rhythms pass!
+Good heavens, feel the sub-bass! A scandalous affair!
+Dubstep in the parlor, powder flying from my hair!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern Dubstep / Victorian Parlor Music
+- **Thematic Ties:** The ultra-aggressive, modern, and electronic club energy of dubstep absurdly contrasted with the stuffy, overly-polite, acoustic instrumentation of 19th-century British high society.
+
+### Title: Andean Shoegaze
+
+**Service:** Minimax Audio
+
+**Prompt:** A massive, reverberating Shoegaze track characterized by a wall of ethereal sound, whispering vocals, and dreamlike atmosphere. The traditional heavily distorted electric guitars are completely replaced by an immense ensemble of Andean pan flutes (zampoñas) and charangos, all drenched in massive reverb and delay to create a hypnotic, fuzzy drone.
+
+**Lyrics:**
+(Verse 1 - Whispered, ethereal vocals drenched in reverb)
+The condor flies through the static sky...
+(A wall of delayed, echoing pan flutes swells)
+Looking down on the peaks, watching the echoes die...
+
+(Chorus)
+(A massive, overwhelming drone of charangos and pan flutes fading into white noise)
+Lost in the clouds, breathing the fuzzy air!
+The mountain is humming, floating without a care!
+Andean dreams wrapped in a sonic haze!
+Losing our minds in the altitude shoegaze!
+
+**Additional Notes:**
+- **Combo/Fusion:** Shoegaze / Traditional Andean Folk
+- **Thematic Ties:** The overwhelming, introspective "wall of sound" created by 90s shoegaze bands perfectly simulated by the breathy, airy, and naturally resonant acoustic instruments of the high Andes mountains.
+
+### Title: Mongolian Jazz Funk
+
+**Service:** Minimax Audio
+
+**Prompt:** A tight, groovy 1970s Jazz Funk track featuring syncopated slap bass, a punchy horn section, and a steady driving drum groove. Suddenly, the slick saxophone solos are replaced by the raw, overtone-rich bowing of a Morin Khuur (horsehead fiddle), and the lead vocals are delivered through rhythmic, staccato Mongolian throat singing that perfectly locks into the funk pocket.
+
+**Lyrics:**
+(Verse 1 - Guttural throat singing delivered in a rhythmic funk cadence)
+Riding the groove across the open plain!
+(Slap bass pops in tight syncopation with a Morin Khuur riff)
+Catching the funk in the freezing rain!
+
+(Chorus)
+(Horn section blasts a sharp chord, answered by a wild horsehead fiddle solo)
+Nomad in the city, got that horse-hair swing!
+Listen to the funk that the deep throat sings!
+Steppe into the club, watch the rhythm unfold!
+A 70s groove with a soul that's ancient and old!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Jazz Funk / Mongolian Folk
+- **Thematic Ties:** The incredibly tight, urban, and sophisticated syncopation of American funk unexpectedly locking into the primal, earth-shaking, and resonant traditional singing of Mongolian nomads.
+
+### Title: Bossa Nova Sea Shanty
+
+**Service:** Minimax Audio
+
+**Prompt:** A rough, traditional a cappella Sea Shanty chanted by a chorus of gruff sailors hauling up a massive anchor. Without warning, the rhythm shifts into a smooth, relaxed Brazilian Bossa Nova sway. The sailors lower their voices to a gentle, sultry whisper, accompanied by the sophisticated, syncopated finger-picking of a nylon-string acoustic guitar.
+
+**Lyrics:**
+(Verse 1 - Gruff, loud sailor chorus)
+Heave away, boys! The Kraken's down below!
+(Sudden shift to smooth nylon-string guitar chords and light percussion)
+
+(Chorus - Soft, breathy Bossa Nova whisper by the same sailors)
+...But the ocean breeze is warm, and the water's moving slow.
+A gentle caipirinha while we swab the wooden deck...
+A lovely sunset sailing in this beautiful shipwreck.
+
+(Verse 2 - Abruptly back to loud, aggressive chanting)
+HOIST THE MAINSAIL! THE STORM IS CLOSING IN!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Sea Shanty / Brazilian Bossa Nova
+- **Thematic Ties:** The harsh, laborious, and dangerous life of 19th-century sailors violently clashing with the impossibly relaxed, romantic, and sophisticated lounge atmosphere of 1960s Rio de Janeiro.
