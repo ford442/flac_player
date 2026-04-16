@@ -998,3 +998,93 @@ Third-wave Mongolian, hear the riders sing!
 **Additional Notes:**
 - **Combo/Fusion:** 1990s Third-Wave Ska-Punk / Tuvan Throat Singing
 - **Thematic Ties:** The bouncy, caffeinated, suburban goofiness of 90s ska-punk clashing hilariously with the deeply spiritual, physically demanding, and resonant ancient art of Mongolian throat singing.
+
+### Title: K-Pop Monastery
+
+**Service:** Minimax Audio
+
+**Prompt:** A hyper-polished, energetic K-Pop idol song with a high-BPM EDM beat and synchronized dance breaks. However, all the vocal parts—including the rapping and high-pitched ad-libs—are performed by a solemn choir of monks singing in echoing, monophonic Gregorian chant, while still keeping up with the frantic tempo.
+
+**Lyrics:**
+(Verse 1 - Monks chanting in rhythmic, rapid-fire Latin over a trap-EDM beat)
+Dominus! (Beat drop) Vobiscum! Oppa is the light!
+Sanctus in the club, dancing through the night!
+
+(Chorus)
+(Massive synth drop with monks hitting a massive, sustained echoing chord)
+Hallelujah finger hearts! Saranghae the Lord!
+EDM and holy water, striking the right chord!
+
+**Additional Notes:**
+- **Combo/Fusion:** K-Pop / Gregorian Chant
+- **Thematic Ties:** The hyper-commercial, high-energy, and colorful world of K-Pop colliding with the austere, solemn, and ancient spiritual tradition of Gregorian chanting.
+
+### Title: Honky Tonk Harpsichord
+
+**Service:** Minimax Audio
+
+**Prompt:** A stadium-ready modern Bro-Country anthem with loud, stomping drum beats, singing about cold beer, pickup trucks, and dirt roads. Instead of acoustic and electric guitars, the entire harmonic backbone and the twangy solos are intricately played on a delicate, plucking Renaissance harpsichord.
+
+**Lyrics:**
+(Verse 1 - Gruff, southern drawl country vocals)
+Rollin' down the dirt road, moonlight shining bright...
+(Harpsichord plucks a fast, classical arpeggio that mimics a country lick)
+Got my girl beside me, everything's alright!
+
+(Chorus)
+(Stomping drum beat with a complex harpsichord backing)
+Ice cold beer and a powdered wig!
+Dancing in the barn to a baroque jig!
+Mud on the tires, lace on the sleeve!
+The fanciest honky tonk you'd ever believe!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern Bro-Country / Renaissance Harpsichord
+- **Thematic Ties:** The rural, beer-drinking, truck-driving aesthetic of modern stadium country jarringly paired with the delicate, aristocratic, and highly refined sound of the 18th-century European court.
+
+### Title: Brooklyn Bagpipes
+
+**Service:** Minimax Audio
+
+**Prompt:** A gritty, dusty 1990s New York Boom Bap hip-hop track featuring heavy, sampled drum breaks and a scratching DJ. However, instead of a jazzy piano loop or horn sample, the driving instrumental hook and solos are blasted by an incredibly loud, continuous Scottish Great Highland Bagpipe, perfectly in the hip-hop pocket.
+
+**Lyrics:**
+(Verse 1 - Smooth, aggressive 90s New York rap flow)
+Straight out the highlands, stepping on the block...
+(Bagpipes hit a syncopated, squealing melodic hook over the boom-bap drums)
+Tartan on my back, ticking on the clock!
+
+(Chorus)
+(DJ scratches a bagpipe drone sound)
+Kilt on the corner, spitting that fire!
+Pipes getting louder, taking it higher!
+Boom bap snare, Highland march!
+Leaving the competition stiff as starch!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Boom Bap Hip Hop / Scottish Bagpipes
+- **Thematic Ties:** The concrete, urban grit of 90s East Coast hip-hop perfectly matching the loud, aggressive, and incredibly confident swagger of traditional Scottish bagpipes.
+
+### Title: The Roswell Reggae
+
+**Service:** Minimax Audio
+
+**Prompt:** A laid-back, sun-soaked Jamaican Reggae track with a deep, bouncing bassline and classic guitar skanking on the off-beats. But the main vocal melody and the brass section are entirely replaced by the eerie, wailing, alien vibrato of a 1950s Sci-Fi Theremin, singing the island melodies with extraterrestrial wobble.
+
+**Lyrics:**
+(Verse 1 - Deep reggae toaster backing vocals, while the Theremin plays the main melody)
+(Guitar skanks: CHUK-chuk, CHUK-chuk)
+Watch the sky, mon, the saucer's flying low...
+(Theremin swoops down in a wailing, pitch-bending Jamaican melody)
+
+(Chorus)
+(Heavy dub bass drop)
+Alien in Kingston, smoking the green!
+The funkiest martian you've ever seen!
+(Theremin hits a high vibrato note, vibrating in time with the reggae beat)
+Abduction on the beach, under the sun!
+The Roswell reggae has only begun!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Reggae / 1950s Sci-Fi Theremin
+- **Thematic Ties:** The ultimate relaxed, earthy, and organic vibe of roots reggae invaded by the completely synthetic, spooky, and alien sound of early sci-fi sound effects.
