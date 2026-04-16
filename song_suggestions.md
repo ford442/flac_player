@@ -901,3 +901,100 @@ HOIST THE MAINSAIL! THE STORM IS CLOSING IN!
 **Additional Notes:**
 - **Combo/Fusion:** Traditional Sea Shanty / Brazilian Bossa Nova
 - **Thematic Ties:** The harsh, laborious, and dangerous life of 19th-century sailors violently clashing with the impossibly relaxed, romantic, and sophisticated lounge atmosphere of 1960s Rio de Janeiro.
+
+### Title: Appalachian Acid
+
+**Service:** Minimax Audio
+
+**Prompt:** A pumping, hypnotic 1990s Acid Techno track with a driving 909 kick drum and relentless tempo. The iconic, squelching Roland TB-303 synthesizer basslines are completely replaced by furiously fast, hyper-precise Appalachian Bluegrass banjo picking, heavily processed with delay and acid filters, sweeping through the frequency spectrum.
+
+**Lyrics:**
+(Verse 1 - Robotic, deadpan techno vocal)
+Raving in the holler, lasers in the pines...
+(Banjo rolls at incredible speed, mimicking a squelching 303 sequence)
+Moonshine in the system, following the lines.
+
+(Chorus)
+(Massive techno drop, four-on-the-floor beat with a distorted banjo hook)
+Acid in the mountains! Stomp the barn floor!
+The 909 is pumping, the banjo wants some more!
+Resonance is peaking, rosin up the bow!
+Techno hillbillies running the show!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Acid Techno / Appalachian Bluegrass
+- **Thematic Ties:** The endless, hypnotic, chemically-induced repetition of underground techno warehouses merging with the lightning-fast, highly technical, organic picking of rural mountain music.
+
+### Title: Valhalla Doo-Wop
+
+**Service:** Minimax Audio
+
+**Prompt:** A sweet, romantic 1950s Doo-Wop ballad with a gentle 6/8 triplet rhythm and finger snaps. However, the smooth vocal harmonies and romantic lead are performed by a chorus of bloodthirsty, battle-hardened Viking warriors delivering guttural war chants, and the saxophone solo is replaced by the screeching wail of a traditional Nordic tagelharpa.
+
+**Lyrics:**
+(Verse 1 - Deep, gruff Viking voices attempting sweet four-part harmony)
+Oh, my shield-maiden... (shang-a-lang, boom-bop!)
+Your axe is so sharp... (shoo-wop, shoo-wop!)
+I'll plunder the village for you...
+(Tagelharpa plays a mournful, screeching melody over the doo-wop beat)
+
+(Chorus)
+(Baritone Viking delivers a spoken, emotional bridge)
+Valhalla is waiting, my darling!
+But I'll stay here and hold your hand!
+We'll drink from the skulls of our enemies...
+In our 1950s promised land!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1950s Doo-Wop / Nordic Viking Folk
+- **Thematic Ties:** The innocent, teenage romance and pristine vocal arrangements of 50s America absurdly contrasted with the hyper-violent, grim, and primal reality of Viking raiders.
+
+### Title: Barbershop Brutality
+
+**Service:** Minimax Audio
+
+**Prompt:** A cheerful, traditional a cappella Barbershop Quartet performance, complete with complex, tight four-part vocal harmonies (tenor, lead, baritone, bass). But instead of clean, smiling vocals, every single note and harmony is delivered using extreme Deathcore vocal techniques—guttural lows, pig squeals, and high-pitched fry screams—while strictly maintaining the major-key barbershop chords.
+
+**Lyrics:**
+(Verse 1 - Tight, four-part harmony consisting entirely of guttural growls and shrieks)
+(Bass starts with a sub-vocal growl)
+Hello, my baby!
+(Tenor enters with an ear-piercing fry scream harmony)
+Hello, my honey!
+(Baritone joins with a wet pig squeal)
+Hello, my ragtime gal!
+
+(Chorus)
+(The quartet locks into a perfectly tuned, major-chord death growl)
+SEND ME A KISS BY WIRE!
+(Blast beats suddenly erupt underneath the a cappella voices)
+BABY, MY HEART'S ON FIRE!
+(A cappella ending tag held for ten seconds in a terrifying, multi-layered screech)
+
+**Additional Notes:**
+- **Combo/Fusion:** Barbershop Quartet / Deathcore Vocals
+- **Thematic Ties:** The aggressively pleasant, overly-groomed, nostalgic cheerfulness of barbershop music utterly corrupted by the terrifying, grotesque, and extreme vocal styling of modern deathcore.
+
+### Title: The Steppes of Ska
+
+**Service:** Minimax Audio
+
+**Prompt:** A hyper-energetic, bouncy 1990s Third-Wave Ska-Punk track with fast upstroke guitar chords and a walking bassline. However, the lively brass section (trumpets and trombones) is entirely replaced by an ensemble of Tuvan throat singers, using deep Kargyraa rumbles and high Sygyt overtones to punch out the staccato horn stabs and melodies.
+
+**Lyrics:**
+(Verse 1 - Nasally, energetic 90s ska-punk vocal)
+Pick it up, pick it up! We're skanking in the yurt!
+(Throat singers blast a three-part harmony overtone whistle stab)
+Got the checkered Vans, kicking up the dirt!
+(Deep throat singing rumbles in a syncopated walking bass rhythm)
+
+(Chorus)
+(A massive ska chorus erupts with throat singing providing the massive "horn" hook)
+Ska from the steppes! We're riding on the beat!
+Nomads in the mosh pit, shuffling their feet!
+Throw away the trumpet, let the overtone ring!
+Third-wave Mongolian, hear the riders sing!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Third-Wave Ska-Punk / Tuvan Throat Singing
+- **Thematic Ties:** The bouncy, caffeinated, suburban goofiness of 90s ska-punk clashing hilariously with the deeply spiritual, physically demanding, and resonant ancient art of Mongolian throat singing.
