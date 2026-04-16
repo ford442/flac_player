@@ -46,9 +46,9 @@ module.exports = {
     // Ensure sdl-audio.* and script processor files from public/ are copied into dist/
     new CopyPlugin({
       patterns: [
-        { from: 'public/sdl-audio.*', to: '.' },
-        { from: 'public/sdl2-audio.*', to: '.' },
-        { from: 'public/script-processor-*.js', to: '.' }
+        { from: 'public/sdl-audio.*', to: '[name][ext]' },
+        { from: 'public/sdl2-audio.*', to: '[name][ext]' },
+        { from: 'public/script-processor-*.js', to: '[name][ext]' }
       ]
     })
   ],
