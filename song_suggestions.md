@@ -1088,3 +1088,92 @@ The Roswell reggae has only begun!
 **Additional Notes:**
 - **Combo/Fusion:** Jamaican Reggae / 1950s Sci-Fi Theremin
 - **Thematic Ties:** The ultimate relaxed, earthy, and organic vibe of roots reggae invaded by the completely synthetic, spooky, and alien sound of early sci-fi sound effects.
+
+### Title: The Yodeling Samurai
+
+**Service:** Minimax Audio
+
+**Prompt:** A highly dramatic, emotional traditional Japanese Enka ballad, usually featuring slow, crying vocal vibrato (kobushi) and a gentle shamisen. However, the emotional vocal delivery is completely replaced by incredibly fast, echoing, and technically demanding Swiss Alpine Yodeling, jumping between registers over the delicate Japanese instrumentation.
+
+**Lyrics:**
+(Verse 1 - Gentle shamisen plucks a melancholic melody)
+The snow falls on Mount Fuji tonight...
+(A sudden, incredibly precise yodel echoes: "Yodel-ay-hee-hoo!")
+My sword is heavy, I've lost the fight.
+
+(Chorus)
+Yodel in the dojo! The ronin's cry!
+Echoing loud in the eastern sky!
+Cherry blossoms falling to a yodeling tune!
+A Swiss mountaineer under the Edo moon!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Japanese Enka / Swiss Alpine Yodeling
+- **Thematic Ties:** The deeply serious, tear-jerking emotional restraint of Japanese Enka ballads completely shattered by the ridiculously cheerful, wide-open vocal gymnastics of Swiss mountain yodeling.
+
+### Title: The Cybernetic Cossack
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressively heavy 2010s Brostep track filled with monstrous bass drops, screeching synth growls, and complex drum programming. However, the melodic buildups and the frantic "wobble" basslines are performed by a hyper-fast ensemble of Russian Balalaikas, while a booming male choir shouts "Hey!" in time with the chaotic electronic beat.
+
+**Lyrics:**
+(Verse 1 - Booming, deep Russian choir shouting rhythmically)
+Drink the vodka, feel the bass!
+(Balalaika plucks an impossibly fast, accelerating melody)
+Squatting low in the cyberspace!
+
+(Chorus)
+(Massive Brostep drop with synthesized balalaika growls)
+Kazachok in the matrix! Kick your boots up high!
+Laser bears are marching through the neon sky!
+Wobble on the tundra, let the sub-bass hit!
+The cybernetic Cossack doesn't know when to quit!
+
+**Additional Notes:**
+- **Combo/Fusion:** 2010s Brostep / Traditional Russian Folk
+- **Thematic Ties:** The abrasive, highly digital, and hyper-kinetic energy of mid-2010s American dubstep colliding with the frantic, vodka-soaked, and fiercely energetic tradition of Russian Cossack dancing.
+
+### Title: Pharaonic Surf Rock
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced, reverb-drenched 1960s Surf Rock track complete with driving drum beats and a frantic, Dick Dale-style tremolo picking rhythm. But instead of a Fender Stratocaster, the impossibly fast, wet, and echoing lead lines are furiously picked on an acoustic Middle Eastern Oud, playing complex, microtonal Arabic scales over the California beach groove.
+
+**Lyrics:**
+(Verse 1 - Classic, energetic 60s beach boy vocal harmony)
+Catch a wave down the river Nile!
+(Oud shreds a rapid, reverb-heavy microtonal solo)
+The mummy's surfing in a brand new style!
+
+(Chorus)
+Wipeout on the sphinx! Hang ten in the sand!
+The pharaoh's got the coolest board in all the land!
+Reverb on the oud, playing in the sun!
+The ancient surfing dynasty has just begun!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1960s Surf Rock / Middle Eastern Oud
+- **Thematic Ties:** The sunny, carefree, and aggressively American beach culture of the 60s fused seamlessly with the ancient, complex, and deeply historical scales of the Middle East, all soaked in spring reverb.
+
+### Title: Appalachian Gamelan
+
+**Service:** Minimax Audio
+
+**Prompt:** A foot-stomping, high-speed Appalachian Bluegrass tune. The traditional banjo, fiddle, and mandolin are entirely absent. Instead, the frantic picking patterns and high-speed country melodies are hammered out on an array of metallic Indonesian Gamelan gongs and metallophones, ringing and clashing with incredible sustain over a steady washboard rhythm.
+
+**Lyrics:**
+(Verse 1 - Nasally, high-lonesome Bluegrass tenor vocal)
+Well I'm going up the mountain, to see my sweet gal...
+(A massive flurry of Gamelan metallophones mimics a banjo roll)
+Got my overalls on, walking down the canal...
+
+(Chorus)
+Ring the bronze on the porch! Let the gongs resound!
+The heaviest hoedown in this sleepy town!
+Moonshine and metallophones, ringing in the night!
+The Appalachian Gamelan is out of sight!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Indonesian Gamelan
+- **Thematic Ties:** The incredibly fast, intricate, and wooden acoustic picking of American mountain music translated into the ringing, sustaining, and profoundly metallic resonance of a traditional Indonesian ensemble.
