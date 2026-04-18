@@ -1,6 +1,30 @@
 import { Mat4, Vec3 } from './math';
+import { waveformWGSL } from './shaders/waveform';
 
 export type VisualizerMode = 'flat' | '3D';
+
+export interface ShaderGUIUniforms {
+  resolution: [number, number];
+  time: number;
+  beatPhase: number;
+  rsycrb: number;
+  fractal: number;
+  pulse: number;
+  audioLevel: number;
+  audioLevelL: number;
+  audioLevelR: number;
+  spectrum0: number;
+  spectrum1: number;
+  spectrum2: number;
+  spectrum3: number;
+  spectrum4: number;
+  modeNone: number;
+  modeIR: number;
+  isPlaying: number;
+  playbackProgress: number;
+  volume: number;
+  colorShift: number;
+}
 
 // WebGPU shader interface for audio visualization
 export class WebGPUVisualizer {
@@ -17,6 +41,19 @@ export class WebGPUVisualizer {
   private waveformUniformBuffer: GPUBuffer | null = null;
   private waveformBindGroup: GPUBindGroup | null = null;
   private waveformPipeline: GPURenderPipeline | null = null;
+
+  // --- GUI Mode Resources ---
+  private guiUniformBuffer: GPUBuffer | null = null;
+  private guiBindGroup: GPUBindGroup | null = null;
+  private guiPipeline: GPURenderPipeline | null = null;
+  private guiUniforms: ShaderGUIUniforms = {
+    resolution: [1, 1], time: 0, beatPhase: 0,
+    rsycrb: 0, fractal: 0, pulse: 0,
+    audioLevel: 0, audioLevelL: 0, audioLevelR: 0,
+    spectrum0: 0, spectrum1: 0, spectrum2: 0, spectrum3: 0, spectrum4: 0,
+    modeNone: 0, modeIR: 0, isPlaying: 0, playbackProgress: 0,
+    volume: 1, colorShift: 0
+  };
 
   // --- 3D Mode Resources ---
   private cubeVertexBuffer: GPUBuffer | null = null;
@@ -84,6 +121,7 @@ export class WebGPUVisualizer {
 
       await this.initWaveformResources(format);
       await this.init3DResources(format);
+      await this.initGUIResources(format);
 
       return true;
     } catch (error) {
@@ -169,6 +207,37 @@ export class WebGPUVisualizer {
         vertex: { module, entryPoint: 'vertex_main' },
         fragment: { module, entryPoint: 'fragment_main', targets: [{ format: canvasFormat }] },
         primitive: { topology: 'triangle-list' }
+    });
+  }
+
+  private async initGUIResources(canvasFormat: GPUTextureFormat) {
+    if (!this.device) return;
+
+    this.guiUniformBuffer = this.device.createBuffer({
+      size: 84,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
+    });
+
+    const guiModule = this.device.createShaderModule({ code: waveformWGSL });
+
+    const guiBindGroupLayout = this.device.createBindGroupLayout({
+      entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }]
+    });
+
+    this.guiBindGroup = this.device.createBindGroup({
+      layout: guiBindGroupLayout,
+      entries: [{ binding: 0, resource: { buffer: this.guiUniformBuffer } }]
+    });
+
+    const guiPipelineLayout = this.device.createPipelineLayout({
+      bindGroupLayouts: [guiBindGroupLayout]
+    });
+
+    this.guiPipeline = this.device.createRenderPipeline({
+      layout: guiPipelineLayout,
+      vertex: { module: guiModule, entryPoint: 'vertex_main' },
+      fragment: { module: guiModule, entryPoint: 'fragment_main', targets: [{ format: canvasFormat }] },
+      primitive: { topology: 'triangle-list' }
     });
   }
 
@@ -507,6 +576,41 @@ struct Uniforms {
       this.device.queue.submit([commandEncoder.finish()]);
   }
 
+  setUniforms(data: ShaderGUIUniforms): void {
+    this.guiUniforms = data;
+  }
+
+  renderGUI(): void {
+    if (!this.device || !this.context || !this.guiPipeline || !this.guiBindGroup || !this.guiUniformBuffer) return;
+
+    const u = this.guiUniforms;
+    this.device.queue.writeBuffer(this.guiUniformBuffer, 0, new Float32Array([
+      u.resolution[0], u.resolution[1], u.time, u.beatPhase,
+      u.rsycrb, u.fractal, u.pulse,
+      u.audioLevel, u.audioLevelL, u.audioLevelR,
+      u.spectrum0, u.spectrum1, u.spectrum2, u.spectrum3, u.spectrum4,
+      u.modeNone, u.modeIR, u.isPlaying, u.playbackProgress,
+      u.volume, u.colorShift
+    ]));
+
+    const commandEncoder = this.device.createCommandEncoder();
+    const textureView = this.context.getCurrentTexture().createView();
+
+    const pass = commandEncoder.beginRenderPass({
+      colorAttachments: [{
+        view: textureView,
+        clearValue: { r: 0.05, g: 0.05, b: 0.05, a: 1.0 },
+        loadOp: 'clear',
+        storeOp: 'store'
+      }]
+    });
+    pass.setPipeline(this.guiPipeline);
+    pass.setBindGroup(0, this.guiBindGroup);
+    pass.draw(6);
+    pass.end();
+    this.device.queue.submit([commandEncoder.finish()]);
+  }
+
   startAnimation(): void {
     const animate = () => {
       this.render();
@@ -525,6 +629,7 @@ struct Uniforms {
   destroy(): void {
     this.stopAnimation();
     if (this.waveformUniformBuffer) this.waveformUniformBuffer.destroy();
+    if (this.guiUniformBuffer) this.guiUniformBuffer.destroy();
     if (this.cubeUniformBuffer) this.cubeUniformBuffer.destroy();
     if (this.cubeVertexBuffer) this.cubeVertexBuffer.destroy();
     if (this.cubeIndexBuffer) this.cubeIndexBuffer.destroy();

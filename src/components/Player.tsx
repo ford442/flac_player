@@ -14,12 +14,12 @@ import {
   loadQueueFromStorage,
   clearQueueStorage
 } from '../audioLoader';
-import { WebGPUVisualizer, VisualizerMode } from '../webgpuVisualizer';
+
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { LibraryView } from './LibraryView';
 import { QueuePanel } from './QueuePanel';
 import { PileMode } from './PileMode';
-import { StarRating } from './StarRating';
+import { ShaderGUI } from './ShaderGUI/ShaderGUI';
 import './Player.css';
 
 // =============================================================================
@@ -77,8 +77,7 @@ export const Player: React.FC = () => {
     isLoading: false
   });
   const [error, setError] = useState<string>('');
-  const [webGPUSupported, setWebGPUSupported] = useState<boolean>(true);
-  const [visualizerMode, setVisualizerMode] = useState<VisualizerMode>('flat');
+
   const [outputMode, setOutputMode] = useState<AudioOutputMode>('web-audio');
   
   // View state
@@ -126,8 +125,6 @@ export const Player: React.FC = () => {
   
   // Refs
   const playerRef = useRef<AudioPlayer | AudioWorkletPlayer | SdlAudioPlayer | Sdl2AudioPlayer | null>(null);
-  const visualizerRef = useRef<WebGPUVisualizer | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   
   const loader = useMemo(() => new AudioLoader(), []);
@@ -251,35 +248,6 @@ export const Player: React.FC = () => {
       player.destroy();
     };
   }, [outputMode]);
-  
-  useEffect(() => {
-    const initVisualizer = async () => {
-      if (!canvasRef.current || !playerRef.current) return;
-
-      if (!visualizerRef.current) {
-        const visualizer = new WebGPUVisualizer(canvasRef.current);
-        visualizerRef.current = visualizer;
-      }
-
-      const analyser = playerRef.current.getAnalyser();
-      const success = await visualizerRef.current.initialize(analyser);
-      if (success) {
-        visualizerRef.current.startAnimation();
-        visualizerRef.current.setMode(visualizerMode);
-        visualizerRef.current.setTogglePlayCallback(() => {
-          if (playerRef.current) {
-            const state = playerRef.current.getState();
-            if (state.isPlaying) playerRef.current.pause();
-            else if (state.duration > 0) playerRef.current.play();
-          }
-        });
-      } else {
-        setWebGPUSupported(false);
-      }
-    };
-
-    initVisualizer();
-  }, [outputMode, visualizerMode]);
   
   // =============================================================================
   // Playback Controls
@@ -766,43 +734,29 @@ export const Player: React.FC = () => {
           )}
           
           {activeTab === 'now-playing' && (
-            <div className="flex-1 flex items-center justify-center">
-              {currentTrack ? (
-                <div className="text-center">
-                  <div className="w-64 h-64 mx-auto mb-6 bg-gradient-to-br from-purple-600 to-blue-600 rounded-2xl flex items-center justify-center text-6xl shadow-2xl">
-                    🎵
-                  </div>
-                  <h2 className="text-2xl font-bold text-white mb-2">
-                    {currentTrack.title || currentTrack.name}
-                  </h2>
-                  <p className="text-gray-400 mb-4">{currentTrack.author || 'Unknown'}</p>
-                  
-                  {currentTrack.tags && (
-                    <div className="flex justify-center gap-2 mb-6">
-                      {currentTrack.tags.map(tag => (
-                        <span key={tag} className="px-3 py-1 bg-white/10 rounded-full text-sm">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  
-                  <div className="flex items-center justify-center gap-4">
-                    <StarRating
-                      rating={currentTrack.rating}
-                      maxRating={5}
-                      size="lg"
-                      onRate={(r) => updateTrack(currentTrack.id, { rating: r })}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center text-gray-500">
-                  <div className="text-6xl mb-4">🎵</div>
-                  <p>No track playing</p>
-                  <p className="text-sm">Select a track from the library</p>
-                </div>
-              )}
+            <div className="flex-1 flex items-center justify-center p-6 overflow-auto">
+              <ShaderGUI
+                analyser={playerRef.current?.getAnalyser() || null}
+                currentTrack={currentTrack}
+                queue={queue}
+                queueCurrentIndex={queueCurrentIndex}
+                isPlaying={playerState.isPlaying}
+                currentTime={playerState.currentTime}
+                duration={playerState.duration}
+                volume={volume}
+                onPlay={() => {
+                  if (playerState.isPlaying) playerRef.current?.pause();
+                  else playerRef.current?.play();
+                }}
+                onStop={() => {
+                  playerRef.current?.stop();
+                }}
+                onTrackClick={(index) => playTrack(queue[index], index)}
+                onVolumeChange={(vol) => {
+                  setVolume(vol);
+                  playerRef.current?.setVolume(vol);
+                }}
+              />
             </div>
           )}
           
@@ -826,35 +780,7 @@ export const Player: React.FC = () => {
           )}
         </main>
         
-        {/* Visualizer Sidebar (Now Playing) */}
-        {activeTab === 'now-playing' && (
-          <aside className="w-80 border-l border-white/10 bg-[#0a0a18] p-4">
-            <canvas
-              ref={canvasRef}
-              width={300}
-              height={400}
-              className="w-full rounded-lg"
-            />
-            {!webGPUSupported && (
-              <p className="text-xs text-yellow-500 mt-2">WebGPU not supported</p>
-            )}
-            
-            <div className="mt-4 space-y-2">
-              <button
-                onClick={() => setVisualizerMode('flat')}
-                className={`w-full px-4 py-2 rounded text-left ${visualizerMode === 'flat' ? 'bg-purple-500' : 'bg-white/10'}`}
-              >
-                Flat Waveform
-              </button>
-              <button
-                onClick={() => setVisualizerMode('3D')}
-                className={`w-full px-4 py-2 rounded text-left ${visualizerMode === '3D' ? 'bg-purple-500' : 'bg-white/10'}`}
-              >
-                3D Device
-              </button>
-            </div>
-          </aside>
-        )}
+        {/* Visualizer sidebar removed — ShaderGUI handles its own WebGPU canvas */}
       </div>
       
       {/* Player Bar */}

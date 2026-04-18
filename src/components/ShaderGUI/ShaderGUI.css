@@ -1,0 +1,406 @@
+/* ShaderGUI Hardware Control Panel Styles */
+
+.shader-gui-chassis {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 24px;
+  background: linear-gradient(180deg, #E4E4E8 0%, #D8D8E0 100%);
+  border-radius: 16px;
+  box-shadow:
+    0 40px 80px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.3) inset,
+    0 -2px 8px rgba(0, 0, 0, 0.1) inset;
+  transform: perspective(1200px) rotateX(8deg) rotateY(-2deg);
+  transform-style: preserve-3d;
+  color: #1A0A2E;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Ventilation grills */
+.vent-grill {
+  display: flex;
+  gap: 4px;
+  padding: 8px 16px;
+}
+
+.vent-slit {
+  width: 3px;
+  height: 16px;
+  background: #A0A0A8;
+  border-radius: 1px;
+  box-shadow: inset 1px 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Screens */
+.shader-screen {
+  background: linear-gradient(180deg, #1A0A2E 0%, #2D1B4E 100%);
+  border-radius: 8px;
+  border: 2px solid #C8C8D0;
+  box-shadow:
+    inset 0 2px 8px rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.shader-screen::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Top screen */
+.top-screen {
+  width: 100%;
+  height: 160px;
+  position: relative;
+}
+
+.top-screen-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+}
+
+.artist-title-overlay {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  right: 16px;
+  color: #E8D5F5;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  z-index: 3;
+  pointer-events: none;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.artist-title-marquee {
+  display: inline-block;
+  animation: marquee-scroll 10s linear infinite;
+}
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Bottom screen / track list */
+.bottom-screen {
+  width: 100%;
+  height: 220px;
+  padding: 8px 0;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-size: 12px;
+  color: #E8D5F5;
+  overflow-y: auto;
+}
+
+.track-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.track-list-item {
+  position: relative;
+  padding: 6px 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.15s ease;
+}
+
+.track-list-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.track-list-item.active {
+  background: rgba(34, 211, 238, 0.1);
+}
+
+.track-list-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #22D3EE;
+}
+
+.track-number {
+  color: #6B7280;
+  min-width: 24px;
+  text-align: right;
+}
+
+.track-name {
+  color: #E8D5F5;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-play-icon {
+  color: #22D3EE;
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.track-list-item.active .track-play-icon {
+  opacity: 1;
+}
+
+/* Knobs */
+.knob-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+}
+
+.knob-body {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #F0F0F4 0%, #E4E4E8 40%, #C8C8D0 100%);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.2),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 2px 4px rgba(255, 255, 255, 0.8);
+  position: relative;
+  cursor: ns-resize;
+  user-select: none;
+}
+
+.knob-glow {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  right: -6px;
+  bottom: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(192, 132, 252, 0.25) 0%, transparent 70%);
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.knob-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 18px;
+  background: #1A0A2E;
+  border-radius: 2px;
+  transform-origin: 50% 0%;
+  transform: translate(-50%, 0) rotate(0deg);
+  margin-top: 2px;
+}
+
+.knob-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #4B5563;
+}
+
+.knob-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(26, 10, 46, 0.9);
+  color: #E8D5F5;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Buttons */
+.shader-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 6px;
+  background: #1A0A2E;
+  border: 1px solid #2D1B4E;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.shader-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.shader-button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.button-icon {
+  font-size: 18px;
+  line-height: 1;
+  transition: filter 0.3s ease, transform 0.2s ease;
+}
+
+.button-led-glow {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.button-led-glow.active {
+  box-shadow: 0 0 8px 2px currentColor;
+}
+
+/* Volume slider */
+.volume-slider-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.volume-track {
+  position: relative;
+  width: 120px;
+  height: 4px;
+  background: #2D1B4E;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.volume-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, #C084FC, #22D3EE);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.volume-thumb {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  cursor: grab;
+  transition: box-shadow 0.2s ease;
+}
+
+.volume-thumb:hover {
+  box-shadow: 0 2px 8px rgba(34, 211, 238, 0.5);
+}
+
+.volume-thumb:active {
+  cursor: grabbing;
+}
+
+.volume-label {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #6B7280;
+}
+
+/* Layout helpers */
+.shader-gui-layout {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto auto auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.shader-gui-top-left {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.shader-gui-top-right {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.shader-gui-bottom-left {
+  grid-column: 1;
+  grid-row: 2 / span 2;
+}
+
+.shader-gui-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.shader-gui-knobs {
+  display: flex;
+  gap: 16px;
+}
+
+/* WebGPU canvas overlay */
+.shader-gui-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.shader-gui-overlay {
+  position: relative;
+  z-index: 1;
+}
