@@ -16,6 +16,10 @@ export const Chassis: React.FC<ChassisProps> = ({ children }) => {
           <div key={i} className="vent-slit" />
         ))}
       </div>
+      <div className="chassis-branding">
+        <span className="branding-model">SYNSA</span>
+        <span className="branding-version">v2.1.0.0</span>
+      </div>
     </div>
   );
 };

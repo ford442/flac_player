@@ -25,7 +25,12 @@ export const waveformWGSL = `struct ShaderGUIUniforms {
   colorShift: f32,
 };
 
+struct AudioData {
+  values: array<f32, 64>,
+};
+
 @group(0) @binding(0) var<uniform> uniforms: ShaderGUIUniforms;
+@group(0) @binding(1) var<storage, read> audioData: AudioData;
 
 struct VertexOutput {
   @builtin(position) position: vec4<f32>,
@@ -44,6 +49,8 @@ fn vertex_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
   return output;
 }
 
+const AUDIO_BINS: i32 = 64;
+
 fn fractalWave(x: f32, depth: f32, audio: f32) -> f32 {
   var y = 0.0;
   var amp = 1.0;
@@ -58,7 +65,31 @@ fn fractalWave(x: f32, depth: f32, audio: f32) -> f32 {
   return y;
 }
 
-fn sampleWaveform(uv: vec2<f32>, audio: f32) -> f32 {
+fn sampleRealWaveform(uv: vec2<f32>) -> f32 {
+  let x = uv.x;
+  let binCount = f32(AUDIO_BINS);
+  let idx = x * binCount;
+  let i0 = clamp(i32(idx), 0, AUDIO_BINS - 1);
+  let i1 = clamp(i0 + 1, 0, AUDIO_BINS - 1);
+  let frac = idx - f32(i0);
+
+  let v0 = audioData.values[i0];
+  let v1 = audioData.values[i1];
+  let value = mix(v0, v1, frac);
+
+  // Draw mirrored waveform (top and bottom)
+  let waveY = 0.5 + value * 0.38;
+  let dist = abs(uv.y - waveY);
+  let glow = 0.018 / (dist + 0.008);
+
+  let waveY2 = 0.5 - value * 0.38;
+  let dist2 = abs(uv.y - waveY2);
+  let glow2 = 0.018 / (dist2 + 0.008);
+
+  return max(glow, glow2);
+}
+
+fn sampleSyntheticWaveform(uv: vec2<f32>, audio: f32) -> f32 {
   let waveX = uv.x * 2.0 - 1.0;
   let audioMod = audio * 0.3;
   let waveY = sin(waveX * 10.0 + uniforms.time * 2.0) * audioMod;
@@ -68,6 +99,16 @@ fn sampleWaveform(uv: vec2<f32>, audio: f32) -> f32 {
   let dist = abs(uv.y - 0.5 - combinedWave * 0.3);
   let glow = 0.02 / (dist + 0.008);
   return glow;
+}
+
+fn sampleWaveform(uv: vec2<f32>, audio: f32) -> f32 {
+  // If audio is very low (SDL dummy analyser), use synthetic fallback
+  // that still animates so the screen doesn't flatline
+  if (audio < 0.005) {
+    let fallback = sampleSyntheticWaveform(uv, 0.15 + sin(uniforms.time * 0.8) * 0.08);
+    return fallback * 0.6;
+  }
+  return sampleRealWaveform(uv);
 }
 
 fn drawKnobGlow(uv: vec2<f32>, center: vec2<f32>, radius: f32, intensity: f32) -> vec3<f32> {
@@ -82,6 +123,13 @@ fn drawLedGlow(uv: vec2<f32>, center: vec2<f32>, color: vec3<f32>, intensity: f3
   let ledGlow = 0.01 / (ledDist + 0.001) * intensity;
   return color * ledGlow;
 }
+
+// Shader-to-CSS alignment map:
+// These UV coordinates correspond to the DOM positions in ShaderGUI.css
+// Top-right knob row in CSS: .shader-gui-top-right at grid-column:2, grid-row:1
+// Knobs are positioned at roughly 72%, 82%, 92% across the width
+// and 22% from the top of the canvas (above the button row at ~42%).
+// If .shader-gui-layout or .shader-gui-top-right changes, these must be recalibrated.
 
 @fragment
 fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
@@ -120,10 +168,12 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
   let vignette = 1.0 - length((uv - 0.5) * 1.2);
   finalColor = finalColor * vignette;
 
+  // Knob glows — aligned to CSS .shader-gui-knobs positions
   finalColor = finalColor + drawKnobGlow(uv, vec2<f32>(0.72, 0.22), 0.06, uniforms.rsycrb * 0.5);
   finalColor = finalColor + drawKnobGlow(uv, vec2<f32>(0.82, 0.22), 0.06, uniforms.fractal * 0.5);
   finalColor = finalColor + drawKnobGlow(uv, vec2<f32>(0.92, 0.22), 0.06, uniforms.pulse * 0.5);
 
+  // LED glows — aligned to CSS .shader-gui-buttons positions
   finalColor = finalColor + drawLedGlow(uv, vec2<f32>(0.68, 0.42), vec3<f32>(0.3, 0.33, 0.39), uniforms.modeNone * 0.3);
   finalColor = finalColor + drawLedGlow(uv, vec2<f32>(0.76, 0.42), vec3<f32>(0.96, 0.45, 0.71), uniforms.modeIR * 0.6);
   finalColor = finalColor + drawLedGlow(uv, vec2<f32>(0.84, 0.42), vec3<f32>(0.97, 0.44, 0.44), 0.0);

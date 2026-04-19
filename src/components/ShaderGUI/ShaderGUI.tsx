@@ -53,6 +53,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const [modeNone, setModeNone] = useState(1);
   const [modeIR, setModeIR] = useState(0);
   const [stopFlash, setStopFlash] = useState(0);
+  const [visualizerMode, setVisualizerMode] = useState<'gui' | '3D'>('gui');
 
   const { beatPhaseRef, spectrumRef, processFrame } = useBeatDetection();
   const timeRef = useRef(0);
@@ -98,38 +99,48 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       // Process audio data
       processFrame(analyser);
 
-      // Stop flash is handled via setTimeout, not RAF
-
-      // Update visualizer uniforms
+      // Capture full frequency data for the waveform display
       const vis = visualizerRef.current;
+      if (vis && webGPUSupported && analyser) {
+        const freqData = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(freqData);
+        vis.setAudioData(freqData);
+      }
+
+      // Update visualizer
       if (vis && webGPUSupported) {
-        const spectrum = spectrumRef.current;
-        const progress = duration > 0 ? currentTime / duration : 0;
+        if (visualizerMode === '3D') {
+          vis.render();
+        } else {
+          const spectrum = spectrumRef.current;
+          const progress = duration > 0 ? currentTime / duration : 0;
+          const canvas = canvasRef.current;
 
-        vis.setUniforms({
-          resolution: [canvasRef.current?.width || 640, canvasRef.current?.height || 160],
-          time: timeRef.current,
-          beatPhase: beatPhaseRef.current,
-          rsycrb: rsycrbRef.current,
-          fractal: fractalRef.current,
-          pulse: pulseRef.current,
-          audioLevel: spectrum[0] + spectrum[1] + spectrum[2],
-          audioLevelL: spectrum[0],
-          audioLevelR: spectrum[1],
-          spectrum0: spectrum[0],
-          spectrum1: spectrum[1],
-          spectrum2: spectrum[2],
-          spectrum3: spectrum[3],
-          spectrum4: spectrum[4],
-          modeNone: modeNone,
-          modeIR: modeIR,
-          isPlaying: isPlaying ? 1 : 0,
-          playbackProgress: progress,
-          volume: volume,
-          colorShift: 0,
-        });
+          vis.setUniforms({
+            resolution: [canvas?.width || 640, canvas?.height || 160],
+            time: timeRef.current,
+            beatPhase: beatPhaseRef.current,
+            rsycrb: rsycrbRef.current,
+            fractal: fractalRef.current,
+            pulse: pulseRef.current,
+            audioLevel: spectrum[0] + spectrum[1] + spectrum[2],
+            audioLevelL: spectrum[0],
+            audioLevelR: spectrum[1],
+            spectrum0: spectrum[0],
+            spectrum1: spectrum[1],
+            spectrum2: spectrum[2],
+            spectrum3: spectrum[3],
+            spectrum4: spectrum[4],
+            modeNone: modeNone,
+            modeIR: modeIR,
+            isPlaying: isPlaying ? 1 : 0,
+            playbackProgress: progress,
+            volume: volume,
+            colorShift: 0,
+          });
 
-        vis.renderGUI();
+          vis.renderGUI();
+        }
       }
 
       animFrameRef.current = requestAnimationFrame(loop);
@@ -137,7 +148,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
 
     animFrameRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [analyser, webGPUSupported, processFrame, beatPhaseRef, spectrumRef, isPlaying, currentTime, duration, volume, modeNone, modeIR]);
+  }, [analyser, webGPUSupported, processFrame, beatPhaseRef, spectrumRef, isPlaying, currentTime, duration, volume, modeNone, modeIR, visualizerMode]);
 
   const handlePlay = useCallback(() => {
     onPlay();
@@ -165,6 +176,14 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     });
   }, []);
 
+  const handleToggle3D = useCallback(() => {
+    setVisualizerMode(prev => {
+      const next = prev === 'gui' ? '3D' : 'gui';
+      visualizerRef.current?.setMode(next === '3D' ? '3D' : 'flat');
+      return next;
+    });
+  }, []);
+
   return (
     <Chassis>
       <div className="shader-gui-layout">
@@ -174,6 +193,8 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             artist={currentTrack?.author}
             title={currentTrack?.title || currentTrack?.name}
             webGPUSupported={webGPUSupported}
+            onCanvasResize={() => visualizerRef.current?.resize()}
+            onCanvasDoubleClick={handleToggle3D}
           />
         </div>
 
@@ -212,7 +233,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
           />
         </div>
 
-        <div style={{ gridColumn: 2, gridRow: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ gridColumn: 2, gridRow: '2 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <VolumeSlider value={volume} onChange={onVolumeChange} />
         </div>
       </div>

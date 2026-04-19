@@ -27,7 +27,7 @@ export const BottomScreen: React.FC<BottomScreenProps> = ({
             <span className="track-number">{index + 1}.</span>
             <span className="track-name">{track.title || track.name}</span>
             {index === currentIndex && (
-              <span className="track-play-icon">▶</span>
+              <span className="track-play-overlay">▶</span>
             )}
           </li>
         ))}

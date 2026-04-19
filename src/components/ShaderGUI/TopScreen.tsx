@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import './ShaderGUI.css';
 
 interface TopScreenProps {
@@ -6,6 +6,8 @@ interface TopScreenProps {
   artist?: string;
   title?: string;
   webGPUSupported: boolean;
+  onCanvasResize?: () => void;
+  onCanvasDoubleClick?: () => void;
 }
 
 export const TopScreen: React.FC<TopScreenProps> = ({
@@ -13,17 +15,52 @@ export const TopScreen: React.FC<TopScreenProps> = ({
   artist,
   title,
   webGPUSupported,
+  onCanvasResize,
+  onCanvasDoubleClick,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
   const displayText = title ? (artist ? `${artist} — ${title}` : title) : 'No track loaded';
 
+  useEffect(() => {
+    const container = containerRef.current;
+    const canvas = canvasRef.current;
+    if (!container || !canvas) return;
+
+    const dpr = window.devicePixelRatio || 1;
+
+    const resize = () => {
+      const rect = container.getBoundingClientRect();
+      const width = Math.max(1, Math.floor(rect.width * dpr));
+      const height = Math.max(1, Math.floor(rect.height * dpr));
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+        onCanvasResize?.();
+      }
+    };
+
+    resize();
+
+    const observer = new ResizeObserver(resize);
+    observer.observe(container);
+
+    window.addEventListener('resize', resize);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', resize);
+    };
+  }, [canvasRef, onCanvasResize]);
+
   return (
-    <div className="shader-screen top-screen">
+    <div ref={containerRef} className="shader-screen top-screen">
       {webGPUSupported ? (
         <canvas
           ref={canvasRef}
           className="top-screen-canvas"
           width={640}
           height={160}
+          onDoubleClick={onCanvasDoubleClick}
         />
       ) : (
         <div

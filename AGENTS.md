@@ -184,6 +184,18 @@ Without these headers:
 - Runs at 60fps via `requestAnimationFrame`
 - Falls back gracefully if WebGPU not supported (Chrome 113+, Edge 113+)
 
+### ShaderGUI Component
+The `ShaderGUI` component (`src/components/ShaderGUI/ShaderGUI.tsx`) is a hardware-inspired control panel rendered in the "now-playing" tab. It features:
+- **Top Screen**: WebGPU canvas with real-time WGSL shader (waveform, scanlines, chromatic aberration, pulse bloom, knob/LED glows)
+- **Bottom Screen**: Scrollable track queue with active-track highlighting
+- **Knobs**: RSYCRB (chromatic aberration), FRACTAL (waveform detail), PULSE (bloom intensity)
+- **Buttons**: NONE, IR (visual modes), STOP, PLAY
+- **Volume Slider**: Vertical fader with tick marks
+- **Hidden 3D Mode**: Double-click the top screen to toggle between the GUI shader and the 3D rotating cube visualizer
+
+**Critical Note — Shader-to-CSS Alignment:**
+The WGSL shader in `src/shaders/waveform.ts` hardcodes UV coordinates for knob glows and LED glows to match the CSS grid layout. If you modify `.shader-gui-layout`, `.shader-gui-top-right`, knob positions, or button positions in `ShaderGUI.css`, you **must** recalibrate the UV coordinates in the WGSL shader's `drawKnobGlow` and `drawLedGlow` calls. The alignment map is documented in comments inside `waveform.ts`.
+
 ### Backend API (`app.py`)
 The FastAPI backend provides:
 
@@ -228,6 +240,10 @@ Manual testing checklist:
 6. Verify 3D mode interaction (drag to rotate, click to play/pause)
 7. Test library features: rating a track, adding tags, smart mix, pile mode
 8. Verify backend health endpoint returns 200
+9. **ShaderGUI**: Verify knobs affect the waveform (RSYCRB = chromatic aberration, FRACTAL = detail, PULSE = bloom)
+10. **ShaderGUI**: Double-click top screen to toggle 3D cube mode
+11. **ShaderGUI**: Verify volume slider is vertical with tick marks
+12. **ShaderGUI**: Confirm active track in bottom screen has highlight + play overlay
 
 ## Security Considerations
 
@@ -250,11 +266,12 @@ Due to SharedArrayBuffer usage, the app must be served over HTTPS (except localh
 
 ## Known Issues & Limitations
 
-1. **SDL Analyser**: SDL backends return a dummy `AnalyserNode` — visualization may flatline when using SDL audio
+1. **SDL Analyser**: SDL backends return a dummy `AnalyserNode` — visualization may flatline when using SDL audio. The ShaderGUI shader now includes a synthetic fallback animation for this case.
 2. **Test Suite**: No automated tests configured
 3. **WASM Build Scope**: `npm run build:wasm` only compiles SDL2. SDL3 must be built manually via `bash src/sdl/build.sh`
 4. **Hardcoded Deploy Credentials**: `deploy.py` contains server-specific configuration
 5. **Memory Constraints**: Large audio files may require WASM memory growth (`ALLOW_MEMORY_GROWTH=1` is enabled)
+6. **Shader-to-CSS Fragility**: WGSL knob/LED glow positions are hardcoded to match CSS layout. Changing the layout requires updating `waveform.ts`
 
 ## Development Workflow
 
@@ -269,7 +286,7 @@ Due to SharedArrayBuffer usage, the app must be served over HTTPS (except localh
 ## File Dependencies
 
 Key module dependencies:
-- `Player.tsx` → `audioPlayer.ts`, `audioWorkletPlayer.ts`, `sdlAudioPlayer.ts`, `sdl2AudioPlayer.ts`, `audioLoader.ts`, `webgpuVisualizer.ts`, `useKeyboardShortcuts.ts`, `LibraryView.tsx`, `QueuePanel.tsx`, `PileMode.tsx`, `StarRating.tsx`
+- `Player.tsx` → `audioPlayer.ts`, `audioWorkletPlayer.ts`, `sdlAudioPlayer.ts`, `sdl2AudioPlayer.ts`, `audioLoader.ts`, `webgpuVisualizer.ts`, `useKeyboardShortcuts.ts`, `LibraryView.tsx`, `QueuePanel.tsx`, `PileMode.tsx`, `StarRating.tsx`, `ShaderGUI.tsx`
 - `audioPlayer.ts` → `flacDecoder.ts`
 - `audioWorkletPlayer.ts` → `flacDecoder.ts`
 - `sdlAudioPlayer.ts` → `flacDecoder.ts`

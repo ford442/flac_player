@@ -44,6 +44,7 @@ export class WebGPUVisualizer {
 
   // --- GUI Mode Resources ---
   private guiUniformBuffer: GPUBuffer | null = null;
+  private guiAudioBuffer: GPUBuffer | null = null;
   private guiBindGroup: GPUBindGroup | null = null;
   private guiPipeline: GPURenderPipeline | null = null;
   private guiUniforms: ShaderGUIUniforms = {
@@ -54,6 +55,7 @@ export class WebGPUVisualizer {
     modeNone: 0, modeIR: 0, isPlaying: 0, playbackProgress: 0,
     volume: 1, colorShift: 0
   };
+  private guiAudioData: Float32Array = new Float32Array(64);
 
   // --- 3D Mode Resources ---
   private cubeVertexBuffer: GPUBuffer | null = null;
@@ -218,15 +220,26 @@ export class WebGPUVisualizer {
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     });
 
+    this.guiAudioBuffer = this.device.createBuffer({
+      size: 64 * 4,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST
+    });
+
     const guiModule = this.device.createShaderModule({ code: waveformWGSL });
 
     const guiBindGroupLayout = this.device.createBindGroupLayout({
-      entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }]
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } }
+      ]
     });
 
     this.guiBindGroup = this.device.createBindGroup({
       layout: guiBindGroupLayout,
-      entries: [{ binding: 0, resource: { buffer: this.guiUniformBuffer } }]
+      entries: [
+        { binding: 0, resource: { buffer: this.guiUniformBuffer } },
+        { binding: 1, resource: { buffer: this.guiAudioBuffer } }
+      ]
     });
 
     const guiPipelineLayout = this.device.createPipelineLayout({
@@ -426,7 +439,7 @@ struct Uniforms {
       this.canvas.addEventListener('mousedown', (e) => {
           this.isDragging = true;
           this.lastMousePos = { x: e.clientX, y: e.clientY };
-          this.checkInteraction(e.clientX, e.clientY);
+          this.checkInteraction();
       });
 
       window.addEventListener('mousemove', (e) => {
@@ -444,7 +457,7 @@ struct Uniforms {
       });
   }
 
-  private checkInteraction(mx: number, my: number) {
+  private checkInteraction() {
       if (this.mode !== '3D') return;
       if (this.onTogglePlay) {
           this.onTogglePlay();
@@ -580,8 +593,35 @@ struct Uniforms {
     this.guiUniforms = data;
   }
 
+  setAudioData(data: Uint8Array | Float32Array): void {
+    // Downsample frequency data to 64 bins
+    const targetBins = 64;
+    const sourceBins = data.length;
+    const binRatio = sourceBins / targetBins;
+    for (let i = 0; i < targetBins; i++) {
+      let sum = 0;
+      const start = Math.floor(i * binRatio);
+      const end = Math.floor((i + 1) * binRatio);
+      for (let j = start; j < end; j++) {
+        sum += data[j];
+      }
+      this.guiAudioData[i] = sum / ((end - start) * 255);
+    }
+  }
+
+  resize(): void {
+    if (!this.device || !this.context) return;
+    // Re-configure context to pick up new canvas size
+    const format = navigator.gpu.getPreferredCanvasFormat();
+    this.context.configure({
+      device: this.device,
+      format,
+      alphaMode: 'opaque'
+    });
+  }
+
   renderGUI(): void {
-    if (!this.device || !this.context || !this.guiPipeline || !this.guiBindGroup || !this.guiUniformBuffer) return;
+    if (!this.device || !this.context || !this.guiPipeline || !this.guiBindGroup || !this.guiUniformBuffer || !this.guiAudioBuffer) return;
 
     const u = this.guiUniforms;
     this.device.queue.writeBuffer(this.guiUniformBuffer, 0, new Float32Array([
@@ -592,6 +632,8 @@ struct Uniforms {
       u.modeNone, u.modeIR, u.isPlaying, u.playbackProgress,
       u.volume, u.colorShift
     ]));
+
+    this.device.queue.writeBuffer(this.guiAudioBuffer, 0, this.guiAudioData.buffer as ArrayBuffer);
 
     const commandEncoder = this.device.createCommandEncoder();
     const textureView = this.context.getCurrentTexture().createView();
@@ -630,6 +672,7 @@ struct Uniforms {
     this.stopAnimation();
     if (this.waveformUniformBuffer) this.waveformUniformBuffer.destroy();
     if (this.guiUniformBuffer) this.guiUniformBuffer.destroy();
+    if (this.guiAudioBuffer) this.guiAudioBuffer.destroy();
     if (this.cubeUniformBuffer) this.cubeUniformBuffer.destroy();
     if (this.cubeVertexBuffer) this.cubeVertexBuffer.destroy();
     if (this.cubeIndexBuffer) this.cubeIndexBuffer.destroy();

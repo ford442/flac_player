@@ -175,6 +175,18 @@
   opacity: 1;
 }
 
+.track-play-overlay {
+  color: #22D3EE;
+  font-size: 14px;
+  margin-left: auto;
+  padding-left: 8px;
+  filter: drop-shadow(0 0 4px rgba(34, 211, 238, 0.6));
+}
+
+.track-list-item.active {
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.12) 0%, rgba(34, 211, 238, 0.04) 100%);
+}
+
 /* Knobs */
 .knob-container {
   display: flex;
@@ -301,46 +313,69 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
+  height: 100%;
+  justify-content: center;
 }
 
-.volume-track {
+.volume-slider-track-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.volume-track-vertical {
   position: relative;
-  width: 120px;
-  height: 4px;
+  width: 4px;
+  height: 140px;
   background: #2D1B4E;
   border-radius: 2px;
   cursor: pointer;
 }
 
-.volume-fill {
+.volume-fill-vertical {
   position: absolute;
   left: 0;
-  top: 0;
+  right: 0;
   bottom: 0;
-  background: linear-gradient(90deg, #C084FC, #22D3EE);
+  background: linear-gradient(0deg, #C084FC, #22D3EE);
   border-radius: 2px;
   pointer-events: none;
 }
 
-.volume-thumb {
+.volume-thumb-vertical {
   position: absolute;
-  top: 50%;
+  left: 50%;
   width: 16px;
   height: 16px;
   background: #fff;
   border-radius: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, 50%);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   cursor: grab;
   transition: box-shadow 0.2s ease;
 }
 
-.volume-thumb:hover {
+.volume-thumb-vertical:hover {
   box-shadow: 0 2px 8px rgba(34, 211, 238, 0.5);
 }
 
-.volume-thumb:active {
+.volume-thumb-vertical:active {
   cursor: grabbing;
+}
+
+.volume-ticks {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 140px;
+}
+
+.volume-tick {
+  width: 8px;
+  height: 1px;
+  background: #6B7280;
+  transition: opacity 0.15s ease;
 }
 
 .volume-label {
@@ -349,6 +384,12 @@
   text-transform: uppercase;
   letter-spacing: 1px;
   color: #6B7280;
+}
+
+.volume-value {
+  font-size: 10px;
+  color: #6B7280;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Layout helpers */
@@ -387,6 +428,31 @@
 .shader-gui-knobs {
   display: flex;
   gap: 16px;
+}
+
+/* Branding */
+.chassis-branding {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+  padding-right: 4px;
+}
+
+.branding-model {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: #6B7280;
+  text-transform: uppercase;
+}
+
+.branding-version {
+  font-size: 9px;
+  font-weight: 500;
+  color: #9CA3AF;
+  font-variant-numeric: tabular-nums;
 }
 
 /* WebGPU canvas overlay */
