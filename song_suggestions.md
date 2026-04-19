@@ -1258,3 +1258,91 @@ An elegant vibration that breaks the royal spell!
 **Additional Notes:**
 - **Combo/Fusion:** 19th-Century Viennese Waltz / Australian Didgeridoo
 - **Thematic Ties:** The rigid, formal, and highly structured elegance of classical European high society grounded by the ancient, raw, and hypnotic resonance of the Australian outback.
+
+### Title: Reggae of the Round Table
+
+**Service:** Minimax Audio
+
+**Prompt:** A relaxed, sun-drenched Jamaican Reggae track with off-beat skanks and a heavy dub bassline. The upbeat, tropical groove is suddenly and completely accompanied by a regal, majestic Medieval brass fanfare, featuring ancient sackbuts and shawms, playing courtly processionals.
+
+**Lyrics:**
+(Verse 1 - Smooth reggae vocal)
+King Arthur stepping in the dancehall tonight...
+(Regal shawm plays a royal fanfare over the skank)
+Excalibur shining in the island light!
+Jah bless the knights, pass the chalice around!
+
+(Chorus)
+Camelot dub! The royal decree!
+Rocking the armor by the Caribbean sea!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Reggae / Medieval Court Brass
+- **Thematic Ties:** The chilled-out, island groove of Reggae contrasted with the stiff, formal, and majestic brass fanfares of Medieval European royalty.
+
+### Title: Bossa Nova Blacksmith
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, breezy Brazilian Bossa Nova song with whispered Portuguese vocals and soft nylon-string acoustic guitar. But the gentle percussion is entirely replaced by the heavy, rhythmic striking of a blacksmith's hammer on an anvil and the hissing of hot iron in water, providing a surprisingly relaxed industrial rhythm.
+
+**Lyrics:**
+(Verse 1 - Breathy, soft vocal)
+The fire burns slow in the forge of my heart...
+(Clang of a hammer on anvil in perfect bossa time)
+Shaping the steel is a beautiful art...
+(Hiss of steam on the off-beat)
+
+(Chorus)
+Bossa of the anvil, sway to the strike...
+Melting the iron, whatever you like.
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Bossa Nova / Industrial Blacksmithing Foley
+- **Thematic Ties:** The absolute tranquility of Bossa Nova rhythms created by the heavy, sweaty, and traditionally aggressive sounds of a working forge.
+
+### Title: Synthpop Sea Shanty
+
+**Service:** Minimax Audio
+
+**Prompt:** A booming, a cappella 19th-century sailor's Sea Shanty, sung by a robust chorus of men. But instead of an old wooden ship, the rhythmic backing is a pulsing, arpeggiated 1980s synthpop beat with gated snare drums, turning the maritime work song into an electronic dance floor anthem.
+
+**Lyrics:**
+(Verse 1 - Booming, gruff sailor chorus)
+Heave away, boys, to the neon shore!
+(Bright, bubbly 80s synth arpeggio kicks in)
+We're hauling the data, who could ask for more!
+The microchip ocean is deep and cold!
+
+(Chorus)
+(Massive gated snare drum hits)
+Way-hey, and up she rises!
+Early in the morning, synthetic surprises!
+Sail the cyber-seas, boys, load up the disk!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Sea Shanty / 1980s Synthpop
+- **Thematic Ties:** The collective, acoustic, and physically demanding nature of a sea shanty mashed up with the synthetic, highly produced, and futuristic sounds of 80s pop.
+
+### Title: Flamenco on the Moon
+
+**Service:** Minimax Audio
+
+**Prompt:** A fierce, passionate Spanish Flamenco track with incredibly fast acoustic guitar fingerpicking and rhythmic handclaps (palmas). However, the traditional stomping (zapateado) and vocals are replaced by the ethereal, echoing, heavily delayed bleeps and transmissions of a vintage space communication system and the hum of a theremin.
+
+**Lyrics:**
+(Verse 1 - Bleeping, synthesized space transmissions trying to sound like a passionate singer)
+Houston, we have a passion...
+(Incredibly fast, dramatic Flamenco guitar run)
+The lunar surface burns with desire...
+(Theremin wails a haunting, microtonal melody)
+
+(Chorus)
+(Rhythmic palmas clapping alongside slow, echoing radar pings)
+Dance in the vacuum! No air to breathe!
+The stars and the strings, a tangled wreath!
+Flamenco zero gravity, floating away!
+
+**Additional Notes:**
+- **Combo/Fusion:** Spanish Flamenco / Vintage Space Age Electronic & Theremin
+- **Thematic Ties:** The earthy, incredibly human, and physically grounded passion of Flamenco completely unmoored in the cold, vast, and synthetic environment of deep space exploration.
