@@ -1177,3 +1177,84 @@ The Appalachian Gamelan is out of sight!
 **Additional Notes:**
 - **Combo/Fusion:** Appalachian Bluegrass / Indonesian Gamelan
 - **Thematic Ties:** The incredibly fast, intricate, and wooden acoustic picking of American mountain music translated into the ringing, sustaining, and profoundly metallic resonance of a traditional Indonesian ensemble.
+
+### Title: The Steppe Speakeasy
+
+**Service:** Minimax Audio
+
+**Prompt:** A lively, bouncing 1920s Dixieland Jazz tune with a swinging rhythm section, but the trumpet, clarinet, and trombone are entirely replaced by the sweeping, raspy bowing of the Mongolian Morin Khuur (horsehead fiddle) improvising wild, syncopated jazz licks and growls.
+
+**Lyrics:**
+(Verse 1)
+Grab your flapper dress, we're heading to the plains!
+(Morin Khuur plays a swinging, bent-note jazz solo)
+The horsehead fiddle's swinging, breaking all the chains!
+
+(Chorus)
+Speakeasy on the steppe! The nomads learn to swing!
+The roaring twenties rhythm makes the open valley ring!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1920s Dixieland Jazz / Mongolian Morin Khuur
+- **Thematic Ties:** The glamorous, urban, and syncopated swing of Prohibition-era America unexpectedly thriving in the vast, windy expanses of the Mongolian steppe, played on a traditional nomadic instrument.
+
+### Title: Neon Shibuya Pipes
+
+**Service:** Minimax Audio
+
+**Prompt:** A smooth, glossy 1980s Japanese City Pop track with funky slap bass and shimmering synths, but the breezy saxophone solos and lead vocal melodies are entirely replaced by the loud, continuous drone of traditional Scottish Great Highland Bagpipes playing jazzy pentatonic scales.
+
+**Lyrics:**
+(Verse 1)
+Midnight in Shibuya, neon lights are glowing bright!
+(Bagpipes blare a smooth, jazzy riff)
+The city breeze is blowing, stepping out into the night!
+
+(Chorus)
+Tartan on the dancefloor! Kilt spinning in the groove!
+The Tokyo piper is making the city move!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Japanese City Pop / Scottish Bagpipes
+- **Thematic Ties:** The hyper-urban, slick, and breezy aesthetics of bubblegum-era Japan colliding with the fierce, rural, and incredibly loud tradition of the Scottish highlands.
+
+### Title: The Monastery Breakbeat
+
+**Service:** Minimax Audio
+
+**Prompt:** A frantic, high-BPM 1990s UK Jungle track driven by chopped and pitched-up Amen breaks and deep sub-bass, but the atmospheric pads and vocal samples are completely replaced by a solemn, reverb-drenched choir of monks singing authentic Latin Gregorian chants in perfect unison.
+
+**Lyrics:**
+(Verse 1)
+(Fast, stuttering Amen breakbeat playing underneath)
+Dominus vobiscum, the bass is dropping low!
+(Monks chanting solemnly in Latin)
+Et cum spiritu tuo, watch the lasers glow!
+
+(Chorus)
+Raving in the abbey! The monks are on the decks!
+A holy breakbeat rhythm that nobody expects!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s UK Jungle / Latin Gregorian Chant
+- **Thematic Ties:** The hyperactive, futuristic, and synthetic energy of underground 90s rave culture juxtaposed against the ancient, slow, and deeply spiritual devotion of medieval monastic chanting.
+
+### Title: The Outback Waltz
+
+**Service:** Minimax Audio
+
+**Prompt:** A grand, sweeping 19th-century Viennese Waltz in 3/4 time, complete with a lush orchestral string section playing elegant melodies. However, the foundational rhythm and bassline are powerfully anchored by the continuous, rhythmic, and earthy growl of an Australian Aboriginal Didgeridoo, weaving circular breathing patterns through the delicate strings.
+
+**Lyrics:**
+(Verse 1)
+One, two, three! The ballroom is spinning around!
+(Didgeridoo provides a deep, rhythmic, pulsing drone)
+Silks and satins sweeping the floor, lifted by the sound!
+
+(Chorus)
+Waltz across the outback! The drone begins to swell!
+An elegant vibration that breaks the royal spell!
+
+**Additional Notes:**
+- **Combo/Fusion:** 19th-Century Viennese Waltz / Australian Didgeridoo
+- **Thematic Ties:** The rigid, formal, and highly structured elegance of classical European high society grounded by the ancient, raw, and hypnotic resonance of the Australian outback.
