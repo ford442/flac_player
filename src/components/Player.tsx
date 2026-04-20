@@ -228,7 +228,6 @@ export const Player: React.FC = () => {
           if (sharedData.tracks && sharedData.tracks.length > 0) {
             setQueue(sharedData.tracks);
             setQueueCurrentIndex(0);
-            setCurrentTrack(sharedData.tracks[0]);
             setActiveTab('now-playing');
             addToast(`Loaded playlist: ${sharedData.title}`, 'success');
             if (window.location.search.includes('share=')) {
@@ -359,7 +358,7 @@ export const Player: React.FC = () => {
     }
 
     playerRef.current?.play();
-  }, [playerState.isPlaying, playerState.duration, queue, queueCurrentIndex]);
+  }, [playerState.isPlaying, playerState.duration, playTrack, queue, queueCurrentIndex]);
   
   const handleAutoAdvance = () => {
     if (queue.length === 0) return;
