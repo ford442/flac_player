@@ -1346,3 +1346,99 @@ Flamenco zero gravity, floating away!
 **Additional Notes:**
 - **Combo/Fusion:** Spanish Flamenco / Vintage Space Age Electronic & Theremin
 - **Thematic Ties:** The earthy, incredibly human, and physically grounded passion of Flamenco completely unmoored in the cold, vast, and synthetic environment of deep space exploration.
+
+### Title: Alpine Shoegaze
+
+**Service:** Minimax Audio
+
+**Prompt:** A dense, swirling 1990s Shoegaze track characterized by a massive wall of heavily distorted, reverberating electric guitars. However, the washed-out, ethereal vocals and lead melodies are completely replaced by the deep, booming, resonant tones of a traditional Swiss Alpine Alphorn, echoing through the feedback as if played on a misty mountain peak.
+
+**Lyrics:**
+(Verse 1 - Breathy, whispered vocals barely audible over the fuzz)
+Standing on the cliff edge, lost within the clouds...
+(The Alphorn blasts a deep, echoing melody through the wall of sound)
+The reverb is a blanket, weaving through the crowds...
+
+(Chorus)
+(Massive wave of distortion crests)
+Alpine shoegaze! The fuzz and the snow!
+The longest wooden horn in the valley below!
+Drowning in the echo, the mountain starts to bend!
+A wall of noise and woodwinds, waiting for the end!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Shoegaze / Swiss Alpine Alphorn
+- **Thematic Ties:** The isolating, overwhelming "wall of sound" created by shoegaze guitar pedals perfectly complementing the immense, solitary, and deeply echoing resonance of a massive mountain horn.
+
+### Title: The Crystal Drill
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, menacing UK Drill rap track with aggressive sliding 808 sub-basses and frantic, syncopated hi-hat patterns. But instead of typical dark piano or synthesizer melodies, the intense instrumental hooks are provided by the incredibly delicate, ethereal, and glassy ringing of an 18th-century Glass Harmonica.
+
+**Lyrics:**
+(Verse 1 - Fast, rhythmic UK Drill flow)
+Step in the zone, man's wearing the black,
+(Ethereal, high-pitched Glass Harmonica chords slide over the heavy 808s)
+Crystal in the trap, there's no turning back!
+Friction on the glass, hear the high notes ring,
+(Glass Harmonica plays a rapid, delicate arpeggio)
+18th-century vibes, hear the mandem sing!
+
+(Chorus)
+(Heavy bass drops with fragile, ringing glass melodies)
+Drill in the parlor! Spin the wet glass!
+Sub-bass shaking, watch the shadows pass!
+Mozart on the block, sliding on the beat!
+The most fragile sound on the hardest street!
+
+**Additional Notes:**
+- **Combo/Fusion:** UK Drill Rap / 18th-Century Glass Harmonica
+- **Thematic Ties:** The aggressive, heavy, and street-level grit of modern UK Drill bizarrely juxtaposed against the impossibly fragile, upper-class, and hauntingly delicate sound of wet fingertips on spinning crystal glass.
+
+### Title: Copacabana Carnage
+
+**Service:** Minimax Audio
+
+**Prompt:** A ferocious, brutal Death Metal track featuring guttural growls, heavily down-tuned guitars, and relentless blast beats. Shockingly, the intense drum fills and rhythmic breakdowns are entirely driven by a loud, squeaking, and highly rhythmic Brazilian Cuica drum, adding a wildly cheerful carnival bounce to the extreme metal chaos.
+
+**Lyrics:**
+(Verse 1 - Deep, guttural Death Metal roar over blast beats)
+BLOOD ON THE BEACH! THE SUN TURNS BLACK!
+(The Cuica drum squeaks wildly in a frantic samba rhythm)
+THE CARNIVAL OF DOOM! THERE IS NO TURNING BACK!
+
+(Chorus)
+(Heavy, sludgy breakdown accompanied by a loud, bouncing Cuica solo)
+SAMBA OF THE DAMNED! THE JUNGLE STARTS TO BLEED!
+SQUEAKING THROUGH THE CARNAGE AT A TERRIFYING SPEED!
+DEATH METAL RIO! THE FEATHERS AND THE GORE!
+THE LOUDEST LITTLE DRUM THAT YOU CANNOT IGNORE!
+
+**Additional Notes:**
+- **Combo/Fusion:** Death Metal / Brazilian Cuica Drum
+- **Thematic Ties:** The terrifying, aggressive, and brutal nature of Death Metal completely undercut and confused by the inherently hilarious, bouncy, and squeaky "monkey sound" of a traditional Brazilian samba instrument.
+
+### Title: Neon Powwow
+
+**Service:** Minimax Audio
+
+**Prompt:** A driving, neon-soaked 1980s Synthwave track with pulsating analog arpeggios and heavy electronic drum machines. However, the soaring synthesizer solos and lead vocals are entirely replaced by the passionate, rhythmic chanting of a Native American Powwow drum circle, accompanied by the airy, breathy melodies of a traditional wooden Native American flute.
+
+**Lyrics:**
+(Verse 1 - Intense, rhythmic Powwow chanting perfectly synced to a 4/4 electronic beat)
+(Traditional wooden flute plays a soaring, echo-drenched melody over a synth bassline)
+Dancing by the neon fire, under grid-like skies!
+(Powwow drummers hit a massive, electronic tom-tom beat)
+Ancestors awakening with digital eyes!
+
+(Chorus)
+(Huge synth chords rise alongside the powerful group chanting)
+Cybernetic powwow! The rhythm of the earth!
+A retro-futuristic, synthetic rebirth!
+Flutes in the matrix, chanting in the glow!
+The oldest human rhythm putting on a laser show!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Synthwave / Native American Powwow Music & Flute
+- **Thematic Ties:** The pristine, highly artificial, and futuristic aesthetic of 80s synthwave grounded by the deeply spiritual, ancient, and deeply human communal energy of Native American traditional music.
