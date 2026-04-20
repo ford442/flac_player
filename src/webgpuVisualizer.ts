@@ -216,7 +216,7 @@ export class WebGPUVisualizer {
     if (!this.device) return;
 
     this.guiUniformBuffer = this.device.createBuffer({
-      size: 84,
+      size: 88,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
     });
 
@@ -630,7 +630,8 @@ struct Uniforms {
       u.audioLevel, u.audioLevelL, u.audioLevelR,
       u.spectrum0, u.spectrum1, u.spectrum2, u.spectrum3, u.spectrum4,
       u.modeNone, u.modeIR, u.isPlaying, u.playbackProgress,
-      u.volume, u.colorShift
+      u.volume, u.colorShift,
+      0.0 // padding to match WGSL struct alignment (88 bytes)
     ]));
 
     this.device.queue.writeBuffer(this.guiAudioBuffer, 0, this.guiAudioData.buffer as ArrayBuffer);
