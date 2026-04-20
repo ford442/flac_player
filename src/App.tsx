@@ -2,7 +2,20 @@ import React from 'react';
 import './App.css';
 import { Player } from './components/Player';
 
+const isSharedPlaylistRoute = (): boolean => {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('share')) {
+    return true;
+  }
+
+  return /^\/playlist\/[^/]+$/.test(window.location.pathname);
+};
+
 const App: React.FC = () => {
+  if (isSharedPlaylistRoute()) {
+    return <Player />;
+  }
+
   return (
     <div className="App">
       <header className="App-header">

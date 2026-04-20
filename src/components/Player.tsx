@@ -29,6 +29,18 @@ type AudioOutputMode = 'web-audio' | 'worklet' | 'sdl' | 'sdl2';
 type ViewTab = 'library' | 'now-playing' | 'queue';
 type LibraryViewMode = 'grid' | 'list';
 
+const getSharedPlaylistId = (): string | null => {
+  const params = new URLSearchParams(window.location.search);
+  const queryShareId = params.get('share');
+
+  if (queryShareId) {
+    return queryShareId;
+  }
+
+  const pathMatch = window.location.pathname.match(/^\/playlist\/([^/]+)$/);
+  return pathMatch ? decodeURIComponent(pathMatch[1]) : null;
+};
+
 // =============================================================================
 // Toast Notification Component (Simple inline version)
 // =============================================================================
@@ -68,6 +80,9 @@ const ToastContainer: React.FC<{ toasts: Toast[]; onRemove: (id: string) => void
 // =============================================================================
 
 export const Player: React.FC = () => {
+  const sharedPlaylistId = useMemo(() => getSharedPlaylistId(), []);
+  const isSharedPlaylist = sharedPlaylistId !== null;
+
   // Player state
   const [playerState, setPlayerState] = useState<PlayerState>({
     isPlaying: false,
@@ -188,28 +203,36 @@ export const Player: React.FC = () => {
   }, [loader]);
   
   useEffect(() => {
+    if (isSharedPlaylist) {
+      return;
+    }
+
     loadLibrary();
-  }, [loadLibrary]);
+  }, [isSharedPlaylist, loadLibrary]);
   
   useEffect(() => {
+    if (isSharedPlaylist) {
+      return;
+    }
+
     loadTags();
     loadStats();
-  }, [loadTags, loadStats]);
+  }, [isSharedPlaylist, loadTags, loadStats]);
   
   // Load queue from storage or shared playlist
   useEffect(() => {
     const initializeApp = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const shareId = params.get('share');
-
-      if (shareId) {
+      if (sharedPlaylistId) {
         try {
-          const sharedData = await loader.fetchSharedPlaylist(shareId);
+          const sharedData = await loader.fetchSharedPlaylist(sharedPlaylistId);
           if (sharedData.tracks && sharedData.tracks.length > 0) {
             setQueue(sharedData.tracks);
             setQueueCurrentIndex(0);
+            setActiveTab('now-playing');
             addToast(`Loaded playlist: ${sharedData.title}`, 'success');
-            window.history.replaceState({}, '', window.location.pathname);
+            if (window.location.search.includes('share=')) {
+              window.history.replaceState({}, '', `/playlist/${encodeURIComponent(sharedPlaylistId)}`);
+            }
             return;
           }
         } catch (err) {
@@ -227,12 +250,16 @@ export const Player: React.FC = () => {
     };
 
     initializeApp();
-  }, [loader, addToast]);
+  }, [loader, addToast, sharedPlaylistId]);
   
   // Save queue to storage
   useEffect(() => {
+    if (isSharedPlaylist) {
+      return;
+    }
+
     saveQueueToStorage({ tracks: queue, currentIndex: queueCurrentIndex, shuffle, repeat: repeatMode });
-  }, [queue, queueCurrentIndex, shuffle, repeatMode]);
+  }, [isSharedPlaylist, queue, queueCurrentIndex, shuffle, repeatMode]);
   
   // =============================================================================
   // Player Initialization
@@ -315,6 +342,28 @@ export const Player: React.FC = () => {
       console.error('Failed to play track:', err);
     }
   };
+
+  const togglePlayback = useCallback(() => {
+    if (playerState.isPlaying) {
+      playerRef.current?.pause();
+      return;
+    }
+
+    if (queue.length === 0) {
+      playerRef.current?.play();
+      return;
+    }
+
+    const initialIndex = queueCurrentIndex >= 0 ? queueCurrentIndex : 0;
+    const initialTrack = queue[initialIndex];
+
+    if (playerState.duration === 0 && initialTrack) {
+      playTrack(initialTrack, initialIndex);
+      return;
+    }
+
+    playerRef.current?.play();
+  }, [playerState.isPlaying, playerState.duration, playTrack, queue, queueCurrentIndex]);
   
   const handleAutoAdvance = () => {
     if (queue.length === 0) return;
@@ -513,10 +562,7 @@ export const Player: React.FC = () => {
   // =============================================================================
   
   useKeyboardShortcuts({
-    onPlayPause: () => {
-      if (playerState.isPlaying) playerRef.current?.pause();
-      else playerRef.current?.play();
-    },
+    onPlayPause: togglePlayback,
     onSeekForward: () => {
       if (playerRef.current) {
         const newTime = Math.min(playerState.currentTime + 10, playerState.duration);
@@ -586,10 +632,7 @@ export const Player: React.FC = () => {
           currentTime={playerState.currentTime}
           duration={playerState.duration}
           volume={volume}
-          onPlay={() => {
-            if (playerState.isPlaying) playerRef.current?.pause();
-            else playerRef.current?.play();
-          }}
+          onPlay={togglePlayback}
           onStop={() => {
             playerRef.current?.stop();
           }}
@@ -609,6 +652,7 @@ export const Player: React.FC = () => {
             }
           }}
           onToggleFallback={() => setShowHtmlFallback(true)}
+          showFallbackToggle={!isSharedPlaylist}
         />
       </>
     );
@@ -866,10 +910,7 @@ export const Player: React.FC = () => {
                 currentTime={playerState.currentTime}
                 duration={playerState.duration}
                 volume={volume}
-                onPlay={() => {
-                  if (playerState.isPlaying) playerRef.current?.pause();
-                  else playerRef.current?.play();
-                }}
+                onPlay={togglePlayback}
                 onStop={() => {
                   playerRef.current?.stop();
                 }}
@@ -940,10 +981,7 @@ export const Player: React.FC = () => {
                 ⏮
               </button>
               <button
-                onClick={() => {
-                  if (playerState.isPlaying) playerRef.current?.pause();
-                  else playerRef.current?.play();
-                }}
+                onClick={togglePlayback}
                 className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center text-xl hover:scale-105 transition-transform"
               >
                 {playerState.isPlaying ? '⏸' : '▶'}
