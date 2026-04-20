@@ -524,10 +524,12 @@ export const Player: React.FC = () => {
 
     try {
       const trackIds = queue.map(t => t.id).filter(Boolean) as string[];
-      const apiUrl = process.env.REACT_APP_API_URL || '';
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://storage.noahcohn.com';
 
       const response = await fetch(`${apiUrl}/api/share`, {
         method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           track_ids: trackIds,
@@ -539,9 +541,12 @@ export const Player: React.FC = () => {
       if (!response.ok) throw new Error('Failed to generate link');
 
       const data = await response.json();
-      await navigator.clipboard.writeText(data.full_url);
+      const shareId = data.share_id ?? data.full_url?.split('/').pop();
+      const shareUrl = `${window.location.origin}${window.location.pathname}?share=${shareId}`;
+      await navigator.clipboard.writeText(shareUrl);
       addToast('Playlist link copied to clipboard!', 'success');
     } catch (err) {
+      console.error('Share error:', err);
       addToast('Error generating share link.', 'error');
     }
   };
