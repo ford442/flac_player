@@ -255,8 +255,12 @@ export const Player: React.FC = () => {
   
   // Save queue to storage
   useEffect(() => {
+    if (isSharedPlaylist) {
+      return;
+    }
+
     saveQueueToStorage({ tracks: queue, currentIndex: queueCurrentIndex, shuffle, repeat: repeatMode });
-  }, [queue, queueCurrentIndex, shuffle, repeatMode]);
+  }, [isSharedPlaylist, queue, queueCurrentIndex, shuffle, repeatMode]);
   
   // =============================================================================
   // Player Initialization
@@ -339,6 +343,23 @@ export const Player: React.FC = () => {
       console.error('Failed to play track:', err);
     }
   };
+
+  const togglePlayback = useCallback(async () => {
+    if (playerState.isPlaying) {
+      playerRef.current?.pause();
+      return;
+    }
+
+    const initialIndex = queueCurrentIndex >= 0 ? queueCurrentIndex : 0;
+    const initialTrack = queue[initialIndex];
+
+    if (playerState.duration === 0 && initialTrack) {
+      await playTrack(initialTrack, initialIndex);
+      return;
+    }
+
+    playerRef.current?.play();
+  }, [playerState.isPlaying, playerState.duration, queue, queueCurrentIndex]);
   
   const handleAutoAdvance = () => {
     if (queue.length === 0) return;
@@ -537,10 +558,7 @@ export const Player: React.FC = () => {
   // =============================================================================
   
   useKeyboardShortcuts({
-    onPlayPause: () => {
-      if (playerState.isPlaying) playerRef.current?.pause();
-      else playerRef.current?.play();
-    },
+    onPlayPause: () => { void togglePlayback(); },
     onSeekForward: () => {
       if (playerRef.current) {
         const newTime = Math.min(playerState.currentTime + 10, playerState.duration);
@@ -610,10 +628,7 @@ export const Player: React.FC = () => {
           currentTime={playerState.currentTime}
           duration={playerState.duration}
           volume={volume}
-          onPlay={() => {
-            if (playerState.isPlaying) playerRef.current?.pause();
-            else playerRef.current?.play();
-          }}
+          onPlay={() => { void togglePlayback(); }}
           onStop={() => {
             playerRef.current?.stop();
           }}
@@ -890,10 +905,7 @@ export const Player: React.FC = () => {
                 currentTime={playerState.currentTime}
                 duration={playerState.duration}
                 volume={volume}
-                onPlay={() => {
-                  if (playerState.isPlaying) playerRef.current?.pause();
-                  else playerRef.current?.play();
-                }}
+                onPlay={() => { void togglePlayback(); }}
                 onStop={() => {
                   playerRef.current?.stop();
                 }}
@@ -964,10 +976,7 @@ export const Player: React.FC = () => {
                 ⏮
               </button>
               <button
-                onClick={() => {
-                  if (playerState.isPlaying) playerRef.current?.pause();
-                  else playerRef.current?.play();
-                }}
+                onClick={() => { void togglePlayback(); }}
                 className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center text-xl hover:scale-105 transition-transform"
               >
                 {playerState.isPlaying ? '⏸' : '▶'}
