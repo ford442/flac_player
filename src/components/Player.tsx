@@ -80,7 +80,7 @@ const ToastContainer: React.FC<{ toasts: Toast[]; onRemove: (id: string) => void
 // =============================================================================
 
 export const Player: React.FC = () => {
-  const [sharedPlaylistId] = useState<string | null>(() => getSharedPlaylistId());
+  const sharedPlaylistId = useMemo(() => getSharedPlaylistId(), []);
   const isSharedPlaylist = sharedPlaylistId !== null;
 
   // Player state
