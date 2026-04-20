@@ -18,7 +18,6 @@ import {
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { LibraryView } from './LibraryView';
 import { QueuePanel } from './QueuePanel';
-import { PileMode } from './PileMode';
 import { ShaderGUI } from './ShaderGUI/ShaderGUI';
 import './Player.css';
 
@@ -114,9 +113,6 @@ export const Player: React.FC = () => {
   const [shuffle, setShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
   
-  // Pile mode
-  const [showPileMode, setShowPileMode] = useState(false);
-  
   // Current track
   const [currentTrack, setCurrentTrack] = useState<PlaylistTrack | null>(null);
   
@@ -162,7 +158,7 @@ export const Player: React.FC = () => {
         search: searchQuery || undefined,
         sortBy,
         sortDesc: true,
-        limit: 200
+        limit: 1000
       });
       setLibrary(tracks);
     } catch (err) {
@@ -366,12 +362,50 @@ export const Player: React.FC = () => {
     });
     addToast('Added to queue', 'success');
   };
-  
+
+  const playNow = (track: PlaylistTrack) => {
+    setQueue([track]);
+    setQueueCurrentIndex(0);
+    playTrack(track, 0);
+    addToast('Playing now: ' + (track.title || track.name), 'info');
+  };
+
+  const playNext = (track: PlaylistTrack) => {
+    setQueue(prev => {
+      if (prev.some(t => t.id === track.id)) return prev;
+      const insertAt = queueCurrentIndex >= 0 ? queueCurrentIndex + 1 : prev.length;
+      const next = [...prev];
+      next.splice(insertAt, 0, track);
+      return next;
+    });
+    addToast('Playing next: ' + (track.title || track.name), 'success');
+  };
+
   const removeFromQueue = (index: number) => {
     setQueue(prev => prev.filter((_, i) => i !== index));
     if (index < queueCurrentIndex) {
       setQueueCurrentIndex(prev => prev - 1);
     }
+  };
+
+  const reorderQueue = (startIndex: number, endIndex: number) => {
+    if (startIndex === endIndex) return;
+    setQueue(prev => {
+      const next = [...prev];
+      const [removed] = next.splice(startIndex, 1);
+      next.splice(endIndex, 0, removed);
+      return next;
+    });
+    setQueueCurrentIndex(prev => {
+      if (prev === -1) return -1;
+      if (prev === startIndex) return endIndex;
+      if (startIndex < endIndex) {
+        if (prev > startIndex && prev <= endIndex) return prev - 1;
+      } else {
+        if (prev >= endIndex && prev < startIndex) return prev + 1;
+      }
+      return prev;
+    });
   };
   
   const clearQueue = () => {
@@ -521,8 +555,7 @@ export const Player: React.FC = () => {
       });
     },
     onToggleQueue: () => setShowQueue(prev => !prev),
-    onTogglePile: () => setShowPileMode(true),
-    isEnabled: !showPileMode
+    isEnabled: true
   });
   
   // =============================================================================
@@ -586,17 +619,6 @@ export const Player: React.FC = () => {
     <div className="player min-h-screen bg-[#0f0f1e] text-white flex flex-col">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
       
-      {/* Pile Mode Overlay */}
-      <PileMode
-        isActive={showPileMode}
-        onClose={() => setShowPileMode(false)}
-        onTrackRated={() => {
-          loadLibrary();
-          loadStats();
-        }}
-        stats={stats}
-      />
-      
       {/* Queue Panel */}
       <QueuePanel
         queue={queue}
@@ -609,6 +631,7 @@ export const Player: React.FC = () => {
         onShuffle={() => setShuffle(s => !s)}
         onSmartMix={handleSmartMix}
         onShareQueue={generateShareLink}
+        onReorderQueue={reorderQueue}
         shuffle={shuffle}
         repeatMode={repeatMode}
         onToggleRepeat={() => setRepeatMode(m => m === 'off' ? 'all' : m === 'all' ? 'one' : 'off')}
@@ -649,12 +672,6 @@ export const Player: React.FC = () => {
         
         {/* Actions */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowPileMode(true)}
-            className="px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:opacity-90 transition-opacity text-sm font-medium"
-          >
-            📦 Sort Pile ({stats.untagged_count})
-          </button>
           <button
             onClick={() => setShowQueue(true)}
             className="relative px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm"
@@ -775,7 +792,7 @@ export const Player: React.FC = () => {
         {/* Main Area */}
         <main className="flex-1 flex flex-col overflow-hidden">
           {activeTab === 'library' && (
-            <>
+            <div className="flex-1 flex flex-col overflow-hidden">
               {/* Library Toolbar */}
               <div className="flex items-center justify-between px-6 py-3 border-b border-white/10">
                 <div className="flex items-center gap-2">
@@ -792,7 +809,7 @@ export const Player: React.FC = () => {
                     ☰ List
                   </button>
                 </div>
-                
+
                 {selectedTags.length > 0 && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-gray-400">Filtered by:</span>
@@ -814,7 +831,7 @@ export const Player: React.FC = () => {
                   </div>
                 )}
               </div>
-              
+
               {/* Library View */}
               <LibraryView
                 tracks={library}
@@ -827,15 +844,15 @@ export const Player: React.FC = () => {
                   addToQueue(track);
                   playTrack(track, queue.length);
                 }}
-                onTrackDoubleClick={(track) => {
-                  addToQueue(track);
-                  playTrack(track, queue.length);
-                }}
+                onTrackDoubleClick={playNow}
                 onUpdateTrack={updateTrack}
                 onTrashTrack={trashTrack}
+                onPlayNow={playNow}
+                onPlayNext={playNext}
+                onAddToQueue={addToQueue}
                 isLoading={isLoadingLibrary}
               />
-            </>
+            </div>
           )}
           
           {activeTab === 'now-playing' && (
@@ -878,6 +895,7 @@ export const Player: React.FC = () => {
                 onShuffle={() => setShuffle(s => !s)}
                 onSmartMix={handleSmartMix}
                 onShareQueue={generateShareLink}
+                onReorderQueue={reorderQueue}
                 shuffle={shuffle}
                 repeatMode={repeatMode}
                 onToggleRepeat={() => setRepeatMode(m => m === 'off' ? 'all' : m === 'all' ? 'one' : 'off')}

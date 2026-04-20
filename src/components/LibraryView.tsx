@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { PlaylistTrack, SortBy, TagInfo, LibraryStats, AudioLoader } from '../audioLoader';
+import React, { useState, useMemo } from 'react';
+import { PlaylistTrack, TagInfo, LibraryStats } from '../audioLoader';
 import { StarRating } from './StarRating';
 import { TagInput } from './TagInput';
 
@@ -14,6 +14,9 @@ interface LibraryViewProps {
   onTrackDoubleClick: (track: PlaylistTrack) => void;
   onUpdateTrack: (id: string, updates: Partial<PlaylistTrack>) => Promise<void>;
   onTrashTrack: (id: string) => Promise<void>;
+  onPlayNow?: (track: PlaylistTrack) => void;
+  onPlayNext?: (track: PlaylistTrack) => void;
+  onAddToQueue?: (track: PlaylistTrack) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoading?: boolean;
@@ -29,7 +32,6 @@ interface EditingState {
 export const LibraryView: React.FC<LibraryViewProps> = ({
   tracks,
   allTags,
-  stats,
   currentTrackId,
   isPlaying,
   viewMode,
@@ -37,6 +39,9 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   onTrackDoubleClick,
   onUpdateTrack,
   onTrashTrack,
+  onPlayNow,
+  onPlayNext,
+  onAddToQueue,
   onLoadMore,
   hasMore,
   isLoading
@@ -47,9 +52,9 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
     tags: [],
     isSaving: false
   });
-  
+
   const tagNames = useMemo(() => allTags.map(t => t.name), [allTags]);
-  
+
   const startEditing = (track: PlaylistTrack) => {
     setEditing({
       trackId: track.id,
@@ -58,12 +63,12 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
       isSaving: false
     });
   };
-  
+
   const saveEdit = async () => {
     if (!editing.trackId) return;
-    
+
     setEditing(prev => ({ ...prev, isSaving: true }));
-    
+
     try {
       const track = tracks.find(t => t.id === editing.trackId);
       if (track) {
@@ -72,7 +77,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         if (JSON.stringify(editing.tags) !== JSON.stringify(track.tags || [])) {
           updates.tags = editing.tags;
         }
-        
+
         if (Object.keys(updates).length > 0) {
           await onUpdateTrack(track.id, updates);
         }
@@ -81,34 +86,34 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
       setEditing({ trackId: null, rating: undefined, tags: [], isSaving: false });
     }
   };
-  
+
   const handleTrash = async (trackId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (window.confirm('Mark this track as trash?')) {
       await onTrashTrack(trackId);
     }
   };
-  
+
   const formatDuration = (seconds?: number) => {
     if (!seconds) return '--:--';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
-  
+
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '--';
     return new Date(dateStr).toLocaleDateString();
   };
-  
+
   // Grid View
   if (viewMode === 'grid') {
     return (
-      <div className="library-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4 overflow-y-auto">
-        {tracks.map((track, index) => {
+      <div className="library-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4 flex-1 overflow-y-auto">
+        {tracks.map((track) => {
           const isCurrent = track.id === currentTrackId;
           const isEditing = editing.trackId === track.id;
-          
+
           return (
             <div
               key={track.id}
@@ -149,22 +154,64 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                   </div>
                 )}
                 <span className="text-3xl opacity-50">🎵</span>
+
+                {/* Play Actions Overlay */}
+                {(onPlayNow || onPlayNext || onAddToQueue) && (
+                  <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/90 via-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex gap-2 justify-center">
+                    {onPlayNow && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPlayNow(track);
+                        }}
+                        className="px-2 py-1 bg-purple-500 text-white rounded text-xs font-medium hover:bg-purple-600 transition-colors"
+                        title="Play Now"
+                      >
+                        ▶ Play
+                      </button>
+                    )}
+                    {onPlayNext && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onPlayNext(track);
+                        }}
+                        className="px-2 py-1 bg-blue-500 text-white rounded text-xs font-medium hover:bg-blue-600 transition-colors"
+                        title="Play Next"
+                      >
+                        ⏭ Next
+                      </button>
+                    )}
+                    {onAddToQueue && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAddToQueue(track);
+                        }}
+                        className="px-2 py-1 bg-white/20 text-white rounded text-xs font-medium hover:bg-white/30 transition-colors"
+                        title="Add to Queue"
+                      >
+                        ＋ Queue
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
-              
+
               {/* Info */}
               <div className="p-3">
                 <h4 className="font-medium text-white truncate" title={track.title || track.name}>
                   {track.title || track.name}
                 </h4>
                 <p className="text-sm text-gray-400 truncate">{track.author || 'Unknown'}</p>
-                
+
                 <div className="mt-2 flex items-center justify-between">
                   <StarRating rating={track.rating} maxRating={5} size="sm" readonly />
                   <span className="text-xs text-gray-500">
                     {formatDuration(track.duration)}
                   </span>
                 </div>
-                
+
                 {track.tags && track.tags.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {track.tags.slice(0, 3).map(tag => (
@@ -178,7 +225,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                   </div>
                 )}
               </div>
-              
+
               {/* Quick Actions */}
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
                 <button
@@ -199,10 +246,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                   🗑️
                 </button>
               </div>
-              
+
               {/* Inline Edit Modal */}
               {isEditing && (
-                <div 
+                <div
                   className="absolute inset-0 bg-[#1a1a2e]/95 p-3 flex flex-col gap-3"
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -244,7 +291,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             </div>
           );
         })}
-        
+
         {hasMore && (
           <button
             onClick={onLoadMore}
@@ -257,10 +304,10 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
       </div>
     );
   }
-  
+
   // List View
   return (
-    <div className="library-list overflow-auto">
+    <div className="library-list flex-1 overflow-y-auto">
       <table className="w-full text-left">
         <thead className="sticky top-0 bg-[#0f0f1e] z-10">
           <tr className="border-b border-white/10 text-gray-400 text-sm">
@@ -271,18 +318,18 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             <th className="p-3">Duration</th>
             <th className="p-3">Plays</th>
             <th className="p-3">Added</th>
-            <th className="p-3"></th>
+            <th className="p-3 w-40"></th>
           </tr>
         </thead>
         <tbody>
-          {tracks.map((track, index) => {
+          {tracks.map((track) => {
             const isCurrent = track.id === currentTrackId;
             const isEditing = editing.trackId === track.id;
-            
+
             return (
               <tr
                 key={track.id}
-              onClick={() => onTrackClick(track)}
+                onClick={() => onTrackClick(track)}
                 onDoubleClick={() => onTrackDoubleClick(track)}
                 className={`group border-b border-white/5 hover:bg-white/5 cursor-pointer ${
                   isCurrent ? 'bg-purple-500/10' : ''
@@ -363,6 +410,42 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                     </div>
                   ) : (
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {onPlayNow && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onPlayNow(track);
+                          }}
+                          className="p-1 text-gray-400 hover:text-purple-400"
+                          title="Play Now"
+                        >
+                          ▶
+                        </button>
+                      )}
+                      {onPlayNext && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onPlayNext(track);
+                          }}
+                          className="p-1 text-gray-400 hover:text-blue-400"
+                          title="Play Next"
+                        >
+                          ⏭
+                        </button>
+                      )}
+                      {onAddToQueue && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onAddToQueue(track);
+                          }}
+                          className="p-1 text-gray-400 hover:text-green-400"
+                          title="Add to Queue"
+                        >
+                          ＋
+                        </button>
+                      )}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -388,7 +471,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
           })}
         </tbody>
       </table>
-      
+
       {hasMore && (
         <div className="p-4 text-center">
           <button
