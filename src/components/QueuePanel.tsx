@@ -11,6 +11,7 @@ interface QueuePanelProps {
   onClearQueue: () => void;
   onShuffle: () => void;
   onSmartMix: () => void;
+  onShareQueue?: () => void;
   shuffle: boolean;
   repeatMode: RepeatMode;
   onToggleRepeat: () => void;
@@ -26,6 +27,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
   onClearQueue,
   onShuffle,
   onSmartMix,
+  onShareQueue,
   shuffle,
   repeatMode,
   onToggleRepeat
@@ -89,6 +91,15 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
         >
           ✨ Smart Mix
         </button>
+        {onShareQueue && (
+          <button
+            onClick={onShareQueue}
+            className="px-3 py-1.5 text-sm bg-white/10 text-gray-300 rounded hover:bg-white/20 transition-colors"
+            title="Share Queue"
+          >
+            🔗
+          </button>
+        )}
       </div>
       
       {/* Track List */}

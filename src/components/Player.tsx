@@ -123,6 +123,9 @@ export const Player: React.FC = () => {
   // Toasts
   const [toasts, setToasts] = useState<Toast[]>([]);
   
+  // View mode toggle
+  const [showHtmlFallback, setShowHtmlFallback] = useState(false);
+  
   // Refs
   const playerRef = useRef<AudioPlayer | AudioWorkletPlayer | SdlAudioPlayer | Sdl2AudioPlayer | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -197,16 +200,38 @@ export const Player: React.FC = () => {
     loadStats();
   }, [loadTags, loadStats]);
   
-  // Load queue from storage
+  // Load queue from storage or shared playlist
   useEffect(() => {
-    const saved = loadQueueFromStorage();
-    if (saved) {
-      setQueue(saved.tracks);
-      setQueueCurrentIndex(saved.currentIndex);
-      setShuffle(saved.shuffle);
-      setRepeatMode(saved.repeat);
-    }
-  }, []);
+    const initializeApp = async () => {
+      const params = new URLSearchParams(window.location.search);
+      const shareId = params.get('share');
+
+      if (shareId) {
+        try {
+          const sharedData = await loader.fetchSharedPlaylist(shareId);
+          if (sharedData.tracks && sharedData.tracks.length > 0) {
+            setQueue(sharedData.tracks);
+            setQueueCurrentIndex(0);
+            addToast(`Loaded playlist: ${sharedData.title}`, 'success');
+            window.history.replaceState({}, '', window.location.pathname);
+            return;
+          }
+        } catch (err) {
+          addToast('Failed to load shared playlist or link expired.', 'error');
+        }
+      }
+
+      const saved = loadQueueFromStorage();
+      if (saved && saved.tracks.length > 0) {
+        setQueue(saved.tracks);
+        setQueueCurrentIndex(saved.currentIndex);
+        setShuffle(saved.shuffle);
+        setRepeatMode(saved.repeat);
+      }
+    };
+
+    initializeApp();
+  }, [loader, addToast]);
   
   // Save queue to storage
   useEffect(() => {
@@ -408,6 +433,36 @@ export const Player: React.FC = () => {
     }
   };
   
+  const generateShareLink = async () => {
+    if (queue.length === 0) {
+      addToast('Add tracks to the queue first to share a playlist.', 'info');
+      return;
+    }
+
+    try {
+      const trackIds = queue.map(t => t.id).filter(Boolean) as string[];
+      const apiUrl = process.env.REACT_APP_API_URL || '';
+
+      const response = await fetch(`${apiUrl}/api/share`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          track_ids: trackIds,
+          title: 'My Custom Playlist',
+          expires_in_days: 30
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to generate link');
+
+      const data = await response.json();
+      await navigator.clipboard.writeText(data.full_url);
+      addToast('Playlist link copied to clipboard!', 'success');
+    } catch (err) {
+      addToast('Error generating share link.', 'error');
+    }
+  };
+
   const trashTrack = async (id: string) => {
     try {
       await loader.trashTrack(id);
@@ -484,6 +539,49 @@ export const Player: React.FC = () => {
   // Render
   // =============================================================================
   
+  // Default GUI mode
+  if (!showHtmlFallback) {
+    return (
+      <>
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <ShaderGUI
+          analyser={playerRef.current?.getAnalyser() || null}
+          currentTrack={currentTrack}
+          queue={queue}
+          queueCurrentIndex={queueCurrentIndex}
+          isPlaying={playerState.isPlaying}
+          currentTime={playerState.currentTime}
+          duration={playerState.duration}
+          volume={volume}
+          onPlay={() => {
+            if (playerState.isPlaying) playerRef.current?.pause();
+            else playerRef.current?.play();
+          }}
+          onStop={() => {
+            playerRef.current?.stop();
+          }}
+          onTrackClick={(index) => playTrack(queue[index], index)}
+          onVolumeChange={(vol) => {
+            setVolume(vol);
+            playerRef.current?.setVolume(vol);
+          }}
+          onNext={() => {
+            if (queue.length > 0 && queueCurrentIndex < queue.length - 1) {
+              playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1);
+            }
+          }}
+          onPrevious={() => {
+            if (queue.length > 0 && queueCurrentIndex > 0) {
+              playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1);
+            }
+          }}
+          onToggleFallback={() => setShowHtmlFallback(true)}
+        />
+      </>
+    );
+  }
+  
+  // HTML Fallback mode
   return (
     <div className="player min-h-screen bg-[#0f0f1e] text-white flex flex-col">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
@@ -510,6 +608,7 @@ export const Player: React.FC = () => {
         onClearQueue={clearQueue}
         onShuffle={() => setShuffle(s => !s)}
         onSmartMix={handleSmartMix}
+        onShareQueue={generateShareLink}
         shuffle={shuffle}
         repeatMode={repeatMode}
         onToggleRepeat={() => setRepeatMode(m => m === 'off' ? 'all' : m === 'all' ? 'one' : 'off')}
@@ -518,6 +617,12 @@ export const Player: React.FC = () => {
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0f0f1e]/95 backdrop-blur">
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => setShowHtmlFallback(false)}
+            className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors text-sm font-bold tracking-wider"
+          >
+            ← Back to GUI Player
+          </button>
           <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
             🎵 FLAC Player
           </h1>
@@ -772,6 +877,7 @@ export const Player: React.FC = () => {
                 onClearQueue={clearQueue}
                 onShuffle={() => setShuffle(s => !s)}
                 onSmartMix={handleSmartMix}
+                onShareQueue={generateShareLink}
                 shuffle={shuffle}
                 repeatMode={repeatMode}
                 onToggleRepeat={() => setRepeatMode(m => m === 'off' ? 'all' : m === 'all' ? 'one' : 'off')}

@@ -23,6 +23,9 @@ export interface ShaderGUIProps {
   onStop: () => void;
   onTrackClick: (index: number) => void;
   onVolumeChange: (volume: number) => void;
+  onNext?: () => void;
+  onPrevious?: () => void;
+  onToggleFallback?: () => void;
 }
 
 export const ShaderGUI: React.FC<ShaderGUIProps> = ({
@@ -38,6 +41,9 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   onStop,
   onTrackClick,
   onVolumeChange,
+  onNext,
+  onPrevious,
+  onToggleFallback,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const visualizerRef = useRef<WebGPUVisualizer | null>(null);
@@ -185,7 +191,16 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   }, []);
 
   return (
-    <Chassis>
+    <div className="relative flex flex-col items-center justify-center min-h-screen bg-black">
+      {onToggleFallback && (
+        <button
+          onClick={onToggleFallback}
+          className="absolute top-4 right-4 px-4 py-2 bg-white/10 text-white rounded hover:bg-white/20 text-xs tracking-widest uppercase z-50"
+        >
+          Open Advanced Library
+        </button>
+      )}
+      <Chassis>
       <div className="shader-gui-layout">
         <div className="shader-gui-top-left">
           <TopScreen
@@ -218,10 +233,12 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
           </div>
 
           <div className="shader-gui-buttons">
+            <Button type="prev" active={false} onClick={() => onPrevious?.()} />
             <Button type="none" active={modeNone === 1} onClick={handleNone} />
             <Button type="ir" active={modeIR === 1} onClick={handleIR} />
             <Button type="stop" active={stopFlash > 0} onClick={handleStop} />
             <Button type="play" active={isPlaying} onClick={handlePlay} />
+            <Button type="next" active={false} onClick={() => onNext?.()} />
           </div>
         </div>
 
@@ -238,6 +255,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         </div>
       </div>
     </Chassis>
+    </div>
   );
 };
 

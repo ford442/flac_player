@@ -1,7 +1,7 @@
 import React from 'react';
 import './ShaderGUI.css';
 
-export type ButtonType = 'none' | 'ir' | 'stop' | 'play';
+export type ButtonType = 'none' | 'ir' | 'stop' | 'play' | 'prev' | 'next';
 
 interface ButtonProps {
   type: ButtonType;
@@ -14,6 +14,8 @@ const BUTTON_CONFIG: Record<ButtonType, { label: string; icon: string; color: st
   ir: { label: 'IR', icon: '〰', color: '#F472B6', ledColor: '#F472B6' },
   stop: { label: 'STOP', icon: '■', color: '#F87171', ledColor: '#F87171' },
   play: { label: 'PLAY', icon: '▶', color: '#4ADE80', ledColor: '#4ADE80' },
+  prev: { label: 'PREV', icon: '⏮', color: '#22D3EE', ledColor: '#22D3EE' },
+  next: { label: 'NEXT', icon: '⏭', color: '#22D3EE', ledColor: '#22D3EE' },
 };
 
 export const Button: React.FC<ButtonProps> = ({ type, active, onClick }) => {

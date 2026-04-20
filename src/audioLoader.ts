@@ -581,6 +581,27 @@ export class AudioLoader {
       throw error;
     }
   }
+
+  async fetchSharedPlaylist(shareId: string): Promise<{ title: string; tracks: PlaylistTrack[] }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/share/${shareId}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch shared playlist: ${response.status}`);
+      }
+
+      const data = await response.json() as { title: string; tracks: PlaylistTrack[] };
+
+      const tracksWithUrls = data.tracks.map((item) => ({
+        ...item,
+        url: item.url || `${API_BASE_URL}/api/music/${item.id}`
+      }));
+
+      return { title: data.title, tracks: tracksWithUrls };
+    } catch (error) {
+      console.error('Error fetching shared playlist:', error);
+      throw error;
+    }
+  }
 }
 
 // =============================================================================
