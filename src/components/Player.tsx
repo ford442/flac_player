@@ -29,6 +29,18 @@ type AudioOutputMode = 'web-audio' | 'worklet' | 'sdl' | 'sdl2';
 type ViewTab = 'library' | 'now-playing' | 'queue';
 type LibraryViewMode = 'grid' | 'list';
 
+const getSharedPlaylistId = (): string | null => {
+  const params = new URLSearchParams(window.location.search);
+  const queryShareId = params.get('share');
+
+  if (queryShareId) {
+    return queryShareId;
+  }
+
+  const pathMatch = window.location.pathname.match(/^\/playlist\/([^/]+)$/);
+  return pathMatch ? decodeURIComponent(pathMatch[1]) : null;
+};
+
 // =============================================================================
 // Toast Notification Component (Simple inline version)
 // =============================================================================
@@ -68,6 +80,9 @@ const ToastContainer: React.FC<{ toasts: Toast[]; onRemove: (id: string) => void
 // =============================================================================
 
 export const Player: React.FC = () => {
+  const [sharedPlaylistId] = useState<string | null>(() => getSharedPlaylistId());
+  const isSharedPlaylist = sharedPlaylistId !== null;
+
   // Player state
   const [playerState, setPlayerState] = useState<PlayerState>({
     isPlaying: false,
@@ -188,28 +203,37 @@ export const Player: React.FC = () => {
   }, [loader]);
   
   useEffect(() => {
+    if (isSharedPlaylist) {
+      return;
+    }
+
     loadLibrary();
-  }, [loadLibrary]);
+  }, [isSharedPlaylist, loadLibrary]);
   
   useEffect(() => {
+    if (isSharedPlaylist) {
+      return;
+    }
+
     loadTags();
     loadStats();
-  }, [loadTags, loadStats]);
+  }, [isSharedPlaylist, loadTags, loadStats]);
   
   // Load queue from storage or shared playlist
   useEffect(() => {
     const initializeApp = async () => {
-      const params = new URLSearchParams(window.location.search);
-      const shareId = params.get('share');
-
-      if (shareId) {
+      if (sharedPlaylistId) {
         try {
-          const sharedData = await loader.fetchSharedPlaylist(shareId);
+          const sharedData = await loader.fetchSharedPlaylist(sharedPlaylistId);
           if (sharedData.tracks && sharedData.tracks.length > 0) {
             setQueue(sharedData.tracks);
             setQueueCurrentIndex(0);
+            setCurrentTrack(sharedData.tracks[0]);
+            setActiveTab('now-playing');
             addToast(`Loaded playlist: ${sharedData.title}`, 'success');
-            window.history.replaceState({}, '', window.location.pathname);
+            if (window.location.search.includes('share=')) {
+              window.history.replaceState({}, '', `/playlist/${encodeURIComponent(sharedPlaylistId)}`);
+            }
             return;
           }
         } catch (err) {
@@ -227,7 +251,7 @@ export const Player: React.FC = () => {
     };
 
     initializeApp();
-  }, [loader, addToast]);
+  }, [loader, addToast, sharedPlaylistId]);
   
   // Save queue to storage
   useEffect(() => {
@@ -608,7 +632,7 @@ export const Player: React.FC = () => {
               playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1);
             }
           }}
-          onToggleFallback={() => setShowHtmlFallback(true)}
+          onToggleFallback={isSharedPlaylist ? undefined : () => setShowHtmlFallback(true)}
         />
       </>
     );
