@@ -549,7 +549,7 @@ export class AudioLoader {
       if (genre) params.append('genre', genre);
       if (minRating) params.append('min_rating', minRating.toString());
 
-      const url = `https://storage.noahcohn.com/api/songs?${params}`;
+      const url = `${API_BASE_URL}/api/songs?${params}`;
       const response = await fetch(url, {
         mode: 'cors',
         credentials: 'omit'
