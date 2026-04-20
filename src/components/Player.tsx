@@ -343,9 +343,14 @@ export const Player: React.FC = () => {
     }
   };
 
-  const togglePlayback = useCallback(async () => {
+  const togglePlayback = useCallback(() => {
     if (playerState.isPlaying) {
       playerRef.current?.pause();
+      return;
+    }
+
+    if (queue.length === 0) {
+      playerRef.current?.play();
       return;
     }
 
@@ -353,7 +358,7 @@ export const Player: React.FC = () => {
     const initialTrack = queue[initialIndex];
 
     if (playerState.duration === 0 && initialTrack) {
-      await playTrack(initialTrack, initialIndex);
+      playTrack(initialTrack, initialIndex);
       return;
     }
 
@@ -557,7 +562,7 @@ export const Player: React.FC = () => {
   // =============================================================================
   
   useKeyboardShortcuts({
-    onPlayPause: () => { void togglePlayback(); },
+    onPlayPause: togglePlayback,
     onSeekForward: () => {
       if (playerRef.current) {
         const newTime = Math.min(playerState.currentTime + 10, playerState.duration);
@@ -627,7 +632,7 @@ export const Player: React.FC = () => {
           currentTime={playerState.currentTime}
           duration={playerState.duration}
           volume={volume}
-          onPlay={() => { void togglePlayback(); }}
+          onPlay={togglePlayback}
           onStop={() => {
             playerRef.current?.stop();
           }}
@@ -646,7 +651,8 @@ export const Player: React.FC = () => {
               playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1);
             }
           }}
-          onToggleFallback={isSharedPlaylist ? undefined : () => setShowHtmlFallback(true)}
+          onToggleFallback={() => setShowHtmlFallback(true)}
+          showFallbackToggle={!isSharedPlaylist}
         />
       </>
     );
@@ -904,7 +910,7 @@ export const Player: React.FC = () => {
                 currentTime={playerState.currentTime}
                 duration={playerState.duration}
                 volume={volume}
-                onPlay={() => { void togglePlayback(); }}
+                onPlay={togglePlayback}
                 onStop={() => {
                   playerRef.current?.stop();
                 }}
@@ -975,7 +981,7 @@ export const Player: React.FC = () => {
                 ⏮
               </button>
               <button
-                onClick={() => { void togglePlayback(); }}
+                onClick={togglePlayback}
                 className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center text-xl hover:scale-105 transition-transform"
               >
                 {playerState.isPlaying ? '⏸' : '▶'}
