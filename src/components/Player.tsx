@@ -222,24 +222,37 @@ export const Player: React.FC = () => {
   // Load queue from storage or shared playlist
   useEffect(() => {
     const initializeApp = async () => {
-      if (sharedPlaylistId) {
+      // 1. Check for URL-based playlist (Bypasses backend completely)
+      const params = new URLSearchParams(window.location.search);
+      const tracksParam = params.get('tracks');
+
+      if (tracksParam) {
         try {
-          const sharedData = await loader.fetchSharedPlaylist(sharedPlaylistId);
-          if (sharedData.tracks && sharedData.tracks.length > 0) {
-            setQueue(sharedData.tracks);
+          const trackIds = tracksParam.split(',');
+          // Fetch the library to match the IDs
+          const { tracks: allTracks } = await loader.fetchLibrary({ limit: 2000 });
+
+          // Map the IDs from the URL to actual track objects
+          const playlistTracks = trackIds
+            .map(id => allTracks.find(t => t.id === id))
+            .filter(Boolean) as PlaylistTrack[];
+
+          if (playlistTracks.length > 0) {
+            setQueue(playlistTracks);
             setQueueCurrentIndex(0);
             setActiveTab('now-playing');
-            addToast(`Loaded playlist: ${sharedData.title}`, 'success');
-            if (window.location.search.includes('share=')) {
-              window.history.replaceState({}, '', `/playlist/${encodeURIComponent(sharedPlaylistId)}`);
-            }
-            return;
+            addToast('Loaded custom playlist!', 'success');
+
+            // Clean up the URL so refreshing doesn't loop
+            window.history.replaceState({}, '', window.location.pathname);
+            return; // Exit so we don't load local storage
           }
         } catch (err) {
-          addToast('Failed to load shared playlist or link expired.', 'error');
+          console.error('Failed to load URL playlist', err);
         }
       }
 
+      // 2. Fallback to Local Storage Queue
       const saved = loadQueueFromStorage();
       if (saved && saved.tracks.length > 0) {
         setQueue(saved.tracks);
@@ -250,7 +263,7 @@ export const Player: React.FC = () => {
     };
 
     initializeApp();
-  }, [loader, addToast, sharedPlaylistId]);
+  }, [loader, addToast]);
   
   // Save queue to storage
   useEffect(() => {
@@ -518,36 +531,22 @@ export const Player: React.FC = () => {
   
   const generateShareLink = async () => {
     if (queue.length === 0) {
-      addToast('Add tracks to the queue first to share a playlist.', 'info');
+      addToast('Add tracks to the queue first.', 'info');
       return;
     }
 
+    // Get all IDs and join them with commas
+    const trackIds = queue.map(t => t.id).filter(Boolean).join(',');
+
+    // Build the frontend-only URL
+    const frontendUrl = `${window.location.origin}${window.location.pathname}?tracks=${trackIds}`;
+
     try {
-      const trackIds = queue.map(t => t.id).filter(Boolean) as string[];
-      const apiUrl = process.env.REACT_APP_API_URL || 'https://storage.noahcohn.com';
-
-      const response = await fetch(`${apiUrl}/api/share`, {
-        method: 'POST',
-        mode: 'cors',
-        credentials: 'omit',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          track_ids: trackIds,
-          title: 'My Custom Playlist',
-          expires_in_days: 30
-        })
-      });
-
-      if (!response.ok) throw new Error('Failed to generate link');
-
-      const data = await response.json();
-      const shareId = data.share_id ?? data.full_url?.split('/').pop();
-      const shareUrl = `${window.location.origin}${window.location.pathname}?share=${shareId}`;
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(frontendUrl);
       addToast('Playlist link copied to clipboard!', 'success');
     } catch (err) {
-      console.error('Share error:', err);
-      addToast('Error generating share link.', 'error');
+      console.error('Error copying playlist link to clipboard', err);
+      addToast('Error copying link.', 'error');
     }
   };
 
