@@ -230,7 +230,7 @@ export const Player: React.FC = () => {
         try {
           const trackIds = tracksParam.split(',');
           // Fetch the library to match the IDs
-          const { tracks: allTracks } = await loader.fetchLibrary({ limit: 2000 });
+          const { tracks: allTracks } = await loader.fetchLibrary({ limit: 500 });
 
           // Map the IDs from the URL to actual track objects
           const playlistTracks = trackIds
