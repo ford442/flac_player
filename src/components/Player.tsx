@@ -115,7 +115,7 @@ export const Player: React.FC = () => {
   
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
-  const [minRating, setMinRating] = useState<number>(1);
+  const [minRating, setMinRating] = useState<number>(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [untaggedOnly, setUntaggedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>('date');
