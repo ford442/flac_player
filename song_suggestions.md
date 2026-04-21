@@ -1442,3 +1442,88 @@ The oldest human rhythm putting on a laser show!
 **Additional Notes:**
 - **Combo/Fusion:** 1980s Synthwave / Native American Powwow Music & Flute
 - **Thematic Ties:** The pristine, highly artificial, and futuristic aesthetic of 80s synthwave grounded by the deeply spiritual, ancient, and deeply human communal energy of Native American traditional music.
+
+### Title: The Banjo and the Gong
+
+**Service:** Minimax Audio
+
+**Prompt:** A high-energy Appalachian Bluegrass barn-burner featuring rapid-fire banjo rolls, but the rhythm section and melodic counterparts are entirely played by a metallic, resonant Indonesian Gamelan ensemble.
+
+**Lyrics:**
+(Verse 1)
+Well I went down to the mountain, with a shiny brass gong!
+(Banjo picking frantically)
+Hear the metallophones ringing all the live-long!
+(Gamelan chimes striking in syncopated rhythm)
+
+(Chorus)
+Oh, strike the bronze, rosin up the bow!
+Where the shadow puppets dance in the holler below!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Indonesian Gamelan
+- **Thematic Ties:** The rustic, foot-stomping energy of the American South meeting the intricate, mathematical, and hypnotic percussion of Southeast Asia.
+
+### Title: Breakdown at the Barbershop
+
+**Service:** Minimax Audio
+
+**Prompt:** A tight, four-part vocal harmony characteristic of a classic 1920s Barbershop Quartet, but suddenly transitioning into brutal Deathcore beatdowns with a cappella guttural growls and pig squeals acting as the bass drop.
+
+**Lyrics:**
+(Verse 1 - Sweet harmonies)
+Oh, my sweet Clementine, walking down the street...
+(Suddenly shifting to low, rhythmic growling)
+Walking... down... the... STREET!
+(A cappella breakdown with pig squeals)
+BLEGH!
+
+(Chorus)
+Shave and a haircut, two bits!
+(Guttural roar) TWO BITS OF SUFFERING!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1920s Barbershop Quartet / Deathcore
+- **Thematic Ties:** The wholesome, sharply-dressed vocal precision of early 20th-century Americana shattered by the visceral, aggressive vocal extremes of modern metal.
+
+### Title: Monasteries in Reverb
+
+**Service:** Minimax Audio
+
+**Prompt:** A massive, swirling wall of sound typical of 90s Shoegaze with layers of heavily distorted, fuzz-pedal guitars. The vocals, instead of breathy whispers, are a choir of monks delivering solemn, reverb-drenched Gregorian Chants in Latin.
+
+**Lyrics:**
+(Verse 1 - Solemn, chanted over a wall of fuzz)
+Kyrie eleison...
+(A massive wave of feedback washes over the choir)
+Christe eleison...
+(Tremolo-picking guitar melody buried in the mix)
+
+(Chorus)
+In aeternum, we gaze at our shoes!
+The holy fuzz, the sacred blues!
+
+**Additional Notes:**
+- **Combo/Fusion:** 90s Shoegaze / Gregorian Chant
+- **Thematic Ties:** The introspective, ethereal overwhelming volume of Shoegaze elevated to a deeply spiritual, ancient monastic meditation.
+
+### Title: The Girl from the Whaling Ship
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, swaying Brazilian Bossa Nova with acoustic nylon-string guitar and soft shaker rhythms, but the vocals are a crew of grizzled 19th-century sailors singing a hearty, call-and-response Sea Shanty.
+
+**Lyrics:**
+(Verse 1 - Soft bossa nova guitar chords)
+Heave away, my softly swaying boys...
+(Whispered, smooth sailors' chorus)
+Heave away, and make no noise...
+
+(Chorus)
+To Rio we sail, with a gentle breeze...
+Catching the whales on the quietest seas...
+Tall and tan and young and lovely, the leviathan goes walking!
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Bossa Nova / Sea Shanty
+- **Thematic Ties:** The rugged, back-breaking labor of oceanic whaling delivered with the impossibly relaxed, sophisticated cool of Copacabana lounge music.
