@@ -71,6 +71,7 @@ class SongMetadata(BaseModel):
     type: Optional[str] = "audio"
     description: Optional[str] = None
     filename: Optional[str] = None
+    cover_url: Optional[str] = None
     rating: Optional[int] = Field(None, ge=0, le=10)  # 0 = trash
     genre: Optional[str] = None
     tags: Optional[List[str]] = Field(default_factory=list)
@@ -95,6 +96,7 @@ class SongCreate(BaseModel):
     artist: Optional[str] = None
     description: Optional[str] = None
     filename: Optional[str] = None
+    cover_url: Optional[str] = None
     rating: Optional[int] = Field(None, ge=0, le=10)
     genre: Optional[str] = None
     tags: Optional[List[str]] = None
@@ -114,6 +116,7 @@ class SongUpdate(BaseModel):
     artist: Optional[str] = None
     description: Optional[str] = None
     filename: Optional[str] = None
+    cover_url: Optional[str] = None
     rating: Optional[int] = Field(None, ge=0, le=10)
     genre: Optional[str] = None
     tags: Optional[List[str]] = None
@@ -133,6 +136,7 @@ class SongPatch(BaseModel):
     author: Optional[str] = None
     artist: Optional[str] = None
     description: Optional[str] = None
+    cover_url: Optional[str] = None
     rating: Optional[int] = Field(None, ge=0, le=10)
     genre: Optional[str] = None
     tags: Optional[List[str]] = None
@@ -876,6 +880,7 @@ async def upload_song(
             'artist': author,
             'description': song.description,
             'filename': song.filename or song.name,
+            'cover_url': song.cover_url,
             'rating': song.rating,
             'genre': song.genre,
             'tags': song.tags or [],

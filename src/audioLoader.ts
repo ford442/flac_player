@@ -15,7 +15,9 @@ export interface PlaylistTrack {
   rating?: number;
   description?: string;
   author?: string;
+  artist?: string;
   genre?: string;
+  cover_url?: string;
   last_played?: string;
   type?: string;
   // New fields for library management
@@ -27,6 +29,13 @@ export interface PlaylistTrack {
   generation_model?: string;
   version?: string;
   prompt?: string;
+}
+
+export interface ShareResponse {
+  share_id: string;
+  short_url: string;
+  full_url: string;
+  expires_at?: string;
 }
 
 export interface LibraryStats {
@@ -601,6 +610,43 @@ export class AudioLoader {
       console.error('Error fetching shared playlist:', error);
       throw error;
     }
+  }
+
+  async createShare(
+    trackIds: string[],
+    title: string = 'Shared Playlist',
+    expiresInDays: number = 30
+  ): Promise<ShareResponse> {
+    if (!trackIds || trackIds.length === 0) {
+      throw new Error('No tracks available to share');
+    }
+
+    const payload = {
+      track_ids: trackIds,
+      title,
+      expires_in_days: expiresInDays,
+    };
+
+    const url = `${API_BASE_URL}/api/share`;
+    debug.log('CREATE_SHARE_REQUEST', { url, payload });
+
+    const response = await fetch(url, {
+      method: 'POST',
+      mode: 'cors',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      debug.error('CREATE_SHARE_ERROR_BODY', { text, status: response.status });
+      throw new Error(`Failed to create share: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    debug.log('CREATE_SHARE_RESPONSE', data);
+    return data as ShareResponse;
   }
 }
 

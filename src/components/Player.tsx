@@ -222,9 +222,24 @@ export const Player: React.FC = () => {
   // Load queue from storage or shared playlist
   useEffect(() => {
     const initializeApp = async () => {
-      // 1. Check for URL-based playlist (Bypasses backend completely)
       const params = new URLSearchParams(window.location.search);
       const tracksParam = params.get('tracks');
+
+      if (sharedPlaylistId) {
+        try {
+          const shared = await loader.fetchSharedPlaylist(sharedPlaylistId);
+          if (shared.tracks.length > 0) {
+            setQueue(shared.tracks);
+            setQueueCurrentIndex(0);
+            setActiveTab('now-playing');
+            addToast(`Loaded shared playlist: ${shared.title}`, 'success');
+            return;
+          }
+        } catch (err) {
+          console.error('Failed to load shared playlist', err);
+          addToast('Failed to load shared playlist', 'error');
+        }
+      }
 
       if (tracksParam) {
         try {
@@ -535,17 +550,31 @@ export const Player: React.FC = () => {
       return;
     }
 
-    // Get all IDs and join them with commas
-    const trackIds = queue.map(t => t.id).filter(Boolean).join(',');
-
-    // Build the frontend-only URL
-    const frontendUrl = `${window.location.origin}${window.location.pathname}?tracks=${trackIds}`;
+    const trackIds = queue.map(t => t.id).filter(Boolean);
+    if (trackIds.length === 0) {
+      addToast('No valid tracks to share.', 'info');
+      return;
+    }
 
     try {
-      await navigator.clipboard.writeText(frontendUrl);
-      addToast('Playlist link copied to clipboard!', 'success');
+      const shareResponse = await loader.createShare(trackIds, 'Shared Playlist', 30);
+      const shareUrl = shareResponse.short_url || shareResponse.full_url;
+      await navigator.clipboard.writeText(shareUrl);
+      addToast('Shareable playlist link copied to clipboard!', 'success');
+      return;
     } catch (err) {
-      console.error('Error copying playlist link to clipboard', err);
+      console.error('Failed to create shared playlist', err);
+      addToast('Could not create shared playlist. Falling back to URL playlist.', 'error');
+    }
+
+    // Fallback to legacy query-based sharing if backend share creation fails
+    const fallbackTrackIds = trackIds.join(',');
+    const frontendUrl = `${window.location.origin}${window.location.pathname}?tracks=${fallbackTrackIds}`;
+    try {
+      await navigator.clipboard.writeText(frontendUrl);
+      addToast('Legacy playlist link copied to clipboard.', 'success');
+    } catch (err) {
+      console.error('Error copying fallback playlist link to clipboard', err);
       addToast('Error copying link.', 'error');
     }
   };
