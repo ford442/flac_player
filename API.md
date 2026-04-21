@@ -193,6 +193,11 @@ The API only fills in **missing** fields - existing values are preserved.
 POST /api/upload/songs
 {
   "name": "bohemian_rhapsody.flac",
+  "title": "Bohemian Rhapsody",
+  "author": "Queen",
+  "genre": "Rock",
+  "tags": ["rock", "classic rock"],
+  "duration": 354.5,
   "auto_enrich": true
 }
 
