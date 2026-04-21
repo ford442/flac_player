@@ -17,7 +17,7 @@ import asyncio
 import hashlib
 import random
 import re
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, Set
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, asdict
@@ -46,6 +46,11 @@ MUSICBRAINZ_USER_AGENT = os.getenv(
 )
 TINYURL_API_KEY = os.getenv("TINYURL_API_KEY", "")
 APP_BASE_URL = os.getenv("APP_BASE_URL", "https://flac-player.hf.space")
+CORS_ALLOWED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CORS_ALLOWED_ORIGINS", "*").split(",")
+    if origin.strip()
+]
 
 # Ensure directories exist
 os.makedirs(SONGS_DIR, exist_ok=True)
@@ -603,8 +608,8 @@ app = FastAPI(
 # CORS middleware for HF Space compatibility
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=CORS_ALLOWED_ORIGINS,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -1131,9 +1136,8 @@ async def create_share(request: ShareRequest):
     """Create a shareable playlist link."""
     try:
         share_id = URLShortener.generate_short_id(10)
-        
-        expires_at = datetime.now()
-        expires_at = expires_at.replace(day=expires_at.day + request.expires_in_days)
+
+        expires_at = datetime.now() + timedelta(days=request.expires_in_days)
         
         share_data = {
             'id': share_id,
