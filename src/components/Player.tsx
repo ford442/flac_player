@@ -131,6 +131,9 @@ export const Player: React.FC = () => {
   // Current track
   const [currentTrack, setCurrentTrack] = useState<PlaylistTrack | null>(null);
   
+  // Shared playlist title (for custom linked pages)
+  const [sharedPlaylistTitle, setSharedPlaylistTitle] = useState<string>('');
+  
   // Toasts
   const [toasts, setToasts] = useState<Toast[]>([]);
   
@@ -232,6 +235,8 @@ export const Player: React.FC = () => {
             setQueue(shared.tracks);
             setQueueCurrentIndex(0);
             setActiveTab('now-playing');
+            setSharedPlaylistTitle(shared.title);
+            document.title = shared.title;
             addToast(`Loaded shared playlist: ${shared.title}`, 'success');
             return;
           }
@@ -656,6 +661,13 @@ export const Player: React.FC = () => {
     return (
       <>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
+        {isSharedPlaylist && sharedPlaylistTitle && (
+          <div className="fixed top-0 left-0 right-0 z-40 flex items-center justify-center pt-4 pointer-events-none">
+            <h1 className="text-xl md:text-2xl font-bold text-white/90 bg-black/50 backdrop-blur px-6 py-2 rounded-full border border-white/10 pointer-events-auto">
+              {sharedPlaylistTitle}
+            </h1>
+          </div>
+        )}
         <ShaderGUI
           analyser={playerRef.current?.getAnalyser() || null}
           currentTrack={currentTrack}
@@ -724,7 +736,7 @@ export const Player: React.FC = () => {
             ← Back to GUI Player
           </button>
           <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-            🎵 FLAC Player
+            {isSharedPlaylist && sharedPlaylistTitle ? sharedPlaylistTitle : '🎵 FLAC Player'}
           </h1>
           
           {/* Stats */}

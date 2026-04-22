@@ -13,12 +13,10 @@ export const BottomScreen: React.FC<BottomScreenProps> = ({
   currentIndex,
   onTrackClick,
 }) => {
-  const visibleTracks = tracks.slice(0, 8);
-
   return (
     <div className="shader-screen bottom-screen">
       <ul className="track-list">
-        {visibleTracks.map((track, index) => (
+        {tracks.map((track, index) => (
           <li
             key={track.id || index}
             className={`track-list-item ${index === currentIndex ? 'active' : ''}`}
@@ -31,7 +29,7 @@ export const BottomScreen: React.FC<BottomScreenProps> = ({
             )}
           </li>
         ))}
-        {visibleTracks.length === 0 && (
+        {tracks.length === 0 && (
           <li className="track-list-item" style={{ opacity: 0.5, cursor: 'default' }}>
             <span className="track-name">No tracks in queue</span>
           </li>

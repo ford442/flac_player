@@ -116,6 +116,14 @@ The application is configured for deployment to:
 - ✅ Code review feedback addressed
 - ✅ Production build optimized (157 KB total)
 
+## Current Working State (April 2026)
+
+The following end-to-end features are **live and operational** with the current `storage.noahcohn.com` backend:
+
+- **Library fetching** — `test.1ink.us/flac-player` successfully fetches the full song library from `storage.noahcohn.com/api/songs` with CORS, filtering, sorting, and pagination.
+- **Song uploads** — Audio files (MP3, FLAC, WAV, OGG, M4A, AAC) can be uploaded via `/api/songs/upload` on the storage server; they are auto-converted to FLAC and indexed into `songs.json`.
+- **Shareable playlists** — Users can create a share link from their queue. The link (`test.1ink.us/flac-player?share=<id>`) loads the playlist directly from `storage.noahcohn.com/api/share/<id>` and auto-plays.
+
 ## Next Steps for Users
 
 1. Deploy to preferred hosting platform (see DEPLOYMENT.md)
