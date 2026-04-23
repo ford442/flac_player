@@ -1532,3 +1532,97 @@ Sombreros and axes, charging in the night!
 **Additional Notes:**
 - **Combo/Fusion:** Nordic Viking Folk / Traditional Mexican Mariachi
 - **Thematic Ties:** The grim, freezing, and bloodthirsty mythology of Viking warriors joyously celebrated through the sunny, colorful, and wildly passionate instrumentation of Mexican street musicians.
+
+### Title: Samurai in the Saloon
+
+**Service:** Minimax Audio
+
+**Prompt:** A lively, foot-stomping American Honky-Tonk Country song with a steady bassline and driving drum beat. The traditional pedal steel guitar and fiddle solos are completely replaced by the piercing, microtonal wail of a Japanese Hichiriki and the rhythmic plucking of a Shamisen.
+
+**Lyrics:**
+(Verse 1 - Classic Country Twang)
+Well, I walked into the tavern, looking for a fight...
+(Shamisen plucks a rapid, twangy country lick)
+Saw a ronin in the corner, drinking through the night.
+(Hichiriki wails a high-pitched, mournful tune)
+
+(Chorus)
+He's a samurai in the saloon, sipping on the rye!
+Underneath the neon moon, hear the battle cry!
+Katana on the barstool, spurs upon his boots!
+Gagaku in the honky-tonk, going back to roots!
+
+**Additional Notes:**
+- **Combo/Fusion:** American Honky-Tonk Country / Traditional Japanese Gagaku
+- **Thematic Ties:** The rowdy, beer-soaked, frontier energy of an American western saloon clashing with the extremely disciplined, ancient, and highly formalized atmosphere of Japanese samurai culture.
+
+### Title: Gregorian Breakcore
+
+**Service:** Minimax Audio
+
+**Prompt:** A frantic, hyper-speed Breakcore track featuring insanely complex, chopped-up Amen breaks and distorted gabber kicks at 220 BPM. The main melodic and atmospheric elements are completely composed of a solemn, reverb-heavy choir of medieval monks singing Latin Gregorian chants that somehow match the chaotic rhythm.
+
+**Lyrics:**
+(Verse 1 - Ethereal, slow-moving Latin chant)
+Kyrie eleison, Christe eleison...
+(Abrupt explosion of distorted, 220 BPM chopped Amen breaks)
+(Monks chant rhythmically to the chaotic beat)
+Dies irae, dies illa!
+Solvet saeclum in favilla!
+
+(Chorus)
+(Massive, stuttering gabber kicks drop under the choir)
+Holy is the bassline! Sacred is the break!
+Monks inside the rave, watching the cathedral shake!
+Chanting in the fast lane, Latin on the floor!
+Gregorian devotion meets the manic breakcore!
+
+**Additional Notes:**
+- **Combo/Fusion:** Latin Gregorian Chant / Breakcore
+- **Thematic Ties:** The intensely spiritual, slow, and completely beatless devotion of medieval monastic life violently accelerated by the terrifying speed, aggression, and digital chaos of modern breakcore.
+
+### Title: The Aztec Synthesizer
+
+**Service:** Minimax Audio
+
+**Prompt:** A pulsing, driving 1980s Synthwave track with a classic analog drum machine and glowing neon bassline. However, the glittering synth melodies and leads are completely replaced by the haunting, breathy shrieks of Aztec death whistles, clay flutes, and the hollow, wooden thud of a Teponaztli drum.
+
+**Lyrics:**
+(Verse 1 - Robotic, heavily vocoded 80s vocal)
+Cruising the cyber-pyramid, looking for a sign...
+(Aztec death whistle lets out a terrifying, airy shriek)
+The obsidian blade is glowing, crossing the grid line.
+
+(Chorus)
+(Teponaztli drum pounds out a syncopated 80s rhythm)
+Sacrifice on the dancefloor! Neon in the blood!
+Ancient gods awakening from the digital mud!
+Synthwave in Tenochtitlan, laser beams and jade!
+The oldest sound in history, synthetically remade!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Synthwave / Ancient Aztec Pre-Columbian Instruments
+- **Thematic Ties:** The bright, neon-soaked, and highly optimistic technological retro-futurism of the 80s paired with the terrifying, bloody, and deeply earthly spiritualism of ancient Aztec rituals.
+
+### Title: Cumbia of the Cossacks
+
+**Service:** Minimax Audio
+
+**Prompt:** A hot, hip-swaying Colombian Cumbia rhythm featuring alegre drums and a shaking guacharaca. The tropical brass section is entirely swapped out for a massive, booming Russian men's choir and a frantically strummed Balalaika playing hyper-fast, minor-key Eastern European folk melodies over the Caribbean beat.
+
+**Lyrics:**
+(Verse 1 - Deep, booming Russian choir singing in a tropical rhythm)
+Cold wind blowing, but the rhythm is hot!
+(Balalaika shreds a furiously fast cumbia montuno)
+Drinking the vodka in the tropical spot!
+
+(Chorus)
+(Guacharaca scrapes fiercely alongside the booming choir)
+Cumbia of the Cossacks! Dancing in the snow!
+Squatting to the congas, watch the dancers go!
+Ushanka on the beach, sweating in the sun!
+The Russian-Latin party has only just begun!
+
+**Additional Notes:**
+- **Combo/Fusion:** Colombian Cumbia / Russian Cossack Folk
+- **Thematic Ties:** The warm, sensual, and relaxed tropical heat of South American cumbia infected by the freezing, vodka-soaked, and aggressively athletic dancing of Russian Cossack traditions.
