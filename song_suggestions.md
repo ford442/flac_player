@@ -1442,3 +1442,93 @@ The oldest human rhythm putting on a laser show!
 **Additional Notes:**
 - **Combo/Fusion:** 1980s Synthwave / Native American Powwow Music & Flute
 - **Thematic Ties:** The pristine, highly artificial, and futuristic aesthetic of 80s synthwave grounded by the deeply spiritual, ancient, and deeply human communal energy of Native American traditional music.
+
+### Title: The Galway Didgeridoo
+
+**Service:** Minimax Audio
+
+**Prompt:** A hyper-fast, upbeat traditional Irish Celtic folk session featuring frantically bowed fiddles and energetic tin whistle solos. Instead of the bodhrán drum holding the rhythm, the entire low-end and rhythmic drive is provided by the deep, continuous, and earthy growl of an Australian Aboriginal Didgeridoo, heavily breathing and pulsing through the jigs and reels.
+
+**Lyrics:**
+(Verse 1 - Fast, energetic pub singing)
+Well we gathered in the pub to play a little tune...
+(Didgeridoo growls deeply, providing a massive, rhythmic drone)
+From the shores of Galway Bay to the dusty afternoon!
+(Tin whistle hits a high, piercing trill over the drone)
+
+(Chorus)
+(Fiddle and Didgeridoo lock into a frantic, dizzying jig)
+Blow the pipe! Spin the bow! Hear the outback roar!
+The heaviest drone on the tavern floor!
+Guinness and the red dust, dancing in the street!
+The didgeridoo is bringing the Celtic heat!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Irish Pub Session / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The lively, high-pitched, and community-driven energy of an Irish pub session grounded by the ancient, deeply resonant, and earthy drone of the Australian outback.
+
+### Title: Trap of the Tsars
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, booming modern Trap hip-hop beat featuring frantic triplet hi-hats and deep 808 subs. Instead of typical synth melodies, the intense instrumental backing is a soaring, highly emotional section of a 19th-century Russian classical ballet orchestra, with weeping violins and graceful harp glissandos playing beautifully over the aggressive trap drums.
+
+**Lyrics:**
+(Verse 1 - Laid back trap rap flow)
+Ice on the wrist, dancing like a swan...
+(Soaring, weeping violins glide over the heavy 808 bass)
+Nutcracker suite, we be grinding till the dawn.
+
+(Chorus)
+(Massive 808 drop with a flurry of classical harp and strings)
+Trap in the winter palace! Swan lake in the hood!
+Tchaikovsky on the beat, misunderstood!
+Violins weeping while the hi-hats roll!
+Russian ballet flex, deep inside the soul!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern Trap / 19th Century Russian Classical Ballet
+- **Thematic Ties:** The gritty, bass-heavy, street-oriented sound of modern Trap colliding with the incredibly refined, upper-class, and emotionally grandiose orchestration of Russian ballet.
+
+### Title: Disco Dirge of the Druids
+
+**Service:** Minimax Audio
+
+**Prompt:** A pulsating, four-on-the-floor 1970s disco track with a driving funky bassline. The sparkling string sections and falsetto vocals are completely replaced by deep, earthy, unison chanting of ancient Celtic druidic rituals, and the rhythmic guitar is swapped for the percussive rattling of animal bones and oak branches hitting together in a funky groove.
+
+**Lyrics:**
+(Verse 1 - Deep, low chanting in unison over a funky slap bass)
+Stonehenge is shaking, under the disco ball...
+The summer solstice groove is answering the call!
+
+(Chorus)
+(Funky, driving disco beat with bone-rattling percussion)
+Sacrifice to the rhythm, burn the wicker man!
+Boogie with the spirits, dance if you can!
+Druids in the nightclub, oak leaves in the hair!
+A funky pagan ritual, magic in the air!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Disco / Ancient Celtic Druidic Chants
+- **Thematic Ties:** The highly produced, synthetic, and flamboyant nightlife culture of 70s disco mixed directly into the deeply organic, spiritual, and mysterious ancient rites of the Celtic druids.
+
+### Title: The Viking Mariachi
+
+**Service:** Minimax Audio
+
+**Prompt:** A mournful, slow-paced Nordic Viking folk song initially driven by the deep, scraping bowed lyre (tagelharpa) and a booming frame drum. Suddenly, it erupts into a lively, passionate Mexican Mariachi serenade, complete with bright trumpets and strummed vihuelas, but the lyrics remain focused on Valhalla and raiding, sung by a full-throated Mariachi belter.
+
+**Lyrics:**
+(Verse 1 - Mournful Tagelharpa and deep Viking drum)
+The longship sails into the freezing mist...
+(Sudden explosion of Mariachi trumpets and vihuela)
+
+(Chorus - Belting Mariachi vocalist)
+Ay, ay, ay! Valhalla is calling to me!
+Drinking the mead by the tropical sea!
+The mariachi raiders, singing as we fight!
+Sombreros and axes, charging in the night!
+
+**Additional Notes:**
+- **Combo/Fusion:** Nordic Viking Folk / Traditional Mexican Mariachi
+- **Thematic Ties:** The grim, freezing, and bloodthirsty mythology of Viking warriors joyously celebrated through the sunny, colorful, and wildly passionate instrumentation of Mexican street musicians.
