@@ -1626,3 +1626,281 @@ The Russian-Latin party has only just begun!
 **Additional Notes:**
 - **Combo/Fusion:** Colombian Cumbia / Russian Cossack Folk
 - **Thematic Ties:** The warm, sensual, and relaxed tropical heat of South American cumbia infected by the freezing, vodka-soaked, and aggressively athletic dancing of Russian Cossack traditions.
+
+### Title: Baroque Reggae
+
+**Service:** Minimax Audio
+
+**Prompt:** A relaxed, sun-soaked Jamaican Reggae track with a deep, bouncing bassline and classic guitar skanking on the off-beats. But the main vocal melody and the brass section are entirely replaced by the highly ornamented, contrapuntal melodies of a Baroque harpsichord and a delicate viola da gamba playing intricate Bach-style fugues over the island groove.
+
+**Lyrics:**
+(Verse 1 - Smooth reggae toaster backing vocals, while the Harpsichord plays the main melody)
+(Guitar skanks: CHUK-chuk, CHUK-chuk)
+Watch the king, mon, the court is stepping slow...
+(Harpsichord trills in a complex, pitch-bending Jamaican melody)
+
+(Chorus)
+(Heavy dub bass drop)
+Baroque in Kingston, sipping on the tea!
+The fanciest noble you've ever seen!
+(Viola da gamba hits a long, vibrating note in time with the reggae beat)
+Wigs on the beach, under the sun!
+The aristocratic reggae has only begun!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Reggae / Baroque Classical
+- **Thematic Ties:** The ultimate relaxed, earthy, and organic vibe of roots reggae invaded by the stiff, formal, and highly decorated sound of 18th-century European court music.
+
+### Title: The Cyber-Shogun's Bossa Nova
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, swaying Brazilian Bossa Nova track featuring complex, jazzy nylon-string guitar chords and light, brushed snare drums. The typically smooth, whispered Portuguese vocals are entirely replaced by the robotic, heavily vocoded speech of a Cyberpunk AI, and the light percussion is punctuated by the sharp, metallic clangs of a futuristic katana unsheathing.
+
+**Lyrics:**
+(Verse 1 - Robotic, heavily vocoded cyberpunk vocal)
+(Nylon-string guitar plays a beautiful, extended jazz chord)
+The neon city goes walking by...
+(Katana unsheathes with a metallic SHING on the off-beat)
+Under the smoggy, dystopian sky...
+
+(Chorus)
+(The brushed snare keeps a light, shuffling bossa rhythm)
+Vocoder softly on the Copacabana...
+Processing data by the cabana...
+The coldest voice on the warmest shore...
+Calculating variables, wanting some more.
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Bossa Nova / Cyberpunk Synthwave
+- **Thematic Ties:** The ultimate beachside relaxation and soft, breezy romance of Bossa Nova given an incredibly cold, synthetic, and calculating resonance by robotic AI vocals.
+
+### Title: The Highland Mariachi
+
+**Service:** Minimax Audio
+
+**Prompt:** A lively, passionate traditional Mexican Mariachi performance with blistering acoustic guitar runs, rapid rhythmic vihuela strumming, and bright trumpets. But replacing the raw, emotional wail of the traditional cantaor (singer) is the incredibly loud, continuous drone of Scottish Great Highland Bagpipes playing blazing fast pentatonic runs.
+
+**Lyrics:**
+(Verse 1 - No human vocals, only Bagpipes 'singing' the lyrics)
+(Rapid, passionate mariachi strumming begins)
+(Bagpipes blast a furious, soaring melody)
+(Trumpets answer with a tight, staccato horn line)
+
+(Chorus)
+(Vihuela accelerates to a dizzying speed)
+(Bagpipes wail in a high register, matching the intensity)
+(The ensemble locks into a massive, triumphant major chord)
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Mexican Mariachi / Scottish Bagpipes
+- **Thematic Ties:** The intensely earthy, human, and sweat-drenched passion of Mexican folk music invaded by the loud, continuous, and aggressively confident sound of highland bagpipes.
+
+### Title: The Bluegrass Muezzin
+
+**Service:** Minimax Audio
+
+**Prompt:** A foot-stomping, high-speed Appalachian Bluegrass tune featuring frantic banjo, fiddle, and mandolin playing. Instead of the high-lonesome country vocals, the singing is a powerful, echoing, and deeply spiritual Islamic call to prayer (Adhan), performed with breathtaking melismas by a Muezzin, perfectly locking into the high-speed country rhythm.
+
+**Lyrics:**
+(Verse 1 - Powerful, echoing Muezzin vocals)
+(A massive flurry of Bluegrass banjo rolls)
+Allahu Akbar, the mountain is high...
+(Fiddle plays a rapid, microtonal fill)
+
+(Chorus)
+(The bluegrass ensemble locks into a driving rhythm)
+Call to prayer in the holler! Echoing in the pines!
+The holiest bluegrass, crossing all the lines!
+Banjo and devotion, ringing in the night!
+The Appalachian Muezzin is out of sight!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Islamic Adhan
+- **Thematic Ties:** The incredibly fast, intricate, and wooden acoustic picking of American mountain music translated into the deeply spiritual, resonant, and profoundly vocal tradition of Islamic prayer calls.
+
+### Title: The Polka-Dot Yakuza
+
+**Service:** Minimax Audio
+
+**Prompt:** A solemn, slow-paced piece of traditional Japanese Gagaku court music featuring the piercing tones of the hichiriki and the rhythmic strikes of the kakko drum. Suddenly, it is abruptly interrupted and completely overtaken by a bouncy, hyper-cheerful Eastern European polka band, with a frantic accordion and a lively tuba playing the basslines on off-beats.
+
+**Lyrics:**
+(Verse 1 - Slow, solemn Japanese vocal)
+Cherry blossoms fall on the ancient shrine...
+(A sudden blast of a cheerful accordion and tuba)
+
+(Chorus)
+(Bouncy polka rhythm with a tuba bassline)
+Oom-pah-pah in Tokyo! The shogun starts to dance!
+Spinning in the kimono, taking a crazy chance!
+Pierogi and the sushi, rolling on the floor!
+The happiest little yakuza that you ever saw!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Japanese Gagaku / Eastern European Polka
+- **Thematic Ties:** The incredibly formal, stiff, and ancient atmosphere of Japanese court music completely shattered by the bouncy, relentlessly cheerful, and slightly goofy energy of a polka band.
+
+### Title: Cybernetic Sea Shanty
+
+**Service:** Minimax Audio
+
+**Prompt:** A rough, traditional a cappella Sea Shanty chanted by a chorus of gruff 19th-century sailors. The rhythmic stomping of their boots on the deck slowly morphs into an aggressive, building 2010s Brostep/Dubstep riser, culminating in a massive drop where the sea waves are replaced by screeching synthesizer growls and wobbling sub-basses.
+
+**Lyrics:**
+(Verse 1 - Gruff, loud sailor chorus)
+Heave away, boys! The kraken's down below!
+We're sailing through the digital, the only way we know!
+(A rising dubstep snare build begins underneath the chanting)
+
+(Chorus)
+(Massive Brostep drop with screeching synth growls and deep wobble bass)
+Drop the anchor! Drop the bass!
+Sailing through the cyberspace!
+Wobble on the starboard bow, lasers in the sky!
+The heaviest shanty makes the cyber-kraken cry!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Sea Shanty / 2010s Brostep Dubstep
+- **Thematic Ties:** The acoustic, labor-intensive, and historical nature of a sea shanty violently clashing with the hyper-synthetic, chaotic, and speaker-destroying energy of modern dubstep.
+
+### Title: The Appalachian Didgeridoo
+
+**Service:** Minimax Audio
+
+**Prompt:** A foot-stomping, high-speed Appalachian Bluegrass tune featuring frantic banjo picking, high-lonesome vocals, and a driving fiddle. Instead of a traditional upright bass, the entire low-end and rhythmic drive is provided by the deep, continuous, and earthy growl of an Australian Aboriginal Didgeridoo, heavily breathing and pulsing through the bluegrass rhythm.
+
+**Lyrics:**
+(Verse 1 - Nasally, high-lonesome Bluegrass tenor vocal)
+Well I'm going up the mountain, to see my sweet gal...
+(Didgeridoo growls deeply, providing a massive, rhythmic drone)
+Got my overalls on, walking down the canal...
+(Banjo rolls furiously over the drone)
+
+(Chorus)
+(Fiddle and Didgeridoo lock into a frantic, dizzying hoedown)
+Blow the pipe! Spin the bow! Hear the outback roar!
+The heaviest drone on the cabin floor!
+Moonshine and the red dust, dancing in the street!
+The didgeridoo is bringing the Appalachian heat!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The incredibly fast, intricate, and high-pitched acoustic picking of American mountain music grounded by the ancient, deeply resonant, and earthy drone of the Australian outback.
+
+### Title: Goth-Rock Gamelan
+
+**Service:** Minimax Audio
+
+**Prompt:** A brooding, atmospheric 1980s Gothic Rock track characterized by deep, dramatic baritone vocals and chorus-drenched basslines. However, all the traditional synthesizer parts, drum machines, and electric guitars are completely replaced by a massive, metallic Indonesian Gamelan ensemble, frantically striking bronze gongs and metallophones in a dark, minor key.
+
+**Lyrics:**
+(Verse 1 - Deep, dramatic, echoing baritone vocal)
+The shadows stretch across the temple floor...
+(A massive flurry of Gamelan metallophones plays a dark, descending minor-key riff)
+I wear the black, I close the heavy door...
+(Deep, resonant gong strikes on the downbeat)
+
+(Chorus)
+(Gamelan ensemble swells in a wall of metallic, chorus-drenched sound)
+Tears of bronze in the pouring rain!
+A gothic heart in an ancient temple of pain!
+The metallophones ring, the darkness is complete!
+Dancing with the ghosts on the cobblestone street!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Gothic Rock / Indonesian Gamelan
+- **Thematic Ties:** The melodramatic, synthesiser-heavy, and darkly romantic aesthetic of 80s goth rock translated into the ringing, sustaining, and profoundly metallic resonance of a traditional Indonesian ensemble.
+
+### Title: The Polka-Dot Yakuza
+
+**Service:** Minimax Audio
+
+**Prompt:** A solemn, slow-paced piece of traditional Japanese Gagaku court music featuring the piercing tones of the hichiriki and the rhythmic strikes of the kakko drum. Suddenly, it is abruptly interrupted and completely overtaken by a bouncy, hyper-cheerful Eastern European polka band, with a frantic accordion and a lively tuba playing the basslines on off-beats.
+
+**Lyrics:**
+(Verse 1 - Slow, solemn Japanese vocal)
+Cherry blossoms fall on the ancient shrine...
+(A sudden blast of a cheerful accordion and tuba)
+
+(Chorus)
+(Bouncy polka rhythm with a tuba bassline)
+Oom-pah-pah in Tokyo! The shogun starts to dance!
+Spinning in the kimono, taking a crazy chance!
+Pierogi and the sushi, rolling on the floor!
+The happiest little yakuza that you ever saw!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Japanese Gagaku / Eastern European Polka
+- **Thematic Ties:** The incredibly formal, stiff, and ancient atmosphere of Japanese court music completely shattered by the bouncy, relentlessly cheerful, and slightly goofy energy of a polka band.
+
+### Title: Cybernetic Sea Shanty
+
+**Service:** Minimax Audio
+
+**Prompt:** A rough, traditional a cappella Sea Shanty chanted by a chorus of gruff 19th-century sailors. The rhythmic stomping of their boots on the deck slowly morphs into an aggressive, building 2010s Brostep/Dubstep riser, culminating in a massive drop where the sea waves are replaced by screeching synthesizer growls and wobbling sub-basses.
+
+**Lyrics:**
+(Verse 1 - Gruff, loud sailor chorus)
+Heave away, boys! The kraken's down below!
+We're sailing through the digital, the only way we know!
+(A rising dubstep snare build begins underneath the chanting)
+
+(Chorus)
+(Massive Brostep drop with screeching synth growls and deep wobble bass)
+Drop the anchor! Drop the bass!
+Sailing through the cyberspace!
+Wobble on the starboard bow, lasers in the sky!
+The heaviest shanty makes the cyber-kraken cry!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Sea Shanty / 2010s Brostep Dubstep
+- **Thematic Ties:** The acoustic, labor-intensive, and historical nature of a sea shanty violently clashing with the hyper-synthetic, chaotic, and speaker-destroying energy of modern dubstep.
+
+### Title: The Appalachian Didgeridoo
+
+**Service:** Minimax Audio
+
+**Prompt:** A foot-stomping, high-speed Appalachian Bluegrass tune featuring frantic banjo picking, high-lonesome vocals, and a driving fiddle. Instead of a traditional upright bass, the entire low-end and rhythmic drive is provided by the deep, continuous, and earthy growl of an Australian Aboriginal Didgeridoo, heavily breathing and pulsing through the bluegrass rhythm.
+
+**Lyrics:**
+(Verse 1 - Nasally, high-lonesome Bluegrass tenor vocal)
+Well I'm going up the mountain, to see my sweet gal...
+(Didgeridoo growls deeply, providing a massive, rhythmic drone)
+Got my overalls on, walking down the canal...
+(Banjo rolls furiously over the drone)
+
+(Chorus)
+(Fiddle and Didgeridoo lock into a frantic, dizzying hoedown)
+Blow the pipe! Spin the bow! Hear the outback roar!
+The heaviest drone on the cabin floor!
+Moonshine and the red dust, dancing in the street!
+The didgeridoo is bringing the Appalachian heat!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The incredibly fast, intricate, and high-pitched acoustic picking of American mountain music grounded by the ancient, deeply resonant, and earthy drone of the Australian outback.
+
+### Title: Goth-Rock Gamelan
+
+**Service:** Minimax Audio
+
+**Prompt:** A brooding, atmospheric 1980s Gothic Rock track characterized by deep, dramatic baritone vocals and chorus-drenched basslines. However, all the traditional synthesizer parts, drum machines, and electric guitars are completely replaced by a massive, metallic Indonesian Gamelan ensemble, frantically striking bronze gongs and metallophones in a dark, minor key.
+
+**Lyrics:**
+(Verse 1 - Deep, dramatic, echoing baritone vocal)
+The shadows stretch across the temple floor...
+(A massive flurry of Gamelan metallophones plays a dark, descending minor-key riff)
+I wear the black, I close the heavy door...
+(Deep, resonant gong strikes on the downbeat)
+
+(Chorus)
+(Gamelan ensemble swells in a wall of metallic, chorus-drenched sound)
+Tears of bronze in the pouring rain!
+A gothic heart in an ancient temple of pain!
+The metallophones ring, the darkness is complete!
+Dancing with the ghosts on the cobblestone street!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Gothic Rock / Indonesian Gamelan
+- **Thematic Ties:** The melodramatic, synthesiser-heavy, and darkly romantic aesthetic of 80s goth rock translated into the ringing, sustaining, and profoundly metallic resonance of a traditional Indonesian ensemble.
