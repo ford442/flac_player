@@ -1904,3 +1904,96 @@ Dancing with the ghosts on the cobblestone street!
 **Additional Notes:**
 - **Combo/Fusion:** 1980s Gothic Rock / Indonesian Gamelan
 - **Thematic Ties:** The melodramatic, synthesiser-heavy, and darkly romantic aesthetic of 80s goth rock translated into the ringing, sustaining, and profoundly metallic resonance of a traditional Indonesian ensemble.
+
+### Title: Mariachi Frost
+
+**Service:** Minimax Audio
+
+**Prompt:** A blisteringly fast and aggressive Scandinavian Black Metal track featuring tremolo-picked guitars and blast beats, but the instrumentation is heavily infused with a traditional Mexican Mariachi band. Trumpets, violins, and a guitarrón relentlessly blast out dark, triumphant brass melodies over the distorted guitars, while the vocals alternate between shrieking black metal rasps and passionate Mariachi gritos.
+
+**Lyrics:**
+(Verse 1 - Raspy Black Metal shriek)
+The frozen tundra cries in the night!
+(Triumphant Mariachi trumpets harmonize a dark melody)
+A northern winter with a southern light!
+(A long, passionate, echoing Mariachi grito)
+Ayayayay! The snow is burning!
+
+(Chorus - Soaring, fast-paced blast beats with full Mariachi ensemble)
+Frostbitten horns across the fjord!
+The guitarrón strikes the final chord!
+From the mountains of ice to the blazing sun!
+Mariachi and metal, we die as one!
+
+**Additional Notes:**
+- **Combo/Fusion:** Scandinavian Black Metal / Mexican Mariachi
+- **Thematic Ties:** The intense, cold, aggressive fury of black metal contrasted with the vibrant, passionate, and bright acoustic orchestration of traditional Mariachi.
+
+### Title: Monastery on the Dancefloor
+
+**Service:** Minimax Audio
+
+**Prompt:** A high-energy 1990s Eurodance track featuring a pulsating four-on-the-floor kick drum, bright synth hooks, and heavy basslines. The lead vocals, however, are exclusively solemn Gregorian Chants sung by a choir of monks in Latin. The chanting builds dramatically before a massive techno drop, where the choir harmonizes rhythmically to the house beat.
+
+**Lyrics:**
+(Verse 1 - Solemn, slow Gregorian Chant over a quiet synth pad)
+Kyrie eleison, Christe eleison...
+(The synth bass begins to sequence a fast, pulsing rhythm)
+Kyrie eleison, the night is long...
+(A classic 90s Eurodance riser builds tension)
+
+(Chorus - Full Eurodance beat drops, monks singing rhythmically)
+Gloria in excelsis deo! (Pump up the jam!)
+Dancing monks in the neon halo! (Feel the bass!)
+From the ancient abbey to the laser light!
+We chant the rhythm all through the night!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Eurodance / Gregorian Chant
+- **Thematic Ties:** The spiritual, ancient, monophonic vocal traditions of the Middle Ages colliding head-on with the synthetic, secular, and intensely rhythmic club anthems of the 90s.
+
+### Title: Trenchtown Highlands
+
+**Service:** Minimax Audio
+
+**Prompt:** A laid-back, heavily syncopated Jamaican Roots Reggae track with a deep, dub-style bassline and skanking off-beat chords. The traditional horn section is completely replaced by a loud, wailing Scottish Bagpipe ensemble, playing syncopated reggae melodies. The vocals are in a thick Jamaican patois, but occasionally accompanied by Scottish Highland shouts.
+
+**Lyrics:**
+(Verse 1 - Smooth Reggae vocal with heavy echo)
+Sun is shining, the weather is sweet...
+(A Scottish Bagpipe wails an off-beat skank melody)
+Got the Highland rhythm down in my feet...
+(Heavy dub bass drop)
+
+(Chorus - Bagpipes soaring with a reggae bounce)
+Mon, we skankin' in the glen today!
+Pipes are blowing all the clouds away!
+From the Caribbean sea to the misty moors!
+One love, one heart, open the doors!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Roots Reggae / Scottish Bagpipes
+- **Thematic Ties:** The relaxed, tropical, bass-heavy groove of Jamaican reggae punctuated by the piercing, reedy, and traditionally martial sounds of the Scottish Highlands.
+
+### Title: Tokyo Speakeasy
+
+**Service:** Minimax Audio
+
+**Prompt:** An upbeat, lively 1920s Dixieland Jazz tune from New Orleans, featuring a driving ragtime rhythm on double bass and drums. The traditional jazz frontline (trumpet, clarinet, trombone) is joined by a frenetic Japanese Shamisen, which rapidly plucks out jazzy, syncopated solos and bends notes in a bluesy, yet traditional Japanese scale.
+
+**Lyrics:**
+(Verse 1 - Scratchy, old-timey megaphone vocal)
+Well, gather 'round folks, let me tell you a tale...
+(A lightning-fast, twangy Shamisen solo plays a ragtime lick)
+About a speakeasy down by the old steel rail...
+(A trombone slides in, answering the Shamisen)
+
+(Chorus - Lively ensemble, Shamisen plucking rhythmically)
+Oh, the Tokyo Speakeasy, where the jazz is hot!
+The Shamisen's playing everything it's got!
+From the bayou swamps to the neon glow!
+Swing it, boys, let the good times flow!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1920s Dixieland Jazz / Japanese Shamisen
+- **Thematic Ties:** The swinging, improvisational, collective energy of early American jazz intertwined with the percussive, twangy, and culturally distinct timbre of traditional Japanese string music.
