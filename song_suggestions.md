@@ -2095,3 +2095,98 @@ Dancing to the bronze in the middle of the night!
 **Additional Notes:**
 - **Combo/Fusion:** 1960s Motown Soul / Balinese Gamelan
 - **Thematic Ties:** The smooth, relentlessly catchy, and tightly arranged pop sensibilities of Detroit soul locking seamlessly into the shimmering, interlocking metallic polyrhythms of a traditional Indonesian ensemble.
+
+### Title: The Andean Cyber-Goth
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive, stomping Cyber-Goth Industrial dance track with heavily distorted synth basses, a pounding 4/4 electronic beat, and harsh whispered vocals. But instead of the typical harsh synth leads, the driving, rapid-fire melodies are intensely strummed on a tiny, acoustic Andean Charango, accompanied by the piercing, breathy wail of a Quena flute echoing through the dystopia.
+
+**Lyrics:**
+(Verse 1 - Harsh, distorted, whispered Cyber-Goth vocals)
+Dancing in the toxic rain, neon in the lung...
+(Rapid, aggressive acoustic Charango strumming cuts through the synth bass)
+A cybernetic sacrifice, songs that go unsung!
+(Quena flute shrieks a high, piercing, breathy melody over the pounding beat)
+
+(Chorus)
+(Massive, distorted synth drop with the Quena and Charango locking into a frantic minor-key run)
+Stomp the boots, breathe the smog!
+The charango crying in the toxic fog!
+Industrial mountains, wires in the snow!
+The heaviest flute that you'll ever know!
+
+**Additional Notes:**
+- **Combo/Fusion:** Cyber-Goth Industrial / Andean Charango & Quena Flute
+- **Thematic Ties:** The harsh, synthetic, aggressive pounding of underground Cyber-Goth clubs pierced by the incredibly organic, high-altitude, and breathy tones of traditional South American mountain instruments.
+
+### Title: Oompah of the Samurai
+
+**Service:** Minimax Audio
+
+**Prompt:** A dramatic, tense Japanese samurai folk ballad. It starts with the fierce, percussive plucking of a Shamisen and the deep boom of a Taiko drum. However, the tense atmosphere is suddenly shattered when a relentlessly cheerful, bouncy Bavarian Oompah brass band, complete with tuba, accordion, and clarinets, joins in to play the ancient Japanese melodies with an aggressively happy waltz rhythm.
+
+**Lyrics:**
+(Verse 1 - Intense, dramatic Japanese Enka-style vocal)
+The blade is drawn under the cherry tree...
+(A massive Taiko drum boom, followed instantly by a bouncy tuba and accordion "oom-pah-pah")
+My honor bound, the wind blows free!
+
+(Chorus)
+(Bavarian brass band playing a wildly cheerful, fast-paced waltz while the Shamisen frantically tries to keep up)
+Oom-pah-pah in Edo! Drink the sake down!
+The happiest ronin in the entire town!
+Lederhosen and the katana, spinning in a trance!
+The Bavarian samurai is ready for the dance!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Japanese Shamisen and Taiko / Bavarian Oompah Brass Band
+- **Thematic Ties:** The fiercely disciplined, ancient, and dramatic tension of Japanese Samurai folk storytelling completely derailed by the bouncing, tuba-driven, beer-swinging cheerfulness of a Bavarian Oktoberfest.
+
+### Title: Gregorian Grunge
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, sludgy 1990s Seattle Grunge rock track featuring quiet, brooding verses that explode into massive, distorted, fuzz-pedal choruses. However, the angst-filled lead vocals are entirely replaced by a choir of solemn monks, delivering the deeply apathetic grunge lyrics in perfect, echoing Latin Gregorian chant, harmonizing over the feedback.
+
+**Lyrics:**
+(Verse 1 - Slow, reverberating Gregorian Chant over a quiet, brooding bassline)
+(Monks singing in unison)
+In the shadows of the rain... I feel the flannel tear...
+Smells like holy spirit... breathing in the air...
+(Distorted guitar feedback begins to swell)
+
+(Chorus)
+(Massive, fuzzy guitar chords explode as the monks hit a powerful, sustained multi-part harmony)
+Apathy in the abbey! The feedback and the cross!
+Wandering in Seattle, mourning for the loss!
+Distortion in the cloister, holy is the fuzz!
+The grunge of the ancients doing what it does!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Seattle Grunge / Latin Gregorian Chant
+- **Thematic Ties:** The angst-ridden, distorted, emotionally raw, and aggressively apathetic sound of 90s alternative rock sung with the incredibly structured, pious, and echoing monophonic reverence of medieval monks.
+
+### Title: Calypso in the Crypt
+
+**Service:** Minimax Audio
+
+**Prompt:** A bright, bouncing Caribbean Calypso track with a lively, syncopated rhythm and cheerful acoustic guitar skanking. But instead of a steel pan or a sunny horn section, the upbeat, tropical melodies are pounded out on a massive, terrifying, gothic Pipe Organ, while an eerie Theremin swoops and wails the cheerful vocal lines.
+
+**Lyrics:**
+(Verse 1 - Upbeat, calypso backing vocals harmonizing)
+Down by the beach, drinking the rum!
+(Massive, gothic Pipe Organ blasts a bouncy, cheerful calypso chord progression)
+Waiting for the island sun to come!
+(Theremin wails in a bright, major key, sounding like a spooky ghost on vacation)
+
+(Chorus)
+(The syncopated beat continues as the Pipe Organ goes into a frantic, cheerful solo)
+Dracula's on vacation, dancing in the sand!
+The spookiest calypso in all the land!
+Coffin on the shoreline, bats in the palm!
+The vampire's singing a tropical psalm!
+
+**Additional Notes:**
+- **Combo/Fusion:** Caribbean Calypso / Transylvanian Pipe Organ & Theremin
+- **Thematic Ties:** The sunny, relaxed, and impossibly cheerful Caribbean beach-party energy of Calypso completely possessed by the terrifying, gothic, and spooky atmosphere of a classic vampire horror film.
