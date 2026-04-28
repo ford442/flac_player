@@ -270,6 +270,20 @@ await navigator.share({
 1. **Admin Dashboard** — Open `https://storage.noahcohn.com/admin`, drag audio files into the upload zone, and attach metadata (Title, Author, Tags).
 2. **Google Cloud Storage Bucket Sync** — Drop `.flac` or `.mp3` files into the bucket's `audio/music/` folder. The VPS file watcher will auto-detect them, generate a UUID and default title, and append them to `songs.json`.
 
+### Storage Manager Webhook Integration
+
+The Contabo Storage Manager can automatically push new tracks to the FLAC Player backend via a webhook. To enable this, set the following environment variable in `contabo_storage_manager/.env` (or your deployment secrets):
+
+```bash
+FLAC_PLAYER_API_URL=https://your-flac-player-domain/api/upload/songs
+```
+
+**Current deployments:**
+- Test: `https://test.1ink.us/flac-player/api/upload/songs`
+- Production: `https://go.1ink.us/flac-player/api/upload/songs`
+
+> **Note:** If `FLAC_PLAYER_API_URL` is not set, the webhook functions will log a debug message and skip the external call, preserving backward compatibility.
+
 ## Error Handling
 
 All endpoints return appropriate HTTP status codes:
