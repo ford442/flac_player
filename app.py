@@ -90,6 +90,7 @@ class SongMetadata(BaseModel):
 
 class SongCreate(BaseModel):
     """Model for creating a new song entry."""
+    id: Optional[str] = None
     name: str
     title: Optional[str] = None
     author: Optional[str] = None
@@ -101,6 +102,7 @@ class SongCreate(BaseModel):
     genre: Optional[str] = None
     tags: Optional[List[str]] = None
     duration: Optional[float] = None
+    url: Optional[str] = None
     generation_model: Optional[str] = None
     version: Optional[str] = None
     prompt: Optional[str] = None
@@ -210,12 +212,19 @@ class StorageManager:
         self._cache: Dict[str, Dict[str, Any]] = {}
         self._loaded = False
         self._lock = asyncio.Lock()
+        self._mtime: Optional[float] = None
     
     async def _ensure_loaded(self):
-        """Load index from disk if not already loaded."""
-        if not self._loaded:
+        """Load index from disk if not already loaded or if file changed."""
+        mtime = None
+        try:
+            mtime = os.path.getmtime(self.index_path)
+        except OSError:
+            pass
+        
+        if not self._loaded or (mtime is not None and mtime != self._mtime):
             async with self._lock:
-                if not self._loaded:
+                if not self._loaded or (mtime is not None and mtime != self._mtime):
                     await self._load()
                     self._loaded = True
     
@@ -226,11 +235,14 @@ class StorageManager:
                 with open(self.index_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     self._cache = {item['id']: item for item in data.get('songs', [])}
+                self._mtime = os.path.getmtime(self.index_path)
             else:
                 self._cache = {}
+                self._mtime = None
         except Exception as e:
             print(f"Error loading index: {e}")
             self._cache = {}
+            self._mtime = None
     
     async def _save(self):
         """Save index to JSON file."""
@@ -243,6 +255,7 @@ class StorageManager:
                 os.makedirs(os.path.dirname(self.index_path), exist_ok=True)
                 with open(self.index_path, 'w', encoding='utf-8') as f:
                     json.dump(data, f, indent=2, ensure_ascii=False)
+                self._mtime = os.path.getmtime(self.index_path)
             except Exception as e:
                 print(f"Error saving index: {e}")
                 raise

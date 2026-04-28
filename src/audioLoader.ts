@@ -59,8 +59,9 @@ export type RepeatMode = 'off' | 'one' | 'all';
 export type ViewMode = 'library' | 'now-playing' | 'queue' | 'pile';
 
 // API Configuration
-// Default to the storage manager API if no env var is set
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://storage.noahcohn.com';
+// When REACT_APP_API_URL is set (e.g. production override) use it.
+// Otherwise default to same-origin so HF Space / local dev proxy work correctly.
+const API_BASE_URL = process.env.REACT_APP_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://storage.noahcohn.com');
 
 // Debug mode - set to true to enable detailed logging
 const DEBUG_MODE = true;
