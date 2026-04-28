@@ -1,17 +1,17 @@
+<!-- From: /root/flac_player/AGENTS.md -->
 # FLAC Player - Agent Documentation
 
 This document provides essential information for AI coding agents working on the FLAC Player project.
 
 ## Project Overview
 
-FLAC Player is a high-fidelity audio player web application with a **React/TypeScript frontend** and a **FastAPI Python backend**. It plays FLAC and WAV audio files directly in the browser and features a multi-backend audio engine (native Web Audio API, AudioWorklet, and C++ SDL-based WASM modules) with real-time WebGPU shader visualization. It also includes advanced library management: track rating, tagging, smart playlist mixing, a "pile mode" for sorting untagged or low-rated tracks, and playlist sharing.
+FLAC Player is a high-fidelity audio player web application with a **React/TypeScript frontend** and a **FastAPI Python backend**. It plays FLAC and WAV audio files directly in the browser and features a multi-backend audio engine (native Web Audio API, AudioWorklet, and C++ SDL-based WASM modules) with real-time WebGPU shader visualization. It also includes advanced library management: track rating, tagging, smart playlist mixing, and playlist sharing.
 
 **Key Capabilities:**
 - Play FLAC/WAV audio from URLs (HTTP/HTTPS, Google Cloud Storage)
 - Four audio output backends: Web Audio API, AudioWorklet, SDL3 (WASM), SDL2 (WASM)
-- Real-time audio visualization using WebGPU shaders (flat waveform + 3D cube modes)
+- Real-time audio visualization using WebGPU shaders (flat waveform + 3D cube + hardware GUI modes)
 - Music library management with ratings, tags, search, and filtering
-- "Pile Mode" for rapid tagging/rating of untagged or low-rated tracks
 - Smart Mix: auto-generate queues based on shared tags
 - MusicBrainz API integration for auto-populating metadata
 - AI-generated track support (parses `generation_model`, `version`, `prompt`)
@@ -22,13 +22,13 @@ FLAC Player is a high-fidelity audio player web application with a **React/TypeS
 
 | Category | Technology |
 |----------|------------|
-| Frontend | React 18, TypeScript, CSS3 (Tailwind-like utility classes in `Player.css`) |
+| Frontend | React 18, TypeScript, CSS3 (Tailwind-like utility classes in `Player.css` and `ShaderGUI.css`) |
 | Build System | Webpack 5, Babel, ESLint |
 | Audio (Native) | Web Audio API (`AudioContext`, `AnalyserNode`, `BufferSourceNode`) |
 | Audio (Worklet) | `AudioWorkletNode` with inline processor blob, ScriptProcessor fallback |
 | Audio (WASM) | SDL3/SDL2 compiled via Emscripten |
 | Visualization | WebGPU API with WGSL shaders |
-| Backend | FastAPI, Pydantic, aiocache, httpx, uvicorn |
+| Backend | FastAPI, Pydantic v2, aiocache, httpx, uvicorn |
 | Storage | JSON file persistence (`data/songs/index.json`) |
 | Deployment | Static hosting, Netlify, Vercel, Python SFTP script |
 
@@ -46,25 +46,39 @@ flac_player/
 │   └── script-processor-processor.js # AudioWorklet processor
 ├── src/
 │   ├── components/
-│   │   ├── Player.tsx          # Main player UI component
+│   │   ├── Player.tsx          # Main player UI component (~1100 lines)
 │   │   ├── Player.css          # Player styles (utility-first)
-│   │   ├── LibraryView.tsx     # Grid/list library display
-│   │   ├── QueuePanel.tsx      # Queue sidebar/panel
-│   │   ├── PileMode.tsx        # "Sort My Pile" rapid-rating mode
-│   │   ├── StarRating.tsx      # Reusable star rating widget
-│   │   └── TagInput.tsx        # Autocomplete tag input
+│   │   ├── LibraryView.tsx     # Grid/list library display with inline editing
+│   │   ├── QueuePanel.tsx      # Queue sidebar/panel with drag-to-reorder
+│   │   ├── StarRating.tsx      # Reusable star rating widget (with trash option)
+│   │   ├── TagInput.tsx        # Autocomplete tag input
+│   │   └── ShaderGUI/          # Hardware-inspired control panel
+│   │       ├── ShaderGUI.tsx   # Main GUI orchestrator
+│   │       ├── TopScreen.tsx   # WebGPU canvas + track info marquee
+│   │       ├── BottomScreen.tsx# Scrollable track queue
+│   │       ├── Knob.tsx        # Rotary knob control
+│   │       ├── Button.tsx      # Hardware-style buttons
+│   │       ├── VolumeSlider.tsx# Vertical fader
+│   │       ├── Chassis.tsx     # Outer chassis shell
+│   │       └── ShaderGUI.css   # GUI-specific styles
 │   ├── hooks/
-│   │   └── useKeyboardShortcuts.ts # Global keyboard shortcuts hook
+│   │   ├── useKeyboardShortcuts.ts # Global keyboard shortcuts (space/arrows/n/p/r/q/s/ctrl+k)
+│   │   ├── useBeatDetection.ts     # 5-band spectrum analysis + simple beat detection
+│   │   ├── useKnob.ts              # Drag interaction hook for rotary knobs
+│   │   └── useShaderUniforms.ts    # Shader uniform state management
 │   ├── sdl/
 │   │   ├── audio_engine.cpp    # SDL3 C++ audio engine
 │   │   ├── audio_engine_sdl2.cpp # SDL2 C++ audio engine
 │   │   ├── build.sh            # SDL3 build script (outputs to public/)
 │   │   └── build_sdl2.sh       # SDL2 build script (outputs to public/)
+│   ├── shaders/
+│   │   ├── waveform.ts         # WGSL shader for ShaderGUI
+│   │   └── waveform.wgsl       # Standalone WGSL file (reference)
 │   ├── App.tsx                 # Root React component
 │   ├── App.css                 # App styles
-│   ├── index.tsx               # React entry point
+│   ├── index.tsx               # React entry point (StrictMode)
 │   ├── audioPlayer.ts          # Native Web Audio API player
-│   ├── audioWorkletPlayer.ts   # AudioWorklet player
+│   ├── audioWorkletPlayer.ts   # AudioWorklet player (with ScriptProcessor fallback)
 │   ├── sdlAudioPlayer.ts       # SDL3 WASM wrapper
 │   ├── sdl2AudioPlayer.ts      # SDL2 WASM wrapper
 │   ├── audioLoader.ts          # Audio fetching + backend API client
@@ -78,7 +92,9 @@ flac_player/
 ├── webpack.config.js           # Webpack build configuration
 ├── .eslintrc.json              # ESLint rules
 ├── netlify.toml                # Netlify deployment config
-└── vercel.json                 # Vercel deployment config
+├── vercel.json                 # Vercel deployment config
+├── .env.example                # Environment variable documentation
+└── requirements.txt            # Python dependencies
 ```
 
 ## Build Commands
@@ -126,7 +142,7 @@ uvicorn app:app --host 0.0.0.0 --port 7860
 ### Naming Conventions
 - Components: PascalCase (e.g., `Player.tsx`, `LibraryView.tsx`)
 - Utilities: camelCase (e.g., `audioLoader.ts`, `flacDecoder.ts`)
-- CSS classes: Tailwind-like utility classes are used inside `Player.css` (e.g., `bg-white/10`, `flex`, `gap-2`)
+- CSS classes: Tailwind-like utility classes are used inside `Player.css` and `ShaderGUI.css` (e.g., `bg-white/10`, `flex`, `gap-2`)
 - Interfaces: PascalCase with descriptive names (e.g., `PlayerState`, `FlacDecoderResult`)
 
 ### Code Patterns
@@ -179,7 +195,7 @@ Without these headers:
 - SDL WASM backends may fall back to ScriptProcessor or fail
 
 ### WebGPU Visualizer
-- Two modes: `'flat'` (waveform) and `'3D'` (rotating cube with screen)
+- Three modes: `'flat'` (waveform), `'3D'` (rotating cube with screen), `'gui'` (ShaderGUI hardware panel)
 - Requires manual resource cleanup in `destroy()` method
 - Runs at 60fps via `requestAnimationFrame`
 - Falls back gracefully if WebGPU not supported (Chrome 113+, Edge 113+)
@@ -189,7 +205,7 @@ The `ShaderGUI` component (`src/components/ShaderGUI/ShaderGUI.tsx`) is a hardwa
 - **Top Screen**: WebGPU canvas with real-time WGSL shader (waveform, scanlines, chromatic aberration, pulse bloom, knob/LED glows)
 - **Bottom Screen**: Scrollable track queue with active-track highlighting
 - **Knobs**: RSYCRB (chromatic aberration), FRACTAL (waveform detail), PULSE (bloom intensity)
-- **Buttons**: NONE, IR (visual modes), STOP, PLAY
+- **Buttons**: NONE, IR (visual modes), STOP, PLAY, PREV, NEXT
 - **Volume Slider**: Vertical fader with tick marks
 - **Hidden 3D Mode**: Double-click the top screen to toggle between the GUI shader and the 3D rotating cube visualizer
 
@@ -238,12 +254,14 @@ Manual testing checklist:
 4. Switch between audio backends (Web Audio → Worklet → SDL3 → SDL2)
 5. Test playlist loading from `/api/songs`
 6. Verify 3D mode interaction (drag to rotate, click to play/pause)
-7. Test library features: rating a track, adding tags, smart mix, pile mode
+7. Test library features: rating a track, adding tags, smart mix
 8. Verify backend health endpoint returns 200
 9. **ShaderGUI**: Verify knobs affect the waveform (RSYCRB = chromatic aberration, FRACTAL = detail, PULSE = bloom)
 10. **ShaderGUI**: Double-click top screen to toggle 3D cube mode
 11. **ShaderGUI**: Verify volume slider is vertical with tick marks
 12. **ShaderGUI**: Confirm active track in bottom screen has highlight + play overlay
+13. Test queue drag-to-reorder functionality
+14. Test keyboard shortcuts: Space (play/pause), Arrows (seek/volume), N/P (next/prev), Q (queue), Ctrl+K (search)
 
 ## Security Considerations
 
@@ -264,9 +282,12 @@ The FastAPI backend already adds `CORSMiddleware` with `allow_origins=["*"]`.
 ### HTTPS Requirement
 Due to SharedArrayBuffer usage, the app must be served over HTTPS (except localhost).
 
+### Deployment Credentials
+`deploy.py` contains hardcoded server credentials. This is a known issue — do not commit sensitive credentials in production.
+
 ## Known Issues & Limitations
 
-1. **SDL Analyser**: SDL backends return a dummy `AnalyserNode` — visualization may flatline when using SDL audio. The ShaderGUI shader now includes a synthetic fallback animation for this case.
+1. **SDL Analyser**: SDL backends return a dummy `AnalyserNode` — visualization may flatline when using SDL audio. The ShaderGUI shader includes a synthetic fallback animation for this case.
 2. **Test Suite**: No automated tests configured
 3. **WASM Build Scope**: `npm run build:wasm` only compiles SDL2. SDL3 must be built manually via `bash src/sdl/build.sh`
 4. **Hardcoded Deploy Credentials**: `deploy.py` contains server-specific configuration
@@ -286,12 +307,13 @@ Due to SharedArrayBuffer usage, the app must be served over HTTPS (except localh
 ## File Dependencies
 
 Key module dependencies:
-- `Player.tsx` → `audioPlayer.ts`, `audioWorkletPlayer.ts`, `sdlAudioPlayer.ts`, `sdl2AudioPlayer.ts`, `audioLoader.ts`, `webgpuVisualizer.ts`, `useKeyboardShortcuts.ts`, `LibraryView.tsx`, `QueuePanel.tsx`, `PileMode.tsx`, `StarRating.tsx`, `ShaderGUI.tsx`
+- `Player.tsx` → `audioPlayer.ts`, `audioWorkletPlayer.ts`, `sdlAudioPlayer.ts`, `sdl2AudioPlayer.ts`, `audioLoader.ts`, `webgpuVisualizer.ts`, `useKeyboardShortcuts.ts`, `LibraryView.tsx`, `QueuePanel.tsx`, `StarRating.tsx`, `ShaderGUI.tsx`
+- `ShaderGUI.tsx` → `WebGPUVisualizer`, `useBeatDetection`, `TopScreen`, `BottomScreen`, `Knob`, `Button`, `VolumeSlider`, `Chassis`
 - `audioPlayer.ts` → `flacDecoder.ts`
 - `audioWorkletPlayer.ts` → `flacDecoder.ts`
 - `sdlAudioPlayer.ts` → `flacDecoder.ts`
 - `sdl2AudioPlayer.ts` → `flacDecoder.ts`
-- `webgpuVisualizer.ts` → `math.ts`
+- `webgpuVisualizer.ts` → `math.ts`, `waveform.ts`
 - `app.py` → `data/songs/index.json` (runtime)
 
 ## External APIs
