@@ -2190,3 +2190,100 @@ The vampire's singing a tropical psalm!
 **Additional Notes:**
 - **Combo/Fusion:** Caribbean Calypso / Transylvanian Pipe Organ & Theremin
 - **Thematic Ties:** The sunny, relaxed, and impossibly cheerful Caribbean beach-party energy of Calypso completely possessed by the terrifying, gothic, and spooky atmosphere of a classic vampire horror film.
+
+### Title: The Throat-Singing Greaser
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced, energetic 1950s Rockabilly track with slapping upright bass and twangy hollow-body electric guitar riffs. However, the slicked-back crooning vocals are completely replaced by a gravelly, deep Tuvan throat singer (Kargyraa), and the frantic saxophone solos are performed by a piercing Sygyt overtone whistle.
+
+**Lyrics:**
+(Verse 1 - Deep, rumbling Kargyraa throat singing acting as the rockabilly vocal)
+Well I slicked back my hair, put my leather jacket on...
+(Throat singing drops into a deep rhythm)
+Gonna ride my hot rod till the early dawn!
+(Twangy guitar plays a classic rock and roll lick)
+
+(Chorus)
+(Overtone whistle screams over a frantic rockabilly beat)
+Throat singing at the drive-in! Shaking all around!
+The deepest voice in this tiny little town!
+Blue suede shoes on the Mongolian plain!
+Driving this hot rod driving me insane!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1950s Rockabilly / Tuvan Throat Singing
+- **Thematic Ties:** The slick, rebellious, pompadour-sporting energy of 50s American rockabilly infused with the ancient, deeply resonant, and earthy tones of Mongolian nomadic singing.
+
+### Title: Boy Band in the Highlands
+
+**Service:** Minimax Audio
+
+**Prompt:** A smooth, romantic 1990s R&B slow jam with a heavy synthesized bassline, snapping drum machine, and lush vocal harmonies. However, the passionate, melismatic lead vocals are entirely replaced by the loud, continuous, and highly ornamented screech of Scottish Great Highland Bagpipes, playing incredibly soulful and emotional runs.
+
+**Lyrics:**
+(Verse 1 - Lush male backing harmonies)
+(Backing vocals: "Ooh yeah, baby...")
+(Bagpipes enter with a smooth, sustained, soulful wail)
+You know I've been waiting all night for you, girl...
+(Bagpipes play a complex, R&B-style trill)
+
+(Chorus)
+(Heavy drum machine beat drops with snaps on the two and four)
+Making love in the highlands, underneath the rain!
+The bagpipes crying out, sharing all my pain!
+Silk shirts and kilts, baby, close the door!
+The most romantic drone that you've ever heard before!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s R&B Slow Jam / Scottish Bagpipes
+- **Thematic Ties:** The incredibly smooth, romantic, and highly polished bedroom-jam atmosphere of 90s R&B violently clashing with the deafening, continuous, and aggressively loud drone of a traditional Scottish instrument.
+
+### Title: Chilled Beats to Joust To
+
+**Service:** Minimax Audio
+
+**Prompt:** A relaxed, crackling Lo-Fi Hip Hop track with a dusty, slow boom-bap drum beat and vinyl surface noise. The typical melancholic jazz piano loop is entirely replaced by an intricately played 16th-century Renaissance harpsichord and a melancholy lute, looping gentle, contrapuntal melodies over the chilled-out beat.
+
+**Lyrics:**
+(Verse 1 - No vocals, just atmospheric sounds)
+(Dusty vinyl crackle, slow, head-nodding hip-hop drum beat)
+(Harpsichord plucks a sad, looping classical progression)
+(Lute plays a gentle, jazzy melody over top)
+Yeah... studying the old texts... sipping on the mead...
+Just a lonely knight, planting the seed...
+
+(Chorus)
+(Beat continues its relaxed, hypnotic sway)
+Lo-Fi in the castle, chilling in the moat!
+The smoothest little harpsichord that anyone wrote!
+Relaxing to the rhythm of the old crusade!
+Chilled beats to study to, resting in the shade!
+
+**Additional Notes:**
+- **Combo/Fusion:** Lo-Fi Hip Hop / Renaissance Harpsichord & Lute
+- **Thematic Ties:** The highly modern, internet-native, cozy aesthetic of 'lo-fi beats to relax to' perfectly melding with the delicate, ornate, and historical quietude of 16th-century European parlor instruments.
+
+### Title: Glitching the Abbey
+
+**Service:** Minimax Audio
+
+**Prompt:** An abrasive, chaotic, and aggressively upbeat modern Hyperpop track featuring massive, distorted 808s, glitching synthesizers, and incredibly fast, erratic percussion. The high-pitched, heavily auto-tuned vocals are completely replaced by a choir of solemn monks singing Latin Gregorian chants, their voices sliced, pitched up, and heavily glitched out.
+
+**Lyrics:**
+(Verse 1 - Monks singing in unison, but heavily auto-tuned and stuttering)
+Do-do-dominus v-v-vobiscum!
+(A massive, distorted bass drop, synths glitching wildly)
+(Choir is pitched up three octaves, sounding like chipmunks)
+Kyrie eleison in the matrix!
+
+(Chorus)
+(Frantic, chaotic hyperpop beat exploding)
+Glitch the abbey! Crash the holy server!
+Singing to the Lord with a synthetic fervor!
+Auto-tuned monks in a digital haze!
+The fastest, craziest, holy hyper-craze!
+
+**Additional Notes:**
+- **Combo/Fusion:** Hyperpop / Latin Gregorian Chant
+- **Thematic Ties:** The aggressively artificial, chaotic, internet-speed maximalism of hyperpop corrupting and digitizing the slow, solemn, ancient, and highly acoustic monophony of medieval monastic chanting.
