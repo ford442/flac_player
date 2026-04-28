@@ -88,10 +88,12 @@ export class AudioLoader {
 
       if (!response.ok) {
         if (response.status === 404) {
-             const isDirectory = source.url.endsWith('/') || !source.url.split('/').pop()?.includes('.');
+             const lastSegment = source.url.split('/').pop() || '';
+             const isDirectory = source.url.endsWith('/') || lastSegment === '';
              if (isDirectory) {
-                 throw new Error(`File not found (404). The URL "${source.url}" appears to be a directory or incomplete path. Please specify a full file path (e.g., ending in .flac or .wav).`);
+                 throw new Error(`File not found (404). The URL "${source.url}" appears to be a directory. Please specify a full file path (e.g., ending in .flac or .wav).`);
              }
+             throw new Error(`File not found (404). The server could not locate the audio file at "${source.url}".`);
         }
         throw new Error(`Failed to load audio: ${response.status} ${response.statusText}`);
       }
