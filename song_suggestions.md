@@ -2287,3 +2287,99 @@ The fastest, craziest, holy hyper-craze!
 **Additional Notes:**
 - **Combo/Fusion:** Hyperpop / Latin Gregorian Chant
 - **Thematic Ties:** The aggressively artificial, chaotic, internet-speed maximalism of hyperpop corrupting and digitizing the slow, solemn, ancient, and highly acoustic monophony of medieval monastic chanting.
+
+### Title: The Andean Skank
+
+**Service:** Minimax Audio
+
+**Prompt:** A hyper-energetic, bouncy 1990s Third-Wave Ska-Punk track with fast upstroke guitar chords and a walking bassline. However, the lively brass section (trumpets and trombones) is entirely replaced by a massive ensemble of traditional Andean Pan Flutes (zampoñas) and charangos, playing the frantic, staccato ska horn hooks with breathy, high-altitude energy.
+
+**Lyrics:**
+(Verse 1 - Nasally, energetic 90s ska-punk vocal)
+Pick it up, pick it up! We're skanking in the clouds!
+(A massive flurry of Pan Flutes plays a bright, staccato ska horn line)
+Got the checkered Vans, rising above the crowds!
+(Charango strums furiously on the off-beat)
+
+(Chorus)
+(A massive ska chorus erupts with pan flutes providing the main hook)
+Ska from the Andes! We're riding on the beat!
+Llamas in the mosh pit, shuffling their feet!
+Throw away the trumpet, let the bamboo ring!
+Third-wave Peruvian, hear the mountains sing!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Third-Wave Ska-Punk / Traditional Andean Pan Flutes
+- **Thematic Ties:** The bouncy, caffeinated, suburban goofiness of 90s ska-punk completely relocated to the breathless, high-altitude, and deeply historical peaks of the Andes mountains.
+
+### Title: Dixieland Devastation
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive, brutal Death Metal track featuring heavily down-tuned guitars and relentless blast beats. Shockingly, the intense drum fills and guttural vocals are intermittently interrupted by a cheerful 1920s Dixieland Jazz ensemble, with a bouncy tuba playing the basslines and a squeaking clarinet soloing frantically over the extreme metal chaos.
+
+**Lyrics:**
+(Verse 1 - Deep, guttural Death Metal roar)
+THE CHARLESTON OF DOOM! THE FLAPPERS AWAKE!
+(A cheerful, squeaking clarinet plays a fast ragtime run over the blast beats)
+THE SPEAKEASY BURNS FOR THE DEVIL'S SAKE!
+(Tuba pumps a bouncy, upbeat bassline over the distorted guitars)
+
+(Chorus)
+(Heavy, sludgy breakdown accompanied by a loud, swinging jazz trumpet solo)
+JAZZ OF THE DAMNED! THE TROMBONE STARTS TO BLEED!
+SWINGING THROUGH THE CARNAGE AT A TERRIFYING SPEED!
+DEATH METAL DIXIELAND! THE FEATHERS AND THE GORE!
+THE HAPPIEST LITTLE JAZZ BAND THAT YOU CANNOT IGNORE!
+
+**Additional Notes:**
+- **Combo/Fusion:** Death Metal / 1920s Dixieland Jazz
+- **Thematic Ties:** The terrifying, aggressive, and brutal nature of Death Metal completely undercut and confused by the inherently bouncy, cheerful, and swinging energy of a traditional Dixieland jazz band.
+
+### Title: The Dembow Shanty
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, driving Reggaeton beat featuring a thumping 808 sub-bass and classic dembow drum patterns. Instead of modern synthesizers or Spanish rap, the entire vocal structure is provided by a chorus of gruff 19th-century sailors singing a traditional a cappella Sea Shanty, perfectly riding the syncopated Caribbean club rhythm.
+
+**Lyrics:**
+(Verse 1 - Gruff, loud sailor chorus perfectly in time with the dembow beat)
+Heave away, boys! The kraken's in the club!
+(A heavy 808 sub-bass drops on the downbeat)
+We're hauling up the anchor from the bottom of the tub!
+(Dembow drum pattern kicks into high gear)
+
+(Chorus)
+(The sailors hit a massive, multi-part harmony over the reggaeton groove)
+Perrea with the mainsail! Whine to the port!
+The sweatiest pirates in the royal court!
+Mueve la cadera, swab the wooden deck!
+Reggaeton shanty in this beautiful shipwreck!
+
+**Additional Notes:**
+- **Combo/Fusion:** Reggaeton / Traditional Sea Shanty
+- **Thematic Ties:** The raw, sensual, and heavy club energy of modern Reggaeton clashing beautifully with the harsh, laborious, and historical nature of a 19th-century sailor's work song.
+
+### Title: The Highland Ipanema
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, swaying Brazilian Bossa Nova track featuring complex, jazzy nylon-string guitar chords and light, brushed snare drums. The typically smooth, whispered Portuguese vocals and gentle flute melodies are entirely replaced by the incredibly loud, continuous, and highly ornamented screech of Scottish Great Highland Bagpipes, playing delicate jazz melodies.
+
+**Lyrics:**
+(Verse 1 - Soft, breathy Bossa Nova vocal)
+The sun sets softly on the gentle sea...
+(Bagpipes blast a furious, loud, sustained jazz melody, drowning out the guitar)
+A caipirinha shared by you and me...
+(Brushed snare keeps a light, shuffling bossa rhythm)
+
+(Chorus)
+(The bagpipes go into a frantic, high-volume solo over the quiet acoustic backing)
+Bossa of the highlands, swaying in the breeze!
+The loudest little piper that you'd ever please!
+Tartan on the beach, dancing on the shore!
+Leaving you always wanting some more.
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Bossa Nova / Scottish Great Highland Bagpipes
+- **Thematic Ties:** The ultimate beachside relaxation and soft, breezy romance of Bossa Nova violently interrupted by the deafening, continuous, and aggressively loud drone of a traditional Scottish instrument.
