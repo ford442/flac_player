@@ -2383,3 +2383,95 @@ Leaving you always wanting some more.
 **Additional Notes:**
 - **Combo/Fusion:** Brazilian Bossa Nova / Scottish Great Highland Bagpipes
 - **Thematic Ties:** The ultimate beachside relaxation and soft, breezy romance of Bossa Nova violently interrupted by the deafening, continuous, and aggressively loud drone of a traditional Scottish instrument.
+
+### Title: Reggae Gregorian
+
+**Service:** Minimax Audio
+
+**Prompt:** A laid-back, sun-soaked Jamaican Reggae track with off-beat skanks, a bouncing bassline, and one-drop drum rhythms. However, the lead vocals and all background harmonies are performed by a solemn choir of medieval monks singing reverberating Latin Gregorian chants perfectly in sync with the Caribbean groove.
+
+**Lyrics:**
+(Verse 1 - Slow, solemn Latin chant with a heavy dub echo)
+In nomine Patris... (Reggae guitar skanks on the off-beat)
+Et Filii... (Bassline walks a deep, bouncing scale)
+Spiritus Sancti... (Snare drum hits with a massive spring reverb)
+
+(Chorus - Monks harmonizing in a joyful reggae bounce)
+Chanting in the sunshine! Babylon must fall!
+Holy water flowing, answering the call!
+Jah is in the abbey, listen to the choir!
+Lighting up the incense, feeling the holy fire!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Reggae / Latin Gregorian Chant
+- **Thematic Ties:** The sunny, laid-back, and rebellious energy of Jamaican reggae completely fused with the austere, disciplined, and ancient reverberations of medieval monastic devotion.
+
+### Title: The Flamenco Synthesizer
+
+**Service:** Minimax Audio
+
+**Prompt:** A passionate, acoustic Andalusian Flamenco performance featuring rhythmic hand-clapping (palmas) and aggressive foot stomping (zapateado). But the rapid, intricate guitar falsetas and emotional cante jondo singing are entirely replaced by the jagged, screeching square waves of a classic 1980s 8-bit chiptune synthesizer, playing lightning-fast arpeggios.
+
+**Lyrics:**
+(Verse 1 - No human vocals, just 8-bit square wave leads)
+(Rapid palmas set a frantic 12/8 rhythm)
+(8-bit synth blasts a furious, highly ornamented flamenco scale)
+(Heel stomping interlocks with a chiptune bassline)
+
+(Chorus)
+(The synth mimics the passionate wail of a traditional singer with intense vibrato)
+(8-bit arpeggios cascade down like a frantic guitar run)
+(The claps and stomps hit a unified, dramatic climax)
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Spanish Flamenco / 1980s 8-bit Chiptune
+- **Thematic Ties:** The raw, blood-and-sweat human passion of traditional Spanish folk dance forcefully digitized into the stiff, electronic, and retro soundscape of early video game consoles.
+
+### Title: K-Pop Didgeridoo
+
+**Service:** Minimax Audio
+
+**Prompt:** A highly polished, hyper-energetic K-Pop girl group anthem featuring massive electronic drops, syncopated rap verses, and bright synth-pop hooks. However, the foundational bassline and primary melodic motif are provided by a raw, droning, and rhythmic Australian Aboriginal Didgeridoo that aggressively growls beneath the sugary sweet vocals.
+
+**Lyrics:**
+(Verse 1 - Sugary, fast-paced K-Pop vocals)
+Neon lights shining, we own the city street!
+(Didgeridoo growls with a deep, pulsating sub-harmonic rhythm)
+Oppa look at me, moving to the beat!
+(Clapsticks syncopate with a trap hi-hat roll)
+
+(Chorus)
+(Massive EDM build-up leads into the drop)
+Saranghae in the outback! Watch the boomerang fly!
+(Didgeridoo blasts a hyper-rhythmic, droning solo)
+Glitter in the desert beneath the purple sky!
+Idol in the dirt, making history!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern K-Pop / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The intensely manufactured, pristine, and glossy world of modern Korean pop music clashing dramatically with the ancient, unpolished, and earth-shaking drone of a traditional Aboriginal instrument.
+
+### Title: Mariachi Cyber-Goth
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive, pounding Industrial Cyber-Goth dance track featuring distorted four-on-the-floor beats, harsh noise sweeps, and screamed, synthesized vocals. Yet the driving melodic force and triumphant horn sections are proudly played by a cheerful, fully acoustic Mexican Mariachi band, with blaring trumpets and aggressively strummed vihuelas matching the industrial tempo.
+
+**Lyrics:**
+(Verse 1 - Heavily distorted, shouted industrial vocals)
+MACHINE FLESH TEARING IN THE ACID RAIN!
+(Mariachi trumpets blast a soaring, vibrato-heavy fanfare)
+NEON CORRUPTION, DIGITAL PAIN!
+(Vihuelas frantically strum along to the pounding industrial kick drum)
+
+(Chorus)
+(The beat drops with a massive, distorted synth bass while the Mariachi band plays a joyful waltz)
+Fiesta in the wasteland! The cyborgs start to dance!
+Tequila in the mainframe, caught in a techno trance!
+(A harsh noise sweep transitions into a beautiful acoustic guitar run)
+Viva the apocalypse! Viva the machine!
+The finest cyber-mariachi you have ever seen!
+
+**Additional Notes:**
+- **Combo/Fusion:** Industrial Cyber-Goth / Traditional Mexican Mariachi
+- **Thematic Ties:** The dark, aggressive, and dystopian nightmare of industrial cyber-goth music inexplicably elevated by the joyful, communal, and undeniably triumphant sound of traditional Mexican celebration.
