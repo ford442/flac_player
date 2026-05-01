@@ -38,6 +38,15 @@ export interface ShareResponse {
   expires_at?: string;
 }
 
+export interface CloudPlaylist {
+  id: string;
+  title: string;
+  description?: string;
+  track_ids: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface LibraryStats {
   total_tracks: number;
   rated_4plus: number;
@@ -650,6 +659,71 @@ export class AudioLoader {
     const data = await response.json();
     debug.log('CREATE_SHARE_RESPONSE', data);
     return data as ShareResponse;
+  }
+
+  // =============================================================================
+  // Cloud Playlists (from contabo_storage_manager)
+  // =============================================================================
+
+  private PLAYLIST_API_URL = process.env.REACT_APP_PLAYLIST_API_URL || 'https://storage.noahcohn.com';
+
+  async fetchPlaylists(): Promise<CloudPlaylist[]> {
+    try {
+      const url = `${this.PLAYLIST_API_URL}/api/playlists`;
+      debug.log('FETCH_PLAYLISTS_REQUEST', { url });
+
+      const startTime = performance.now();
+      const response = await fetch(url, {
+        mode: 'cors',
+        credentials: 'omit'
+      });
+      const endTime = performance.now();
+
+      debug.log('FETCH_PLAYLISTS_RESPONSE', {
+        status: response.status,
+        ok: response.ok,
+        duration: `${(endTime - startTime).toFixed(2)}ms`
+      });
+
+      if (!response.ok) {
+        debug.warn('FETCH_PLAYLISTS_ERROR', { status: response.status });
+        return [];
+      }
+
+      const data = await response.json();
+      debug.log('FETCH_PLAYLISTS_PARSED', { count: data.length });
+      return data;
+    } catch (error) {
+      debug.error('FETCH_PLAYLISTS_FAILED', {
+        message: error instanceof Error ? error.message : String(error)
+      });
+      return [];
+    }
+  }
+
+  async fetchPlaylistTracks(playlistId: string): Promise<string[]> {
+    try {
+      const url = `${this.PLAYLIST_API_URL}/api/playlists/${playlistId}`;
+      debug.log('FETCH_PLAYLIST_TRACKS_REQUEST', { url, playlistId });
+
+      const response = await fetch(url, {
+        mode: 'cors',
+        credentials: 'omit'
+      });
+
+      if (!response.ok) {
+        debug.warn('FETCH_PLAYLIST_TRACKS_ERROR', { status: response.status });
+        return [];
+      }
+
+      const data = await response.json();
+      return data.track_ids || [];
+    } catch (error) {
+      debug.error('FETCH_PLAYLIST_TRACKS_FAILED', {
+        message: error instanceof Error ? error.message : String(error)
+      });
+      return [];
+    }
   }
 }
 

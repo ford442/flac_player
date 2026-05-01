@@ -10,6 +10,7 @@ import {
   RepeatMode, 
   LibraryStats, 
   TagInfo,
+  CloudPlaylist,
   saveQueueToStorage,
   loadQueueFromStorage,
   clearQueueStorage
@@ -26,7 +27,7 @@ import './Player.css';
 // =============================================================================
 
 type AudioOutputMode = 'web-audio' | 'worklet' | 'sdl' | 'sdl2';
-type ViewTab = 'library' | 'now-playing' | 'queue';
+type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists';
 type LibraryViewMode = 'grid' | 'list';
 
 const getSharedPlaylistId = (): string | null => {
@@ -140,6 +141,10 @@ export const Player: React.FC = () => {
   // View mode toggle
   const [showHtmlFallback, setShowHtmlFallback] = useState(false);
   
+  // Cloud playlists state
+  const [playlists, setPlaylists] = useState<CloudPlaylist[]>([]);
+  const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
+  
   // Refs
   const playerRef = useRef<AudioPlayer | AudioWorkletPlayer | SdlAudioPlayer | Sdl2AudioPlayer | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -166,6 +171,18 @@ export const Player: React.FC = () => {
   // Data Loading
   // =============================================================================
   
+  const loadPlaylists = useCallback(async () => {
+    setIsLoadingPlaylists(true);
+    try {
+      const data = await loader.fetchPlaylists();
+      setPlaylists(data);
+    } catch (err) {
+      addToast('Failed to load playlists', 'error');
+    } finally {
+      setIsLoadingPlaylists(false);
+    }
+  }, [loader, addToast]);
+
   const loadLibrary = useCallback(async () => {
     setIsLoadingLibrary(true);
     try {
@@ -375,6 +392,35 @@ export const Player: React.FC = () => {
       console.error('Failed to play track:', err);
     }
   };
+
+  const loadCloudPlaylist = useCallback(async (playlistId: string) => {
+    setIsLoadingPlaylists(true);
+    try {
+      const trackIds = await loader.fetchPlaylistTracks(playlistId);
+      if (trackIds.length === 0) {
+        addToast('Playlist is empty or unavailable', 'info');
+        return;
+      }
+      
+      const matchedTracks = trackIds
+        .map(id => library.find(t => t.id === id))
+        .filter(Boolean) as PlaylistTrack[];
+      
+      if (matchedTracks.length === 0) {
+        addToast('No matching tracks found in local library', 'error');
+        return;
+      }
+      
+      setQueue(matchedTracks);
+      setQueueCurrentIndex(0);
+      playTrack(matchedTracks[0], 0);
+      addToast(`Loaded ${matchedTracks.length}/${trackIds.length} tracks from playlist`, 'success');
+    } catch (err) {
+      addToast('Failed to load playlist tracks', 'error');
+    } finally {
+      setIsLoadingPlaylists(false);
+    }
+  }, [loader, library, addToast, playTrack]);
 
   const togglePlayback = useCallback(() => {
     if (playerState.isPlaying) {
@@ -784,7 +830,8 @@ export const Player: React.FC = () => {
             {[
               { id: 'library', label: '📚 Library', count: library.length },
               { id: 'now-playing', label: '▶️ Now Playing' },
-              { id: 'queue', label: '📋 Queue', count: queue.length }
+              { id: 'queue', label: '📋 Queue', count: queue.length },
+              { id: 'playlists', label: '☁️ Playlists', count: playlists.length }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -986,6 +1033,52 @@ export const Player: React.FC = () => {
                 repeatMode={repeatMode}
                 onToggleRepeat={() => setRepeatMode(m => m === 'off' ? 'all' : m === 'all' ? 'one' : 'off')}
               />
+            </div>
+          )}
+          
+          {activeTab === 'playlists' && (
+            <div className="flex-1 overflow-auto p-6">
+              <div className="max-w-2xl mx-auto">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold">Cloud Playlists</h2>
+                  <button
+                    onClick={loadPlaylists}
+                    disabled={isLoadingPlaylists}
+                    className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30 disabled:opacity-50"
+                  >
+                    {isLoadingPlaylists ? 'Loading...' : '🔄 Refresh'}
+                  </button>
+                </div>
+                
+                {playlists.length === 0 && !isLoadingPlaylists && (
+                  <div className="text-gray-400 text-center py-12">
+                    <p>No playlists found.</p>
+                    <p className="text-sm mt-2">Create playlists in cloud_notes to see them here.</p>
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  {playlists.map(playlist => (
+                    <div
+                      key={playlist.id}
+                      onClick={() => loadCloudPlaylist(playlist.id)}
+                      className="p-4 bg-white/5 rounded-lg hover:bg-white/10 cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-white">{playlist.title}</div>
+                          {playlist.description && (
+                            <div className="text-sm text-gray-400 mt-1">{playlist.description}</div>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-400">
+                          {playlist.track_ids?.length || 0} tracks
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </main>
