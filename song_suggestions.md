@@ -2475,3 +2475,97 @@ The finest cyber-mariachi you have ever seen!
 **Additional Notes:**
 - **Combo/Fusion:** Industrial Cyber-Goth / Traditional Mexican Mariachi
 - **Thematic Ties:** The dark, aggressive, and dystopian nightmare of industrial cyber-goth music inexplicably elevated by the joyful, communal, and undeniably triumphant sound of traditional Mexican celebration.
+
+### Title: Bollywood Black Metal
+
+**Service:** Minimax Audio
+
+**Prompt:** A ferocious, blistering Scandinavian Black Metal track featuring tremolo-picked distorted guitars and blast-beat drums. Astoundingly, the frantic, evil guitar melodies are perfectly doubled by a massive, joyful Bollywood string section and a bright sitar, while the shrieking vocals are replaced by a highly ornamented, incredibly fast Hindi playback singer delivering a cheerful romantic melody over the extreme metal chaos.
+
+**Lyrics:**
+(Verse 1 - Cheerful, highly ornamented Hindi playback singer over blast beats)
+(Tremolo-picked guitar and Bollywood strings harmonize in a frantic, major-key run)
+The sun is shining bright on the snowy peaks!
+My heart is dancing, it's you that it seeks!
+(A bright sitar plays a blistering solo over the distorted bass)
+
+(Chorus)
+(Blast beats continue, but the mood is incredibly joyous)
+Love in the darkness! The lotus in the frost!
+Without your sweet smile, I am totally lost!
+The heaviest romance, singing in the rain!
+A Bollywood dream in a temple of pain!
+
+**Additional Notes:**
+- **Combo/Fusion:** Scandinavian Black Metal / Indian Bollywood Music
+- **Thematic Ties:** The intense, cold, and aggressive fury of black metal contrasted hilariously with the vibrant, passionate, overwhelmingly joyous, and cinematic orchestration of traditional Bollywood musical numbers.
+
+### Title: Klezmer Shoegaze
+
+**Service:** Minimax Audio
+
+**Prompt:** A dense, ethereal Shoegaze track characterized by a massive wall of distorted, reverberating sound and a slow, driving drum beat. However, piercing through the wash of noise is the frantic, minor-key wailing of a traditional Eastern European Klezmer clarinet and a bouncy accordion, both completely drenched in massive reverb and delay to create a hypnotic, fuzzy drone.
+
+**Lyrics:**
+(Verse 1 - Whispered, ethereal vocals drenched in reverb)
+The village fades away... the hora starts to blur...
+(A massive wall of fuzz guitar, with a crying clarinet echoing endlessly)
+Lost inside the pedalboard, a warm and fuzzy stir.
+The accordion hums through the reverb tank...
+Standing on the edge of the river bank.
+
+(Chorus)
+(The wall of sound swells, the clarinet attacks fiercely but echoes into infinity)
+Noise and the wedding! The feedback screams!
+Drowning the celebration in static dreams!
+Dancing the freylekhs in the endless haze!
+The weeping woodwind catches the shoegaze!
+
+**Additional Notes:**
+- **Combo/Fusion:** Shoegaze / Eastern European Klezmer
+- **Thematic Ties:** The overwhelming, blurry, and incredibly loud wash of 90s shoegaze aesthetics being sharply contrasted by the articulate, frantic, and fiercely acoustic woodwind attacks of a Klezmer ensemble, all submerged in endless reverb.
+
+### Title: Inuit Bossa Nova
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, swaying Brazilian Bossa Nova song with a complex nylon-string acoustic guitar and a light, brushed snare drum. The typically smooth, whispered Portuguese vocals are entirely replaced by the rhythmic, breathy, and guttural sounds of Inuit throat singing (katajjaq), weaving a mesmerizing, interlocking vocal pattern over the relaxed tropical groove.
+
+**Lyrics:**
+(Verse 1 - Two women performing rhythmic Inuit throat singing, acting as a soothing, breathy melody)
+(Nylon-string guitar plays a beautiful, extended jazz chord)
+(Throat singing drops to a rhythmic, interlocking breathy pattern, incredibly smooth)
+(Brushed snare keeps a light, shuffling bossa rhythm)
+
+(Chorus)
+(The throat singers match the syncopation of the Bossa Nova beat perfectly)
+(A soft jazz flute solo intertwines with the breathy vocals)
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Bossa Nova / Inuit Throat Singing (Katajjaq)
+- **Thematic Ties:** The ultimate beachside relaxation and soft, breezy romance of Bossa Nova given an incredibly earthy, rhythmic, and freezing resonance by the indigenous vocal games of the Arctic.
+
+### Title: Barbershop Trap
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, booming modern Trap hip-hop beat featuring frantic triplet hi-hats and deep 808 subs. However, the entire melodic and atmospheric backing is provided by a cheerful, four-part a cappella Barbershop Quartet, singing tight, major-key harmonies that perfectly follow the dark minor-key trap basslines, while occasionally ad-libbing like modern rappers.
+
+**Lyrics:**
+(Verse 1 - Tight, four-part harmony singing with a laid-back, triplet trap flow)
+(Bass singer drops a low vocal note that mimics an 808 sub)
+Rolling through the barbershop, getting a fresh fade...
+(Tenor singer hits a high, sustained harmony over the trap hi-hats)
+Sipping on the syrup and the cold lemonade!
+(Baritone ad-libs: "Skrrt, skrrt!")
+
+(Chorus)
+(Massive 808 drop with a perfectly tuned, major-chord barbershop swell)
+Trap in the quartet! The harmonies are tight!
+We're singing on the corner in the middle of the night!
+Ice on the bowtie, striped shirts on the grind!
+Leaving the regular synth leads behind!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern Trap / Barbershop Quartet
+- **Thematic Ties:** The gritty, bass-heavy, street-oriented sound of modern Trap colliding with the aggressively pleasant, overly-groomed, nostalgic cheerfulness of barbershop music.
