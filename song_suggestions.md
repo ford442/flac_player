@@ -2569,3 +2569,98 @@ Leaving the regular synth leads behind!
 **Additional Notes:**
 - **Combo/Fusion:** Modern Trap / Barbershop Quartet
 - **Thematic Ties:** The gritty, bass-heavy, street-oriented sound of modern Trap colliding with the aggressively pleasant, overly-groomed, nostalgic cheerfulness of barbershop music.
+
+### Title: The Siberian Doo-Wop
+
+**Service:** Minimax Audio
+
+**Prompt:** A sweet, romantic 1950s Doo-Wop ballad with a gentle 6/8 triplet rhythm and finger snaps. However, the smooth vocal harmonies and romantic lead are entirely performed by a deep, booming Siberian Men's Choir singing in Russian, while the backing instrumental is rapidly but gently plucked on a traditional Balalaika, maintaining the slow, swaying doo-wop tempo.
+
+**Lyrics:**
+(Verse 1 - Deep, booming Russian Choir singing in a 6/8 rhythm)
+(Balalaika plucks a gentle, swaying doo-wop progression)
+Oh, my tundra darling... (deep bass voices hit a low, rhythmic: bom-bom-bom)
+The snow is falling softly... (choir hits a massive, dramatic harmony)
+I'll walk across the ice... just to hold your hand...
+
+(Chorus)
+(Finger snaps perfectly in time with the Balalaika)
+Siberian romance in the freezing night!
+Our love is burning like the northern light!
+Shoo-wop, shoo-wop, in the heavy snow!
+The warmest little love that the Taiga will know!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1950s Doo-Wop / Russian Balalaika and Siberian Men's Choir
+- **Thematic Ties:** The innocent, pristine teenage romance of 1950s American pop culture hilariously translated into the freezing, harsh, and hyper-masculine tones of a traditional Russian choir.
+
+### Title: The New Delhi Jungle
+
+**Service:** Minimax Audio
+
+**Prompt:** A frantic, high-BPM 1990s UK Jungle track driven by chopped and pitched-up Amen breaks and deep sub-bass. The atmospheric pads and vocal samples are completely replaced by lightning-fast improvisations on a Classical Indian Sitar, while a traditional Tabla drum battles the frantic breakbeats with insanely complex polyrhythms.
+
+**Lyrics:**
+(Verse 1)
+(Fast, stuttering Amen breakbeat playing underneath)
+(Sitar shreds a wildly fast, microtonal scale over the heavy sub-bass)
+(Tabla drum drops an incredibly fast, syncopated fill that matches the Amen break perfectly)
+
+(Chorus)
+(Massive jungle drop with a deeply resonating Sitar bend)
+Raving in the temple! The bass is dropping low!
+The fastest tabla rhythm that the underground will know!
+Sub-bass and the sitar, spinning out of control!
+A high-speed raga for the digital soul!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s UK Jungle / Classical Indian Sitar and Tabla
+- **Thematic Ties:** The hyperactive, frantic, and synthetic energy of underground 90s UK rave culture perfectly matched by the mind-bending speed and rhythmic complexity of classical Indian instrumentation.
+
+### Title: The Appalachian Necromancer
+
+**Service:** Minimax Audio
+
+**Prompt:** A terrifying, slow-paced Death Metal track with guttural growls and heavily down-tuned guitars. But the sludgy, oppressive doom riffs are completely overtaken by a ridiculously fast, cheerful Appalachian Bluegrass banjo playing bright major-key rolls, while a washboard player frantically tries to keep up with the double-kick drum blast beats.
+
+**Lyrics:**
+(Verse 1 - Guttural Death Metal roar)
+THE HARVEST IS ROTTEN! THE CORN IS DEAD!
+(Banjo plucks a lightning-fast, cheerful major-key hoedown melody)
+THE SCARECROW AWAKENS WITH A PUMPKIN HEAD!
+(Washboard scrapes furiously alongside the blast beats)
+
+(Chorus)
+(Sludgy breakdown accompanied by a joyful banjo solo)
+DOOM IN THE HOLLER! THE TRACTOR OF HELL!
+THE DARKEST LITTLE BANJO THAT EVER RANG THE BELL!
+SQUARE DANCING IN THE GRAVEYARD, KICKING UP THE DIRT!
+THE BANJO PLAYER WEARS A HEAVY METAL SHIRT!
+
+**Additional Notes:**
+- **Combo/Fusion:** Death Metal / Appalachian Bluegrass Banjo
+- **Thematic Ties:** The terrifying, aggressive, and brutal nature of Death Metal completely undercut and confused by the inherently bouncy, cheerful, and fast-paced energy of a traditional mountain bluegrass band.
+
+### Title: K-Pop of the Round Table
+
+**Service:** Minimax Audio
+
+**Prompt:** A highly polished, hyper-energetic K-Pop girl group anthem featuring synchronized dance beats and rap verses. However, all the backing instrumentation—synthesizers, heavy bass, and electronic drums—is entirely replaced by a rustic ensemble of Medieval tavern instruments, featuring bouncy hurdy-gurdies, delicate lutes, and squawking crumhorns playing the frantic pop hooks.
+
+**Lyrics:**
+(Verse 1 - Sugary, fast-paced K-Pop vocals)
+Oppa is a knight in shining armor today!
+(Hurdy-gurdy cranks out a massive, bouncy pop riff)
+Riding on his horse, stealing my heart away!
+(Crumhorn blasts a tight, staccato horn line)
+
+(Chorus)
+(A massive, catchy pop drop played entirely on medieval instruments)
+Saranghae in the castle! Watch the jester spin!
+The cutest little crusade that you have ever been in!
+Lute strings popping, making history!
+Medieval idol, creating the fantasy!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern K-Pop / Medieval Tavern Instruments
+- **Thematic Ties:** The intensely manufactured, pristine, and glossy world of modern Korean pop music clashing dramatically with the rustic, unpolished, and earthy sounds of a 12th-century European tavern.
