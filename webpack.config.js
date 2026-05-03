@@ -8,7 +8,7 @@ require('dotenv').config();
 
 // Build env vars for DefinePlugin
 const envVars = {};
-['REACT_APP_API_URL', 'REACT_APP_GA_ID', 'REACT_APP_MIXPANEL_TOKEN'].forEach(key => {
+['REACT_APP_API_URL', 'REACT_APP_PLAYLIST_API_URL', 'REACT_APP_GA_ID', 'REACT_APP_MIXPANEL_TOKEN'].forEach(key => {
   envVars[`process.env.${key}`] = JSON.stringify(process.env[key] || '');
 });
 
