@@ -8,6 +8,7 @@ interface LibraryViewProps {
   allTags: TagInfo[];
   stats: LibraryStats;
   currentTrackId?: string;
+  loadingTrackId?: string;
   isPlaying: boolean;
   viewMode: 'grid' | 'list';
   onTrackClick: (track: PlaylistTrack) => void;
@@ -33,6 +34,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   tracks,
   allTags,
   currentTrackId,
+  loadingTrackId,
   isPlaying,
   viewMode,
   onTrackClick,
@@ -112,6 +114,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
       <div className="library-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-4 flex-1 overflow-y-auto">
         {tracks.map((track) => {
           const isCurrent = track.id === currentTrackId;
+          const isLoadingTrack = track.id === loadingTrackId;
           const isEditing = editing.trackId === track.id;
 
           return (
@@ -137,7 +140,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                     />
                   ))}
                 </div>
-                {isCurrent && isPlaying && (
+                {isCurrent && isPlaying && !isLoadingTrack && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="flex gap-1">
                       {Array.from({ length: 4 }).map((_, i) => (
@@ -153,7 +156,16 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                     </div>
                   </div>
                 )}
-                <span className="text-3xl opacity-50">🎵</span>
+                {isLoadingTrack ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 z-10">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="spinner spinner-lg" />
+                      <span className="text-xs text-white font-medium">Loading…</span>
+                    </div>
+                  </div>
+                ) : (
+                  <span className="text-3xl opacity-50">🎵</span>
+                )}
 
                 {/* Play Actions Overlay */}
                 {(onPlayNow || onPlayNext || onAddToQueue) && (
@@ -324,6 +336,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
         <tbody>
           {tracks.map((track) => {
             const isCurrent = track.id === currentTrackId;
+            const isLoadingTrack = track.id === loadingTrackId;
             const isEditing = editing.trackId === track.id;
 
             return (
@@ -333,12 +346,18 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                 onDoubleClick={() => onTrackDoubleClick(track)}
                 className={`group border-b border-white/5 hover:bg-white/5 cursor-pointer ${
                   isCurrent ? 'bg-purple-500/10' : ''
-                }`}
+                } ${isLoadingTrack ? 'opacity-60' : ''}`}
               >
                 <td className="p-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-br from-purple-900 to-blue-900 rounded flex items-center justify-center text-lg">
-                      {isCurrent && isPlaying ? '▶' : '🎵'}
+                      {isLoadingTrack ? (
+                        <div className="spinner" />
+                      ) : isCurrent && isPlaying ? (
+                        '▶'
+                      ) : (
+                        '🎵'
+                      )}
                     </div>
                     <div>
                       <div className="font-medium text-white">{track.title || track.name}</div>

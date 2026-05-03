@@ -4,6 +4,7 @@ import { PlaylistTrack, RepeatMode } from '../audioLoader';
 interface QueuePanelProps {
   queue: PlaylistTrack[];
   currentIndex: number;
+  loadingTrackId?: string;
   isOpen: boolean;
   onClose: () => void;
   onTrackClick: (index: number) => void;
@@ -21,6 +22,7 @@ interface QueuePanelProps {
 export const QueuePanel: React.FC<QueuePanelProps> = ({
   queue,
   currentIndex,
+  loadingTrackId,
   isOpen,
   onClose,
   onTrackClick,
@@ -158,6 +160,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
           <div className="divide-y divide-white/5">
             {queue.map((track, index) => {
               const isCurrent = index === currentIndex;
+              const isLoadingTrack = track.id === loadingTrackId;
               const isDragOver = dragOverIndex === index && draggedIndex !== index;
 
               return (
@@ -179,10 +182,12 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
                       isCurrent
                         ? 'bg-purple-500/20 border-l-2 border-purple-500'
                         : 'hover:bg-white/5 border-l-2 border-transparent'
-                    } ${onReorderQueue ? 'cursor-move' : ''}`}
+                    } ${onReorderQueue ? 'cursor-move' : ''} ${isLoadingTrack ? 'opacity-60' : ''}`}
                   >
                     <div className="w-8 text-center text-sm text-gray-500">
-                      {isCurrent ? (
+                      {isLoadingTrack ? (
+                        <div className="spinner mx-auto" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
+                      ) : isCurrent ? (
                         <span className="text-purple-400">▶</span>
                       ) : (
                         index + 1

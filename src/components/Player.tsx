@@ -131,6 +131,7 @@ export const Player: React.FC = () => {
   
   // Current track
   const [currentTrack, setCurrentTrack] = useState<PlaylistTrack | null>(null);
+  const [loadingTrackId, setLoadingTrackId] = useState<string | undefined>(undefined);
   
   // Shared playlist title (for custom linked pages)
   const [sharedPlaylistTitle, setSharedPlaylistTitle] = useState<string>('');
@@ -378,6 +379,8 @@ export const Player: React.FC = () => {
   };
   
   const playTrack = async (track: PlaylistTrack, index?: number) => {
+    setCurrentTrack(track);
+    setLoadingTrackId(track.id);
     try {
       await loadAudioFromUrl(track.url, track);
       playerRef.current?.play();
@@ -390,6 +393,8 @@ export const Player: React.FC = () => {
       setTimeout(loadStats, 500);
     } catch (err) {
       console.error('Failed to play track:', err);
+    } finally {
+      setLoadingTrackId(undefined);
     }
   };
 
@@ -974,6 +979,7 @@ export const Player: React.FC = () => {
                 allTags={allTags}
                 stats={stats}
                 currentTrackId={currentTrack?.id}
+                loadingTrackId={loadingTrackId}
                 isPlaying={playerState.isPlaying}
                 viewMode={libraryViewMode}
                 onTrackClick={(track) => {
@@ -1020,6 +1026,7 @@ export const Player: React.FC = () => {
               <QueuePanel
                 queue={queue}
                 currentIndex={queueCurrentIndex}
+                loadingTrackId={loadingTrackId}
                 isOpen={true}
                 onClose={() => {}}
                 onTrackClick={(index) => playTrack(queue[index], index)}
@@ -1094,11 +1101,17 @@ export const Player: React.FC = () => {
             {currentTrack && (
               <>
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded flex items-center justify-center">
-                  🎵
+                  {playerState.isLoading ? (
+                    <div className="spinner spinner-lg" />
+                  ) : (
+                    '🎵'
+                  )}
                 </div>
                 <div className="min-w-0">
                   <div className="font-medium truncate">{currentTrack.title || currentTrack.name}</div>
-                  <div className="text-sm text-gray-400 truncate">{currentTrack.author}</div>
+                  <div className="text-sm text-gray-400 truncate">
+                    {playerState.isLoading ? 'Loading…' : currentTrack.author}
+                  </div>
                 </div>
               </>
             )}
@@ -1113,16 +1126,23 @@ export const Player: React.FC = () => {
                     playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1);
                   }
                 }}
-                className="text-gray-400 hover:text-white"
-                disabled={queueCurrentIndex <= 0}
+                className="text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                disabled={queueCurrentIndex <= 0 || playerState.isLoading}
               >
                 ⏮
               </button>
               <button
                 onClick={togglePlayback}
-                className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center text-xl hover:scale-105 transition-transform"
+                disabled={playerState.isLoading}
+                className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center text-xl hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {playerState.isPlaying ? '⏸' : '▶'}
+                {playerState.isLoading ? (
+                  <div className="spinner" style={{ borderTopColor: '#000' }} />
+                ) : playerState.isPlaying ? (
+                  '⏸'
+                ) : (
+                  '▶'
+                )}
               </button>
               <button
                 onClick={() => {
@@ -1130,8 +1150,8 @@ export const Player: React.FC = () => {
                     playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1);
                   }
                 }}
-                className="text-gray-400 hover:text-white"
-                disabled={queueCurrentIndex >= queue.length - 1}
+                className="text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                disabled={queueCurrentIndex >= queue.length - 1 || playerState.isLoading}
               >
                 ⏭
               </button>
