@@ -2664,3 +2664,100 @@ Medieval idol, creating the fantasy!
 **Additional Notes:**
 - **Combo/Fusion:** Modern K-Pop / Medieval Tavern Instruments
 - **Thematic Ties:** The intensely manufactured, pristine, and glossy world of modern Korean pop music clashing dramatically with the rustic, unpolished, and earthy sounds of a 12th-century European tavern.
+
+### Title: Opera of the Bayou
+
+**Service:** Minimax Audio
+
+**Prompt:** A grand, soaring 19th-century Italian High Opera aria performed by a dramatic soprano. However, the delicate orchestral accompaniment of violins and cellos is entirely replaced by the gritty, swampy instruments of a Louisiana Zydeco band, featuring a grooving washboard, a pumping diatonic button accordion, and a twangy swamp-pop guitar.
+
+**Lyrics:**
+(Verse 1 - Grand Italian Operatic Soprano, singing with intense vibrato)
+Oh, la palude è scura! The swamp is dark!
+(A pumping Zydeco accordion plays a fast, syncopated rhythm)
+Il coccodrillo piange! The alligator's mark!
+(Washboard scrapes furiously, providing a driving beat)
+
+(Chorus)
+(Soprano hits a piercing, dramatic high note over the swamp groove)
+Canta! Canta in the Louisiana mud!
+The aria flows like the Mississippi blood!
+Vincerò! Vincerò on the bayou tonight!
+The grandest opera in the pale moonlight!
+
+**Additional Notes:**
+- **Combo/Fusion:** 19th-Century Italian Opera / Louisiana Zydeco
+- **Thematic Ties:** The pristine, aristocratic, and incredibly refined drama of classical European opera dragged down into the humid, sweaty, and foot-stomping mud of the Louisiana bayou.
+
+### Title: The West African Synthwave
+
+**Service:** Minimax Audio
+
+**Prompt:** A driving, neon-soaked 1980s Synthwave track with pulsating analog arpeggios and heavy electronic drum machines. However, the soaring synthesizer solos and lead melodies are entirely replaced by the intricate, cascading polyrhythms of a traditional West African Kora (a 21-string lute-bridge-harp), playing bright, acoustic runs over the digital dystopia.
+
+**Lyrics:**
+(Verse 1 - Robotic, heavily vocoded 80s vocal)
+Cruising the cyber-savanna, looking for a sign...
+(The Kora erupts into a lightning-fast, cascading acoustic run)
+The neon sun is setting, crossing the grid line.
+(Analog drum machines pound out a heavy 4/4 beat)
+
+(Chorus)
+(Massive synth chords rise alongside the delicate Kora plucking)
+Digital griot! The rhythm of the earth!
+A retro-futuristic, synthetic rebirth!
+Harp strings in the matrix, shining in the glow!
+The oldest human stories putting on a laser show!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Synthwave / West African Kora
+- **Thematic Ties:** The pristine, highly artificial, and futuristic aesthetic of 80s synthwave grounded by the deeply historical, intricate, and deeply human acoustic storytelling tradition of the West African griot.
+
+### Title: Reggae of the Taiga
+
+**Service:** Minimax Audio
+
+**Prompt:** A laid-back, sun-soaked Jamaican Reggae track with off-beat skanks, a bouncing bassline, and one-drop drum rhythms. However, the cheerful tropical instrumentation is entirely replaced by a freezing ensemble of traditional Russian instruments, featuring a bouncy Balalaika playing the off-beat skanks, a deep bayan (button accordion) playing the bassline, and a chorus of stoic Siberian men singing the reggae vocals in deep Russian harmony.
+
+**Lyrics:**
+(Verse 1 - Deep, booming Russian men's chorus singing with a reggae bounce)
+Sun is shining, but the snow is deep...
+(Balalaika skanks sharply on the off-beat: CHUK-chuk)
+The bear is waking from his winter sleep...
+(Bayan pumps a heavy, dub-style bassline)
+
+(Chorus)
+(The stoic choir hits a massive harmony over the reggae groove)
+One love in the tundra! Pass the vodka round!
+We're skanking in the blizzard, listening to the sound!
+From Kingston to Kamchatka, the rhythm keeps us warm!
+The coldest little reggae in the middle of the storm!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Reggae / Traditional Russian Folk
+- **Thematic Ties:** The incredibly relaxed, warm, and tropical island groove of Jamaican reggae completely relocated to the freezing, stoic, and vodka-soaked expanses of the Siberian tundra.
+
+### Title: The Cybernetic Gospel
+
+**Service:** Minimax Audio
+
+**Prompt:** A frantic, high-BPM 1990s UK Jungle track driven by chopped and pitched-up Amen breaks and deep sub-bass. The atmospheric pads and vocal samples are completely replaced by a massive, soul-stirring African-American Gospel Choir, singing powerful, uplifting, and harmonized praises perfectly in sync with the chaotic, lightning-fast electronic breakbeats.
+
+**Lyrics:**
+(Verse 1)
+(Fast, stuttering Amen breakbeat playing underneath)
+(The Gospel Choir claps on the two and four, singing with immense power)
+Take me to the river, wash my sins away!
+(A deep sub-bass rolls under a massive choir harmony)
+Stepping in the light of a brand new day!
+
+(Chorus)
+(Massive jungle drop with a deeply resonating Hammond organ and choir swell)
+Praise Him on the dancefloor! Let the spirit move!
+Catching the salvation in a lightning-fast groove!
+Breakbeats and the choir, reaching for the sky!
+The holiest of rhythms lifting us so high!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s UK Jungle / African-American Gospel Choir
+- **Thematic Ties:** The hyperactive, frantic, and synthetic energy of underground 90s UK rave culture perfectly matched by the immense, uplifting, and incredibly powerful communal energy of a traditional gospel choir.
