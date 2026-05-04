@@ -2761,3 +2761,93 @@ The holiest of rhythms lifting us so high!
 **Additional Notes:**
 - **Combo/Fusion:** 1990s UK Jungle / African-American Gospel Choir
 - **Thematic Ties:** The hyperactive, frantic, and synthetic energy of underground 90s UK rave culture perfectly matched by the immense, uplifting, and incredibly powerful communal energy of a traditional gospel choir.
+
+### Title: Polka on the Moon
+
+**Service:** Minimax Audio
+
+**Prompt:** A slow, ethereal, and weightless ambient space track featuring long, reverberating synthesizer drones and the sound of astronauts breathing. Suddenly, the silence of space is completely shattered by a hyper-energetic, bouncing Eastern European polka band, with a frantic accordion and tuba playing at double speed over the cosmic void.
+
+**Lyrics:**
+(Verse 1 - Echoing astronaut radio transmission)
+Houston, we have a situation...
+(Sudden explosion of bouncy accordion and tuba)
+
+(Chorus)
+Oom-pah-pah in zero gravity!
+Spinning out of control in the galaxy!
+Pierogi floating in the spaceship door!
+The happiest polka on the lunar floor!
+
+**Additional Notes:**
+- **Combo/Fusion:** Ambient Space Music / Eastern European Polka
+- **Thematic Ties:** The vast, terrifying, and utterly silent emptiness of deep space rudely interrupted by the bouncy, relentless cheerfulness and claustrophobic energy of a local polka band.
+
+### Title: Mariachi of the Matrix
+
+**Service:** Minimax Audio
+
+**Prompt:** A gritty, high-tempo Cyberpunk Darksynth track with aggressive, distorted sawtooth basslines and pounding electronic drums. Instead of typical neon synth melodies, the intense lead lines, sweeping arpeggios, and triumphant fanfares are played by a fully acoustic traditional Mexican Mariachi band, with blaring trumpets and aggressively strummed vihuelas matching the industrial tempo.
+
+**Lyrics:**
+(Verse 1 - Heavily vocoded, robotic cyberpunk vocal)
+Scanning the sectors in the pouring rain...
+System overload, digital pain...
+(Mariachi trumpets blast a soaring, vibrato-heavy fanfare)
+
+(Chorus)
+Cyber-fiesta in the neon light!
+Vihuelas glowing in the endless night!
+Sombreros of steel, lasers in the sky!
+The finest mariachi makes the mainframe cry!
+
+**Additional Notes:**
+- **Combo/Fusion:** Cyberpunk Darksynth / Traditional Mexican Mariachi
+- **Thematic Ties:** The bleak, highly technological, and synthetic atmosphere of a cyberpunk megacity pierced by the fiercely passionate, incredibly organic, and acoustic celebration of Mexican street musicians.
+
+### Title: Samurai Swing
+
+**Service:** Minimax Audio
+
+**Prompt:** An upbeat, lively 1940s Big Band Swing tune with a driving walking bassline and a tight, syncopated drum groove. However, the massive brass section—usually trumpets, trombones, and saxophones—is completely replaced by an enormous ensemble of traditional Japanese instruments, featuring the twang of multiple Shamisens, the wail of Hichirikis, and massive Taiko drums accenting the swing hits.
+
+**Lyrics:**
+(Verse 1 - Smooth, old-school jazz crooner)
+Well, pack your bags, we're heading to the East!
+(A lightning-fast, twangy Shamisen solo plays a swing lick)
+Gonna find a shogun, gonna have a feast!
+(Hichirikis harmonize a tight, staccato big band stab)
+
+(Chorus)
+Oh, the Samurai Swing is tearing up the town!
+The heaviest Taiko drums are laying it down!
+From the Edo period to the dancehall floor!
+Swing it, ronin, let the good times roar!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1940s Big Band Swing / Traditional Japanese Edo-Period Ensemble
+- **Thematic Ties:** The glamorous, highly choreographed, and incredibly brassy power of American Big Band swing completely reimagined through the rigid, historic, and distinctly non-Western timbres of feudal Japan.
+
+### Title: Didgeridoo Doom
+
+**Service:** Minimax Audio
+
+**Prompt:** An agonizingly slow, incredibly heavy Doom Metal track with thick, downtuned, fuzz-drenched guitars and a pounding, lethargic drum beat. Yet, replacing the guttural death growls and the sludgy bass guitar is the incredibly deep, continuous, and earthy rumble of an Australian Aboriginal Didgeridoo, heavily amplified and distorted, vibrating the earth with circular breathing.
+
+**Lyrics:**
+(Verse 1 - Slow, agonizing Doom Metal roar)
+THE DESERT BURNS IN THE ENDLESS NIGHT!
+(Didgeridoo pulses deeply, providing a massive, distorted drone)
+THE RED DUST SWALLOWS THE FADING LIGHT!
+(The fuzz guitar vibrates the ground, while the didgeridoo growls)
+
+(Chorus)
+(Massive, distorted guitar chord rings out as the Didgeridoo plays a rhythmic pulse)
+DOOM OF THE OUTBACK! THE ANCESTORS WEEP!
+THE ANCIENT EARTH AWAKENS FROM THE DEEP!
+BREATHE IN THE DUST! FUZZ IN THE VEIN!
+THE HEAVIEST DRONE IN THE BURNING RAIN!
+
+**Additional Notes:**
+- **Combo/Fusion:** Doom Metal / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The suffocating, massive, and earth-shattering weight of Doom Metal perfectly complemented by the deeply resonant, ancient, and naturally droning acoustic power of the Australian outback.
