@@ -3,17 +3,19 @@ import { AudioPlayer, PlayerState } from '../audioPlayer';
 import { SdlAudioPlayer } from '../sdlAudioPlayer';
 import { Sdl2AudioPlayer } from '../sdl2AudioPlayer';
 import { AudioWorkletPlayer } from '../audioWorkletPlayer';
-import { 
-  AudioLoader, 
-  PlaylistTrack, 
-  SortBy, 
-  RepeatMode, 
-  LibraryStats, 
+import {
+  AudioLoader,
+  PlaylistTrack,
+  SortBy,
+  RepeatMode,
+  LibraryStats,
   TagInfo,
   CloudPlaylist,
   saveQueueToStorage,
   loadQueueFromStorage,
-  clearQueueStorage
+  clearQueueStorage,
+  getCachedLibrary,
+  setCachedLibrary
 } from '../audioLoader';
 
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -113,7 +115,8 @@ export const Player: React.FC = () => {
     top_tags: []
   });
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
-  
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'up' | 'down'>('checking');
+
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [minRating, setMinRating] = useState<number>(0);
@@ -171,7 +174,19 @@ export const Player: React.FC = () => {
   // =============================================================================
   // Data Loading
   // =============================================================================
-  
+
+  const checkBackend = useCallback(async () => {
+    try {
+      const health = await loader.healthCheck();
+      const isUp = health.isHealthy;
+      setBackendStatus(isUp ? 'up' : 'down');
+      return isUp;
+    } catch {
+      setBackendStatus('down');
+      return false;
+    }
+  }, [loader]);
+
   const loadPlaylists = useCallback(async () => {
     setIsLoadingPlaylists(true);
     try {
@@ -197,13 +212,24 @@ export const Player: React.FC = () => {
         limit: 1000
       });
       setLibrary(tracks);
+      // Cache successful load
+      setCachedLibrary(tracks, allTags, stats);
     } catch (err) {
-      setError('Failed to load library');
+      // Try to use cached library
+      const cached = getCachedLibrary();
+      if (cached && cached.tracks.length > 0) {
+        setLibrary(cached.tracks);
+        setAllTags(cached.tags);
+        setStats(cached.stats);
+        addToast('Showing cached library (server unavailable)', 'info');
+      } else {
+        setError('Failed to load library');
+      }
       console.error(err);
     } finally {
       setIsLoadingLibrary(false);
     }
-  }, [loader, minRating, selectedTags, untaggedOnly, searchQuery, sortBy]);
+  }, [loader, minRating, selectedTags, untaggedOnly, searchQuery, sortBy, allTags, stats, addToast]);
   
   const loadTags = useCallback(async () => {
     try {
@@ -228,8 +254,12 @@ export const Player: React.FC = () => {
       return;
     }
 
-    loadLibrary();
-  }, [isSharedPlaylist, loadLibrary]);
+    checkBackend().then(healthy => {
+      if (healthy) {
+        loadLibrary();
+      }
+    });
+  }, [isSharedPlaylist, checkBackend, loadLibrary]);
   
   useEffect(() => {
     if (isSharedPlaylist) {
@@ -381,17 +411,21 @@ export const Player: React.FC = () => {
   const playTrack = async (track: PlaylistTrack, index?: number) => {
     setCurrentTrack(track);
     setLoadingTrackId(track.id);
+    setError('');
     try {
       await loadAudioFromUrl(track.url, track);
       playerRef.current?.play();
-      
+
       if (index !== undefined) {
         setQueueCurrentIndex(index);
       }
-      
+
       // Update stats after a short delay
       setTimeout(loadStats, 500);
     } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to play track';
+      setError(message);
+      addToast(`Playback failed: ${message}`, 'error');
       console.error('Failed to play track:', err);
     } finally {
       setLoadingTrackId(undefined);
@@ -758,7 +792,21 @@ export const Player: React.FC = () => {
   return (
     <div className="player min-h-screen bg-[#0f0f1e] text-white flex flex-col">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
-      
+
+      {backendStatus === 'down' && (
+        <div className="bg-red-500/20 border-b border-red-500/30 px-6 py-3 text-center">
+          <p className="text-red-300 text-sm">
+            Music library server is temporarily unavailable.
+            <button
+              onClick={() => checkBackend().then(h => h && loadLibrary())}
+              className="ml-2 underline hover:text-red-200"
+            >
+              Retry
+            </button>
+          </p>
+        </div>
+      )}
+
       {/* Queue Panel */}
       <QueuePanel
         queue={queue}

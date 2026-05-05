@@ -209,7 +209,7 @@ export class AudioLoader {
       // Map to add URLs - use the song's URL or construct from base URL
       const tracksWithUrls = tracks.map((item: any) => ({
         ...item,
-        url: item.url ? (item.url.startsWith('http') ? item.url : `${API_BASE_URL}${item.url}`) : `${API_BASE_URL}/api/music/${item.id}/file`
+        url: item.url ? (item.url.startsWith('http') ? item.url : `${API_BASE_URL}${item.url}`) : `${API_BASE_URL}/api/music/${item.id}`
       }));
 
       return { tracks: tracksWithUrls, total: tracks.length };
@@ -590,7 +590,7 @@ export class AudioLoader {
         .map((item: any) => ({
           id: item.id,
           name: item.name || item.filename,
-          url: `${API_BASE_URL}/api/music/${item.id}/file`,
+          url: `${API_BASE_URL}/api/music/${item.id}`,
           rating: item.rating,
           description: item.description,
           author: item.author,
@@ -614,7 +614,7 @@ export class AudioLoader {
 
       const tracksWithUrls = data.tracks.map((item) => ({
         ...item,
-        url: item.url || `${API_BASE_URL}/api/music/${item.id}/file`
+        url: item.url || `${API_BASE_URL}/api/music/${item.id}`
       }));
 
       return { title: data.title, tracks: tracksWithUrls };
@@ -762,4 +762,46 @@ export function loadQueueFromStorage(): QueueState | null {
 
 export function clearQueueStorage(): void {
   localStorage.removeItem(QUEUE_STORAGE_KEY);
+}
+
+// =============================================================================
+// Library Caching
+// =============================================================================
+
+const LIBRARY_CACHE_KEY = 'flac_player_library_cache';
+const LIBRARY_CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
+
+export interface CachedLibrary {
+  tracks: PlaylistTrack[];
+  tags: TagInfo[];
+  stats: LibraryStats;
+  timestamp: number;
+}
+
+export function getCachedLibrary(): CachedLibrary | null {
+  try {
+    const cached = localStorage.getItem(LIBRARY_CACHE_KEY);
+    if (!cached) return null;
+    const data = JSON.parse(cached) as CachedLibrary;
+    if (Date.now() - data.timestamp > LIBRARY_CACHE_TTL_MS) {
+      localStorage.removeItem(LIBRARY_CACHE_KEY);
+      return null;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export function setCachedLibrary(tracks: PlaylistTrack[], tags: TagInfo[], stats: LibraryStats): void {
+  try {
+    const data: CachedLibrary = { tracks, tags, stats, timestamp: Date.now() };
+    localStorage.setItem(LIBRARY_CACHE_KEY, JSON.stringify(data));
+  } catch {
+    // Quota exceeded — silently fail
+  }
+}
+
+export function clearLibraryCache(): void {
+  localStorage.removeItem(LIBRARY_CACHE_KEY);
 }
