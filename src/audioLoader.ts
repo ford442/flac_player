@@ -209,7 +209,7 @@ export class AudioLoader {
       // Map to add URLs - use the song's URL or construct from base URL
       const tracksWithUrls = tracks.map((item: any) => ({
         ...item,
-        url: item.url ? (item.url.startsWith('http') ? item.url : `${API_BASE_URL}${item.url}`) : `${API_BASE_URL}/api/music/${item.id}`
+        url: item.url ? (item.url.startsWith('http') ? item.url : `${API_BASE_URL}${item.url}`) : `${API_BASE_URL}/api/music/${item.id}/file`
       }));
 
       return { tracks: tracksWithUrls, total: tracks.length };
@@ -590,7 +590,7 @@ export class AudioLoader {
         .map((item: any) => ({
           id: item.id,
           name: item.name || item.filename,
-          url: `${API_BASE_URL}/api/music/${item.id}`,
+          url: `${API_BASE_URL}/api/music/${item.id}/file`,
           rating: item.rating,
           description: item.description,
           author: item.author,
@@ -614,7 +614,7 @@ export class AudioLoader {
 
       const tracksWithUrls = data.tracks.map((item) => ({
         ...item,
-        url: item.url || `${API_BASE_URL}/api/music/${item.id}`
+        url: item.url || `${API_BASE_URL}/api/music/${item.id}/file`
       }));
 
       return { title: data.title, tracks: tracksWithUrls };
