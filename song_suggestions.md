@@ -2851,3 +2851,97 @@ THE HEAVIEST DRONE IN THE BURNING RAIN!
 **Additional Notes:**
 - **Combo/Fusion:** Doom Metal / Australian Aboriginal Didgeridoo
 - **Thematic Ties:** The suffocating, massive, and earth-shattering weight of Doom Metal perfectly complemented by the deeply resonant, ancient, and naturally droning acoustic power of the Australian outback.
+
+### Title: The Aristocrat's Bounce
+
+**Service:** Minimax Audio
+
+**Prompt:** An incredibly high-energy, fast-paced New Orleans Bounce rap track featuring rapid-fire "Triggerman" drum beats, heavy 808 bass, and call-and-response chanting. However, all melodic and harmonic elements are played by a pristine, highly refined 18th-century Classical String Quartet (violins, viola, and cello), frantically bowing aggressive, staccato Mozart-style runs that match the chaotic, twerking club rhythm.
+
+**Lyrics:**
+(Verse 1 - Fast, aggressive New Orleans Bounce MC)
+Break it down now! Bow on the string!
+(String quartet vigorously plays a rapid, staccato classical progression over the 808s)
+Make that cello work, let me hear you sing!
+
+(Chorus)
+(Massive bounce beat with the string quartet frantically playing rapid arpeggios)
+Bounce for the Duke! Bounce for the Queen!
+The craziest ballroom that you've ever seen!
+Powdered wigs shaking to the heavy bass!
+Classical bounce all up in your face!
+
+**Additional Notes:**
+- **Combo/Fusion:** New Orleans Bounce / 18th-Century Classical String Quartet
+- **Thematic Ties:** The sweat-drenched, chaotic, and relentlessly heavy club energy of New Orleans Bounce slamming into the delicate, highly structured, and aristocratic world of a classical string quartet.
+
+### Title: Idol of the Abyss
+
+**Service:** Minimax Audio
+
+**Prompt:** An agonizingly slow, incredibly heavy Doom Metal track with thick, downtuned, fuzz-drenched guitars and a pounding, lethargic drum beat. However, the vocals are performed by a hyper-energetic, sugary-sweet K-Pop girl group, singing incredibly cheerful, high-pitched melodies in Korean, completely ignoring the oppressive, sludgy wall of sound behind them.
+
+**Lyrics:**
+(Verse 1 - Sugary, cheerful K-Pop girl group vocals)
+(A massive, distorted, agonizingly slow Doom Metal riff rings out)
+Oppa, the darkness is so bright today!
+(Lethargic crash cymbal hit)
+Kawaii in the shadows, dancing the pain away!
+
+(Chorus)
+(The fuzz guitar vibrates the earth while the girls harmonize sweetly)
+Saranghae to the void! Glitter on the skull!
+The heaviest idol group, never ever dull!
+Pink hearts floating in the sludgy black!
+There's no escape, we're never coming back!
+
+**Additional Notes:**
+- **Combo/Fusion:** Doom Metal / Modern K-Pop Vocals
+- **Thematic Ties:** The suffocating, massive, and earth-shattering weight of Doom Metal utterly ignored and contrasted by the intensely manufactured, cheerful, and glossy world of modern Korean pop music.
+
+### Title: Saturday Night Barn Dance
+
+**Service:** Minimax Audio
+
+**Prompt:** A pulsating, four-on-the-floor 1970s disco track with a driving funky bassline and swirling string sections. But the glitzy synthesizer hooks, wah-wah guitars, and brass fanfares are completely replaced by lightning-fast Appalachian Bluegrass banjo rolls, frantic fiddle solos, and a twangy mandolin, all playing complex country licks over the infectious disco beat.
+
+**Lyrics:**
+(Verse 1 - Smooth 70s soul falsetto, but with country lyrics)
+Well I hitched up the wagon, put my platform shoes on tight...
+(Frantic, high-speed banjo roll perfectly in time with the disco hi-hats)
+We're heading down to the holler, gonna boogie through the night!
+
+(Chorus)
+(Massive disco drop with a driving 4/4 beat and a blazing fiddle solo)
+Do the hillbilly hustle, underneath the disco ball!
+Rosin up the bow, we're answering the call!
+Flared jeans and overalls, spinning on the floor!
+The funkiest hoedown leaves you begging for more!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Disco / Appalachian Bluegrass
+- **Thematic Ties:** The flamboyant, highly produced, and synthetic nightlife culture of 70s disco fused directly into the fast-paced, deeply rural, acoustic virtuosity of mountain bluegrass.
+
+### Title: Mississippi Ronin
+
+**Service:** Minimax Audio
+
+**Prompt:** A raw, stomping 1930s Delta Blues track featuring a slow, heavy foot-stomping rhythm and a raspy, soulful vocal delivery. Instead of a weeping slide guitar, the gritty, bending blues riffs and solos are played on a delicate, traditional Japanese Koto, aggressively plucked and bent to hit those dirty, microtonal blue notes over the muddy rhythm.
+
+**Lyrics:**
+(Verse 1 - Gritty Delta Blues wail)
+Well I woke up this morning, my katana was rusted shut...
+(Koto plucks a nasty, bending blues turnaround)
+Yeah I woke up this morning, stuck inside this wooden hut.
+(A heavy boot stomps on a wooden floorboard)
+
+(Chorus)
+(Koto shreds a frantic, aggressive blues solo)
+Oh the Mississippi shogun, got the delta blues!
+Walking down the dirt road in my wooden shoes!
+Pluck the silk string hard, let the sorrow fly!
+Underneath the weeping willow, hear the ronin cry!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1930s Delta Blues / Traditional Japanese Koto
+- **Thematic Ties:** The deeply personal, raw, and muddy sorrow of the American South played on an instrument traditionally reserved for the highly refined, delicate, and structured courts of feudal Japan.
