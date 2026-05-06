@@ -6,12 +6,14 @@ interface BottomScreenProps {
   tracks: PlaylistTrack[];
   currentIndex: number;
   onTrackClick: (index: number) => void;
+  isLoading?: boolean;
 }
 
 export const BottomScreen: React.FC<BottomScreenProps> = ({
   tracks,
   currentIndex,
   onTrackClick,
+  isLoading = false,
 }) => {
   return (
     <div className="shader-screen bottom-screen">
@@ -25,7 +27,9 @@ export const BottomScreen: React.FC<BottomScreenProps> = ({
             <span className="track-number">{index + 1}.</span>
             <span className="track-name">{track.title || track.name}</span>
             {index === currentIndex && (
-              <span className="track-play-overlay">▶</span>
+              isLoading
+                ? <span className="track-loading-spinner" />
+                : <span className="track-play-overlay">&#9654;</span>
             )}
           </li>
         ))}

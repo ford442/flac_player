@@ -16,6 +16,7 @@ export interface ShaderGUIProps {
   queue: PlaylistTrack[];
   queueCurrentIndex: number;
   isPlaying: boolean;
+  isLoading?: boolean;
   currentTime: number;
   duration: number;
   volume: number;
@@ -35,6 +36,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   queue,
   queueCurrentIndex,
   isPlaying,
+  isLoading = false,
   currentTime,
   duration,
   volume,
@@ -212,6 +214,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             webGPUSupported={webGPUSupported}
             onCanvasResize={() => visualizerRef.current?.resize()}
             onCanvasDoubleClick={handleToggle3D}
+            isLoading={isLoading}
           />
         </div>
 
@@ -249,6 +252,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             tracks={queue}
             currentIndex={queueCurrentIndex}
             onTrackClick={onTrackClick}
+            isLoading={isLoading}
           />
         </div>
 

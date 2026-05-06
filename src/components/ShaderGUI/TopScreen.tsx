@@ -8,6 +8,7 @@ interface TopScreenProps {
   webGPUSupported: boolean;
   onCanvasResize?: () => void;
   onCanvasDoubleClick?: () => void;
+  isLoading?: boolean;
 }
 
 export const TopScreen: React.FC<TopScreenProps> = ({
@@ -17,9 +18,12 @@ export const TopScreen: React.FC<TopScreenProps> = ({
   webGPUSupported,
   onCanvasResize,
   onCanvasDoubleClick,
+  isLoading = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const displayText = title ? (artist ? `${artist} — ${title}` : title) : 'No track loaded';
+  const displayText = isLoading
+    ? 'LOADING...'
+    : (title ? (artist ? `${artist} — ${title}` : title) : 'No track loaded');
 
   useEffect(() => {
     const container = containerRef.current;
@@ -84,9 +88,13 @@ export const TopScreen: React.FC<TopScreenProps> = ({
         </div>
       )}
       <div className="artist-title-overlay">
-        <div className="artist-title-marquee">
-          {displayText}&nbsp;&nbsp;&nbsp;&nbsp;{displayText}&nbsp;&nbsp;&nbsp;&nbsp;
-        </div>
+        {isLoading ? (
+          <div className="loading-text">{displayText}</div>
+        ) : (
+          <div className="artist-title-marquee">
+            {displayText}&nbsp;&nbsp;&nbsp;&nbsp;{displayText}&nbsp;&nbsp;&nbsp;&nbsp;
+          </div>
+        )}
       </div>
     </div>
   );
