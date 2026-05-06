@@ -105,6 +105,34 @@
   100% { transform: translateX(-50%); }
 }
 
+/* Loading text in TopScreen */
+.loading-text {
+  color: #22D3EE;
+  letter-spacing: 2px;
+  animation: loading-pulse 1s ease-in-out infinite;
+}
+
+@keyframes loading-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Loading spinner in track list */
+@keyframes gui-spin {
+  to { transform: rotate(360deg); }
+}
+
+.track-loading-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(34, 211, 238, 0.25);
+  border-top-color: #22D3EE;
+  border-radius: 50%;
+  animation: gui-spin 0.8s linear infinite;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 /* Bottom screen / track list */
 .bottom-screen {
   width: 100%;
