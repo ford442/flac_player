@@ -2945,3 +2945,98 @@ Underneath the weeping willow, hear the ronin cry!
 **Additional Notes:**
 - **Combo/Fusion:** 1930s Delta Blues / Traditional Japanese Koto
 - **Thematic Ties:** The deeply personal, raw, and muddy sorrow of the American South played on an instrument traditionally reserved for the highly refined, delicate, and structured courts of feudal Japan.
+
+### Title: The Celtic Cyber-Shaman
+
+**Service:** Minimax Audio
+
+**Prompt:** A gritty, high-tempo Cyberpunk Darksynth track with aggressive, distorted sawtooth basslines and pounding electronic drums. Instead of typical neon synth melodies, the intense lead lines and rhythmic drives are played by a delicate, ethereal Traditional Celtic Harp and a booming, organic Bodhrán drum, weaving ancient magic into the digital dystopia.
+
+**Lyrics:**
+(Verse 1 - Heavily vocoded, robotic cyberpunk vocal)
+Scanning the sectors in the pouring rain...
+(Celtic Harp plays a rapid, delicate, ancient melody over the distorted bass)
+System overload, digital pain...
+(Bodhrán drum beats aggressively in a complex tribal rhythm)
+
+(Chorus)
+(Massive synth drop combined with a soaring Celtic harp run)
+Cyber-shaman rising from the smog!
+Marching through the synthetic bog!
+Strings of the ancestors, circuit and steel!
+Make the whole megacity feel!
+
+**Additional Notes:**
+- **Combo/Fusion:** Cyberpunk Darksynth / Traditional Celtic Harp & Bodhrán
+- **Thematic Ties:** The bleak, highly technological, and synthetic atmosphere of a cyberpunk megacity pierced by the delicate, ancient, and deeply organic storytelling of traditional Celtic instruments.
+
+### Title: Reggaeton of the Steppes
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, driving Reggaeton beat featuring a thumping 808 sub-bass and classic dembow drum patterns. Instead of modern synthesizers or Spanish rap, the entire vocal structure and harmonic backbone are provided by a chorus of Tuvan throat singers, using deep Kargyraa rumbles and high Sygyt overtones to punch out the syncopated Caribbean club rhythm.
+
+**Lyrics:**
+(Verse 1 - Deep, booming Kargyraa throat singing acting as a rhythmic rap flow)
+(A heavy 808 sub-bass drops on the downbeat)
+(Sygyt overtone whistle plays a high, piercing melody over the dembow beat)
+Riding the yak to the club tonight!
+
+(Chorus)
+(The throat singers hit a massive, multi-part overtone harmony over the reggaeton groove)
+Perrea on the steppe! Whine to the yurt!
+The sweatiest nomads kicking up the dirt!
+Mueve la cadera, milk the mare!
+Reggaeton throat singing everywhere!
+
+**Additional Notes:**
+- **Combo/Fusion:** Reggaeton / Tuvan Throat Singing
+- **Thematic Ties:** The raw, sensual, and heavy club energy of modern Reggaeton clashing beautifully with the harsh, ancient, and resonant nature of Mongolian nomadic throat singing.
+
+### Title: Polka of the Pharaohs
+
+**Service:** Minimax Audio
+
+**Prompt:** A bouncy, hyper-cheerful Eastern European polka track, with a frantic accordion and a lively tuba playing the basslines on off-beats. However, the joyful accordion melodies are entirely replaced by the swirling, mystical Middle Eastern Ney flute and a bright, resonant Qanun (zither), playing complex Arabic maqam scales with an aggressively happy waltz rhythm.
+
+**Lyrics:**
+(Verse 1 - Cheerful, fast-paced Polka vocal delivery)
+The sun beats down on the pyramid stone!
+(Ney flute plays a rapid, swirling, microtonal run)
+The mummy is dancing, rattling his bone!
+(Qanun plucks a frantic, bouncing rhythm)
+
+(Chorus)
+(Bouncy polka rhythm with a tuba bassline and Middle Eastern instruments)
+Oom-pah-pah in Cairo! The sphinx starts to spin!
+Spinning in the desert, let the party begin!
+Pierogi and falafel, rolling on the sand!
+The happiest little pharaoh in the whole damn land!
+
+**Additional Notes:**
+- **Combo/Fusion:** Eastern European Polka / Middle Eastern Ney and Qanun
+- **Thematic Ties:** The bouncing, relentlessly cheerful, and slightly goofy energy of a polka band completely relocated to the ancient, mystical, and microtonal atmosphere of the Egyptian desert.
+
+### Title: Shoegaze Mariachi
+
+**Service:** Minimax Audio
+
+**Prompt:** A dense, ethereal Shoegaze track characterized by a massive wall of distorted, reverberating sound and a slow, driving drum beat. However, piercing through the wash of noise is the passionate, vibrant instrumentation of a Traditional Mexican Mariachi band. The trumpets and vihuelas are completely drenched in massive reverb and delay to create a hypnotic, fuzzy drone.
+
+**Lyrics:**
+(Verse 1 - Whispered, ethereal vocals drenched in reverb)
+The fiesta fades away... the sun starts to blur...
+(A massive wall of fuzz guitar, with a crying trumpet echoing endlessly)
+Lost inside the pedalboard, a warm and fuzzy stir.
+The vihuela hums through the reverb tank...
+
+(Chorus)
+(The wall of sound swells, the trumpet attacks fiercely but echoes into infinity)
+Noise and the agave! The feedback screams!
+Drowning the cantina in static dreams!
+Dancing the jarabe in the endless haze!
+The weeping mariachi catches the shoegaze!
+
+**Additional Notes:**
+- **Combo/Fusion:** Shoegaze / Traditional Mexican Mariachi
+- **Thematic Ties:** The overwhelming, blurry, and incredibly loud wash of 90s shoegaze aesthetics being sharply contrasted by the articulate, passionate, and fiercely acoustic attacks of a Mariachi ensemble, all submerged in endless reverb.
