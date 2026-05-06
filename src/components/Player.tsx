@@ -411,15 +411,13 @@ export const Player: React.FC = () => {
   const playTrack = async (track: PlaylistTrack, index?: number) => {
     setCurrentTrack(track);
     setLoadingTrackId(track.id);
+    if (index !== undefined) {
+      setQueueCurrentIndex(index);
+    }
     setError('');
     try {
       await loadAudioFromUrl(track.url, track);
       playerRef.current?.play();
-
-      if (index !== undefined) {
-        setQueueCurrentIndex(index);
-      }
-
       // Update stats after a short delay
       setTimeout(loadStats, 500);
     } catch (err) {
@@ -759,6 +757,7 @@ export const Player: React.FC = () => {
           queue={queue}
           queueCurrentIndex={queueCurrentIndex}
           isPlaying={playerState.isPlaying}
+          isLoading={playerState.isLoading}
           currentTime={playerState.currentTime}
           duration={playerState.duration}
           volume={volume}
@@ -1053,6 +1052,7 @@ export const Player: React.FC = () => {
                 queue={queue}
                 queueCurrentIndex={queueCurrentIndex}
                 isPlaying={playerState.isPlaying}
+                isLoading={playerState.isLoading}
                 currentTime={playerState.currentTime}
                 duration={playerState.duration}
                 volume={volume}
