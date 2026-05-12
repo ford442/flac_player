@@ -1743,6 +1743,103 @@ Reggaeton gothic, waking up too soon!
 - **Combo/Fusion:** Reggaeton / Gothic Pipe Organ & Harpsichord
 - **Thematic Ties:** The raw, sensual, and heavy tropical club energy of modern Reggaeton completely possessed by the terrifying, gothic, and spooky atmosphere of a classic vampire horror film.
 
+### Title: Honolulu Frostbite
+
+**Service:** Minimax Audio
+
+**Prompt:** A fiercely aggressive Scandinavian Black Metal track featuring relentless blast beats and guttural screams. However, the heavily distorted, tremolo-picked guitars are entirely replaced by a gentle, cheerful Hawaiian Ukulele and a soothing Slack-Key guitar, furiously strummed and plucked at breakneck speeds while maintaining their bright, sunny tone over the chaotic drums.
+
+**Lyrics:**
+(Verse 1 - Demonic Black Metal Shriek)
+THE VOLCANO AWAKENS IN THE BURNING SNOW!
+(Ukulele strums a lightning-fast, cheerful major-key progression)
+THE OCEAN BOILS IN THE DEPTHS BELOW!
+(Slack-key guitar plays a rapid, sunny melody over the blast beats)
+
+(Chorus)
+(Guttural roaring with upbeat island instrumentation)
+ALOHA TO THE DARKNESS! LUAU OF DOOM!
+THE HAPPIEST LITTLE HELLFIRE IN THE TROPICAL ROOM!
+SURFING ON THE LAVA, DRINKING FROM THE SKULL!
+THE BLACK METAL LUAU IS NEVER EVER DULL!
+
+**Additional Notes:**
+- **Combo/Fusion:** Norwegian Black Metal / Traditional Hawaiian Folk
+- **Thematic Ties:** The grim, terrifying, and aggressive atmosphere of Norwegian black metal completely subverted by the bright, relaxed, and incredibly cheerful sounds of a Hawaiian luau.
+
+### Title: The Funky Lama
+
+**Service:** Minimax Audio
+
+**Prompt:** A groovy, infectious 1970s Funk track with a tight, syncopated drum beat and a bouncy bassline. But the shimmering rhythm guitars and punchy brass section are completely replaced by a massive ensemble of Tibetan Monks, who rhythmically blow deep, earth-shaking Dungchen horns for the horn stabs, while chanting funky, syncopated mantras in unison.
+
+**Lyrics:**
+(Verse 1 - Rhythmic, deep chanting by a monk choir)
+(Tight funk drum beat drops in)
+Ohm... the groove is deep, brothers!
+(Dungchen horns blast a punchy, staccato funk stab)
+Ohm... we're meditating on the beat!
+(Singing bowls ring out on the off-beats)
+
+(Chorus)
+(Monks chanting in a tight, syncopated funk rhythm)
+Funky in the temple! Enlightenment is near!
+The heaviest mantra that you'll ever hear!
+Horns of the Himalayas, blowing in the club!
+The funkiest monks in the spiritual hub!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Funk / Traditional Tibetan Monastic Instruments
+- **Thematic Ties:** The slick, highly syncopated, and deeply physical groove of 70s funk perfectly locking into the deeply resonant, spiritual, and traditionally ambient sounds of Tibetan ritual instruments.
+
+### Title: The Jamaican Waltz
+
+**Service:** Minimax Audio
+
+**Prompt:** A highly elegant and sweeping 19th-century Viennese Waltz featuring lush orchestrations of violins, cellos, and grand pianos. However, the sweeping 3/4 rhythm is heavily injected with Jamaican Reggae influences, featuring a massive dub bassline and off-beat skanks played by the orchestral string section, while a gruff Reggae toaster delivers a formal ballroom toast.
+
+**Lyrics:**
+(Verse 1 - Gruff Jamaican Toaster vocal, heavily echoed)
+(Grand piano plays a sweeping 3/4 waltz melody)
+Step to the ballroom, mon, one, two, three...
+(Violins abruptly hit a sharp off-beat reggae skank)
+The fanciest dance that you ever did see!
+
+(Chorus)
+(Heavy dub bass drop in a 3/4 waltz rhythm)
+Waltz in Kingston! Spinning in the hall!
+The heaviest dub that will conquer them all!
+Tuxedo and the dreadlocks, stepping to the beat!
+The royal Jamaican bringing the heat!
+
+**Additional Notes:**
+- **Combo/Fusion:** 19th-Century Viennese Waltz / Jamaican Dub Reggae
+- **Thematic Ties:** The pristine, aristocratic, and swirling romance of a European ballroom waltz injected with the heavy, relaxed, and syncopated bounce of Jamaican dub reggae.
+
+### Title: The Mumbai Lowrider
+
+**Service:** Minimax Audio
+
+**Prompt:** A laid-back, bouncing 1990s West Coast G-Funk track with deep, rolling basslines and a slow, head-nodding drum beat. The iconic high-pitched synthesizer whine is entirely replaced by a gliding, microtonal Bansuri flute, while the rhythmic chord stabs are played by a sitar, and a classical Indian vocalist delivers a smooth, melodic rap flow.
+
+**Lyrics:**
+(Verse 1 - Smooth, melodic Indian classical vocal acting as a laid-back rap flow)
+(Deep G-Funk bassline rolls under a steady beat)
+Cruising down the street in my auto-rickshaw...
+(Bansuri flute plays a high, whining G-Funk melody)
+The smoothest little ride that you ever saw.
+(Tabla drums add a complex fill to the hip-hop beat)
+
+(Chorus)
+(Sitar strums heavily on the two and four)
+Mumbai lowrider, bouncing in the sun!
+The west coast raga has only begun!
+Flute in the air, bass on the ground!
+The deepest, smoothest, classical sound!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s West Coast G-Funk / Classical Indian Hindustani
+- **Thematic Ties:** The incredibly laid-back, sun-soaked, and heavily synthesized bounce of West Coast hip hop seamlessly translated into the smooth, gliding, and intricate melodies of classical Indian instrumentation.
 ### Title: The Alpine Lowrider
 
 **Service:** Minimax Audio
