@@ -1838,3 +1838,92 @@ A beautiful, sad, acoustic wall of sound...
 **Additional Notes:**
 - **Combo/Fusion:** 1990s Shoegaze / Mexican Mariachi
 - **Thematic Ties:** The introverted, effects-heavy, and completely overwhelming volume of 90s shoegaze recreated entirely acoustically using the bright, traditionally extroverted instruments of a Mariachi band.
+### Title: The Alpine Lowrider
+
+**Service:** Minimax Audio
+
+**Prompt:** A laid-back, sun-soaked 1990s West Coast G-Funk track featuring a deep, slow-rolling Moog bassline and a classic hip-hop drum break. The iconic high-pitched synthesizer whine and smooth backing vocals are entirely replaced by a cheerful, echoing Swiss Yodeler delivering complex, rapid-fire vocal leaps perfectly over the bouncing gangsta rap beat.
+
+**Lyrics:**
+(Verse 1 - Smooth, laid-back G-Funk rap flow)
+Cruising down the mountain in the six-four...
+(A deep, bouncing Moog bassline rolls underneath)
+Dropping the top, couldn't ask for more.
+
+(Chorus)
+(A sudden, incredibly fast and joyful Swiss Yodel drops right on the beat)
+Yodel-ay-hee-hoo in the California sun!
+The funkiest alpine party has just begun!
+Bouncing the hydraulics up to the peak!
+The freshest yodeler that you'll ever meet!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s West Coast G-Funk / Swiss Yodeling
+- **Thematic Ties:** The dangerous, laid-back coolness of 90s Los Angeles gangsta rap completely disarmed by the impossibly cheerful, high-altitude acoustics of traditional Swiss mountain singing.
+
+### Title: The Anarchy Raga
+
+**Service:** Minimax Audio
+
+**Prompt:** A raw, aggressive 1970s British Punk Rock anthem with a blistering, fast-paced drumbeat and shouted, rebellious vocals. The distorted, three-chord electric guitar riffs are completely replaced by an aggressively shredded, amplified Classical Indian Sitar, bending notes into angry dissonance, while a Tabla violently smashes out the punk drum fills.
+
+**Lyrics:**
+(Verse 1 - Shouted, aggressive Cockney punk vocal)
+We don't need your rules! We don't need your king!
+(The sitar violently shreds a distorted, three-chord punk progression)
+Listen to the feedback that the sitar's gonna bring!
+(Tabla smashes a chaotic, rapid-fire punk fill)
+
+(Chorus)
+Anarchy in New Delhi! Smashing up the state!
+The heaviest raga that's born out of hate!
+Safety pins and spices! Spitting on the floor!
+The classical punk rock that leaves you wanting more!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s British Punk Rock / Classical Indian Sitar & Tabla
+- **Thematic Ties:** The completely untrained, aggressive, and simplistic fury of 70s British punk rock attempting to be played on incredibly complex, spiritual, and ancient classical Indian instruments.
+
+### Title: The Obsidian Sock Hop
+
+**Service:** Minimax Audio
+
+**Prompt:** A romantic, swaying 1950s Doo-Wop ballad with a gentle 6/8 triplet rhythm and snapping fingers. The sweet, harmonizing backing singers and the soaring lead vocalist are completely replaced by a terrifying ensemble of Aztec death whistles, clay flutes, and hollow teponaztli drums, playing the incredibly cheerful, innocent teenage love song progression using bone-chilling shrieks.
+
+**Lyrics:**
+(Verse 1 - A terrifying, airy shriek from an Aztec death whistle mimicking a crooner)
+(A chorus of clay flutes harmonize in a sweet, major-key doo-wop progression: shoo-wop, shoo-wop)
+(Teponaztli drum pounds out a gentle 6/8 triplet rhythm)
+
+(Chorus)
+(The death whistles reach a horrifying, screeching crescendo perfectly in tune)
+Blood on the dancefloor! Sacrifice the night!
+Holding hands together in the pale moonlight!
+The most terrifying romance that you ever saw!
+A prehistoric love in the jaguar's claw!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1950s Doo-Wop / Ancient Aztec Instruments
+- **Thematic Ties:** The intensely innocent, saccharine, and highly polished teenage romance of 1950s America completely possessed by the bloodthirsty, terrifying, and ancient acoustics of Pre-Columbian Aztec rituals.
+
+### Title: The Viennese Outback
+
+**Service:** Minimax Audio
+
+**Prompt:** A highly refined, elegant 18th-century Viennese Waltz performed by a sweeping classical orchestra with graceful violins and cellos. However, the delicate waltz rhythm and the aristocratic ballroom atmosphere are entirely disrupted by the deep, continuous, and aggressively earthy rumble of an Australian Aboriginal Didgeridoo, pulsing a heavy drone underneath the classical strings.
+
+**Lyrics:**
+(Verse 1 - Sweeping classical strings playing a beautiful waltz melody)
+(A massive, low-end Didgeridoo growl suddenly enters, completely ignoring the aristocratic delicacy)
+(The orchestra gracefully tries to waltz around the massive, rhythmic drone)
+
+(Chorus)
+(The Didgeridoo begins to syncopate heavily, driving the waltz into a tribal frenzy)
+Dancing in the palace! Mud on the shoes!
+The grandest Vienna with the outback blues!
+Powdered wigs shaking to the Aboriginal sound!
+The heaviest drone in the ballroom ground!
+
+**Additional Notes:**
+- **Combo/Fusion:** 18th-Century Viennese Waltz / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The peak of European aristocratic refinement, elegance, and classical structure completely overwhelmed and grounded by the ancient, deeply resonant, and earthy drone of the Australian outback.
