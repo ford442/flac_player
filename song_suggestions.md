@@ -2024,3 +2024,100 @@ The heaviest drone in the ballroom ground!
 **Additional Notes:**
 - **Combo/Fusion:** 18th-Century Viennese Waltz / Australian Aboriginal Didgeridoo
 - **Thematic Ties:** The peak of European aristocratic refinement, elegance, and classical structure completely overwhelmed and grounded by the ancient, deeply resonant, and earthy drone of the Australian outback.
+
+### Title: The Flamenco Cyber-Hacker
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive, fast-paced Cyberpunk Synthwave track featuring dark, pulsating analog basses and futuristic 808 beats. However, the icy, synthetic lead melodies and neon arpeggios are completely replaced by the incredibly passionate, fast-paced fingerpicking and furious rasgueado strumming of a traditional Spanish Flamenco acoustic guitar.
+
+**Lyrics:**
+(Verse 1 - Heavily vocoded, robotic cyberpunk vocal)
+Hacking the mainframe in the neon glow...
+(Flamenco guitar erupts into a blistering, passionate acoustic run)
+Downloading data, watching the network flow.
+(A furious rasgueado strum matches the electronic snare drum)
+
+(Chorus)
+(Massive synth drop combined with incredibly fast fingerpicking)
+Cyber-flamenco, dancing on the grid!
+The fastest acoustic that you ever did!
+Castanets clicking in the digital rain!
+Organic passion in the mainframe brain!
+
+**Additional Notes:**
+- **Combo/Fusion:** Cyberpunk Synthwave / Traditional Spanish Flamenco
+- **Thematic Ties:** The bleak, highly technological, and emotionally detached dystopia of cyberpunk infused with the raw, acoustic, deeply emotional and sweat-drenched passion of Andalusian Flamenco.
+
+### Title: The Inuit Barbershop
+
+**Service:** Minimax Audio
+
+**Prompt:** A cheerful, four-part a cappella Barbershop Quartet performing a bright, major-key harmony complete with snappy finger clicks. Yet, all four impeccably dressed singers perform the entire arrangement using the rhythmic, breathy, and guttural techniques of traditional Inuit throat singing (katajjaq), replacing the smooth crooning with mesmerizing, interlocking vocal rasps.
+
+**Lyrics:**
+(Verse 1 - Four singers harmonizing, but using deep, guttural throat singing)
+(Snappy finger clicks on the off-beat)
+Hello my baby, hello my honey...
+(The lead singer performs a rapid, breathy katajjaq rhythm)
+Hello my ragtime gal!
+(The bass singer drops an incredibly deep, resonant overtone hum)
+
+(Chorus)
+(The throat singers lock into a complex, interlocking major-chord harmony)
+Barbershop pole in the freezing snow!
+The happiest throat singers that you'll ever know!
+Striped shirts and parkas, singing so sweet!
+The tightest harmonies on the arctic street!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1910s Barbershop Quartet / Inuit Throat Singing
+- **Thematic Ties:** The hyper-polished, pristine, and historically American cheerfulness of a barbershop quartet completely subverted by the earthy, ancient, and deeply resonant vocal traditions of the Arctic.
+
+### Title: K-Pop in the Bayou
+
+**Service:** Minimax Audio
+
+**Prompt:** A slick, highly choreographed K-Pop dance anthem featuring synchronized vocal harmonies and rap verses. However, all the modern synthesizers and heavy EDM basslines are entirely replaced by the gritty, swampy instrumentation of a Louisiana Zydeco band, featuring a grooving washboard, a pumping button accordion, and a twangy swamp-pop guitar playing the pop hooks.
+
+**Lyrics:**
+(Verse 1 - Sugary, synchronized K-Pop girl group vocals)
+Oppa, the swamp is looking so fine today!
+(A pumping Zydeco accordion plays a fast, syncopated pop hook)
+Got the rubber boots on, chasing the gators away!
+(Washboard scrapes furiously, providing a driving beat)
+
+(Chorus)
+(A massive, catchy pop drop played entirely on zydeco instruments)
+Saranghae on the bayou! Catching the crawfish now!
+The cutest little swamp party, taking a bow!
+Accordion popping, making history!
+Zydeco idol, creating the fantasy!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern K-Pop / Louisiana Zydeco
+- **Thematic Ties:** The pristine, highly manufactured, and flawlessly choreographed world of modern K-Pop dragged down into the humid, sweaty, and deeply organic foot-stomping mud of the Louisiana bayou.
+
+### Title: The Mariachi Muezzin
+
+**Service:** Minimax Audio
+
+**Prompt:** A vibrant, passionate traditional Mexican Mariachi performance with blistering acoustic guitar runs, rapid vihuela strumming, and bright trumpets. Instead of the traditional cantaor belting out a ranchera, the lead vocal is a powerful, echoing, and deeply spiritual Islamic call to prayer (Adhan), performed with breathtaking melismas by a Muezzin, perfectly locking into the mariachi waltz rhythm.
+
+**Lyrics:**
+(Verse 1 - Powerful, echoing Muezzin vocals over a Mariachi waltz)
+(Rapid, passionate vihuela strumming begins)
+Allahu Akbar, the sun is blazing bright...
+(Mariachi trumpets blast a soaring, vibrato-heavy fanfare)
+Allahu Akbar, dancing in the light!
+
+(Chorus)
+(The Muezzin hits a breathtaking, highly ornamented melisma)
+Call to prayer in the plaza! Echoing in the street!
+The holiest mariachi, moving to the beat!
+Sombreros and devotion, singing in the sun!
+The Mexican Muezzin has only just begun!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Mexican Mariachi / Islamic Adhan
+- **Thematic Ties:** The earthy, festive, and passionately human celebration of Mexican folk music fused seamlessly with the deeply spiritual, resonant, and profoundly vocal devotion of an Islamic prayer call.
