@@ -1742,3 +1742,99 @@ Reggaeton gothic, waking up too soon!
 **Additional Notes:**
 - **Combo/Fusion:** Reggaeton / Gothic Pipe Organ & Harpsichord
 - **Thematic Ties:** The raw, sensual, and heavy tropical club energy of modern Reggaeton completely possessed by the terrifying, gothic, and spooky atmosphere of a classic vampire horror film.
+
+### Title: Seoul of the Hurdy-Gurdy
+
+**Service:** Minimax Audio
+
+**Prompt:** A slick, hyper-produced modern K-Pop dance track with a driving EDM beat and complex vocal harmonies. However, the shiny synthesizer leads and heavy bass drops are entirely replaced by the continuous, grating drone of a medieval Hurdy-Gurdy and the squawking, reedy stabs of a Renaissance Crumhorn, playing impossibly catchy K-Pop melodies.
+
+**Lyrics:**
+(Verse 1 - Crisp, synchronized K-Pop boy band vocals)
+Walking through Gangnam, looking so fresh...
+(Hurdy-Gurdy cranks out a massive, buzzing EDM bassline)
+Got the style, got the moves, putting you to the test!
+(Crumhorn blasts a bright, syncopated pop hook)
+
+(Chorus)
+(Massive, synchronized pop explosion)
+Crank the wheel, baby! Spin it around!
+The medieval sound is taking the town!
+Dancing in Seoul with a renaissance flair!
+Hurdy-gurdy pop, hands in the air!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern K-Pop / Medieval Hurdy-Gurdy & Crumhorn
+- **Thematic Ties:** The pristine, synchronized, and highly modern sheen of K-Pop completely invaded by the buzzing, droning, and decidedly unpolished sounds of 12th-century European peasant instruments.
+
+### Title: The Mississippi Koto
+
+**Service:** Minimax Audio
+
+**Prompt:** A raw, mournful 1930s Delta Blues track with a slow, stomping foot-tap rhythm and a gravelly, heartbroken vocal performance. The traditional acoustic slide guitar is entirely replaced by a classical Japanese Koto. The intricate string plucking bends and slides across the pentatonic scales, mimicking the weeping of a blues guitar but with an unmistakable eastern twang.
+
+**Lyrics:**
+(Verse 1 - Gritty, heartbroken blues vocal)
+Well, I woke up this morning, my baby was gone...
+(Koto plucks a slow, weeping blues turnaround with deep pitch bends)
+Yeah, I woke up this morning, my sweet baby was gone...
+(A slow, steady foot stomp keeps the rhythm)
+
+(Chorus)
+(Koto strikes a series of fast, sliding notes mimicking a bottleneck slide)
+Got the Mississippi mud on my kimono shoes!
+Playing the koto with the Delta blues!
+From the cherry blossoms down to the muddy river bed!
+Got the ancient sorrow inside my head!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1930s Delta Blues / Japanese Koto
+- **Thematic Ties:** The raw, earthy, and profoundly sorrowful storytelling of the American South played through the delicate, highly formalized, and plucked timbre of a traditional Japanese court instrument.
+
+### Title: Saturday Night Highlands
+
+**Service:** Minimax Audio
+
+**Prompt:** A glittering, fast-paced 1970s Disco track featuring a relentless four-on-the-floor beat, sweeping string arrangements, and a grooving electric bassline. Suddenly, the elegant strings and falsetto vocals are overpowered by the incredibly loud, continuous drone of Scottish Great Highland Bagpipes, blasting out a triumphant, syncopated disco melody while dancers hustle beneath a mirror ball.
+
+**Lyrics:**
+(Verse 1 - Smooth disco falsetto)
+We're burning up the floor, feeling the heat!
+(Bagpipes erupt with a massive, wailing disco riff)
+Got the platform shoes, moving to the beat!
+(Sweeping 70s strings try to harmonize with the bagpipe drone)
+
+(Chorus)
+(Relentless 4/4 disco beat with a booming bassline)
+Do the Highland Hustle! Spin under the light!
+Bagpipes grooving on a Saturday night!
+Tartan bell-bottoms, pointing to the sky!
+The loudest disco inferno, making you fly!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Disco / Scottish Bagpipes
+- **Thematic Ties:** The glamorous, highly produced, and string-laden elegance of a 1970s discotheque completely blown away by the aggressively loud, reedy, and martial blasts of the Scottish highlands.
+
+### Title: A Wall of Guitarrón
+
+**Service:** Minimax Audio
+
+**Prompt:** An incredibly loud, atmospheric 1990s Shoegaze track characterized by a massive "wall of sound" and buried, ethereal vocals. However, the layers of distorted electric guitars and fuzz pedals are replaced by a massive ensemble of traditional Mexican Mariachi instruments. Dozens of vihuelas, violins, and a booming guitarrón are strummed so ferociously they create a droning, acoustic wall of noise, pierced by melancholic trumpet lines.
+
+**Lyrics:**
+(Verse 1 - Ethereal, whispered, barely audible shoegaze vocals)
+Looking at my shoes... in the desert sand...
+(A deafening, droning wave of frantically strummed vihuelas)
+Losing myself... in the mariachi band...
+(A slow, sad trumpet line cuts through the acoustic fuzz)
+
+(Chorus)
+(The acoustic wall of sound swells to a massive volume)
+Fuzz pedal tears in the midday sun...
+The guitarrón drone has only just begun...
+Drowning in the horns, staring at the ground...
+A beautiful, sad, acoustic wall of sound...
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Shoegaze / Mexican Mariachi
+- **Thematic Ties:** The introverted, effects-heavy, and completely overwhelming volume of 90s shoegaze recreated entirely acoustically using the bright, traditionally extroverted instruments of a Mariachi band.
