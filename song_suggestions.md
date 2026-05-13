@@ -2121,3 +2121,99 @@ The Mexican Muezzin has only just begun!
 **Additional Notes:**
 - **Combo/Fusion:** Traditional Mexican Mariachi / Islamic Adhan
 - **Thematic Ties:** The earthy, festive, and passionately human celebration of Mexican folk music fused seamlessly with the deeply spiritual, resonant, and profoundly vocal devotion of an Islamic prayer call.
+
+### Title: The Alpine Garage
+
+**Service:** Minimax Audio
+
+**Prompt:** A bouncy, syncopated 1990s UK Garage track with shuffling hi-hats and a heavy sub-bass. However, the smooth R&B vocal chops and synthesizer melodies are entirely replaced by the massive, booming, resonant blasts of a giant Swiss Alphorn echoing across the dancefloor, punctuated by rapid cowbell strikes perfectly in time with the garage rhythm.
+
+**Lyrics:**
+(Verse 1 - Echoing vocal chops style, but played by the Alphorn)
+(Heavy sub-bass drops alongside a shuffled 2-step beat)
+(Alphorn blasts a massive, syncopated, bouncing melody)
+(Cowbells clatter frantically to the rhythm)
+
+(Chorus)
+(MC shouts over the beat)
+Rewind! Massive Alphorn inside the ride!
+Bouncing from the club to the mountainside!
+(Alphorn drops an impossibly deep, resonant bass note)
+Stepping in the rave with the edelweiss!
+The heaviest echoes of the alpine ice!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s UK Garage / Swiss Alphorn & Cowbells
+- **Thematic Ties:** The slick, urban, and heavily syncopated underground dance club energy of 90s London completely overwhelmed by the massive, resonant, and deeply rural echoes of the Swiss Alps.
+
+### Title: Tropical Frostbite
+
+**Service:** Minimax Audio
+
+**Prompt:** A fiercely aggressive Norwegian Black Metal track featuring relentless blast beats and guttural, shrieking vocals. However, the heavily distorted, tremolo-picked guitars are entirely replaced by a bright, cheerful Caribbean Steel Pan ensemble, furiously hammering out dark, evil minor-key melodies at breakneck speeds while maintaining their distinctly sunny, metallic timbre over the chaotic drums.
+
+**Lyrics:**
+(Verse 1 - Demonic Black Metal Shriek)
+THE FJORD FREEZES OVER IN THE DEAD OF NIGHT!
+(Steel drums hammer a lightning-fast, minor-key tremolo run)
+THE CARIBBEAN DARKNESS CONSUMES THE LIGHT!
+(Blast beats roar under the cheerful metallic pinging)
+
+(Chorus)
+(Guttural roaring with upbeat island instrumentation playing dark melodies)
+STEEL DRUMS OF DOOM! SUNSHINE IN HELL!
+THE DARKEST LITTLE CALYPSO THAT EVER RANG THE BELL!
+DRINKING FROM THE COCONUT, SACRIFICE THE SOUL!
+THE TROPICAL ABYSS TAKING COMPLETE CONTROL!
+
+**Additional Notes:**
+- **Combo/Fusion:** Norwegian Black Metal / Caribbean Steel Pan
+- **Thematic Ties:** The grim, terrifying, and freezing atmosphere of Norwegian black metal completely subverted by the bright, metallic, and incredibly cheerful sounds of a Caribbean beach party.
+
+### Title: Parisian Drill
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, menacing modern UK Drill hip-hop track featuring sliding 808 sub-basses and frantic, skittering triplet hi-hats. However, the eerie piano loops and dark synthesizer pads are entirely replaced by a highly romantic, swaying French accordion playing traditional musette waltzes, contrasting violently with the aggressive, fast-paced drill rapping.
+
+**Lyrics:**
+(Verse 1 - Aggressive, fast-paced UK Drill rap flow)
+(French accordion plays a beautiful, melancholic Parisian waltz)
+Yeah, stepping on the cobbles by the Eiffel Tower...
+(Massive, sliding 808 bass drops under the accordion)
+Baguette in the coat, moving with the power!
+
+(Chorus)
+(The skittering hi-hats go into overdrive while the accordion plays a fast flourish)
+Drill in Paris! Sliding on the Seine!
+The accordion crying out, bringing all the pain!
+Café au lait, but the streets are cold!
+The most romantic drill story ever told!
+
+**Additional Notes:**
+- **Combo/Fusion:** UK Drill Hip-Hop / Traditional French Musette Accordion
+- **Thematic Ties:** The dark, aggressive, and menacing street energy of modern drill rap violently contrasted by the impossibly romantic, delicate, and nostalgic atmosphere of a Parisian café.
+
+### Title: Edo Funk
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, grooving 1970s Psychedelic Funk track with a deep, slapping bassline, wah-wah pedals, and tight brass stabs. The lead electric guitar and swirling Hammond organ are entirely replaced by a twangy, percussive Japanese Shamisen, furiously plucking out funky, syncopated pentatonic riffs and bending notes over the psychedelic rhythm section.
+
+**Lyrics:**
+(Verse 1 - Smooth, soulful funk falsetto)
+(Shamisen plucks a rapid, syncopated funk riff with a wah-wah effect)
+Walking through Tokyo, platform shoes so high...
+(Slapping bassline locks in with the Shamisen)
+Neon cherry blossoms floating in the sky...
+
+(Chorus)
+(Tight brass section blasts a funky stab, answered immediately by the Shamisen)
+Get down, shogun! Groove to the east!
+The psychedelic ronin is bringing the feast!
+Pluck that silk string, let the funk flow free!
+The funkiest samurai that you ever did see!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Psychedelic Funk / Japanese Shamisen
+- **Thematic Ties:** The deeply syncopated, flamboyant, and heavily effected groove of 70s psychedelic funk effortlessly translated into the percussive, twangy, and historic strings of the Edo period.
