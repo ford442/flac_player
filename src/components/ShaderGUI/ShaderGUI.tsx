@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { WebGPUVisualizer } from '../../webgpuVisualizer';
+import { CanvasFallbackVisualizer } from '../../visuals/webglFallback';
 import { PlaylistTrack } from '../../audioLoader';
 import { Chassis } from './Chassis';
 import { TopScreen } from './TopScreen';
@@ -51,8 +52,10 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const visualizerRef = useRef<WebGPUVisualizer | null>(null);
+  const fallbackRef = useRef<CanvasFallbackVisualizer | null>(null);
   const animFrameRef = useRef<number>(0);
   const [webGPUSupported, setWebGPUSupported] = useState(true);
+  const [fallbackMessage, setFallbackMessage] = useState('');
 
   // Knob values stored in refs to avoid re-render on drag
   const rsycrbRef = useRef(0.0);
@@ -68,7 +71,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const { beatPhaseRef, spectrumRef, processFrame } = useBeatDetection();
   const timeRef = useRef(0);
 
-  // Initialize WebGPU visualizer
+  // Initialize WebGPU visualizer (with fallback)
   useEffect(() => {
     let cancelled = false;
 
@@ -78,15 +81,35 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       const visualizer = new WebGPUVisualizer(canvasRef.current);
       visualizerRef.current = visualizer;
 
-      const success = await visualizer.initialize(analyser);
-      if (cancelled) {
+      try {
+        await visualizer.initialize(analyser);
+        if (cancelled) {
+          visualizer.destroy();
+          return;
+        }
+        setWebGPUSupported(true);
+        setFallbackMessage('');
+      } catch (err: unknown) {
         visualizer.destroy();
-        return;
-      }
+        visualizerRef.current = null;
 
-      if (!success) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes('webgpu-unsupported')) {
+          setFallbackMessage('WebGPU not supported in this browser. Using Canvas2D fallback.');
+        } else if (msg.includes('webgpu-no-adapter')) {
+          setFallbackMessage('No GPU adapter found. Using Canvas2D fallback.');
+        } else if (msg.includes('webgpu-shader-compile-error')) {
+          setFallbackMessage('WebGPU shader error. Using Canvas2D fallback.');
+        } else {
+          setFallbackMessage('WebGPU initialization failed. Using Canvas2D fallback.');
+        }
+        console.warn('[ShaderGUI] WebGPU failed:', msg);
         setWebGPUSupported(false);
-        return;
+
+        // Initialize Canvas2D fallback
+        const fallback = new CanvasFallbackVisualizer(canvasRef.current);
+        fallback.initialize(analyser);
+        fallbackRef.current = fallback;
       }
     };
 
@@ -94,10 +117,10 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
 
     return () => {
       cancelled = true;
-      if (visualizerRef.current) {
-        visualizerRef.current.destroy();
-        visualizerRef.current = null;
-      }
+      visualizerRef.current?.destroy();
+      visualizerRef.current = null;
+      fallbackRef.current?.destroy();
+      fallbackRef.current = null;
     };
   }, [analyser]);
 
@@ -109,7 +132,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       // Process audio data
       processFrame(analyser);
 
-      // Capture full frequency data for the waveform display
+      // Update WebGPU visualizer
       const vis = visualizerRef.current;
       if (vis && webGPUSupported && analyser) {
         const freqData = new Uint8Array(analyser.frequencyBinCount);
@@ -117,7 +140,6 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         vis.setAudioData(freqData);
       }
 
-      // Update visualizer
       if (vis && webGPUSupported) {
         if (visualizerMode === '3D') {
           vis.render();
@@ -151,6 +173,12 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
 
           vis.renderGUI();
         }
+      }
+
+      // Render Canvas2D fallback when WebGPU is unavailable
+      const fallback = fallbackRef.current;
+      if (!webGPUSupported && fallback) {
+        fallback.render();
       }
 
       animFrameRef.current = requestAnimationFrame(loop);
@@ -204,6 +232,11 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
           Open Advanced Library
         </button>
       )}
+      {fallbackMessage && (
+        <div className="absolute top-4 left-4 px-3 py-1.5 bg-yellow-500/20 text-yellow-200 rounded text-xs max-w-xs z-50 border border-yellow-500/30">
+          {fallbackMessage}
+        </div>
+      )}
       <Chassis>
       <div className="shader-gui-layout">
         <div className="shader-gui-top-left">
@@ -212,7 +245,10 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             artist={currentTrack?.author}
             title={currentTrack?.title || currentTrack?.name}
             webGPUSupported={webGPUSupported}
-            onCanvasResize={() => visualizerRef.current?.resize()}
+            onCanvasResize={() => {
+              visualizerRef.current?.resize();
+              fallbackRef.current?.resize();
+            }}
             onCanvasDoubleClick={handleToggle3D}
             isLoading={isLoading}
           />

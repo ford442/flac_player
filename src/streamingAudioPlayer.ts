@@ -39,7 +39,7 @@ export class StreamingAudioPlayer {
     this.audioElement.addEventListener('loadedmetadata', () => this.notifyStateChange());
     this.audioElement.addEventListener('ended', () => {
       this.notifyStateChange();
-      try { this.onEndedCallback?.(); } catch {}
+      try { this.onEndedCallback?.(); } catch { /* noop */ }
     });
   }
 

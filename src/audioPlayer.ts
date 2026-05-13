@@ -52,10 +52,12 @@ export class AudioPlayer {
       // Stop current playback
       this.stop();
 
-      // Decode the audio
+      // Decode the audio off the main thread via WASM worker
       const decoder = new FlacDecoder();
+      await decoder.init();
       const decodedData = await decoder.decode(arrayBuffer);
-      this.audioBuffer = await decoder.createAudioBuffer(decodedData);
+      this.audioBuffer = decoder.createAudioBuffer(this.audioContext, decodedData);
+      decoder.destroy();
 
       this.pausedAt = 0;
       this.notifyStateChange();

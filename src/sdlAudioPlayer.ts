@@ -152,24 +152,18 @@ export class SdlAudioPlayer {
     try {
       console.log('[SdlAudioPlayer] Decoding audio...');
       const decoder = new FlacDecoder();
+      await decoder.init();
       const result = await decoder.decode(arrayBuffer);
+      decoder.destroy();
       console.log('[SdlAudioPlayer] Decoded. Channels:', result.channels, 'SampleRate:', result.sampleRate, 'Duration:', result.duration);
 
       this.duration = result.duration;
 
-      // Interleave samples
+      // Use pre-interleaved buffer from worker
       const channels = result.channels;
-      const length = result.samples[0].length;
-      const interleavedLength = length * channels;
-      console.log('[SdlAudioPlayer] Interleaving samples. Total samples:', interleavedLength);
-
-      const interleaved = new Float32Array(interleavedLength);
-
-      for (let i = 0; i < length; i++) {
-        for (let ch = 0; ch < channels; ch++) {
-          interleaved[i * channels + ch] = result.samples[ch][i];
-        }
-      }
+      const interleaved = result.interleavedBuffer;
+      const interleavedLength = interleaved.length;
+      console.log('[SdlAudioPlayer] Interleaved samples ready. Total samples:', interleavedLength);
 
       // Allocate memory in WASM (in bytes) and write safely to the current WASM buffer
       // Let C++ allocate the memory and give us a pointer

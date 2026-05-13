@@ -5,7 +5,7 @@ interface TopScreenProps {
   canvasRef: React.RefObject<HTMLCanvasElement | null>;
   artist?: string;
   title?: string;
-  webGPUSupported: boolean;
+  webGPUSupported?: boolean;
   onCanvasResize?: () => void;
   onCanvasDoubleClick?: () => void;
   isLoading?: boolean;
@@ -15,7 +15,6 @@ export const TopScreen: React.FC<TopScreenProps> = ({
   canvasRef,
   artist,
   title,
-  webGPUSupported,
   onCanvasResize,
   onCanvasDoubleClick,
   isLoading = false,
@@ -58,35 +57,17 @@ export const TopScreen: React.FC<TopScreenProps> = ({
 
   return (
     <div ref={containerRef} className="shader-screen top-screen">
-      {webGPUSupported ? (
-        <canvas
-          ref={canvasRef}
-          className="top-screen-canvas"
-          width={640}
-          height={160}
-          onDoubleClick={onCanvasDoubleClick}
-        />
-      ) : (
-        <div
-          className="top-screen-canvas"
-          style={{
-            background: 'linear-gradient(180deg, #1A0A2E 0%, #2D1B4E 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <div
-            style={{
-              width: '80%',
-              height: '60%',
-              background: 'repeating-linear-gradient(90deg, transparent, transparent 8px, rgba(192,132,252,0.3) 8px, rgba(192,132,252,0.3) 10px)',
-              borderRadius: 4,
-              animation: 'pulse 2s ease-in-out infinite',
-            }}
-          />
-        </div>
-      )}
+      {/* Canvas is always rendered — either WebGPU or Canvas2D fallback draws into it */}
+      <canvas
+        ref={canvasRef}
+        className="top-screen-canvas"
+        width={640}
+        height={160}
+        onDoubleClick={onCanvasDoubleClick}
+        style={{
+          background: 'linear-gradient(180deg, #0A0A1A 0%, #1A1A2E 100%)',
+        }}
+      />
       <div className="artist-title-overlay">
         {isLoading ? (
           <div className="loading-text">{displayText}</div>

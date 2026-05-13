@@ -23,6 +23,8 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { LibraryView } from './LibraryView';
 import { QueuePanel } from './QueuePanel';
 import { ShaderGUI } from './ShaderGUI/ShaderGUI';
+import { MetadataPanel } from './MetadataPanel';
+import { FileDropZone } from './FileDropZone';
 import './Player.css';
 
 // =============================================================================
@@ -128,9 +130,11 @@ export const Player: React.FC = () => {
   const [showHtmlFallback, setShowHtmlFallback] = useState(false);
   const [playlists, setPlaylists] = useState<CloudPlaylist[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
+  const [currentFile, setCurrentFile] = useState<File | undefined>(undefined);
 
   const playerRef = useRef<AnyPlayer | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const pendingFilesRef = useRef<File[]>([]);
   const loader = useMemo(() => new AudioLoader(), []);
 
   type EndCallbackPlayer = { setOnEndedCallback?: (cb?: () => void) => void };
@@ -205,11 +209,11 @@ export const Player: React.FC = () => {
   }, [loader, minRating, selectedTags, untaggedOnly, searchQuery, sortBy, allTags, stats, addToast]);
 
   const loadTags = useCallback(async () => {
-    try { setAllTags(await loader.fetchTags()); } catch {}
+    try { setAllTags(await loader.fetchTags()); } catch { /* no-op */ }
   }, [loader]);
 
   const loadStats = useCallback(async () => {
-    try { setStats(await loader.fetchStats()); } catch {}
+    try { setStats(await loader.fetchStats()); } catch { /* no-op */ }
   }, [loader]);
 
   useEffect(() => {
@@ -260,7 +264,7 @@ export const Player: React.FC = () => {
             window.history.replaceState({}, '', window.location.pathname);
             return;
           }
-        } catch {}
+        } catch { /* no-op */ }
       }
 
       const saved = loadQueueFromStorage();
@@ -278,6 +282,74 @@ export const Player: React.FC = () => {
     if (isSharedPlaylist) return;
     saveQueueToStorage({ tracks: queue, currentIndex: queueCurrentIndex, shuffle, repeat: repeatMode });
   }, [isSharedPlaylist, queue, queueCurrentIndex, shuffle, repeatMode]);
+
+  // =============================================================================
+  // Local File Loading
+  // =============================================================================
+
+  const loadLocalFile = useCallback(async (file: File) => {
+    if (!playerRef.current) return;
+    setPlayerState(prev => ({ ...prev, isLoading: true }));
+    setError('');
+    setCurrentFile(file);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+
+      // Extract metadata
+      let track: PlaylistTrack;
+      try {
+        const { parseBlob } = await import('music-metadata-browser');
+        const meta = await parseBlob(file);
+        track = {
+          id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          name: file.name,
+          title: (meta.common.title as string) || file.name.replace(/\.[^/.]+$/, ''),
+          author: (meta.common.artist as string) || 'Unknown Artist',
+          url: URL.createObjectURL(file),
+          duration: (meta.format.duration as number) || 0,
+        };
+      } catch {
+        track = {
+          id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          name: file.name,
+          title: file.name.replace(/\.[^/.]+$/, ''),
+          author: 'Unknown Artist',
+          url: URL.createObjectURL(file),
+          duration: 0,
+        };
+      }
+
+      setCurrentTrack(track);
+
+      if (playerRef.current instanceof StreamingAudioPlayer) {
+        setError('Streaming mode does not support local files. Switch to a buffered audio mode.');
+        return;
+      }
+
+      await (playerRef.current as AudioPlayer).loadAudio(arrayBuffer);
+      playerRef.current.play();
+      addToast(`Playing: ${track.title || track.name}`, 'info');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to load file';
+      setError(message);
+      addToast(`Failed to load file: ${message}`, 'error');
+    } finally {
+      setPlayerState(prev => ({ ...prev, isLoading: false }));
+    }
+  }, [addToast]);
+
+  const handleLocalFiles = useCallback((files: File[]) => {
+    if (outputMode === 'streaming') {
+      pendingFilesRef.current = files;
+      setOutputMode('worklet');
+      addToast('Switched to buffered mode for local files', 'info');
+      return;
+    }
+    files.forEach((file, i) => {
+      setTimeout(() => loadLocalFile(file), i * 100);
+    });
+  }, [outputMode, loadLocalFile, addToast]);
 
   // =============================================================================
   // Player Initialization
@@ -308,11 +380,22 @@ export const Player: React.FC = () => {
     (player as EndCallbackPlayer).setOnEndedCallback?.(() => handleAutoAdvance());
     playerRef.current = player;
 
+    // Load pending local files after mode switch
+    if (pendingFilesRef.current.length > 0) {
+      const files = pendingFilesRef.current;
+      pendingFilesRef.current = [];
+      setTimeout(() => {
+        files.forEach((file, i) => {
+          setTimeout(() => loadLocalFile(file), i * 100);
+        });
+      }, 0);
+    }
+
     return () => {
       (player as EndCallbackPlayer).setOnEndedCallback?.(undefined);
       player.destroy();
     };
-  }, [outputMode]);
+  }, [outputMode, loadLocalFile]);
 
   // =============================================================================
   // Playback Controls
@@ -525,6 +608,39 @@ export const Player: React.FC = () => {
     isEnabled: true
   });
 
+  // Window-level drag-and-drop for ShaderGUI mode
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+  useEffect(() => {
+    const onDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes('Files')) {
+        e.preventDefault();
+        setIsDraggingFile(true);
+      }
+    };
+    const onDragLeave = (e: DragEvent) => {
+      if (e.relatedTarget === null) setIsDraggingFile(false);
+    };
+    const onDrop = (e: DragEvent) => {
+      setIsDraggingFile(false);
+      if (!e.dataTransfer) return;
+      const files = Array.from(e.dataTransfer.files).filter(
+        f => f.name.endsWith('.flac') || f.name.endsWith('.wav') || f.type.includes('audio')
+      );
+      if (files.length > 0) {
+        e.preventDefault();
+        handleLocalFiles(files);
+      }
+    };
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('dragleave', onDragLeave);
+    window.addEventListener('drop', onDrop);
+    return () => {
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('dragleave', onDragLeave);
+      window.removeEventListener('drop', onDrop);
+    };
+  }, [handleLocalFiles]);
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
@@ -544,6 +660,13 @@ export const Player: React.FC = () => {
             <h1 className="text-xl md:text-2xl font-bold text-white/90 bg-black/50 backdrop-blur px-6 py-2 rounded-full border border-white/10 pointer-events-auto">
               {sharedPlaylistTitle}
             </h1>
+          </div>
+        )}
+        {isDraggingFile && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+            <div className="border-4 border-dashed border-purple-400 rounded-2xl p-12 text-center">
+              <p className="text-2xl text-purple-300 font-bold">Drop FLAC/WAV files to play</p>
+            </div>
           </div>
         )}
         <ShaderGUI
@@ -686,6 +809,11 @@ export const Player: React.FC = () => {
               ))}
             </div>
           </div>
+
+          <div className="p-4 border-t border-white/10">
+            <label className="text-xs text-gray-500 uppercase block mb-2">Local Files</label>
+            <FileDropZone onFiles={handleLocalFiles} />
+          </div>
         </aside>
 
         {/* Main Area */}
@@ -790,15 +918,10 @@ export const Player: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="w-1/3 flex items-center gap-3">
             {currentTrack && (
-              <>
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-blue-600 rounded flex items-center justify-center">
-                  {playerState.isLoading ? <div className="spinner spinner-lg" /> : '🎵'}
-                </div>
-                <div className="min-w-0">
-                  <div className="font-medium truncate">{currentTrack.title || currentTrack.name}</div>
-                  <div className="text-sm text-gray-400 truncate">{playerState.isLoading ? 'Loading…' : currentTrack.author}</div>
-                </div>
-              </>
+              <MetadataPanel
+                file={currentFile}
+                audioUrl={currentTrack.url}
+              />
             )}
           </div>
 
@@ -806,32 +929,38 @@ export const Player: React.FC = () => {
             <div className="flex items-center gap-4 mb-2">
               <button onClick={() => { if (queue.length > 0 && queueCurrentIndex > 0) playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1); }}
                 className="text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                disabled={queueCurrentIndex <= 0 || playerState.isLoading}>⏮</button>
+                disabled={queueCurrentIndex <= 0 || playerState.isLoading}
+                aria-label="Previous track">⏮</button>
               <button onClick={togglePlayback} disabled={playerState.isLoading}
-                className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center text-xl hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed">
+                className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center text-xl hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                aria-label={playerState.isPlaying ? 'Pause' : 'Play'}>
                 {playerState.isLoading ? <div className="spinner" style={{ borderTopColor: '#000' }} /> : playerState.isPlaying ? '⏸' : '▶'}
               </button>
               <button onClick={() => { if (queue.length > 0 && queueCurrentIndex < queue.length - 1) playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1); }}
                 className="text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                disabled={queueCurrentIndex >= queue.length - 1 || playerState.isLoading}>⏭</button>
+                disabled={queueCurrentIndex >= queue.length - 1 || playerState.isLoading}
+                aria-label="Next track">⏭</button>
             </div>
             <div className="w-full max-w-md flex items-center gap-3">
-              <span className="text-xs text-gray-400 w-10 text-right">{formatTime(playerState.currentTime)}</span>
+              <span className="text-xs text-gray-400 w-10 text-right" aria-label="Elapsed time">{formatTime(playerState.currentTime)}</span>
               <input type="range" min={0} max={playerState.duration || 0} value={playerState.currentTime}
                 onChange={(e) => playerRef.current?.seek(parseFloat(e.target.value))}
-                className="flex-1 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer" />
-              <span className="text-xs text-gray-400 w-10">{formatTime(playerState.duration)}</span>
+                className="flex-1 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer"
+                aria-label="Seek position" />
+              <span className="text-xs text-gray-400 w-10" aria-label="Remaining time">-{formatTime(Math.max(0, playerState.duration - playerState.currentTime))}</span>
             </div>
           </div>
 
           <div className="w-1/3 flex items-center justify-end gap-4">
-            <button onClick={() => setShuffle(s => !s)} className={`text-sm ${shuffle ? 'text-purple-400' : 'text-gray-400'}`} title="Shuffle">🔀</button>
+            <button onClick={() => setShuffle(s => !s)} className={`text-sm ${shuffle ? 'text-purple-400' : 'text-gray-400'}`} title="Shuffle" aria-label="Toggle shuffle" aria-pressed={shuffle}>🔀</button>
             <button onClick={() => setRepeatMode(m => m === 'off' ? 'all' : m === 'all' ? 'one' : 'off')}
-              className={`text-sm ${repeatMode !== 'off' ? 'text-purple-400' : 'text-gray-400'}`} title={`Repeat: ${repeatMode}`}>
+              className={`text-sm ${repeatMode !== 'off' ? 'text-purple-400' : 'text-gray-400'}`} title={`Repeat: ${repeatMode}`}
+              aria-label={`Repeat mode: ${repeatMode}`} aria-pressed={repeatMode !== 'off'}>
               {repeatMode === 'one' ? '🔂' : '🔁'}
             </button>
             <select value={outputMode} onChange={(e) => setOutputMode(e.target.value as AudioOutputMode)}
-              className="px-3 py-1 bg-white/10 rounded text-sm">
+              className="px-3 py-1 bg-white/10 rounded text-sm"
+              aria-label="Audio output mode">
               <option value="streaming">Streaming (default)</option>
               <option value="web-audio">Web Audio (buffered)</option>
               <option value="worklet">AudioWorklet</option>

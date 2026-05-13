@@ -76,6 +76,13 @@ export class WebGPUVisualizer {
   private lastMousePos = { x: 0, y: 0 };
 
   private onTogglePlay: (() => void) | null = null;
+  private onDeviceLostCallback?: (reason: string) => void;
+  private destroyed = false;
+
+  /** Notify the app that the visualizer has fallen back (e.g. device lost). */
+  private notifyFallback(message: string): void {
+    window.dispatchEvent(new CustomEvent('visualizer-fallback', { detail: message }));
+  }
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -90,25 +97,34 @@ export class WebGPUVisualizer {
       this.onTogglePlay = cb;
   }
 
+  setOnDeviceLost(cb: (reason: string) => void) {
+    this.onDeviceLostCallback = cb;
+  }
+
   async initialize(analyser: AnalyserNode): Promise<boolean> {
     if (!navigator.gpu) {
-      console.warn('WebGPU not supported in this browser');
-      return false;
+      throw new Error('webgpu-unsupported');
     }
 
     try {
       const adapter = await navigator.gpu.requestAdapter();
       if (!adapter) {
-        console.error('No GPU adapter found');
-        return false;
+        throw new Error('webgpu-no-adapter');
       }
 
       this.device = await adapter.requestDevice();
+
+      // Device loss handler
+      this.device.lost.then((info) => {
+        console.warn('WebGPU device lost:', info.message, 'reason:', info.reason);
+        this.device = null;
+        this.onDeviceLostCallback?.(info.reason);
+      });
+
       this.context = this.canvas.getContext('webgpu') as unknown as GPUCanvasContext;
-      
+
       if (!this.context) {
-        console.error('Could not get WebGPU context');
-        return false;
+        throw new Error('webgpu-no-context');
       }
 
       const format = navigator.gpu.getPreferredCanvasFormat();
@@ -128,7 +144,36 @@ export class WebGPUVisualizer {
       return true;
     } catch (error) {
       console.error('Error initializing WebGPU:', error);
-      return false;
+      this.cleanupPartial();
+      throw error;
+    }
+  }
+
+  private cleanupPartial() {
+    // Destroy any resources that were successfully created before the failure
+    if (this.waveformUniformBuffer) { this.waveformUniformBuffer.destroy(); this.waveformUniformBuffer = null; }
+    if (this.guiUniformBuffer) { this.guiUniformBuffer.destroy(); this.guiUniformBuffer = null; }
+    if (this.guiAudioBuffer) { this.guiAudioBuffer.destroy(); this.guiAudioBuffer = null; }
+    if (this.cubeUniformBuffer) { this.cubeUniformBuffer.destroy(); this.cubeUniformBuffer = null; }
+    if (this.cubeVertexBuffer) { this.cubeVertexBuffer.destroy(); this.cubeVertexBuffer = null; }
+    if (this.cubeIndexBuffer) { this.cubeIndexBuffer.destroy(); this.cubeIndexBuffer = null; }
+    if (this.renderTargetTexture) { this.renderTargetTexture.destroy(); this.renderTargetTexture = null; }
+    if (this.depthTexture) { this.depthTexture.destroy(); this.depthTexture = null; }
+    if (this.device) {
+      this.device.destroy();
+      this.device = null;
+    }
+    this.context = null;
+  }
+
+  private async checkShaderCompilation(module: GPUShaderModule, label: string) {
+    const info = await module.getCompilationInfo();
+    for (const msg of info.messages) {
+      const log = msg.type === 'error' ? console.error : console.warn;
+      log(`[WebGPU Shader ${label}] ${msg.type}: ${msg.message} (line ${msg.lineNum}, col ${msg.linePos})`);
+    }
+    if (info.messages.some(m => m.type === 'error')) {
+      throw new Error(`webgpu-shader-compile-error: ${label}`);
     }
   }
 
@@ -170,26 +215,24 @@ export class WebGPUVisualizer {
         let uv = input.uv;
         let time = uniforms.time;
         let audio = uniforms.audioLevel;
-        
+
         let aspect = uniforms.resolution.x / uniforms.resolution.y;
         var p = (uv - 0.5) * 2.0;
-        
-        // Circular waveform for 3D screen? Or standard linear?
-        // Let's keep the linear wave.
+
         let wave = sin(p.x * 3.0 + time + audio * 3.0) * 0.5 * audio;
         let dist = abs(p.y - wave);
         let glow = 0.05 / (dist + 0.01);
-        
+
         let color = vec3<f32>(0.2, 0.5, 1.0) * glow;
-        
-        // Add a border/grid effect to look like a screen
+
         let grid = step(0.95, fract(uv.x * 20.0)) + step(0.95, fract(uv.y * 20.0));
         let screenColor = mix(color, vec3<f32>(0.0, 0.2, 0.4), grid * 0.1);
-        
+
         return vec4<f32>(screenColor, 1.0);
       }
     `;
     const module = this.device.createShaderModule({ code: shaderCode });
+    await this.checkShaderCompilation(module, 'waveform');
 
     this.waveformBindGroup = this.device.createBindGroup({
         layout: this.device.createBindGroupLayout({
@@ -226,6 +269,7 @@ export class WebGPUVisualizer {
     });
 
     const guiModule = this.device.createShaderModule({ code: waveformWGSL });
+    await this.checkShaderCompilation(guiModule, 'gui');
 
     const guiBindGroupLayout = this.device.createBindGroupLayout({
       entries: [
@@ -355,18 +399,11 @@ struct Uniforms {
 
         @fragment
         fn fragment_main(@location(0) uv : vec2<f32>, @location(1) vertexPos : vec3<f32>) -> @location(0) vec4<f32> {
-            // FIX: Sample the texture unconditionally outside the if statement
-            // This satisfies the "uniform control flow" requirement for textureSample
             let texColor = textureSample(myTexture, mySampler, uv);
 
             var color: vec4<f32>;
 
-            // Check if it's the front face (Z approx 1.0)
             if (vertexPos.z > 0.9) {
-                 // Front Face: Screen
-                 
-                 // Simple Play Icon logic (circle triangle)
-                 // center 0.5, 0.2 (bottom)
                  let d = distance(uv, vec2<f32>(0.5, 0.2));
                  var buttonColor = vec4<f32>(0.0);
                  if (d < 0.1) {
@@ -375,10 +412,7 @@ struct Uniforms {
 
                  color = mix(texColor, buttonColor, 0.3);
             } else {
-                 // Case (Sides/Back)
                  color = vec4<f32>(0.1, 0.1, 0.1, 1.0);
-                 
-                 // Add some edge highlighting
                  let edge = step(0.95, abs(uv.x)) + step(0.95, abs(uv.y));
                  color = color + vec4<f32>(edge * 0.2);
             }
@@ -388,6 +422,7 @@ struct Uniforms {
       `;
 
       const cubeModule = this.device.createShaderModule({ code: cubeShader });
+      await this.checkShaderCompilation(cubeModule, 'cube');
 
       const cubeBindGroupLayout = this.device.createBindGroupLayout({
           entries: [
@@ -535,7 +570,6 @@ struct Uniforms {
       const projection = Mat4.perspective(Math.PI / 4, aspect, 0.1, 100.0);
 
       const radius = 5;
-      // Clamp X rotation to avoid flipping
       this.cameraRotation.x = Math.max(-Math.PI/2 + 0.1, Math.min(Math.PI/2 - 0.1, this.cameraRotation.x));
 
       const camX = Math.sin(this.cameraRotation.y) * radius * Math.cos(this.cameraRotation.x);
@@ -549,7 +583,7 @@ struct Uniforms {
       );
 
       const mvp = Mat4.multiply(projection, view);
-      this.device.queue.writeBuffer(this.cubeUniformBuffer!, 0, mvp.values as any);
+      this.device.queue.writeBuffer(this.cubeUniformBuffer!, 0, mvp.values.buffer as ArrayBuffer);
 
       if (!this.depthTexture ||
           this.depthTexture.width !== this.canvas.width ||
@@ -594,7 +628,6 @@ struct Uniforms {
   }
 
   setAudioData(data: Uint8Array | Float32Array): void {
-    // Downsample frequency data to 64 bins
     const targetBins = 64;
     const sourceBins = data.length;
     const binRatio = sourceBins / targetBins;
@@ -611,7 +644,6 @@ struct Uniforms {
 
   resize(): void {
     if (!this.device || !this.context) return;
-    // Re-configure context to pick up new canvas size
     const format = navigator.gpu.getPreferredCanvasFormat();
     this.context.configure({
       device: this.device,
@@ -631,7 +663,7 @@ struct Uniforms {
       u.spectrum0, u.spectrum1, u.spectrum2, u.spectrum3, u.spectrum4,
       u.modeNone, u.modeIR, u.isPlaying, u.playbackProgress,
       u.volume, u.colorShift,
-      0.0 // padding to match WGSL struct alignment (88 bytes)
+      0.0
     ]));
 
     this.device.queue.writeBuffer(this.guiAudioBuffer, 0, this.guiAudioData.buffer as ArrayBuffer);
@@ -670,15 +702,16 @@ struct Uniforms {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.stopAnimation();
-    if (this.waveformUniformBuffer) this.waveformUniformBuffer.destroy();
-    if (this.guiUniformBuffer) this.guiUniformBuffer.destroy();
-    if (this.guiAudioBuffer) this.guiAudioBuffer.destroy();
-    if (this.cubeUniformBuffer) this.cubeUniformBuffer.destroy();
-    if (this.cubeVertexBuffer) this.cubeVertexBuffer.destroy();
-    if (this.cubeIndexBuffer) this.cubeIndexBuffer.destroy();
-    if (this.renderTargetTexture) this.renderTargetTexture.destroy();
-    if (this.depthTexture) this.depthTexture.destroy();
+    if (this.waveformUniformBuffer) { this.waveformUniformBuffer.destroy(); this.waveformUniformBuffer = null; }
+    if (this.guiUniformBuffer) { this.guiUniformBuffer.destroy(); this.guiUniformBuffer = null; }
+    if (this.guiAudioBuffer) { this.guiAudioBuffer.destroy(); this.guiAudioBuffer = null; }
+    if (this.cubeUniformBuffer) { this.cubeUniformBuffer.destroy(); this.cubeUniformBuffer = null; }
+    if (this.cubeVertexBuffer) { this.cubeVertexBuffer.destroy(); this.cubeVertexBuffer = null; }
+    if (this.cubeIndexBuffer) { this.cubeIndexBuffer.destroy(); this.cubeIndexBuffer = null; }
+    if (this.renderTargetTexture) { this.renderTargetTexture.destroy(); this.renderTargetTexture = null; }
+    if (this.depthTexture) { this.depthTexture.destroy(); this.depthTexture = null; }
     if (this.device) {
       this.device.destroy();
       this.device = null;

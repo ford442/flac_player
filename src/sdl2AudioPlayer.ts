@@ -122,20 +122,14 @@ export class Sdl2AudioPlayer {
     try {
       console.log('[Sdl2AudioPlayer] Decoding...');
       const decoder = new FlacDecoder();
+      await decoder.init();
       const result = await decoder.decode(arrayBuffer);
+      decoder.destroy();
       this.duration = result.duration;
 
-      // Interleave
+      // Use pre-interleaved buffer from worker
       const channels = result.channels;
-      const length = result.samples[0].length;
-      const interleavedLength = length * channels;
-      const interleaved = new Float32Array(interleavedLength);
-
-      for (let i = 0; i < length; i++) {
-        for (let ch = 0; ch < channels; ch++) {
-          interleaved[i * channels + ch] = result.samples[ch][i];
-        }
-      }
+      const interleaved = result.interleavedBuffer;
 
       const byteLength = interleaved.byteLength;
       const ptr = (this.module as any)._malloc(byteLength);
@@ -151,10 +145,10 @@ export class Sdl2AudioPlayer {
 
       if (!memoryBuffer) throw new Error('No memory buffer');
 
-      const destination = new Float32Array(memoryBuffer, ptr, interleavedLength);
+      const destination = new Float32Array(memoryBuffer, ptr, interleaved.length);
       destination.set(interleaved);
 
-      this.module._set_audio_data(ptr, interleavedLength, channels, result.sampleRate);
+      this.module._set_audio_data(ptr, interleaved.length, channels, result.sampleRate);
 
       this.module._free(ptr);
       this.notifyStateChange();

@@ -1,0 +1,212 @@
+/* MetadataPanel.css — Dark/Light theme support */
+
+.metadata-panel {
+  border-radius: 16px;
+  padding: 1.25rem;
+  transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  border: 1px solid;
+}
+
+/* ─── Dark Theme ─── */
+.metadata-panel.dark {
+  background: rgba(15, 15, 20, 0.95);
+  border-color: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.metadata-panel.dark .now-playing-label {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.metadata-panel.dark .theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.metadata-panel.dark .album-art-placeholder {
+  background: linear-gradient(145deg, #1f1f25, #2a2a32);
+  color: #555;
+}
+
+.metadata-panel.dark .track-title {
+  color: #fff;
+}
+
+.metadata-panel.dark .track-artist {
+  color: #ccc;
+}
+
+.metadata-panel.dark .track-album {
+  color: #888;
+}
+
+.metadata-panel.dark .audio-specs span {
+  background: rgba(255, 255, 255, 0.08);
+  color: #aaa;
+}
+
+/* ─── Light Theme ─── */
+.metadata-panel.light {
+  background: #f8f9fa;
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #111;
+}
+
+.metadata-panel.light .now-playing-label {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+.metadata-panel.light .theme-toggle:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.metadata-panel.light .album-art-placeholder {
+  background: linear-gradient(145deg, #e8e8e8, #d0d0d0);
+  color: #888;
+}
+
+.metadata-panel.light .track-title {
+  color: #111;
+}
+
+.metadata-panel.light .track-artist {
+  color: #444;
+}
+
+.metadata-panel.light .track-album {
+  color: #666;
+}
+
+.metadata-panel.light .audio-specs span {
+  background: rgba(0, 0, 0, 0.08);
+  color: #555;
+}
+
+/* ─── Layout ─── */
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.now-playing-label {
+  font-size: 0.75rem;
+  letter-spacing: 1.5px;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.theme-toggle {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 999px;
+  transition: transform 0.2s ease, background 0.2s ease;
+  line-height: 1;
+}
+
+.theme-toggle:hover {
+  transform: scale(1.1);
+}
+
+.content {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+/* ─── Album Art ─── */
+.album-art-container {
+  flex-shrink: 0;
+  width: 148px;
+  height: 148px;
+  position: relative;
+}
+
+.album-art {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.album-art:hover {
+  transform: scale(1.04) rotate(1.5deg);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6);
+}
+
+.album-art-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.2rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+.album-art-placeholder p {
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.album-art-placeholder.loading {
+  animation: metadata-pulse 1.6s infinite ease-in-out;
+}
+
+@keyframes metadata-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* ─── Track Info ─── */
+.track-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.track-title {
+  margin: 0 0 0.35rem 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.3s ease;
+}
+
+.track-artist {
+  margin: 0 0 0.15rem 0;
+  font-size: 1.05rem;
+  opacity: 0.85;
+  transition: color 0.3s ease;
+}
+
+.track-album {
+  margin: 0;
+  font-size: 0.95rem;
+  opacity: 0.65;
+  transition: color 0.3s ease;
+}
+
+.audio-specs {
+  margin-top: 0.9rem;
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+}
+
+.audio-specs span {
+  padding: 2px 9px;
+  border-radius: 999px;
+  transition: background 0.3s ease, color 0.3s ease;
+}

@@ -9,9 +9,18 @@
     "prebuild": "npm run build:wasm",
     "build": "webpack --mode production",
     "postbuild": "test -f dist/sdl-audio.js || test -f dist/public/sdl-audio.js && test -f dist/sdl-audio.wasm || test -f dist/public/sdl-audio.wasm",
-    "lint": "eslint src --ext .js,.jsx,.ts,.tsx"
+    "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
+    "test": "npm run test:decoder && npm run test:e2e",
+    "test:decoder": "node tests/decoder.test.mjs",
+    "test:e2e": "npx playwright test",
+    "test:streaming": "echo 'Test large file streaming after Phase 2'",
+    "test:visualizer": "echo 'Test WebGPU + fallback after Phase 3'",
+    "profile:chrome": "lighthouse http://localhost:3000 --view --preset=desktop"
   },
   "dependencies": {
+    "@wasm-audio-decoders/flac": "^0.2.10",
+    "music-metadata": "^11.12.3",
+    "music-metadata-browser": "^2.5.11",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
@@ -19,6 +28,7 @@
     "@babel/core": "^7.23.0",
     "@babel/preset-react": "^7.22.0",
     "@babel/preset-typescript": "^7.23.0",
+    "@playwright/test": "^1.60.0",
     "@types/node": "^25.3.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
@@ -38,6 +48,9 @@
     "webpack": "^5.88.0",
     "webpack-cli": "^5.1.4",
     "webpack-dev-server": "^4.15.2"
+  },
+  "optionalDependencies": {
+    "lighthouse": "^12.0.0"
   },
   "browserslist": {
     "production": [
