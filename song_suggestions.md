@@ -2121,3 +2121,99 @@ The Mexican Muezzin has only just begun!
 **Additional Notes:**
 - **Combo/Fusion:** Traditional Mexican Mariachi / Islamic Adhan
 - **Thematic Ties:** The earthy, festive, and passionately human celebration of Mexican folk music fused seamlessly with the deeply spiritual, resonant, and profoundly vocal devotion of an Islamic prayer call.
+
+### Title: The Edo Hurdy-Gurdy
+
+**Service:** Minimax Audio
+
+**Prompt:** A solemn, traditional Japanese Gagaku court music piece featuring the slow, steady strikes of a Kakko drum and the ethereal chords of a Sho. However, the serene, piercing melody of the Hichiriki is completely replaced by the continuous, buzzing drone and rhythmic cranking of a Medieval European Hurdy-Gurdy, grinding out the ancient Japanese pentatonic scales with aggressive peasant energy.
+
+**Lyrics:**
+(Verse 1 - Slow, solemn Japanese vocal)
+The cherry blossoms fall upon the dirt...
+(Hurdy-Gurdy cranks a heavy, buzzing drone that vibrates the shrine)
+The shogun's blade, the peasant's heavy shirt...
+(Sho plays a delicate, ethereal cluster chord underneath the buzzing)
+
+(Chorus)
+(Kakko drum strikes steadily while the Hurdy-Gurdy plays a fast, syncopated melody)
+Cranking in Kyoto! The medieval drone!
+The strangest wooden box that the emperor has ever known!
+From the muddy tavern to the temple gate!
+The buzzing of the strings deciding all our fate!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Japanese Gagaku / Medieval Hurdy-Gurdy
+- **Thematic Ties:** The highly refined, formal, and aristocratic atmosphere of Japanese court music completely disrupted by the noisy, continuous, and distinctly rustic European peasant instrument.
+
+### Title: The Tuvan Synthwave
+
+**Service:** Minimax Audio
+
+**Prompt:** A driving, neon-soaked 1980s Synthwave track featuring pulsing analog basslines and heavy gated-reverb snare drums. But the soaring synthesizer leads and robotic vocoder vocals are entirely replaced by the deep, resonant Kargyraa sub-harmonics and piercing Sygyt whistling overtones of a Tuvan throat singer, perfectly harmonizing with the digital dystopia.
+
+**Lyrics:**
+(Verse 1 - Deep, rumbling Kargyraa throat singing acting as a robotic 80s vocal)
+(A pulsing, arpeggiated synth bassline drives the rhythm)
+Cruising the cyber-steppe, lasers in the sky...
+(Throat singer shifts into incredibly high-pitched, whistling Sygyt overtones)
+The neon yurt is glowing, watching the cars go by.
+
+(Chorus)
+(Massive synth chords rise alongside the deep throat singing)
+Digital nomad! Riding on the grid!
+The deepest bassline that the ancient world hid!
+Overtones shining in the ultraviolet light!
+The oldest human synthesizer singing in the night!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Synthwave / Tuvan Throat Singing (Khöömei)
+- **Thematic Ties:** The pristine, highly artificial, and futuristic aesthetic of 80s synthwave grounded by the deeply historical, resonant, and incredibly organic acoustic techniques of Mongolian nomadic singing.
+
+### Title: Death Metal Castanets
+
+**Service:** Minimax Audio
+
+**Prompt:** A blisteringly fast, aggressive Swedish Death Metal track driven by relentless double-kick blast beats and heavily distorted bass. However, the distorted electric guitars are entirely replaced by virtuoso Spanish Flamenco acoustic guitars playing lightning-fast picado runs, while guttural death growls roar over passionate, rhythmic palmas (handclaps) and the rapid clicking of castanets.
+
+**Lyrics:**
+(Verse 1 - Brutal, guttural death metal growl)
+(Acoustic Flamenco guitars shred a terrifying, dissonant minor-key run)
+THE SUN SETS RED OVER THE DUST...
+(Blast beats explode alongside furious acoustic strumming and castanets)
+WE DANCE IN THE SHADOWS, BETRAYING THE TRUST!
+
+(Chorus)
+(Rhythmic palmas clap frantically over double-kick drums)
+DEATH IN THE PLAZA! FIRE IN THE SOUL!
+THE ACOUSTIC DESTRUCTION IS TAKING ITS TOLL!
+SCREAMING THE SORROW, BLEEDING THE STRING!
+THE DARKEST FLAMENCO THAT ANYONE CAN SING!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Spanish Flamenco / Swedish Death Metal
+- **Thematic Ties:** The fierce, passionate, and deeply emotional acoustic tradition of Andalusian flamenco pushed to the absolute terrifying extremes of volume, speed, and aggression found in death metal.
+
+### Title: The Appalachian Sitar
+
+**Service:** Minimax Audio
+
+**Prompt:** A foot-stomping, high-speed Appalachian Bluegrass tune featuring frantic banjo picking, a driving upright bass, and a washboard rhythm. The traditional fiddle and mandolin solos, however, are entirely swapped out for a heavily amplified Classical Indian Sitar, bending notes into furious bluegrass licks, while a Tabla rhythmically battles the washboard.
+
+**Lyrics:**
+(Verse 1 - Nasally, high-lonesome Bluegrass tenor vocal)
+Well I'm going up the mountain, to see my sweet gal...
+(Sitar shreds a lightning-fast, microtonal bluegrass run)
+Got my overalls on, walking down the canal...
+(Tabla and washboard play a frantic, interlocking rhythm)
+
+(Chorus)
+(Sitar and Banjo trade blazing fast solos over a driving bluegrass beat)
+Bend the string, brother! Ring out the drone!
+The fastest little raga that the holler has known!
+Moonshine and spices, dancing in the street!
+The New Delhi hoedown is bringing the heat!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Classical Indian Sitar & Tabla
+- **Thematic Ties:** The incredibly fast, intricate, and wooden acoustic picking of American mountain music fused with the intricate, deeply spiritual, and highly complex melodic structures of classical Indian instrumentation.
