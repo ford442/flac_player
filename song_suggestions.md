@@ -2217,3 +2217,97 @@ The New Delhi hoedown is bringing the heat!
 **Additional Notes:**
 - **Combo/Fusion:** Appalachian Bluegrass / Classical Indian Sitar & Tabla
 - **Thematic Ties:** The incredibly fast, intricate, and wooden acoustic picking of American mountain music fused with the intricate, deeply spiritual, and highly complex melodic structures of classical Indian instrumentation.
+
+### Title: 808s and Didgeridoos
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, modern Trap hip-hop beat featuring frantic triplet hi-hats and deep 808 sub-bass. However, the dark, brooding synthesizer melodies and rhythmic stabs are completely replaced by a heavily amplified Australian Aboriginal Didgeridoo pulsing a heavy drone and sharp rhythmic barks, while clapsticks replace the standard snare drum.
+
+**Lyrics:**
+(Verse 1 - Aggressive trap rap flow, but vocalized by rhythmic Didgeridoo barks)
+(Frantic triplet hi-hats roll underneath)
+(The Didgeridoo pulses a massive, distorted drone matching the 808 bass)
+(Clapsticks hit sharply on the three beat)
+
+(Chorus)
+(Massive trap drop)
+Trap in the outback! Bouncing in the dirt!
+The heaviest drone that's gonna make it hurt!
+Clapsticks popping, rolling through the night!
+Aboriginal trap, keeping it tight!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern Trap / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The deep, booming sub-bass and syncopated bounce of modern trap seamlessly fusing with the ancient, earthy, and naturally rhythmic drone of the Australian outback.
+
+### Title: The Steel Pan Crusader
+
+**Service:** Minimax Audio
+
+**Prompt:** An epic, high-energy European Power Metal anthem featuring galloping double-bass drums, soaring operatic vocals, and triumphant chord progressions. Yet, the blazing, distorted electric guitar solos and majestic keyboard fanfares are entirely replaced by a Caribbean Steel Pan ensemble, hammering out lightning-fast, hyper-melodic arpeggios over the thunderous metal rhythm.
+
+**Lyrics:**
+(Verse 1 - Soaring, high-pitched Power Metal operatic vocal)
+The dragon rises from the island shore!
+(Steel Pan ensemble plays a lightning-fast, triumphant arpeggio)
+We ride to battle, answering the roar!
+(Galloping double-bass drums lock in with the tropical melody)
+
+(Chorus)
+(Massive, epic power metal chorus with full steel pan backing)
+Crusader of the Caribbean! Fighting in the sun!
+The tropical battle has only just begun!
+Double-kick drums and the island breeze!
+The heaviest steel pan crossing the seas!
+
+**Additional Notes:**
+- **Combo/Fusion:** European Power Metal / Caribbean Steel Pan
+- **Thematic Ties:** The triumphant, hyper-melodic, and utterly bombastic energy of power metal taking a surprisingly cheerful and tropical vacation, maintaining the speed but completely altering the climate.
+
+### Title: Swing of the Steppes
+
+**Service:** Minimax Audio
+
+**Prompt:** An upbeat, highly danceable 1930s Electro-Swing track with a driving four-on-the-floor beat and punchy brass stabs. The smooth, vintage jazz vocals and clarinet solos are entirely swapped out for the deep, rumbling Kargyraa sub-harmonics and piercing Sygyt whistling overtones of a Tuvan throat singer, perfectly riding the bouncy swing rhythm.
+
+**Lyrics:**
+(Verse 1 - Deep, rumbling Kargyraa throat singing acting as a rhythmic swing vocal)
+(A bouncy four-on-the-floor electro-swing beat drops)
+(Sygyt overtone whistle plays a high, syncopated jazz solo)
+(Punchy brass section answers the throat singing)
+
+(Chorus)
+(Massive electro-swing drop)
+Swinging on the steppes! Bouncing in the yurt!
+The tightest little rhythm kicking up the dirt!
+Flapper girls and nomads, dancing on the floor!
+The Mongolian swing leaves you wanting more!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1930s Electro-Swing / Tuvan Throat Singing
+- **Thematic Ties:** The glamorous, highly choreographed, and bouncy energy of vintage swing completely reimagined through the resonant, deeply historical, and highly organic acoustic techniques of Mongolian nomadic singing.
+
+### Title: The Koto Gangster
+
+**Service:** Minimax Audio
+
+**Prompt:** A raw, gritty 1990s East Coast Boom Bap hip-hop track featuring heavy, dusty drum breaks and a vinyl-crackling atmosphere. Instead of jazz piano or horn loops, the driving instrumental hook and melodic backbone are provided by a delicately plucked, traditional Japanese Koto, weaving intricate, slightly melancholic pentatonic melodies that loop perfectly over the hard-hitting beat.
+
+**Lyrics:**
+(Verse 1 - Smooth, aggressive 90s New York rap flow)
+Step into the dojo, Brooklyn on the map...
+(Koto plucks a beautiful, sad, and looping pentatonic riff)
+Spitting that fire, caught inside the trap.
+(Heavy, dusty boom-bap drum beat hits)
+
+(Chorus)
+(DJ scratches a Koto sample over the heavy beat)
+Boom bap in Edo! Slicing through the beat!
+The smoothest little koto walking down the street!
+Samurai of the block, keeping it so real!
+The ancient Japanese hip-hop feel!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Boom Bap Hip Hop / Traditional Japanese Koto
+- **Thematic Ties:** The dusty, sample-heavy grit and head-nodding bounce of 90s East Coast hip-hop perfectly contrasting with the highly refined, delicate, and ancient stringed traditions of feudal Japan.
