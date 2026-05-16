@@ -210,3 +210,19 @@
   border-radius: 999px;
   transition: background 0.3s ease, color 0.3s ease;
 }
+
+.spec-badge {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.metadata-panel.dark .spec-badge {
+  background: rgba(139, 92, 246, 0.25) !important;
+  color: #c4b5fd !important;
+}
+
+.metadata-panel.light .spec-badge {
+  background: rgba(109, 40, 217, 0.12) !important;
+  color: #6d28d9 !important;
+}

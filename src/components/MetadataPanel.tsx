@@ -24,11 +24,12 @@ function uint8ArrayToBase64(data: Uint8Array): string {
 export const MetadataPanel: React.FC<MetadataPanelProps> = ({
   file,
   audioUrl,
-  sampleRate,
-  bitDepth = 16,
-  channels = 2,
+  sampleRate: sampleRateProp,
+  bitDepth: bitDepthProp = 16,
+  channels: channelsProp = 2,
 }) => {
   const [metadata, setMetadata] = useState<Record<string, unknown> | null>(null);
+  const [formatSpecs, setFormatSpecs] = useState<{ sampleRate?: number; bitsPerSample?: number; numberOfChannels?: number; container?: string; codec?: string; bitrate?: number } | null>(null);
   const [albumArt, setAlbumArt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -60,6 +61,14 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
         const meta = await parseBlob(blob);
         if (cancelled) return;
         setMetadata(meta.common as unknown as Record<string, unknown>);
+        setFormatSpecs({
+          sampleRate: meta.format.sampleRate,
+          bitsPerSample: meta.format.bitsPerSample,
+          numberOfChannels: meta.format.numberOfChannels,
+          container: meta.format.container,
+          codec: meta.format.codec,
+          bitrate: meta.format.bitrate,
+        });
 
         const pictures = (meta.common as unknown as Record<string, unknown>).picture as Array<{ format: string; data: Uint8Array }> | undefined;
         if (pictures?.[0]) {
@@ -72,6 +81,7 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
       } catch (e) {
         console.warn('Metadata parsing failed', e);
         setMetadata(null);
+        setFormatSpecs(null);
         setAlbumArt(null);
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -91,6 +101,13 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
   const displayTitle = (metadata?.title as string) || file?.name?.replace(/\.[^/.]+$/, '') || 'Unknown Track';
   const displayArtist = (metadata?.artist as string) || 'Unknown Artist';
   const displayAlbum = (metadata?.album as string) || '';
+
+  // Prefer values from parsed format, fall back to props
+  const displaySampleRate = formatSpecs?.sampleRate ?? sampleRateProp;
+  const displayBitDepth = formatSpecs?.bitsPerSample ?? bitDepthProp;
+  const displayChannels = formatSpecs?.numberOfChannels ?? channelsProp;
+  const displayFormat = formatSpecs?.container || formatSpecs?.codec;
+  const displayBitrate = formatSpecs?.bitrate ? Math.round(formatSpecs.bitrate / 1000) : undefined;
 
   return (
     <div
@@ -136,9 +153,11 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
           {displayAlbum && <p className="track-album">{displayAlbum}</p>}
 
           <div className="audio-specs">
-            {sampleRate && <span>{(sampleRate / 1000).toFixed(1)} kHz</span>}
-            <span>{bitDepth} bit</span>
-            <span>{channels} ch</span>
+            {displayFormat && <span className="spec-badge">{displayFormat}</span>}
+            {displaySampleRate && <span>{(displaySampleRate / 1000).toFixed(1)} kHz</span>}
+            {displayBitDepth && <span>{displayBitDepth}-bit</span>}
+            {displayChannels && <span>{displayChannels === 1 ? 'Mono' : displayChannels === 2 ? 'Stereo' : `${displayChannels}ch`}</span>}
+            {displayBitrate && <span>{displayBitrate} kbps</span>}
             {metadata?.year && <span>{String(metadata.year)}</span>}
           </div>
         </div>
