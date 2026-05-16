@@ -67,3 +67,24 @@ export function normalizeDebugObject(error: any): {
     stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3) : undefined
   };
 }
+
+// =============================================================================
+// Playback Utilities
+// =============================================================================
+
+/** Format seconds as mm:ss string */
+export function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+/** Fisher-Yates shuffle — uniform random permutation */
+export function shuffleArray<T>(arr: T[]): T[] {
+  const result = [...arr];
+  for (let i = result.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
+  }
+  return result;
+}

@@ -28,8 +28,10 @@ import { ShaderGUI } from './ShaderGUI/ShaderGUI';
 import { MetadataPanel } from './MetadataPanel';
 import { FileDropZone } from './FileDropZone';
 import { ToastContainer } from './Toast';
+import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { checkBackendHealth } from '../utils/healthCheck';
 import { handleQueueAutoAdvance, reorderQueueIndex, addTrackToQueue, playNextTrack, removeFromQueue as removeFromQueueUtil } from '../utils/queueUtils';
+import { formatTime, shuffleArray } from '../utils/audioUtils';
 import './Player.css';
 
 // =============================================================================
@@ -78,7 +80,11 @@ export const Player: React.FC = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [untaggedOnly, setUntaggedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>('date');
-  const [volume, setVolume] = useState(1);
+  const [volume, setVolume] = useState(() => {
+    try { const v = parseFloat(localStorage.getItem('flac_volume') || '1'); return isNaN(v) ? 1 : Math.max(0, Math.min(1, v)); } catch { return 1; }
+  });
+  const [muted, setMuted] = useState(false);
+  const prevVolumeRef = useRef(1);
 
   const [queue, setQueue] = useState<PlaylistTrack[]>([]);
   const [queueCurrentIndex, setQueueCurrentIndex] = useState<number>(-1);
@@ -91,6 +97,7 @@ export const Player: React.FC = () => {
   const [playlists, setPlaylists] = useState<CloudPlaylist[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
   const [currentFile, setCurrentFile] = useState<File | undefined>(undefined);
+  const [showHelp, setShowHelp] = useState(false);
 
   const playerRef = useRef<AnyPlayer | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -224,6 +231,27 @@ export const Player: React.FC = () => {
     saveQueueToStorage({ tracks: queue, currentIndex: queueCurrentIndex, shuffle, repeat: repeatMode });
   }, [isSharedPlaylist, queue, queueCurrentIndex, shuffle, repeatMode]);
 
+  // Persist volume to localStorage
+  useEffect(() => {
+    try { localStorage.setItem('flac_volume', String(volume)); } catch { /* no-op */ }
+  }, [volume]);
+
+  // Persist playback position periodically
+  useEffect(() => {
+    if (isSharedPlaylist) return;
+    const interval = setInterval(() => {
+      if (currentTrack && playerState.currentTime > 0 && playerState.duration > 0) {
+        try {
+          localStorage.setItem('flac_position', JSON.stringify({
+            trackId: currentTrack.id,
+            time: playerState.currentTime,
+          }));
+        } catch { /* no-op */ }
+      }
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isSharedPlaylist, currentTrack, playerState.currentTime, playerState.duration]);
+
   // =============================================================================
   // Local File Loading
   // =============================================================================
@@ -321,6 +349,9 @@ export const Player: React.FC = () => {
     (player as EndCallbackPlayer).setOnEndedCallback?.(() => handleAutoAdvance());
     playerRef.current = player;
 
+    // Apply persisted volume immediately
+    player.setVolume(muted ? 0 : volume);
+
     // Load pending local files after mode switch
     if (pendingFilesRef.current.length > 0) {
       const files = pendingFilesRef.current;
@@ -383,6 +414,15 @@ export const Player: React.FC = () => {
       // StreamingAudioPlayer.play() returns Promise<void>; others return void.
       const maybePromise = playerRef.current?.play();
       if (maybePromise instanceof Promise) await maybePromise;
+
+      // Restore saved playback position for the same track
+      try {
+        const saved = JSON.parse(localStorage.getItem('flac_position') || 'null');
+        if (saved && saved.trackId === track.id && saved.time > 0) {
+          playerRef.current?.seek(saved.time);
+        }
+      } catch { /* no-op */ }
+
       setTimeout(loadStats, 500);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to play track';
@@ -440,6 +480,49 @@ export const Player: React.FC = () => {
     setQueue(prev => addTrackToQueue(prev, track));
     addToast('Added to queue', 'success');
   };
+
+  const playAll = (tracks: PlaylistTrack[], shuffled = false) => {
+    if (tracks.length === 0) return;
+    const ordered = shuffled ? shuffleArray(tracks) : tracks;
+    setQueue(ordered);
+    setQueueCurrentIndex(0);
+    playTrack(ordered[0], 0);
+    addToast(shuffled ? `Shuffling ${ordered.length} tracks` : `Playing ${ordered.length} tracks`, 'success');
+  };
+
+  const addAllToQueue = (tracks: PlaylistTrack[]) => {
+    if (tracks.length === 0) return;
+    setQueue(prev => {
+      const existingIds = new Set(prev.map(t => t.id));
+      const newTracks = tracks.filter(t => !existingIds.has(t.id));
+      return [...prev, ...newTracks];
+    });
+    addToast(`Added ${tracks.length} tracks to queue`, 'success');
+  };
+
+  const toggleMute = useCallback(() => {
+    setMuted(prev => {
+      if (!prev) {
+        prevVolumeRef.current = volume;
+        playerRef.current?.setVolume(0);
+      } else {
+        const restoredVol = prevVolumeRef.current;
+        playerRef.current?.setVolume(restoredVol);
+        setVolume(restoredVol);
+      }
+      return !prev;
+    });
+  }, [volume]);
+
+  const handleVolumeChange = useCallback((vol: number) => {
+    if (vol > 0) {
+      // Track the new volume as the "pre-mute" restore point
+      prevVolumeRef.current = vol;
+    }
+    setMuted(false);
+    setVolume(vol);
+    playerRef.current?.setVolume(vol);
+  }, []);
 
   const playNow = (track: PlaylistTrack) => {
     setQueue([track]); setQueueCurrentIndex(0); playTrack(track, 0);
@@ -563,9 +646,11 @@ export const Player: React.FC = () => {
     onNext:     () => { if (queue.length > 0 && queueCurrentIndex < queue.length - 1) playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1); },
     onPrevious: () => { if (queue.length > 0 && queueCurrentIndex > 0) playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1); },
     onSearchFocus: () => searchInputRef.current?.focus(),
-    onVolumeUp:   () => { setVolume(prev => { const next = Math.min(1, prev + 0.1); playerRef.current?.setVolume(next); return next; }); },
-    onVolumeDown: () => { setVolume(prev => { const next = Math.max(0, prev - 0.1); playerRef.current?.setVolume(next); return next; }); },
+    onVolumeUp:   () => { handleVolumeChange(Math.min(1, volume + 0.1)); },
+    onVolumeDown: () => { handleVolumeChange(Math.max(0, volume - 0.1)); },
     onToggleQueue: () => setShowQueue(prev => !prev),
+    onMute: toggleMute,
+    onShowHelp: () => setShowHelp(prev => !prev),
     isEnabled: true
   });
 
@@ -602,12 +687,6 @@ export const Player: React.FC = () => {
     };
   }, [handleLocalFiles]);
 
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   // =============================================================================
   // Render — default ShaderGUI mode
   // =============================================================================
@@ -616,6 +695,7 @@ export const Player: React.FC = () => {
     return (
       <>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
+        {showHelp && <KeyboardHelpModal onClose={() => setShowHelp(false)} />}
         {isSharedPlaylist && sharedPlaylistTitle && (
           <div className="fixed top-0 left-0 right-0 z-40 flex items-center justify-center pt-4 pointer-events-none">
             <h1 className="text-xl md:text-2xl font-bold text-white/90 bg-black/50 backdrop-blur px-6 py-2 rounded-full border border-white/10 pointer-events-auto">
@@ -640,10 +720,13 @@ export const Player: React.FC = () => {
           currentTime={playerState.currentTime}
           duration={playerState.duration}
           volume={volume}
+          muted={muted}
           onPlay={togglePlayback}
           onStop={() => playerRef.current?.stop()}
+          onSeek={(t) => playerRef.current?.seek(t)}
           onTrackClick={(index) => playTrack(queue[index], index)}
-          onVolumeChange={(vol) => { setVolume(vol); playerRef.current?.setVolume(vol); }}
+          onVolumeChange={handleVolumeChange}
+          onMute={toggleMute}
           onNext={() => { if (queue.length > 0 && queueCurrentIndex < queue.length - 1) playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1); }}
           onPrevious={() => { if (queue.length > 0 && queueCurrentIndex > 0) playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1); }}
           onToggleFallback={() => setShowHtmlFallback(true)}
@@ -660,6 +743,7 @@ export const Player: React.FC = () => {
   return (
     <div className="player min-h-screen bg-[#0f0f1e] text-white flex flex-col">
       <ToastContainer toasts={toasts} onRemove={removeToast} />
+      {showHelp && <KeyboardHelpModal onClose={() => setShowHelp(false)} />}
 
       {backendStatus === 'down' && (
         <div className="bg-red-500/20 border-b border-red-500/30 px-6 py-3 text-center">
@@ -704,6 +788,7 @@ export const Player: React.FC = () => {
           />
         </div>
         <div className="flex items-center gap-2">
+          <button onClick={() => setShowHelp(true)} className="px-3 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm" title="Keyboard shortcuts (?)">⌨️ ?</button>
           <button onClick={() => setShowQueue(true)} className="relative px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm">
             📋 Queue
             {queue.length > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-purple-500 rounded-full text-xs flex items-center justify-center">{queue.length}</span>}
@@ -785,6 +870,25 @@ export const Player: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <button onClick={() => setLibraryViewMode('grid')} className={`p-2 rounded ${libraryViewMode === 'grid' ? 'bg-white/20' : 'hover:bg-white/10'}`}>⊞ Grid</button>
                   <button onClick={() => setLibraryViewMode('list')} className={`p-2 rounded ${libraryViewMode === 'list' ? 'bg-white/20' : 'hover:bg-white/10'}`}>☰ List</button>
+                  <div className="w-px h-5 bg-white/20 mx-1" />
+                  <button
+                    onClick={() => playAll(library)}
+                    disabled={library.length === 0}
+                    className="px-3 py-1.5 text-xs bg-purple-500/20 text-purple-300 rounded hover:bg-purple-500/30 disabled:opacity-40 transition-colors"
+                    title="Clear queue and play all visible tracks"
+                  >⏵ Play All ({library.length})</button>
+                  <button
+                    onClick={() => playAll(library, true)}
+                    disabled={library.length === 0}
+                    className="px-3 py-1.5 text-xs bg-purple-500/20 text-purple-300 rounded hover:bg-purple-500/30 disabled:opacity-40 transition-colors"
+                    title="Clear queue and shuffle all visible tracks"
+                  >🔀 Shuffle All</button>
+                  <button
+                    onClick={() => addAllToQueue(library)}
+                    disabled={library.length === 0}
+                    className="px-3 py-1.5 text-xs bg-white/10 text-gray-300 rounded hover:bg-white/20 disabled:opacity-40 transition-colors"
+                    title="Add all visible tracks to queue (skip duplicates)"
+                  >➕ Add All</button>
                 </div>
                 {selectedTags.length > 0 && (
                   <div className="flex items-center gap-2">
@@ -816,9 +920,14 @@ export const Player: React.FC = () => {
                 currentTrack={currentTrack} queue={queue} queueCurrentIndex={queueCurrentIndex}
                 isPlaying={playerState.isPlaying} isLoading={playerState.isLoading}
                 currentTime={playerState.currentTime} duration={playerState.duration} volume={volume}
+                muted={muted}
                 onPlay={togglePlayback} onStop={() => playerRef.current?.stop()}
+                onSeek={(t) => playerRef.current?.seek(t)}
                 onTrackClick={(index) => playTrack(queue[index], index)}
-                onVolumeChange={(vol) => { setVolume(vol); playerRef.current?.setVolume(vol); }}
+                onVolumeChange={handleVolumeChange}
+                onMute={toggleMute}
+                onNext={() => { if (queue.length > 0 && queueCurrentIndex < queue.length - 1) playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1); }}
+                onPrevious={() => { if (queue.length > 0 && queueCurrentIndex > 0) playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1); }}
               />
             </div>
           )}
@@ -919,6 +1028,15 @@ export const Player: React.FC = () => {
               aria-label={`Repeat mode: ${repeatMode}`} aria-pressed={repeatMode !== 'off'}>
               {repeatMode === 'one' ? '🔂' : '🔁'}
             </button>
+            <button
+              onClick={toggleMute}
+              className={`text-sm ${muted ? 'text-yellow-400' : 'text-gray-400'} hover:text-white transition-colors`}
+              title={muted ? 'Unmute (M)' : 'Mute (M)'}
+              aria-label={muted ? 'Unmute' : 'Mute'}
+              aria-pressed={muted}
+            >
+              {muted ? '🔇' : '🔊'}
+            </button>
             <select value={outputMode} onChange={(e) => setOutputMode(e.target.value as AudioOutputMode)}
               className="px-3 py-1 bg-white/10 rounded text-sm"
               aria-label="Audio output mode">
@@ -928,7 +1046,7 @@ export const Player: React.FC = () => {
               <option value="sdl">SDL3</option>
               <option value="sdl2">SDL2</option>
             </select>
-            <span className="text-xs text-gray-400 w-12 text-right">{Math.round(volume * 100)}%</span>
+            <span className="text-xs text-gray-400 w-12 text-right">{muted ? '🔇 0%' : `${Math.round(volume * 100)}%`}</span>
           </div>
         </div>
         {error && <div className="mt-2 text-center text-red-400 text-sm">{error}</div>}
