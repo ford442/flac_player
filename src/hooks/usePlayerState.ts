@@ -7,15 +7,15 @@ export interface PlayerStateHook {
   playerState: PlayerState;
   setPlayerState: (state: PlayerState | ((prev: PlayerState) => PlayerState)) => void;
   outputMode: AudioOutputMode;
-  setOutputMode: (mode: AudioOutputMode) => void;
+  setOutputMode: (mode: AudioOutputMode | ((prev: AudioOutputMode) => AudioOutputMode)) => void;
   error: string;
-  setError: (error: string) => void;
+  setError: (error: string | ((prev: string) => string)) => void;
   currentTrack: PlaylistTrack | null;
-  setCurrentTrack: (track: PlaylistTrack | null) => void;
+  setCurrentTrack: (track: PlaylistTrack | null | ((prev: PlaylistTrack | null) => PlaylistTrack | null)) => void;
   loadingTrackId: string | undefined;
-  setLoadingTrackId: (id: string | undefined) => void;
+  setLoadingTrackId: (id: string | undefined | ((prev: string | undefined) => string | undefined)) => void;
   backendStatus: 'checking' | 'up' | 'down';
-  setBackendStatus: (status: 'checking' | 'up' | 'down') => void;
+  setBackendStatus: (status: 'checking' | 'up' | 'down' | ((prev: 'checking' | 'up' | 'down') => 'checking' | 'up' | 'down')) => void;
 }
 
 // Import PlaylistTrack type

@@ -1,4 +1,4 @@
-import { PlaylistTrack, LibraryStats, TagInfo, AudioLoader } from '../audioLoader';
+import { PlaylistTrack, LibraryStats, TagInfo, AudioLoader, getCachedLibrary, setCachedLibrary } from '../audioLoader';
 
 export const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -12,9 +12,7 @@ export const loadLibraryWithFilters = async (
   selectedTags: string[],
   untaggedOnly: boolean,
   searchQuery: string,
-  sortBy: string,
-  allTags: TagInfo[],
-  stats: LibraryStats
+  sortBy: string
 ): Promise<PlaylistTrack[]> => {
   const { tracks } = await loader.fetchLibrary({
     ratingGte: minRating,
@@ -28,8 +26,7 @@ export const loadLibraryWithFilters = async (
   return tracks;
 };
 
-export const getCachedLibraryData = (loader: AudioLoader) => {
-  const { getCachedLibrary } = require('../audioLoader');
+export const getCachedLibraryData = () => {
   return getCachedLibrary();
 };
 
@@ -38,7 +35,6 @@ export const setCachedLibraryData = (
   tags: TagInfo[],
   stats: LibraryStats
 ) => {
-  const { setCachedLibrary } = require('../audioLoader');
   setCachedLibrary(tracks, tags, stats);
 };
 

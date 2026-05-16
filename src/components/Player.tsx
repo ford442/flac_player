@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { AudioPlayer, PlayerState } from '../audioPlayer';
+import { AudioPlayer } from '../audioPlayer';
 import { SdlAudioPlayer } from '../sdlAudioPlayer';
 import { Sdl2AudioPlayer } from '../sdl2AudioPlayer';
 import { AudioWorkletPlayer } from '../audioWorkletPlayer';
@@ -29,8 +29,7 @@ import { MetadataPanel } from './MetadataPanel';
 import { FileDropZone } from './FileDropZone';
 import { ToastContainer } from './Toast';
 import { checkBackendHealth } from '../utils/healthCheck';
-import { formatTime } from '../utils/libraryUtils';
-import { handleQueueAutoAdvance, reorderQueueIndex, addTrackToQueue, playNextTrack, removeFromQueue as removeFromQueueUtil, clearQueue as clearQueueUtil } from '../utils/queueUtils';
+import { handleQueueAutoAdvance, reorderQueueIndex, addTrackToQueue, playNextTrack, removeFromQueue as removeFromQueueUtil } from '../utils/queueUtils';
 import './Player.css';
 
 // =============================================================================
@@ -448,7 +447,7 @@ export const Player: React.FC = () => {
   };
 
   const playNext = (track: PlaylistTrack) => {
-    const { queue: newQueue, insertAt } = playNextTrack(queue, track, queueCurrentIndex);
+    const { queue: newQueue } = playNextTrack(queue, track, queueCurrentIndex);
     setQueue(newQueue);
     addToast('Playing next: ' + (track.title || track.name), 'success');
   };

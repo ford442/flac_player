@@ -1,6 +1,6 @@
 // Utility functions for audio and playlist management
 
-import { PlaylistTrack, SortBy } from '../audioLoader';
+import { PlaylistTrack } from '../audioLoader';
 
 // =============================================================================
 // Track Filtering & Sorting

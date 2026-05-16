@@ -2,8 +2,6 @@
 // Enhanced with AI track support and library management
 
 import * as songApi from './api/songApi';
-import * as queueStorage from './storage/queueStorage';
-import * as libraryCache from './storage/libraryCache';
 
 // Re-export types and storage utilities
 export type { RepeatMode } from './storage/queueStorage';
