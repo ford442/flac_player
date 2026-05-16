@@ -21,10 +21,13 @@ export interface ShaderGUIProps {
   currentTime: number;
   duration: number;
   volume: number;
+  muted?: boolean;
   onPlay: () => void;
   onStop: () => void;
+  onSeek?: (time: number) => void;
   onTrackClick: (index: number) => void;
   onVolumeChange: (volume: number) => void;
+  onMute?: () => void;
   onNext?: () => void;
   onPrevious?: () => void;
   onToggleFallback?: () => void;
@@ -41,10 +44,13 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   currentTime,
   duration,
   volume,
+  muted = false,
   onPlay,
   onStop,
+  onSeek,
   onTrackClick,
   onVolumeChange,
+  onMute,
   onNext,
   onPrevious,
   onToggleFallback,
@@ -198,6 +204,19 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     onStop();
   }, [onStop]);
 
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const handleSeekBarClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!onSeek || duration <= 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    onSeek(ratio * duration);
+  }, [onSeek, duration]);
+
   const handleNone = useCallback(() => {
     setModeNone(prev => {
       const next = prev ? 0 : 1;
@@ -252,6 +271,24 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             onCanvasDoubleClick={handleToggle3D}
             isLoading={isLoading}
           />
+          {/* Seek bar + time display */}
+          <div className="shader-seek-row">
+            <span className="shader-time-display">{formatTime(currentTime)}</span>
+            <div
+              className="shader-seek-bar"
+              onClick={handleSeekBarClick}
+              title={onSeek ? 'Click to seek' : ''}
+              style={{ cursor: onSeek && duration > 0 ? 'pointer' : 'default' }}
+            >
+              <div
+                className="shader-seek-progress"
+                style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+              />
+            </div>
+            <span className="shader-time-display shader-time-right">
+              -{formatTime(Math.max(0, duration - currentTime))}
+            </span>
+          </div>
         </div>
 
         <div className="shader-gui-top-right">
@@ -292,8 +329,18 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
           />
         </div>
 
-        <div style={{ gridColumn: 2, gridRow: '2 / span 2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <VolumeSlider value={volume} onChange={onVolumeChange} />
+        <div style={{ gridColumn: 2, gridRow: '2 / span 2', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+          <VolumeSlider value={muted ? 0 : volume} onChange={onVolumeChange} />
+          {onMute && (
+            <button
+              onClick={onMute}
+              className="shader-mute-btn"
+              title={muted ? 'Unmute (M)' : 'Mute (M)'}
+              aria-label={muted ? 'Unmute' : 'Mute'}
+            >
+              {muted ? '🔇' : '🔊'}
+            </button>
+          )}
         </div>
       </div>
     </Chassis>

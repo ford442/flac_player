@@ -12,6 +12,8 @@ interface KeyboardShortcutsOptions {
   onSearchFocus?: () => void;
   onToggleQueue?: () => void;
   onTogglePile?: () => void;
+  onMute?: () => void;
+  onShowHelp?: () => void;
   isEnabled?: boolean;
 }
 
@@ -27,6 +29,8 @@ export function useKeyboardShortcuts({
   onSearchFocus,
   onToggleQueue,
   onTogglePile,
+  onMute,
+  onShowHelp,
   isEnabled = true
 }: KeyboardShortcutsOptions) {
   const callbacksRef = useRef({
@@ -40,7 +44,9 @@ export function useKeyboardShortcuts({
     onRate,
     onSearchFocus,
     onToggleQueue,
-    onTogglePile
+    onTogglePile,
+    onMute,
+    onShowHelp,
   });
   
   // Update callbacks ref when they change
@@ -56,7 +62,9 @@ export function useKeyboardShortcuts({
       onRate,
       onSearchFocus,
       onToggleQueue,
-      onTogglePile
+      onTogglePile,
+      onMute,
+      onShowHelp,
     };
   }, [
     onPlayPause,
@@ -69,7 +77,9 @@ export function useKeyboardShortcuts({
     onRate,
     onSearchFocus,
     onToggleQueue,
-    onTogglePile
+    onTogglePile,
+    onMute,
+    onShowHelp,
   ]);
   
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -146,6 +156,19 @@ export function useKeyboardShortcuts({
       case 'S':
         if (!e.ctrlKey && !e.metaKey) {
           callbacks.onTogglePile?.();
+        }
+        break;
+        
+      case 'm':
+      case 'M':
+        if (!e.ctrlKey && !e.metaKey) {
+          callbacks.onMute?.();
+        }
+        break;
+
+      case '?':
+        if (!e.ctrlKey && !e.metaKey) {
+          callbacks.onShowHelp?.();
         }
         break;
         

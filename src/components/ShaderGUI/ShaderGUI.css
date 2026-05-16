@@ -79,6 +79,71 @@
   border-radius: 6px;
 }
 
+/* Seek bar row below top screen */
+.shader-seek-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 2px 2px;
+}
+
+.shader-seek-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  position: relative;
+  overflow: hidden;
+  transition: height 0.15s ease;
+}
+
+.shader-seek-bar:hover {
+  height: 8px;
+}
+
+.shader-seek-progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  background: linear-gradient(90deg, #9b59b6 0%, #22D3EE 100%);
+  border-radius: 3px;
+  transition: width 0.25s linear;
+}
+
+.shader-time-display {
+  font-size: 10px;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  color: #9CA3AF;
+  min-width: 32px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.shader-time-right {
+  text-align: right;
+}
+
+/* Mute button */
+.shader-mute-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.2s ease;
+  color: inherit;
+}
+
+.shader-mute-btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
 .artist-title-overlay {
   position: absolute;
   top: 12px;
