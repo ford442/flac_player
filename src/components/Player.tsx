@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { AudioPlayer, PlayerState } from '../audioPlayer';
+import { AudioPlayer } from '../audioPlayer';
 import { SdlAudioPlayer } from '../sdlAudioPlayer';
 import { Sdl2AudioPlayer } from '../sdl2AudioPlayer';
 import { AudioWorkletPlayer } from '../audioWorkletPlayer';
@@ -20,18 +20,22 @@ import {
 } from '../audioLoader';
 
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { usePlayerState, AudioOutputMode } from '../hooks/usePlayerState';
+import { useToastNotifications } from '../hooks/useToastNotifications';
 import { LibraryView } from './LibraryView';
 import { QueuePanel } from './QueuePanel';
 import { ShaderGUI } from './ShaderGUI/ShaderGUI';
 import { MetadataPanel } from './MetadataPanel';
 import { FileDropZone } from './FileDropZone';
+import { ToastContainer } from './Toast';
+import { checkBackendHealth } from '../utils/healthCheck';
+import { handleQueueAutoAdvance, reorderQueueIndex, addTrackToQueue, playNextTrack, removeFromQueue as removeFromQueueUtil } from '../utils/queueUtils';
 import './Player.css';
 
 // =============================================================================
 // Types & Constants
 // =============================================================================
 
-type AudioOutputMode = 'streaming' | 'web-audio' | 'worklet' | 'sdl' | 'sdl2';
 type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists';
 type LibraryViewMode = 'grid' | 'list';
 
@@ -46,38 +50,6 @@ const getSharedPlaylistId = (): string | null => {
 };
 
 // =============================================================================
-// Toast Notification Component
-// =============================================================================
-
-interface Toast {
-  id: string;
-  message: string;
-  type: 'success' | 'error' | 'info';
-}
-
-const ToastContainer: React.FC<{ toasts: Toast[]; onRemove: (id: string) => void }> = ({ toasts, onRemove }) => {
-  useEffect(() => {
-    toasts.forEach(toast => { setTimeout(() => onRemove(toast.id), 3000); });
-  }, [toasts, onRemove]);
-
-  return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2">
-      {toasts.map(toast => (
-        <div
-          key={toast.id}
-          className={`px-4 py-2 rounded-lg shadow-lg text-white text-sm animate-slide-in ${
-            toast.type === 'success' ? 'bg-green-500' :
-            toast.type === 'error'   ? 'bg-red-500'   : 'bg-blue-500'
-          }`}
-        >
-          {toast.message}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-// =============================================================================
 // Main Player Component
 // =============================================================================
 
@@ -85,17 +57,9 @@ export const Player: React.FC = () => {
   const sharedPlaylistId = useMemo(() => getSharedPlaylistId(), []);
   const isSharedPlaylist = sharedPlaylistId !== null;
 
-  const [playerState, setPlayerState] = useState<PlayerState>({
-    isPlaying: false,
-    currentTime: 0,
-    duration: 0,
-    isLoading: false
-  });
-  const [error, setError] = useState<string>('');
-
-  // 'streaming' is the default — uses HTMLAudioElement + HTTP range requests
-  // against Contabo S3 so playback starts without downloading the full file.
-  const [outputMode, setOutputMode] = useState<AudioOutputMode>('streaming');
+  // State management
+  const { playerState, setPlayerState, outputMode, setOutputMode, error, setError, currentTrack, setCurrentTrack, loadingTrackId, setLoadingTrackId, backendStatus, setBackendStatus } = usePlayerState();
+  const { toasts, addToast, removeToast } = useToastNotifications();
 
   const [activeTab, setActiveTab] = useState<ViewTab>('library');
   const [libraryViewMode, setLibraryViewMode] = useState<LibraryViewMode>('grid');
@@ -108,7 +72,6 @@ export const Player: React.FC = () => {
     unique_tags: 0, top_tags: []
   });
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
-  const [backendStatus, setBackendStatus] = useState<'checking' | 'up' | 'down'>('checking');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [minRating, setMinRating] = useState<number>(0);
@@ -123,10 +86,7 @@ export const Player: React.FC = () => {
   const [shuffle, setShuffle] = useState(false);
   const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
 
-  const [currentTrack, setCurrentTrack] = useState<PlaylistTrack | null>(null);
-  const [loadingTrackId, setLoadingTrackId] = useState<string | undefined>(undefined);
   const [sharedPlaylistTitle, setSharedPlaylistTitle] = useState<string>('');
-  const [toasts, setToasts] = useState<Toast[]>([]);
   const [showHtmlFallback, setShowHtmlFallback] = useState(false);
   const [playlists, setPlaylists] = useState<CloudPlaylist[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
@@ -140,32 +100,13 @@ export const Player: React.FC = () => {
   type EndCallbackPlayer = { setOnEndedCallback?: (cb?: () => void) => void };
 
   // =============================================================================
-  // Toast Helpers
-  // =============================================================================
-
-  const addToast = useCallback((message: string, type: Toast['type'] = 'info') => {
-    const id = Math.random().toString(36).substring(7);
-    setToasts(prev => [...prev, { id, message, type }]);
-  }, []);
-
-  const removeToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  }, []);
-
-  // =============================================================================
   // Data Loading
   // =============================================================================
 
   const checkBackend = useCallback(async () => {
-    try {
-      const health = await loader.healthCheck();
-      const isUp = health.isHealthy;
-      setBackendStatus(isUp ? 'up' : 'down');
-      return isUp;
-    } catch {
-      setBackendStatus('down');
-      return false;
-    }
+    const isUp = await checkBackendHealth(loader);
+    setBackendStatus(isUp ? 'up' : 'down');
+    return isUp;
   }, [loader]);
 
   const loadPlaylists = useCallback(async () => {
@@ -481,29 +422,22 @@ export const Player: React.FC = () => {
   }, [playerState.isPlaying, playerState.duration, playTrack, queue, queueCurrentIndex]);
 
   const handleAutoAdvance = () => {
-    if (queue.length === 0) return;
-    if (repeatMode === 'one') { playerRef.current?.play(); return; }
-    let nextIndex: number;
-    if (shuffle) {
-      if (queue.length === 1) { nextIndex = 0; }
-      else { do { nextIndex = Math.floor(Math.random() * queue.length); } while (nextIndex === queueCurrentIndex); }
-    } else {
-      nextIndex = queueCurrentIndex + 1;
-      if (nextIndex >= queue.length) {
-        if (repeatMode === 'all') nextIndex = 0;
-        else return;
-      }
-    }
-    const nextTrack = queue[nextIndex];
-    if (nextTrack) playTrack(nextTrack, nextIndex);
+    handleQueueAutoAdvance(
+      queue,
+      queueCurrentIndex,
+      shuffle,
+      repeatMode,
+      (track, index) => playTrack(track, index),
+      () => playerRef.current?.play()
+    );
   };
 
   // =============================================================================
   // Queue Management
   // =============================================================================
 
-  const addToQueue = (track: PlaylistTrack) => {
-    setQueue(prev => { if (prev.some(t => t.id === track.id)) return prev; return [...prev, track]; });
+  const addToQueueFn = (track: PlaylistTrack) => {
+    setQueue(prev => addTrackToQueue(prev, track));
     addToast('Added to queue', 'success');
   };
 
@@ -513,44 +447,55 @@ export const Player: React.FC = () => {
   };
 
   const playNext = (track: PlaylistTrack) => {
-    setQueue(prev => {
-      if (prev.some(t => t.id === track.id)) return prev;
-      const insertAt = queueCurrentIndex >= 0 ? queueCurrentIndex + 1 : prev.length;
-      const next = [...prev]; next.splice(insertAt, 0, track); return next;
-    });
+    const { queue: newQueue } = playNextTrack(queue, track, queueCurrentIndex);
+    setQueue(newQueue);
     addToast('Playing next: ' + (track.title || track.name), 'success');
   };
 
-  const removeFromQueue = (index: number) => {
-    setQueue(prev => prev.filter((_, i) => i !== index));
-    if (index < queueCurrentIndex) setQueueCurrentIndex(prev => prev - 1);
+  const removeFromQueueFn = (index: number) => {
+    setQueue(prev => {
+      const newQueue = removeFromQueueUtil(prev, index);
+      if (index < queueCurrentIndex) setQueueCurrentIndex(prev => prev - 1);
+      return newQueue;
+    });
   };
 
   const reorderQueue = (startIndex: number, endIndex: number) => {
     if (startIndex === endIndex) return;
     setQueue(prev => {
-      const next = [...prev]; const [removed] = next.splice(startIndex, 1); next.splice(endIndex, 0, removed); return next;
+      const next = [...prev];
+      const [removed] = next.splice(startIndex, 1);
+      next.splice(endIndex, 0, removed);
+      return next;
     });
-    setQueueCurrentIndex(prev => {
-      if (prev === -1) return -1;
-      if (prev === startIndex) return endIndex;
-      if (startIndex < endIndex) { if (prev > startIndex && prev <= endIndex) return prev - 1; }
-      else { if (prev >= endIndex && prev < startIndex) return prev + 1; }
-      return prev;
-    });
+    setQueueCurrentIndex(prev => reorderQueueIndex(prev, startIndex, endIndex));
   };
 
-  const clearQueue = () => { setQueue([]); setQueueCurrentIndex(-1); clearQueueStorage(); };
+  const clearQueueFn = () => {
+    setQueue([]);
+    setQueueCurrentIndex(-1);
+    clearQueueStorage();
+  };
 
   const handleSmartMix = async () => {
-    if (!currentTrack?.tags) { addToast('No tags to base mix on', 'error'); return; }
+    if (!currentTrack?.tags) {
+      addToast('No tags to base mix on', 'error');
+      return;
+    }
     try {
       const similar = await loader.findSimilarTracks(currentTrack.id, currentTrack.tags, 4, 20);
       if (similar.length > 0) {
-        setQueue(prev => { const newTracks = similar.filter(t => !prev.some(p => p.id === t.id)); return [...prev, ...newTracks]; });
+        setQueue(prev => {
+          const newTracks = similar.filter(t => !prev.some(p => p.id === t.id));
+          return [...prev, ...newTracks];
+        });
         addToast(`Added ${similar.length} tracks to queue`, 'success');
-      } else { addToast('No similar tracks found', 'info'); }
-    } catch { addToast('Failed to create smart mix', 'error'); }
+      } else {
+        addToast('No similar tracks found', 'info');
+      }
+    } catch {
+      addToast('Failed to create smart mix', 'error');
+    }
   };
 
   // =============================================================================
@@ -564,31 +509,47 @@ export const Player: React.FC = () => {
       if (currentTrack?.id === id) setCurrentTrack(prev => prev ? { ...prev, ...updates } : null);
       loadTags(); loadStats();
       addToast('Changes saved', 'success');
-    } catch { addToast('Failed to save changes', 'error'); throw new Error('Failed to save changes'); }
+    } catch {
+      addToast('Failed to save changes', 'error');
+      throw new Error('Failed to save changes');
+    }
   };
 
   const generateShareLink = async () => {
-    if (queue.length === 0) { addToast('Add tracks to the queue first.', 'info'); return; }
+    if (queue.length === 0) {
+      addToast('Add tracks to the queue first.', 'info');
+      return;
+    }
     const trackIds = queue.map(t => t.id).filter(Boolean);
-    if (trackIds.length === 0) { addToast('No valid tracks to share.', 'info'); return; }
+    if (trackIds.length === 0) {
+      addToast('No valid tracks to share.', 'info');
+      return;
+    }
     try {
       const shareResponse = await loader.createShare(trackIds, 'Shared Playlist', 30);
       await navigator.clipboard.writeText(shareResponse.short_url || shareResponse.full_url);
       addToast('Shareable playlist link copied to clipboard!', 'success');
       return;
-    } catch { addToast('Could not create shared playlist. Falling back to URL playlist.', 'error'); }
+    } catch {
+      addToast('Could not create shared playlist. Falling back to URL playlist.', 'error');
+    }
     try {
       await navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?tracks=${trackIds.join(',')}`);
       addToast('Legacy playlist link copied to clipboard.', 'success');
-    } catch { addToast('Error copying link.', 'error'); }
+    } catch {
+      addToast('Error copying link.', 'error');
+    }
   };
 
   const trashTrack = async (id: string) => {
     try {
       await loader.trashTrack(id);
       setLibrary(prev => prev.filter(t => t.id !== id));
-      loadStats(); addToast('Moved to trash', 'success');
-    } catch { addToast('Failed to trash track', 'error'); }
+      loadStats();
+      addToast('Moved to trash', 'success');
+    } catch {
+      addToast('Failed to trash track', 'error');
+    }
   };
 
   // =============================================================================
@@ -713,7 +674,7 @@ export const Player: React.FC = () => {
         queue={queue} currentIndex={queueCurrentIndex} isOpen={showQueue}
         onClose={() => setShowQueue(false)}
         onTrackClick={(index) => playTrack(queue[index], index)}
-        onRemoveTrack={removeFromQueue} onClearQueue={clearQueue}
+        onRemoveTrack={removeFromQueueFn} onClearQueue={clearQueueFn}
         onShuffle={() => setShuffle(s => !s)} onSmartMix={handleSmartMix}
         onShareQueue={generateShareLink} onReorderQueue={reorderQueue}
         shuffle={shuffle} repeatMode={repeatMode}
@@ -840,9 +801,9 @@ export const Player: React.FC = () => {
                 tracks={library} allTags={allTags} stats={stats}
                 currentTrackId={currentTrack?.id} loadingTrackId={loadingTrackId}
                 isPlaying={playerState.isPlaying} viewMode={libraryViewMode}
-                onTrackClick={(track) => { addToQueue(track); playTrack(track, queue.length); }}
+                onTrackClick={(track) => { addToQueueFn(track); playTrack(track, queue.length); }}
                 onTrackDoubleClick={playNow} onUpdateTrack={updateTrack} onTrashTrack={trashTrack}
-                onPlayNow={playNow} onPlayNext={playNext} onAddToQueue={addToQueue}
+                onPlayNow={playNow} onPlayNext={playNext} onAddToQueue={addToQueueFn}
                 isLoading={isLoadingLibrary}
               />
             </div>
@@ -868,7 +829,7 @@ export const Player: React.FC = () => {
                 queue={queue} currentIndex={queueCurrentIndex} loadingTrackId={loadingTrackId}
                 isOpen={true} onClose={() => {}}
                 onTrackClick={(index) => playTrack(queue[index], index)}
-                onRemoveTrack={removeFromQueue} onClearQueue={clearQueue}
+                onRemoveTrack={removeFromQueueFn} onClearQueue={clearQueueFn}
                 onShuffle={() => setShuffle(s => !s)} onSmartMix={handleSmartMix}
                 onShareQueue={generateShareLink} onReorderQueue={reorderQueue}
                 shuffle={shuffle} repeatMode={repeatMode}
