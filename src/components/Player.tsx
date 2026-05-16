@@ -31,6 +31,7 @@ import { ToastContainer } from './Toast';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { checkBackendHealth } from '../utils/healthCheck';
 import { handleQueueAutoAdvance, reorderQueueIndex, addTrackToQueue, playNextTrack, removeFromQueue as removeFromQueueUtil } from '../utils/queueUtils';
+import { formatTime, shuffleArray } from '../utils/audioUtils';
 import './Player.css';
 
 // =============================================================================
@@ -482,7 +483,7 @@ export const Player: React.FC = () => {
 
   const playAll = (tracks: PlaylistTrack[], shuffled = false) => {
     if (tracks.length === 0) return;
-    const ordered = shuffled ? [...tracks].sort(() => Math.random() - 0.5) : tracks;
+    const ordered = shuffled ? shuffleArray(tracks) : tracks;
     setQueue(ordered);
     setQueueCurrentIndex(0);
     playTrack(ordered[0], 0);
@@ -510,6 +511,12 @@ export const Player: React.FC = () => {
       return !prev;
     });
   }, [volume]);
+
+  const handleVolumeChange = useCallback((vol: number) => {
+    setMuted(false);
+    setVolume(vol);
+    playerRef.current?.setVolume(vol);
+  }, []);
 
   const playNow = (track: PlaylistTrack) => {
     setQueue([track]); setQueueCurrentIndex(0); playTrack(track, 0);
@@ -674,12 +681,6 @@ export const Player: React.FC = () => {
     };
   }, [handleLocalFiles]);
 
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
   // =============================================================================
   // Render — default ShaderGUI mode
   // =============================================================================
@@ -718,7 +719,7 @@ export const Player: React.FC = () => {
           onStop={() => playerRef.current?.stop()}
           onSeek={(t) => playerRef.current?.seek(t)}
           onTrackClick={(index) => playTrack(queue[index], index)}
-          onVolumeChange={(vol) => { setMuted(false); setVolume(vol); playerRef.current?.setVolume(vol); }}
+          onVolumeChange={handleVolumeChange}
           onMute={toggleMute}
           onNext={() => { if (queue.length > 0 && queueCurrentIndex < queue.length - 1) playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1); }}
           onPrevious={() => { if (queue.length > 0 && queueCurrentIndex > 0) playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1); }}
@@ -917,7 +918,7 @@ export const Player: React.FC = () => {
                 onPlay={togglePlayback} onStop={() => playerRef.current?.stop()}
                 onSeek={(t) => playerRef.current?.seek(t)}
                 onTrackClick={(index) => playTrack(queue[index], index)}
-                onVolumeChange={(vol) => { setMuted(false); setVolume(vol); playerRef.current?.setVolume(vol); }}
+                onVolumeChange={handleVolumeChange}
                 onMute={toggleMute}
                 onNext={() => { if (queue.length > 0 && queueCurrentIndex < queue.length - 1) playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1); }}
                 onPrevious={() => { if (queue.length > 0 && queueCurrentIndex > 0) playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1); }}

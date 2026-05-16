@@ -21,6 +21,21 @@ function uint8ArrayToBase64(data: Uint8Array): string {
   return btoa(binary);
 }
 
+interface AudioFormatSpecs {
+  sampleRate?: number;
+  bitsPerSample?: number;
+  numberOfChannels?: number;
+  container?: string;
+  codec?: string;
+  bitrate?: number;
+}
+
+function formatChannelCount(channels: number): string {
+  if (channels === 1) return 'Mono';
+  if (channels === 2) return 'Stereo';
+  return `${channels}ch`;
+}
+
 export const MetadataPanel: React.FC<MetadataPanelProps> = ({
   file,
   audioUrl,
@@ -29,7 +44,7 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
   channels: channelsProp = 2,
 }) => {
   const [metadata, setMetadata] = useState<Record<string, unknown> | null>(null);
-  const [formatSpecs, setFormatSpecs] = useState<{ sampleRate?: number; bitsPerSample?: number; numberOfChannels?: number; container?: string; codec?: string; bitrate?: number } | null>(null);
+  const [formatSpecs, setFormatSpecs] = useState<AudioFormatSpecs | null>(null);
   const [albumArt, setAlbumArt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
@@ -156,7 +171,7 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
             {displayFormat && <span className="spec-badge">{displayFormat}</span>}
             {displaySampleRate && <span>{(displaySampleRate / 1000).toFixed(1)} kHz</span>}
             {displayBitDepth && <span>{displayBitDepth}-bit</span>}
-            {displayChannels && <span>{displayChannels === 1 ? 'Mono' : displayChannels === 2 ? 'Stereo' : `${displayChannels}ch`}</span>}
+            {displayChannels && <span>{formatChannelCount(displayChannels)}</span>}
             {displayBitrate && <span>{displayBitrate} kbps</span>}
             {metadata?.year && <span>{String(metadata.year)}</span>}
           </div>

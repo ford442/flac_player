@@ -9,6 +9,7 @@ import { Knob } from './Knob';
 import { Button } from './Button';
 import { VolumeSlider } from './VolumeSlider';
 import { useBeatDetection } from '../../hooks/useBeatDetection';
+import { formatTime } from '../../utils/audioUtils';
 import './ShaderGUI.css';
 
 export interface ShaderGUIProps {
@@ -203,12 +204,6 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     setTimeout(() => setStopFlash(0), 300);
     onStop();
   }, [onStop]);
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
 
   const handleSeekBarClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (!onSeek || duration <= 0) return;
