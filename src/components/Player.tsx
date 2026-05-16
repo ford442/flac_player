@@ -506,13 +506,19 @@ export const Player: React.FC = () => {
         prevVolumeRef.current = volume;
         playerRef.current?.setVolume(0);
       } else {
-        playerRef.current?.setVolume(prevVolumeRef.current);
+        const restoredVol = prevVolumeRef.current;
+        playerRef.current?.setVolume(restoredVol);
+        setVolume(restoredVol);
       }
       return !prev;
     });
   }, [volume]);
 
   const handleVolumeChange = useCallback((vol: number) => {
+    if (vol > 0) {
+      // Track the new volume as the "pre-mute" restore point
+      prevVolumeRef.current = vol;
+    }
     setMuted(false);
     setVolume(vol);
     playerRef.current?.setVolume(vol);
@@ -640,8 +646,8 @@ export const Player: React.FC = () => {
     onNext:     () => { if (queue.length > 0 && queueCurrentIndex < queue.length - 1) playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1); },
     onPrevious: () => { if (queue.length > 0 && queueCurrentIndex > 0) playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1); },
     onSearchFocus: () => searchInputRef.current?.focus(),
-    onVolumeUp:   () => { if (!muted) { setVolume(prev => { const next = Math.min(1, prev + 0.1); playerRef.current?.setVolume(next); return next; }); } },
-    onVolumeDown: () => { if (!muted) { setVolume(prev => { const next = Math.max(0, prev - 0.1); playerRef.current?.setVolume(next); return next; }); } },
+    onVolumeUp:   () => { handleVolumeChange(Math.min(1, volume + 0.1)); },
+    onVolumeDown: () => { handleVolumeChange(Math.max(0, volume - 0.1)); },
     onToggleQueue: () => setShowQueue(prev => !prev),
     onMute: toggleMute,
     onShowHelp: () => setShowHelp(prev => !prev),

@@ -121,7 +121,7 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
   const displaySampleRate = formatSpecs?.sampleRate ?? sampleRateProp;
   const displayBitDepth = formatSpecs?.bitsPerSample ?? bitDepthProp;
   const displayChannels = formatSpecs?.numberOfChannels ?? channelsProp;
-  const displayFormat = formatSpecs?.container || formatSpecs?.codec;
+  const displayFormat = formatSpecs?.container ?? formatSpecs?.codec;
   const displayBitrate = formatSpecs?.bitrate ? Math.round(formatSpecs.bitrate / 1000) : undefined;
 
   return (

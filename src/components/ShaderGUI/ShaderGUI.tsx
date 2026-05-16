@@ -324,7 +324,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
           />
         </div>
 
-        <div style={{ gridColumn: 2, gridRow: '2 / span 2', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+        <div className="shader-gui-volume-col">
           <VolumeSlider value={muted ? 0 : volume} onChange={onVolumeChange} />
           {onMute && (
             <button
