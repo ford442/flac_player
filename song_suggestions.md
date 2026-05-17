@@ -2406,3 +2406,98 @@ The ancient Japanese hip-hop feel!
 **Additional Notes:**
 - **Combo/Fusion:** 1990s Boom Bap Hip Hop / Traditional Japanese Koto
 - **Thematic Ties:** The dusty, sample-heavy grit and head-nodding bounce of 90s East Coast hip-hop perfectly contrasting with the highly refined, delicate, and ancient stringed traditions of feudal Japan.
+
+### Title: Samba of the Vikings
+
+**Service:** Minimax Audio
+
+**Prompt:** A high-energy, infectious Brazilian Samba track with a massive bateria of whistles, surdo drums, and cuícas. The upbeat Portuguese vocals and cavaquinho leads are completely replaced by the deep, booming chants of Nordic Viking warriors and the mournful, scraping drone of a bowed tagelharpa, playing a relentlessly cheerful carnival rhythm.
+
+**Lyrics:**
+(Verse 1 - Booming, deep Viking warrior chorus)
+Rowing the longship down to Rio today!
+(A massive whistle blast and a flurry of samba drums)
+Pillaging the carnival, dancing the night away!
+(Tagelharpa scrapes out a fast, syncopated samba melody)
+
+(Chorus)
+(The Viking choir sings cheerfully over the driving bateria)
+Valhalla in the tropics! Feathers in the beard!
+The happiest little raid that the coast has ever feared!
+Samba of the northmen, shield-wall in the sun!
+The icy Scandinavian party has just begun!
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Samba / Nordic Viking Folk
+- **Thematic Ties:** The colorful, sunny, and incredibly rhythmic street parties of Brazilian carnival violently crashed by the grim, freezing, and bloodthirsty mythology of Viking raiders.
+
+### Title: Bluegrass of the Pharaohs
+
+**Service:** Minimax Audio
+
+**Prompt:** A foot-stomping, high-speed Appalachian Bluegrass tune featuring frantic banjo, fiddle, and mandolin playing. However, the twangy acoustic strings are completely replaced by a swirling, mystical Middle Eastern Ney flute and a bright, resonant Qanun (zither), playing blazing fast, major-key country hoedown melodies over a syncopated washboard beat.
+
+**Lyrics:**
+(Verse 1 - Nasally, high-lonesome Bluegrass tenor vocal)
+Well I'm going up the pyramid, to see my sweet gal...
+(Qanun plucks a lightning-fast, twangy bluegrass roll)
+Got my overalls on, walking down the Nile canal...
+(Ney flute plays a soaring, breathy fiddle tune)
+
+(Chorus)
+(Washboard and Qanun lock into a frantic, dizzying hoedown)
+Mummify the rhythm! Spin the wooden bow!
+The brightest little zither that the desert will ever know!
+Moonshine and the scarab, dancing in the street!
+The Egyptian hoedown is bringing the heat!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Ancient Egyptian Instruments
+- **Thematic Ties:** The incredibly fast, intricate, and wooden acoustic picking of American mountain music completely relocated to the ancient, mystical, and microtonal atmosphere of the Egyptian desert.
+
+### Title: K-Pop of the Cossacks
+
+**Service:** Minimax Audio
+
+**Prompt:** A highly polished, hyper-energetic K-Pop girl group anthem featuring massive electronic drops, syncopated rap verses, and bright synth-pop hooks. However, all the backing instrumentation—synthesizers, heavy bass, and electronic drums—is entirely replaced by a massive, booming Russian men's choir and a frantically strummed Balalaika playing the hyper-fast pop hooks.
+
+**Lyrics:**
+(Verse 1 - Sugary, fast-paced K-Pop vocals)
+Neon lights shining, oppa look at me!
+(Balalaika shreds a furiously fast pop melody)
+Dancing in the snow, pretty as can be!
+(Deep, booming Russian choir sings a rhythmic bassline)
+
+(Chorus)
+(Massive pop chorus with full Russian choir and Balalaika)
+Saranghae in the tundra! Watch the ushanka spin!
+The cutest little winter that you have ever been in!
+Squat-dancing idols, making history!
+The coldest little pop star, creating the fantasy!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern K-Pop / Russian Cossack Folk
+- **Thematic Ties:** The intensely manufactured, pristine, and glossy world of modern Korean pop music clashing dramatically with the freezing, vodka-soaked, and aggressively athletic traditions of Russian Cossack folk.
+
+### Title: Jazz of the Aztecs
+
+**Service:** Minimax Audio
+
+**Prompt:** An upbeat, lively 1940s Big Band Swing tune with a driving walking bassline and a tight, syncopated drum groove. However, the massive brass section—usually trumpets, trombones, and saxophones—is completely replaced by a terrifying ensemble of Aztec death whistles, clay flutes, and hollow teponaztli drums, playing the swinging jazz melodies with bone-chilling shrieks.
+
+**Lyrics:**
+(Verse 1 - Smooth, old-school jazz crooner)
+Well, pack your bags, we're heading south today!
+(A terrifying, airy shriek from an Aztec death whistle mimicking a trumpet solo)
+Gonna find a pyramid, gonna hide away!
+(Teponaztli drum pounds out a syncopated swing rhythm)
+
+(Chorus)
+Oh, the Aztec Swing is tearing up the town!
+The heaviest clay flutes are laying it down!
+From the jungle temples to the dancehall floor!
+Swing it, priest, let the good times roar!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1940s Big Band Swing / Ancient Aztec Instruments
+- **Thematic Ties:** The glamorous, highly choreographed, and incredibly brassy power of American Big Band swing completely reimagined through the bloodthirsty, terrifying, and ancient acoustics of Pre-Columbian Aztec rituals.
