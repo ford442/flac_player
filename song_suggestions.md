@@ -2501,3 +2501,98 @@ Swing it, priest, let the good times roar!
 **Additional Notes:**
 - **Combo/Fusion:** 1940s Big Band Swing / Ancient Aztec Instruments
 - **Thematic Ties:** The glamorous, highly choreographed, and incredibly brassy power of American Big Band swing completely reimagined through the bloodthirsty, terrifying, and ancient acoustics of Pre-Columbian Aztec rituals.
+
+### Title: The Cloister Lowrider
+
+**Service:** Minimax Audio
+
+**Prompt:** A laid-back, bouncing 1990s West Coast G-Funk track with a slow, head-nodding drum beat. The iconic high-pitched synthesizer whine and deep basslines are entirely replaced by a massive, gothic church organ and a delicate, plucking lute, while a choir of solemn monks delivers a smooth, rhythmic gangsta rap flow entirely in Latin Gregorian chants.
+
+**Lyrics:**
+(Verse 1 - Rhythmic, smooth Latin chanting acting as a laid-back rap flow)
+(Deep, rolling church organ bassline underneath)
+Cruising through the abbey in my horse-drawn cart...
+(Lute plucks a high, whining G-Funk melody)
+Illuminating manuscripts, mastering the art.
+(Monks harmonize a smooth, G-Funk style backing vocal: "Ooooh, yeah")
+
+(Chorus)
+(Church organ hits a massive, heavy chord on the downbeat)
+Rolling with the monks, bouncing in the nave!
+The holiest gangstas that the Lord ever gave!
+Incense in the air, chalice full of wine!
+The west coast abbey is doing just fine!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s West Coast G-Funk / Latin Gregorian Chant & Church Organ
+- **Thematic Ties:** The incredibly laid-back, dangerous, and heavily synthesized bounce of West Coast hip hop seamlessly translated into the solemn, ancient, and highly acoustic environment of a medieval monastery.
+
+### Title: Neon Billabong
+
+**Service:** Minimax Audio
+
+**Prompt:** A moody, atmospheric 1980s New Wave synth-pop track with a driving, robotic drum machine beat and chorus-drenched guitars. However, the icy, melancholic synthesizer leads and new romantic vocals are entirely replaced by the deep, continuous, and earthy growl of an Australian Aboriginal Didgeridoo, rhythmically pulsing and barking out catchy pop melodies.
+
+**Lyrics:**
+(Verse 1 - Robotic 80s drum machine beat)
+(Chorus-drenched electric guitar plays a sparse, moody chord progression)
+(The Didgeridoo enters, mimicking a melancholic, breathy new wave vocal)
+(Rhythmic didgeridoo barks act as the lyrics, full of angst and echo)
+
+(Chorus)
+(The drum machine switches to a driving 4/4 dance beat)
+(Didgeridoo blasts a massive, infectious, and bouncy pop hook, drenched in 80s reverb)
+(The guitar plays a fast, rhythmic funk strum underneath the deep drone)
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s New Wave Synth-Pop / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The melancholic, highly processed, and synthetic angst of 80s new wave bands grounded by the ancient, deeply resonant, and earthy drone of the Australian outback.
+
+### Title: Tartan Whine
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, energetic Jamaican Dancehall track featuring a pounding, syncopated riddim and booming sub-bass. The modern tropical synthesizers and auto-tuned vocals are completely replaced by the incredibly loud, continuous wail of Scottish Great Highland Bagpipes and the crisp, military rattle of highland snare drums, playing incredibly fast, aggressive Caribbean club rhythms.
+
+**Lyrics:**
+(Verse 1 - Gruff Jamaican Dancehall MC flow, heavily echoed)
+(Highland snare drums rattle out a frantic, syncopated dancehall beat)
+Step into the dance, make way for the king!
+(Bagpipes erupt with a blistering, fast-paced dancehall melody)
+Hear the loud pipes make the whole club ring!
+(Heavy sub-bass drops on the off-beat)
+
+(Chorus)
+(The bagpipes go into an incredibly fast, highly ornamented solo over the heavy bass)
+Highland in the dancehall! Whine to the drone!
+The loudest little riddim that the island has known!
+Kilts in the club, stepping to the bass!
+The Scottish dancehall is taking over the place!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Dancehall / Scottish Bagpipes & Highland Snare Drums
+- **Thematic Ties:** The raw, sensual, and heavy tropical club energy of Jamaican Dancehall violently interrupted by the deafening, continuous, and aggressively martial blasts of traditional Scottish instruments.
+
+### Title: Sombrero in the Mosh Pit
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced, whiny 2000s Pop Punk anthem featuring driving power chords, double-time drum beats, and teenage angst lyrics. However, the distorted electric guitars are entirely replaced by fiercely strummed acoustic vihuelas and guitarróns, while a triumphant section of Mariachi trumpets blasts out the catchy pop-punk hooks over the frantic skateboarding tempo.
+
+**Lyrics:**
+(Verse 1 - Whiny, nasally 2000s Pop Punk vocal)
+I'm so sick of this small town, I just wanna leave!
+(Acoustic vihuelas furiously strum a fast-paced power-chord progression)
+Nobody understands me, wearing my heart on my sleeve!
+(Mariachi trumpets blast a bright, catchy, major-key hook)
+
+(Chorus)
+(Double-time punk drum beat with the guitarrón pumping a heavy bassline)
+So let's go! (Ay, ay, ay!) Running from the scene!
+The saddest little mariachi that you've ever seen!
+Skateboards and sombreros, crying in the rain!
+Acoustic power chords to take away the pain!
+
+**Additional Notes:**
+- **Combo/Fusion:** 2000s Pop Punk / Traditional Mexican Mariachi
+- **Thematic Ties:** The whiny, suburban, and heavily distorted angst of 2000s pop punk completely relocated to the passionate, vibrant, and acoustic celebration of Mexican street musicians.
