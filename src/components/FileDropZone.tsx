@@ -1,5 +1,5 @@
 // src/components/FileDropZone.tsx
-// Drag-and-drop zone + file picker for local FLAC/WAV files.
+// Drag-and-drop zone + file picker for local audio files (FLAC, WAV, MP3).
 import React, { useCallback, useRef, useState } from 'react';
 
 interface FileDropZoneProps {
@@ -51,30 +51,19 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({ onFiles }) => {
           ? 'border-purple-400 bg-purple-500/10'
           : 'border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10'
       }`}
+      onClick={() => inputRef.current?.click()}
+      role="button"
+      tabIndex={0}
+      aria-label="Drag and drop FLAC, WAV, or MP3 files here, or click to browse"
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click(); }}
     >
-      <div
-        className="text-center cursor-pointer"
-        onClick={() => inputRef.current?.click()}
-        role="button"
-        tabIndex={0}
-        aria-label="Drag and drop audio files here, or click to browse"
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click(); }}
-      >
-        <p className="text-sm text-gray-400">Drop FLAC/WAV/MP3 files here</p>
-        <p className="text-xs text-gray-500 mt-1">or click to browse</p>
-      </div>
-      <button
-        onClick={handleButtonClick}
-        className="mt-3 w-full px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded transition-colors"
-        title="Open local audio files"
-      >
-        📂 Open Files
-      </button>
+      <p className="text-sm text-gray-400">Drop FLAC/WAV/MP3 files here</p>
+      <p className="text-xs text-gray-500 mt-1">or click to browse</p>
       <input
         ref={inputRef}
         type="file"
         multiple
-        accept=".flac,.wav,.mp3,audio/flac,audio/wav,audio/x-wav,audio/mpeg"
+        accept=".flac,.wav,.mp3,audio/flac,audio/wav,audio/x-wav,audio/mpeg,audio/mp3"
         onChange={handleFileInput}
         className="hidden"
         aria-hidden="true"

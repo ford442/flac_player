@@ -297,7 +297,7 @@ export const Player: React.FC = () => {
         return;
       }
 
-      await (playerRef.current as AudioPlayer).loadAudio(arrayBuffer);
+      await (playerRef.current as AudioPlayer).loadAudio(arrayBuffer, file.name);
       playerRef.current.play();
       addToast(`Playing: ${track.title || track.name}`, 'info');
     } catch (err) {

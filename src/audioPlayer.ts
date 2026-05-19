@@ -1,5 +1,5 @@
 // Audio player with load/play/pause/seek functionality
-import { FlacDecoder } from './flacDecoder';
+import { decodeAudioWithBuffer } from './audioDecoder';
 
 export interface PlayerState {
   isPlaying: boolean;
@@ -45,19 +45,42 @@ export class AudioPlayer {
     }
   }
 
-  async loadAudio(arrayBuffer: ArrayBuffer): Promise<void> {
+  async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
     this.notifyStateChange();
 
     try {
       // Stop current playback
       this.stop();
 
-      // Decode the audio off the main thread via WASM worker
-      const decoder = new FlacDecoder();
-      await decoder.init();
-      const decodedData = await decoder.decode(arrayBuffer);
-      this.audioBuffer = decoder.createAudioBuffer(this.audioContext, decodedData);
-      decoder.destroy();
+      // Decode the audio (auto-detects FLAC vs native formats like MP3)
+      const { decoderResult, audioBuffer: nativeBuffer } = await decodeAudioWithBuffer(
+        arrayBuffer,
+        this.audioContext,
+        filename
+      );
+
+      // If we have the original native AudioBuffer, use it directly (more efficient)
+      if (nativeBuffer) {
+        this.audioBuffer = nativeBuffer;
+      } else {
+        // Otherwise, reconstruct from interleaved buffer (for FLAC)
+        const frameCount = decoderResult.interleavedBuffer.length / decoderResult.channels;
+        this.audioBuffer = this.audioContext.createBuffer(
+          decoderResult.channels,
+          frameCount,
+          decoderResult.sampleRate
+        );
+
+        // Use typed array operations for better performance
+        const interleaved = decoderResult.interleavedBuffer;
+        for (let ch = 0; ch < decoderResult.channels; ch++) {
+          const channelData = this.audioBuffer.getChannelData(ch);
+          // Copy channel data using stride
+          for (let i = 0, idx = ch; i < frameCount; i++, idx += decoderResult.channels) {
+            channelData[i] = interleaved[idx];
+          }
+        }
+      }
 
       this.pausedAt = 0;
       this.notifyStateChange();
