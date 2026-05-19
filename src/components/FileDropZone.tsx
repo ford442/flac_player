@@ -46,10 +46,10 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({ onFiles }) => {
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
-      className={`p-4 border-2 border-dashed rounded-lg transition-colors ${
+      className={`p-4 border-2 border-dashed rounded-lg transition-colors cursor-pointer ${
         isDragging
           ? 'border-purple-400 bg-purple-500/10'
-          : 'border-white/20 bg-white/5'
+          : 'border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10'
       }`}
     >
       <div className="text-center cursor-pointer" onClick={() => inputRef.current?.click()} role="button" tabIndex={0} aria-label="Drag and drop audio files here, or click to browse" onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click(); }}>
