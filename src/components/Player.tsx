@@ -32,6 +32,7 @@ import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { checkBackendHealth } from '../utils/healthCheck';
 import { handleQueueAutoAdvance, reorderQueueIndex, addTrackToQueue, playNextTrack, removeFromQueue as removeFromQueueUtil } from '../utils/queueUtils';
 import { formatTime, shuffleArray } from '../utils/audioUtils';
+import { startProjectMBridge } from '../utils/projectMBridge';
 import './Player.css';
 
 // =============================================================================
@@ -352,6 +353,10 @@ export const Player: React.FC = () => {
     // Apply persisted volume immediately
     player.setVolume(muted ? 0 : volume);
 
+    // Start project-M bridge for popup integration
+    const analyser = player.getAnalyser();
+    const stopProjectMBridge = startProjectMBridge(analyser);
+
     // Load pending local files after mode switch
     if (pendingFilesRef.current.length > 0) {
       const files = pendingFilesRef.current;
@@ -364,6 +369,7 @@ export const Player: React.FC = () => {
     }
 
     return () => {
+      stopProjectMBridge();
       (player as EndCallbackPlayer).setOnEndedCallback?.(undefined);
       player.destroy();
     };
