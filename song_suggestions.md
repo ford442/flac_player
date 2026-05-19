@@ -2596,3 +2596,94 @@ Acoustic power chords to take away the pain!
 **Additional Notes:**
 - **Combo/Fusion:** 2000s Pop Punk / Traditional Mexican Mariachi
 - **Thematic Ties:** The whiny, suburban, and heavily distorted angst of 2000s pop punk completely relocated to the passionate, vibrant, and acoustic celebration of Mexican street musicians.
+
+### Title: The Alpine Cypher
+
+**Service:** Minimax Audio
+
+**Prompt:** A gritty, dusty 1990s New York Boom Bap hip-hop track featuring heavy, sampled drum breaks. However, the driving instrumental hook and bassline are entirely replaced by a cheerful, echoing Swiss Yodeler delivering complex, rapid-fire vocal leaps and a booming Alphorn providing the deep sub-bass over the East Coast beat.
+
+**Lyrics:**
+(Verse 1 - Smooth, aggressive 90s New York rap flow)
+Step into the cipher, bringing the pain...
+(Alphorn blasts a deep, heavy, resonant bass note)
+Spitting that fire, caught in the rain.
+(Swiss Yodeler delivers a rapid-fire vocal leap perfectly in time with the beat)
+
+(Chorus)
+(DJ scratches an Alphorn sample over the boom-bap beat)
+Boom bap in the Alps! Dropping the snow!
+The heaviest yodel that you'll ever know!
+Alphorn crankin', spinning the wheel!
+Mountain top hip-hop, keeping it real!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Boom Bap Hip Hop / Swiss Yodeling & Alphorn
+- **Thematic Ties:** The dusty, sample-heavy grit and head-nodding bounce of 90s East Coast hip-hop perfectly contrasting with the cheerful, highly acoustic, and mountainous traditions of the Swiss Alps.
+
+### Title: The Robotic Calypso
+
+**Service:** Minimax Audio
+
+**Prompt:** A bright, bouncing Caribbean Calypso track with a lively, syncopated rhythm and cheerful acoustic guitar skanking. But the upbeat, tropical melodies and lead vocals are entirely performed by a glitching, heavily auto-tuned Cyberpunk AI, with a harsh, synthetic 8-bit chip providing the bright steel drum melodies.
+
+**Lyrics:**
+(Verse 1 - Robotic, heavily vocoded cyberpunk vocal)
+(8-bit synth plays a bright, bouncy calypso chord progression)
+Processing data by the digital sea...
+(A metallic, synthetic scrape acts as the guiro)
+Downloading sunshine for you and me...
+
+(Chorus)
+(The syncopated beat continues as the 8-bit synth goes into a frantic solo)
+Robots on vacation, dancing in the sand!
+The most logical calypso in all the land!
+Circuit boards shaking, lasers in the palm!
+The AI singing a tropical psalm!
+
+**Additional Notes:**
+- **Combo/Fusion:** Caribbean Calypso / Cyberpunk Synthwave & 8-Bit Chiptune
+- **Thematic Ties:** The sunny, relaxed, and impossibly cheerful Caribbean beach-party energy completely digitized by the cold, calculating, and highly artificial soundscape of a cyberpunk AI.
+
+### Title: Tibetan Pub Crawl
+
+**Service:** Minimax Audio
+
+**Prompt:** A rowdy, fast-paced Irish Pub Rock anthem featuring aggressively strummed acoustic guitars, a driving drum beat, and a stomping, unified chorus of drinkers. However, the melodic leads—typically a fiddle or tin whistle—are entirely replaced by the deep, resonant droning of Tibetan Singing Bowls and the booming strikes of large Temple Gongs, which somehow lock perfectly into the punk-rock drinking rhythm.
+
+**Lyrics:**
+(Verse 1 - Rowdy, shouted Irish pub-rock vocal)
+Well, we drank all the whiskey, we drank all the stout!
+(Tibetan Singing Bowl begins a rapid, pulsing drone)
+We're causing a ruckus, we're screaming it out!
+(A massive Temple Gong crashes perfectly on the downbeat)
+
+(Chorus)
+(A unified, stomping chorus of drinkers shouting)
+Heave ho! Monks in the bar!
+The loudest little singing bowls, traveling far!
+Pints on the table, gongs in the air!
+The Tibetan pub crawl without any care!
+
+**Additional Notes:**
+- **Combo/Fusion:** Irish Pub Rock / Tibetan Singing Bowls & Temple Gongs
+- **Thematic Ties:** The chaotic, aggressively cheerful, and alcohol-fueled energy of an Irish pub rock song completely overwhelmed by the pious, echoing, and traditionally peaceful acoustics of Tibetan monks.
+
+### Title: The Hurdy-Gurdy Wobble
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive, building 2010s Brostep/Dubstep track featuring a massive drop with screeching synthesizer growls and wobbling sub-basses. But the entire drop and all the aggressive synth lines are completely performed by a heavily distorted, aggressively cranked Medieval Hurdy-Gurdy, grinding out the metallic, wobbling bass frequencies over the chaotic electronic drums.
+
+**Lyrics:**
+(Verse 1 - No vocals, just a rising dubstep snare build)
+(A Hurdy-Gurdy begins to crank, slowly building in intensity and distortion)
+
+(Chorus)
+(Massive Brostep drop with the Hurdy-Gurdy providing screeching synth growls and deep wobble bass)
+(The Hurdy-Gurdy cranks frantically, mimicking the chaotic, stuttering rhythm of dubstep)
+(Heavy electronic drums pound underneath the medieval drone)
+
+**Additional Notes:**
+- **Combo/Fusion:** 2010s Brostep Dubstep / Medieval Hurdy-Gurdy
+- **Thematic Ties:** The hyper-synthetic, chaotic, and speaker-destroying energy of modern dubstep completely replicated by the noisy, continuous, and highly mechanical European peasant instrument.

@@ -37,6 +37,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({ onFiles }) => {
     e.target.value = '';
   }, [onFiles]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleButtonClick = useCallback(() => {
     inputRef.current?.click();
   }, []);
