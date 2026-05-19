@@ -37,12 +37,16 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({ onFiles }) => {
     e.target.value = '';
   }, [onFiles]);
 
+  const handleButtonClick = useCallback(() => {
+    inputRef.current?.click();
+  }, []);
+
   return (
     <div
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
-      className={`p-4 text-center border-2 border-dashed rounded-lg transition-colors cursor-pointer ${
+      className={`p-4 border-2 border-dashed rounded-lg transition-colors cursor-pointer ${
         isDragging
           ? 'border-purple-400 bg-purple-500/10'
           : 'border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10'
