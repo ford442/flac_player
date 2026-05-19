@@ -2596,3 +2596,186 @@ Acoustic power chords to take away the pain!
 **Additional Notes:**
 - **Combo/Fusion:** 2000s Pop Punk / Traditional Mexican Mariachi
 - **Thematic Ties:** The whiny, suburban, and heavily distorted angst of 2000s pop punk completely relocated to the passionate, vibrant, and acoustic celebration of Mexican street musicians.
+
+### Title: The Tuvan Breakdancer
+
+**Service:** Minimax Audio
+
+**Prompt:** A classic, breakbeat-heavy 1980s Hip-Hop electro track featuring a crisp Roland TR-808 drum machine and heavy scratching. But the classic synthesizer stabs and vocoder vocals are completely replaced by a Tuvan throat singer, using the deep Kargyraa technique to punch out the bassline and the high-pitched Sygyt whistling to mimic synthesizer leads, all while a DJ scratches a Morin Khuur (horsehead fiddle) sample.
+
+**Lyrics:**
+(Verse 1 - Deep, rhythmic Kargyraa throat singing acting as the rap flow)
+(808 drum machine drops a heavy, syncopated breakbeat)
+(Sygyt overtone whistle plays a high, descending electro melody)
+(DJ scratches furiously over the beat)
+
+(Chorus)
+(Throat singer shifts into incredibly high-pitched, rhythmic whistling)
+Breakdancing on the steppe! Spinning on the head!
+The deepest bassline that the DJ ever said!
+Cardboard on the grass, adidas on the feet!
+The Mongolian electro is bringing the heat!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Electro Hip-Hop / Tuvan Throat Singing
+- **Thematic Ties:** The highly urban, synthesized, and breakdance-oriented sound of early hip-hop relocated to the vast, open, and deeply ancient acoustic environment of the Mongolian steppes.
+
+### Title: The Andean Shoegazer
+
+**Service:** Minimax Audio
+
+**Prompt:** A dense, ethereal Shoegaze track characterized by a massive wall of distorted, reverberating sound and a slow, driving drum beat. However, piercing through the wash of noise is a massive ensemble of traditional Andean Pan Flutes (zampoñas) and charangos, completely drenched in massive reverb and delay to create a hypnotic, fuzzy drone that sounds like a storm in the high mountains.
+
+**Lyrics:**
+(Verse 1 - Whispered, ethereal vocals drenched in reverb)
+Looking at the clouds... in the mountain air...
+(A massive wall of fuzz guitar, with crying pan flutes echoing endlessly)
+Losing myself... without a single care.
+The charango hums through the reverb tank...
+
+(Chorus)
+(The wall of sound swells, the pan flutes attack fiercely but echo into infinity)
+Noise in the Andes! The feedback screams!
+Drowning the peaks in static dreams!
+Dancing the huayno in the endless haze!
+The weeping bamboo catches the shoegaze!
+
+**Additional Notes:**
+- **Combo/Fusion:** Shoegaze / Traditional Andean Pan Flutes & Charango
+- **Thematic Ties:** The overwhelming, blurry, and incredibly loud wash of 90s shoegaze aesthetics being sharply contrasted by the articulate, breathy, and fiercely acoustic attacks of high-altitude South American instruments, all submerged in endless reverb.
+
+### Title: Gagaku in the Club
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive, pounding modern Techno track featuring a relentless four-on-the-floor kick drum and dark, industrial atmospheres. Yet the driving melodic force and eerie tension are provided by a traditional Japanese Gagaku ensemble, with the piercing hichiriki wailing dissonant scales and the sho providing slow, breathing cluster chords over the techno beat.
+
+**Lyrics:**
+(Verse 1 - No human vocals, just industrial techno atmosphere)
+(A relentless, distorted kick drum pounds at 130 BPM)
+(The hichiriki pierces through the mix with a slow, bending, microtonal melody)
+(The sho breathes a massive, dissonant cluster chord on the off-beat)
+
+(Chorus)
+(The techno beat drops into a heavy, driving rhythm)
+(The kakko drum is sampled and looped rapidly to create a frantic techno snare roll)
+(The hichiriki wails in a terrifying, high-pitched frenzy)
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern Techno / Traditional Japanese Gagaku
+- **Thematic Ties:** The relentless, mechanical, and highly synthetic energy of an underground techno club fused perfectly with the ancient, terrifyingly formal, and distinctly dissonant sounds of the Japanese imperial court.
+
+### Title: The Mariachi Drill
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, menacing modern UK Drill hip-hop track featuring sliding 808 sub-basses and frantic, skittering triplet hi-hats. However, the eerie piano loops and dark synthesizer pads are entirely replaced by a passionate Mexican Mariachi band, with blaring trumpets and aggressively strummed vihuelas playing minor-key, dramatic melodies contrasting violently with the aggressive, fast-paced drill rapping.
+
+**Lyrics:**
+(Verse 1 - Aggressive, fast-paced UK Drill rap flow)
+(Mariachi trumpets blast a dark, soaring, minor-key fanfare)
+Yeah, stepping on the plaza, looking for a fight...
+(Massive, sliding 808 bass drops under the vihuela strumming)
+Sombrero on the head, moving in the night!
+
+(Chorus)
+(The skittering hi-hats go into overdrive while the mariachi band plays a fast flourish)
+Drill in the cantina! Sliding on the street!
+The trumpet crying out, moving to the beat!
+Tacos and the drill, the plaza is cold!
+The most dramatic drill story ever told!
+
+**Additional Notes:**
+- **Combo/Fusion:** UK Drill Hip-Hop / Traditional Mexican Mariachi
+- **Thematic Ties:** The dark, aggressive, and menacing street energy of modern drill rap violently contrasted by the deeply passionate, vibrant, and acoustic drama of Mexican street musicians.
+
+### Title: The Alpine Cypher
+
+**Service:** Minimax Audio
+
+**Prompt:** A gritty, dusty 1990s New York Boom Bap hip-hop track featuring heavy, sampled drum breaks. However, the driving instrumental hook and bassline are entirely replaced by a cheerful, echoing Swiss Yodeler delivering complex, rapid-fire vocal leaps and a booming Alphorn providing the deep sub-bass over the East Coast beat.
+
+**Lyrics:**
+(Verse 1 - Smooth, aggressive 90s New York rap flow)
+Step into the cipher, bringing the pain...
+(Alphorn blasts a deep, heavy, resonant bass note)
+Spitting that fire, caught in the rain.
+(Swiss Yodeler delivers a rapid-fire vocal leap perfectly in time with the beat)
+
+(Chorus)
+(DJ scratches an Alphorn sample over the boom-bap beat)
+Boom bap in the Alps! Dropping the snow!
+The heaviest yodel that you'll ever know!
+Alphorn crankin', spinning the wheel!
+Mountain top hip-hop, keeping it real!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Boom Bap Hip Hop / Swiss Yodeling & Alphorn
+- **Thematic Ties:** The dusty, sample-heavy grit and head-nodding bounce of 90s East Coast hip-hop perfectly contrasting with the cheerful, highly acoustic, and mountainous traditions of the Swiss Alps.
+
+### Title: The Robotic Calypso
+
+**Service:** Minimax Audio
+
+**Prompt:** A bright, bouncing Caribbean Calypso track with a lively, syncopated rhythm and cheerful acoustic guitar skanking. But the upbeat, tropical melodies and lead vocals are entirely performed by a glitching, heavily auto-tuned Cyberpunk AI, with a harsh, synthetic 8-bit chip providing the bright steel drum melodies.
+
+**Lyrics:**
+(Verse 1 - Robotic, heavily vocoded cyberpunk vocal)
+(8-bit synth plays a bright, bouncy calypso chord progression)
+Processing data by the digital sea...
+(A metallic, synthetic scrape acts as the guiro)
+Downloading sunshine for you and me...
+
+(Chorus)
+(The syncopated beat continues as the 8-bit synth goes into a frantic solo)
+Robots on vacation, dancing in the sand!
+The most logical calypso in all the land!
+Circuit boards shaking, lasers in the palm!
+The AI singing a tropical psalm!
+
+**Additional Notes:**
+- **Combo/Fusion:** Caribbean Calypso / Cyberpunk Synthwave & 8-Bit Chiptune
+- **Thematic Ties:** The sunny, relaxed, and impossibly cheerful Caribbean beach-party energy completely digitized by the cold, calculating, and highly artificial soundscape of a cyberpunk AI.
+
+### Title: Tibetan Pub Crawl
+
+**Service:** Minimax Audio
+
+**Prompt:** A rowdy, fast-paced Irish Pub Rock anthem featuring aggressively strummed acoustic guitars, a driving drum beat, and a stomping, unified chorus of drinkers. However, the melodic leads—typically a fiddle or tin whistle—are entirely replaced by the deep, resonant droning of Tibetan Singing Bowls and the booming strikes of large Temple Gongs, which somehow lock perfectly into the punk-rock drinking rhythm.
+
+**Lyrics:**
+(Verse 1 - Rowdy, shouted Irish pub-rock vocal)
+Well, we drank all the whiskey, we drank all the stout!
+(Tibetan Singing Bowl begins a rapid, pulsing drone)
+We're causing a ruckus, we're screaming it out!
+(A massive Temple Gong crashes perfectly on the downbeat)
+
+(Chorus)
+(A unified, stomping chorus of drinkers shouting)
+Heave ho! Monks in the bar!
+The loudest little singing bowls, traveling far!
+Pints on the table, gongs in the air!
+The Tibetan pub crawl without any care!
+
+**Additional Notes:**
+- **Combo/Fusion:** Irish Pub Rock / Tibetan Singing Bowls & Temple Gongs
+- **Thematic Ties:** The chaotic, aggressively cheerful, and alcohol-fueled energy of an Irish pub rock song completely overwhelmed by the pious, echoing, and traditionally peaceful acoustics of Tibetan monks.
+
+### Title: The Hurdy-Gurdy Wobble
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive, building 2010s Brostep/Dubstep track featuring a massive drop with screeching synthesizer growls and wobbling sub-basses. But the entire drop and all the aggressive synth lines are completely performed by a heavily distorted, aggressively cranked Medieval Hurdy-Gurdy, grinding out the metallic, wobbling bass frequencies over the chaotic electronic drums.
+
+**Lyrics:**
+(Verse 1 - No vocals, just a rising dubstep snare build)
+(A Hurdy-Gurdy begins to crank, slowly building in intensity and distortion)
+
+(Chorus)
+(Massive Brostep drop with the Hurdy-Gurdy providing screeching synth growls and deep wobble bass)
+(The Hurdy-Gurdy cranks frantically, mimicking the chaotic, stuttering rhythm of dubstep)
+(Heavy electronic drums pound underneath the medieval drone)
+
+**Additional Notes:**
+- **Combo/Fusion:** 2010s Brostep Dubstep / Medieval Hurdy-Gurdy
+- **Thematic Ties:** The hyper-synthetic, chaotic, and speaker-destroying energy of modern dubstep completely replicated by the noisy, continuous, and highly mechanical European peasant instrument.
