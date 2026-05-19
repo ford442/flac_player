@@ -1,5 +1,5 @@
 // Audio player with load/play/pause/seek functionality
-import { FlacDecoder } from './flacDecoder';
+import { decodeAudio } from './audioDecoder';
 
 export interface PlayerState {
   isPlaying: boolean;
@@ -45,19 +45,31 @@ export class AudioPlayer {
     }
   }
 
-  async loadAudio(arrayBuffer: ArrayBuffer): Promise<void> {
+  async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
     this.notifyStateChange();
 
     try {
       // Stop current playback
       this.stop();
 
-      // Decode the audio off the main thread via WASM worker
-      const decoder = new FlacDecoder();
-      await decoder.init();
-      const decodedData = await decoder.decode(arrayBuffer);
-      this.audioBuffer = decoder.createAudioBuffer(this.audioContext, decodedData);
-      decoder.destroy();
+      // Decode the audio (auto-detects FLAC vs native formats like MP3)
+      const decodedData = await decodeAudio(arrayBuffer, this.audioContext, filename);
+
+      // Create AudioBuffer from decoded data
+      const frameCount = decodedData.interleavedBuffer.length / decodedData.channels;
+      this.audioBuffer = this.audioContext.createBuffer(
+        decodedData.channels,
+        frameCount,
+        decodedData.sampleRate
+      );
+
+      for (let ch = 0; ch < decodedData.channels; ch++) {
+        const channelData = this.audioBuffer.getChannelData(ch);
+        for (let i = 0; i < frameCount; i++) {
+          channelData[i] =
+            decodedData.interleavedBuffer[i * decodedData.channels + ch];
+        }
+      }
 
       this.pausedAt = 0;
       this.notifyStateChange();

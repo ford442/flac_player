@@ -1,4 +1,4 @@
-import { FlacDecoder } from './flacDecoder';
+import { decodeAudio } from './audioDecoder';
 import { PlayerState } from './audioPlayer';
 
 // Define the Emscripten module interface
@@ -139,7 +139,7 @@ export class SdlAudioPlayer {
     }, 100);
   }
 
-  async loadAudio(arrayBuffer: ArrayBuffer): Promise<void> {
+  async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
     console.log('[SdlAudioPlayer] loadAudio called with ArrayBuffer of size:', arrayBuffer.byteLength);
     if (!this.module || !this.isReady) {
       console.warn('[SdlAudioPlayer] Module not ready during loadAudio call.');
@@ -151,15 +151,12 @@ export class SdlAudioPlayer {
 
     try {
       console.log('[SdlAudioPlayer] Decoding audio...');
-      const decoder = new FlacDecoder();
-      await decoder.init();
-      const result = await decoder.decode(arrayBuffer);
-      decoder.destroy();
+      const result = await decodeAudio(arrayBuffer, undefined, filename);
       console.log('[SdlAudioPlayer] Decoded. Channels:', result.channels, 'SampleRate:', result.sampleRate, 'Duration:', result.duration);
 
       this.duration = result.duration;
 
-      // Use pre-interleaved buffer from worker
+      // Use pre-interleaved buffer from decoder
       const channels = result.channels;
       const interleaved = result.interleavedBuffer;
       const interleavedLength = interleaved.length;

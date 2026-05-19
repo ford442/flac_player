@@ -296,7 +296,7 @@ export const Player: React.FC = () => {
         return;
       }
 
-      await (playerRef.current as AudioPlayer).loadAudio(arrayBuffer);
+      await (playerRef.current as AudioPlayer).loadAudio(arrayBuffer, file.name);
       playerRef.current.play();
       addToast(`Playing: ${track.title || track.name}`, 'info');
     } catch (err) {
@@ -670,7 +670,7 @@ export const Player: React.FC = () => {
       setIsDraggingFile(false);
       if (!e.dataTransfer) return;
       const files = Array.from(e.dataTransfer.files).filter(
-        f => f.name.endsWith('.flac') || f.name.endsWith('.wav') || f.type.includes('audio')
+        f => f.name.endsWith('.flac') || f.name.endsWith('.wav') || f.name.endsWith('.mp3') || f.type.includes('audio')
       );
       if (files.length > 0) {
         e.preventDefault();

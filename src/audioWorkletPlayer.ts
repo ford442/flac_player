@@ -1,7 +1,7 @@
 // Audio player using AudioWorkletNode for better performance
 // Falls back to ScriptProcessorNode if AudioWorklet is not available
 // Phase 2: Added streaming mode with ring buffer for chunked/low-memory playback.
-import { FlacDecoder } from './flacDecoder';
+import { decodeAudio } from './audioDecoder';
 
 export interface PlayerState {
   isPlaying: boolean;
@@ -244,7 +244,7 @@ export class AudioWorkletPlayer {
     }
   }
 
-  async loadAudio(arrayBuffer: ArrayBuffer): Promise<void> {
+  async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
     if (!this.audioContext) {
       await this.initialize();
     }
@@ -254,10 +254,7 @@ export class AudioWorkletPlayer {
     try {
       this.stop();
 
-      const decoder = new FlacDecoder();
-      await decoder.init();
-      const decodedData = await decoder.decode(arrayBuffer);
-      decoder.destroy();
+      const decodedData = await decodeAudio(arrayBuffer, this.audioContext, filename);
 
       this.channels = decodedData.channels;
       this.sampleRate = decodedData.sampleRate;
