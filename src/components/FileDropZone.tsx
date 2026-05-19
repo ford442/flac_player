@@ -14,7 +14,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({ onFiles }) => {
     e.preventDefault();
     setIsDragging(false);
     const files = Array.from(e.dataTransfer.files).filter(
-      f => f.name.endsWith('.flac') || f.name.endsWith('.wav') || f.type.includes('audio')
+      f => f.name.endsWith('.flac') || f.name.endsWith('.wav') || f.name.endsWith('.mp3') || f.type.includes('audio')
     );
     if (files.length > 0) onFiles(files);
   }, [onFiles]);
@@ -31,35 +31,43 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({ onFiles }) => {
 
   const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []).filter(
-      f => f.name.endsWith('.flac') || f.name.endsWith('.wav') || f.type.includes('audio')
+      f => f.name.endsWith('.flac') || f.name.endsWith('.wav') || f.name.endsWith('.mp3') || f.type.includes('audio')
     );
     if (files.length > 0) onFiles(files);
     e.target.value = '';
   }, [onFiles]);
+
+  const handleButtonClick = useCallback(() => {
+    inputRef.current?.click();
+  }, []);
 
   return (
     <div
       onDrop={onDrop}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
-      className={`p-4 text-center border-2 border-dashed rounded-lg transition-colors cursor-pointer ${
+      className={`p-4 border-2 border-dashed rounded-lg transition-colors ${
         isDragging
           ? 'border-purple-400 bg-purple-500/10'
-          : 'border-white/20 bg-white/5 hover:border-white/40 hover:bg-white/10'
+          : 'border-white/20 bg-white/5'
       }`}
-      onClick={() => inputRef.current?.click()}
-      role="button"
-      tabIndex={0}
-      aria-label="Drag and drop FLAC or WAV files here, or click to browse"
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click(); }}
     >
-      <p className="text-sm text-gray-400">Drop FLAC/WAV files here</p>
-      <p className="text-xs text-gray-500 mt-1">or click to browse</p>
+      <div className="text-center cursor-pointer" onClick={() => inputRef.current?.click()} role="button" tabIndex={0} aria-label="Drag and drop audio files here, or click to browse" onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click(); }}>
+        <p className="text-sm text-gray-400">Drop FLAC/WAV/MP3 files here</p>
+        <p className="text-xs text-gray-500 mt-1">or click to browse</p>
+      </div>
+      <button
+        onClick={handleButtonClick}
+        className="mt-3 w-full px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded transition-colors"
+        title="Open local audio files"
+      >
+        📂 Open Files
+      </button>
       <input
         ref={inputRef}
         type="file"
         multiple
-        accept=".flac,.wav,audio/flac,audio/wav,audio/x-wav"
+        accept=".flac,.wav,.mp3,audio/flac,audio/wav,audio/x-wav,audio/mpeg"
         onChange={handleFileInput}
         className="hidden"
         aria-hidden="true"
