@@ -670,7 +670,7 @@ export const Player: React.FC = () => {
       setIsDraggingFile(false);
       if (!e.dataTransfer) return;
       const files = Array.from(e.dataTransfer.files).filter(
-        f => f.name.endsWith('.flac') || f.name.endsWith('.wav') || f.type.includes('audio')
+        f => f.name.endsWith('.flac') || f.name.endsWith('.wav') || f.name.endsWith('.mp3') || f.type.includes('audio')
       );
       if (files.length > 0) {
         e.preventDefault();
@@ -731,6 +731,7 @@ export const Player: React.FC = () => {
           onPrevious={() => { if (queue.length > 0 && queueCurrentIndex > 0) playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1); }}
           onToggleFallback={() => setShowHtmlFallback(true)}
           showFallbackToggle={!isSharedPlaylist}
+          onFileSelect={handleLocalFiles}
         />
       </>
     );
@@ -928,6 +929,7 @@ export const Player: React.FC = () => {
                 onMute={toggleMute}
                 onNext={() => { if (queue.length > 0 && queueCurrentIndex < queue.length - 1) playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1); }}
                 onPrevious={() => { if (queue.length > 0 && queueCurrentIndex > 0) playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1); }}
+                onFileSelect={handleLocalFiles}
               />
             </div>
           )}

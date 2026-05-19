@@ -33,6 +33,7 @@ export interface ShaderGUIProps {
   onPrevious?: () => void;
   onToggleFallback?: () => void;
   showFallbackToggle?: boolean;
+  onFileSelect?: (files: File[]) => void;
 }
 
 export const ShaderGUI: React.FC<ShaderGUIProps> = ({
@@ -56,8 +57,10 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   onPrevious,
   onToggleFallback,
   showFallbackToggle = false,
+  onFileSelect,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const visualizerRef = useRef<WebGPUVisualizer | null>(null);
   const fallbackRef = useRef<CanvasFallbackVisualizer | null>(null);
   const animFrameRef = useRef<number>(0);
@@ -236,6 +239,20 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     });
   }, []);
 
+  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).filter(
+      f => f.name.endsWith('.flac') || f.name.endsWith('.wav') || f.name.endsWith('.mp3') || f.type.includes('audio')
+    );
+    if (files.length > 0 && onFileSelect) {
+      onFileSelect(files);
+    }
+    e.target.value = '';
+  }, [onFileSelect]);
+
+  const handleOpenFiles = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen bg-black">
       {showFallbackToggle && onToggleFallback && (
@@ -313,6 +330,17 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             <Button type="play" active={isPlaying} onClick={handlePlay} />
             <Button type="next" active={false} onClick={() => onNext?.()} />
           </div>
+
+          {onFileSelect && (
+            <button
+              onClick={handleOpenFiles}
+              className="shader-button"
+              title="Open local audio files"
+              aria-label="Open Files"
+            >
+              <span className="button-icon">📂</span>
+            </button>
+          )}
         </div>
 
         <div className="shader-gui-bottom-left">
@@ -339,6 +367,15 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         </div>
       </div>
     </Chassis>
+    <input
+      ref={fileInputRef}
+      type="file"
+      multiple
+      accept=".flac,.wav,.mp3,audio/flac,audio/wav,audio/x-wav,audio/mpeg"
+      onChange={handleFileInput}
+      className="hidden"
+      aria-hidden="true"
+    />
     </div>
   );
 };
