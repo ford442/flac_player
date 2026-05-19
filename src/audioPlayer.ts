@@ -1,5 +1,5 @@
 // Audio player with load/play/pause/seek functionality
-import { decodeAudio } from './audioDecoder';
+import { decodeAudioWithBuffer } from './audioDecoder';
 
 export interface PlayerState {
   isPlaying: boolean;
@@ -53,21 +53,30 @@ export class AudioPlayer {
       this.stop();
 
       // Decode the audio (auto-detects FLAC vs native formats like MP3)
-      const decodedData = await decodeAudio(arrayBuffer, this.audioContext, filename);
-
-      // Create AudioBuffer from decoded data
-      const frameCount = decodedData.interleavedBuffer.length / decodedData.channels;
-      this.audioBuffer = this.audioContext.createBuffer(
-        decodedData.channels,
-        frameCount,
-        decodedData.sampleRate
+      const { decoderResult, audioBuffer: nativeBuffer } = await decodeAudioWithBuffer(
+        arrayBuffer,
+        this.audioContext,
+        filename
       );
 
-      for (let ch = 0; ch < decodedData.channels; ch++) {
-        const channelData = this.audioBuffer.getChannelData(ch);
-        for (let i = 0; i < frameCount; i++) {
-          channelData[i] =
-            decodedData.interleavedBuffer[i * decodedData.channels + ch];
+      // If we have the original native AudioBuffer, use it directly (more efficient)
+      if (nativeBuffer) {
+        this.audioBuffer = nativeBuffer;
+      } else {
+        // Otherwise, reconstruct from interleaved buffer (for FLAC)
+        const frameCount = decoderResult.interleavedBuffer.length / decoderResult.channels;
+        this.audioBuffer = this.audioContext.createBuffer(
+          decoderResult.channels,
+          frameCount,
+          decoderResult.sampleRate
+        );
+
+        for (let ch = 0; ch < decoderResult.channels; ch++) {
+          const channelData = this.audioBuffer.getChannelData(ch);
+          for (let i = 0; i < frameCount; i++) {
+            channelData[i] =
+              decoderResult.interleavedBuffer[i * decoderResult.channels + ch];
+          }
         }
       }
 

@@ -45,10 +45,36 @@ export async function decodeAudio(
     if (!audioContext) {
       throw new Error('Cannot decode non-FLAC audio without an AudioContext. Provide an AudioContext or use FLAC format.');
     }
-    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer.slice(0));
+    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
     
     // Convert AudioBuffer to FlacDecoderResult format for consistency
     return convertAudioBufferToDecoderResult(audioBuffer);
+  }
+}
+
+/**
+ * Decode audio and return the original AudioBuffer if available (for Web Audio API use).
+ * This optimizes native format playback by avoiding unnecessary conversions.
+ */
+export async function decodeAudioWithBuffer(
+  arrayBuffer: ArrayBuffer,
+  audioContext: AudioContext,
+  filename?: string
+): Promise<{ decoderResult: FlacDecoderResult; audioBuffer?: AudioBuffer }> {
+  const isFlac = isFlacBuffer(arrayBuffer) || isFlacByExtension(filename);
+
+  if (isFlac) {
+    // FLAC: return only decoder result
+    const decoder = new FlacDecoder();
+    await decoder.init();
+    const decodedData = await decoder.decode(arrayBuffer);
+    decoder.destroy();
+    return { decoderResult: decodedData };
+  } else {
+    // Native format: return both for efficiency
+    const nativeBuffer = await audioContext.decodeAudioData(arrayBuffer);
+    const decoderResult = convertAudioBufferToDecoderResult(nativeBuffer);
+    return { decoderResult, audioBuffer: nativeBuffer };
   }
 }
 
