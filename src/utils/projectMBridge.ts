@@ -19,8 +19,9 @@ export function startProjectMBridge(analyser: AnalyserNode): () => void {
 
   try {
     const channel = new BroadcastChannel('projectm-audio');
+    // Use fftSize for time-domain data (not frequencyBinCount, which is for frequency data)
     const buf = new Float32Array(analyser.fftSize);
-    let rafId: number;
+    let rafId: number | undefined;
 
     const send = () => {
       analyser.getFloatTimeDomainData(buf);
@@ -35,7 +36,9 @@ export function startProjectMBridge(analyser: AnalyserNode): () => void {
 
     // Return cleanup function
     return () => {
-      cancelAnimationFrame(rafId);
+      if (rafId !== undefined) {
+        cancelAnimationFrame(rafId);
+      }
       channel.close();
     };
   } catch (err) {
