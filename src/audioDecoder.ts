@@ -43,7 +43,7 @@ export async function decodeAudio(
   } else {
     // Use native AudioContext.decodeAudioData for MP3 and other formats
     if (!audioContext) {
-      throw new Error('Cannot decode non-FLAC audio without an AudioContext. Provide an AudioContext or use FLAC format.');
+      throw new Error('Cannot decode MP3 or other non-FLAC formats in SDL mode. Please use Web Audio or AudioWorklet playback mode, or convert your audio to FLAC format.');
     }
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
     

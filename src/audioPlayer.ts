@@ -71,11 +71,13 @@ export class AudioPlayer {
           decoderResult.sampleRate
         );
 
+        // Use typed array operations for better performance
+        const interleaved = decoderResult.interleavedBuffer;
         for (let ch = 0; ch < decoderResult.channels; ch++) {
           const channelData = this.audioBuffer.getChannelData(ch);
-          for (let i = 0; i < frameCount; i++) {
-            channelData[i] =
-              decoderResult.interleavedBuffer[i * decoderResult.channels + ch];
+          // Copy channel data using stride
+          for (let i = 0, idx = ch; i < frameCount; i++, idx += decoderResult.channels) {
+            channelData[i] = interleaved[idx];
           }
         }
       }

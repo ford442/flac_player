@@ -59,7 +59,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({ onFiles }) => {
         ref={inputRef}
         type="file"
         multiple
-        accept=".flac,.wav,.mp3,audio/flac,audio/wav,audio/x-wav,audio/mpeg"
+        accept=".flac,.wav,.mp3,audio/flac,audio/wav,audio/x-wav,audio/mpeg,audio/mp3"
         onChange={handleFileInput}
         className="hidden"
         aria-hidden="true"
