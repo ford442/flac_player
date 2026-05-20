@@ -13,11 +13,13 @@ Features:
 
 import os
 import random
+import logging
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from models import (
@@ -675,6 +677,84 @@ async def redirect_to_playlist(share_id: str):
         raise HTTPException(status_code=404, detail="Share not found")
     
     return RedirectResponse(url=f"/?share={share_id}")
+
+
+# =============================================================================
+# API Endpoints - Audio Streaming
+# =============================================================================
+
+@app.get("/api/music/{item_id}")
+async def stream_music(item_id: str):
+    """
+    Stream audio file for a song by ID.
+    
+    This endpoint provides a fallback for songs that don't have external URLs.
+    Per the architecture, the primary audio source is storage.noahcohn.com
+    (REACT_APP_API_URL), but this endpoint supports local file serving for:
+    - Development environments
+    - Offline deployments
+    - Backup/fallback scenarios
+    
+    The frontend only uses this endpoint if song.url is not set (per audioLoader.ts).
+    """
+    try:
+        # Get song metadata
+        song = await STORAGE_MAP.get(item_id)
+        if not song:
+            raise HTTPException(status_code=404, detail="Song not found")
+        
+        # Get filename from metadata
+        filename = song.get("filename")
+        if not filename:
+            raise HTTPException(status_code=404, detail="Audio file not available for this song")
+        
+        # Construct full file path
+        file_path = os.path.join(MUSIC_DIR, filename)
+        
+        # Verify file exists and is within MUSIC_DIR (security check)
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Audio file not found on disk")
+        
+        # Security: Ensure the resolved path is within MUSIC_DIR
+        resolved_path = os.path.realpath(file_path)
+        music_dir_resolved = os.path.realpath(MUSIC_DIR)
+        # Normalize paths for case-insensitive filesystems (Windows, macOS)
+        resolved_path_norm = os.path.normcase(resolved_path)
+        music_dir_resolved_norm = os.path.normcase(music_dir_resolved)
+        # Use os.path.commonpath for more robust path checking
+        try:
+            common = os.path.commonpath([resolved_path_norm, music_dir_resolved_norm])
+            if common != music_dir_resolved_norm:
+                raise HTTPException(status_code=403, detail="Access denied")
+        except ValueError:
+            # Paths on different drives on Windows
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Determine MIME type based on file extension
+        _, ext = os.path.splitext(filename.lower())
+        if ext == ".flac":
+            media_type = "audio/flac"
+        elif ext in [".wav", ".wave"]:
+            media_type = "audio/wav"
+        elif ext == ".mp3":
+            media_type = "audio/mpeg"
+        else:
+            media_type = "audio/octet-stream"
+        
+        # Return file with streaming
+        return FileResponse(
+            file_path,
+            media_type=media_type,
+            filename=filename,
+            headers={"Accept-Ranges": "bytes"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        # Log error server-side for debugging but return generic message to client
+        error_type = type(e).__name__
+        logging.error(f"Error streaming music {item_id}: {error_type}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # =============================================================================

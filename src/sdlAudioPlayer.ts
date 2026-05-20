@@ -36,6 +36,8 @@ export class SdlAudioPlayer {
   private onStateChange?: (state: PlayerState) => void;
   private pollInterval: number | null = null;
   private lastVolume: number = 1.0;
+  private dummyAudioContext: AudioContext | null = null;
+  private dummyAnalyser: AnalyserNode | null = null;
 
   constructor() {
     this.initializeModule();
@@ -48,7 +50,7 @@ export class SdlAudioPlayer {
     if (!(window as any).__sdl_script_processor_shim_loaded) {
       console.log('[SdlAudioPlayer] Loading script-processor-shim.js...');
       const shim = document.createElement('script');
-      shim.src = 'script-processor-shim.js';
+      shim.src = '/script-processor-shim.js';
       shim.async = true;
       document.head.appendChild(shim);
 
@@ -69,7 +71,7 @@ export class SdlAudioPlayer {
     if (!window.createSdlAudioModule) {
       console.log('[SdlAudioPlayer] Loading sdl-audio.js...');
       const script = document.createElement('script');
-      script.src = 'sdl-audio.js';
+      script.src = '/sdl-audio.js';
       script.async = true;
       document.body.appendChild(script);
 
@@ -269,13 +271,12 @@ export class SdlAudioPlayer {
 
   getAnalyser(): AnalyserNode {
     // SDL player doesn't support Web Audio AnalyserNode integration yet
-    // Return a dummy analyser to satisfy interface if needed, or throw/return null and handle in UI
-    // The UI handles null but the type signature says AnalyserNode.
-    // We'll cast null or create a dummy one.
-    // Creating a dummy one requires AudioContext.
-    const ctx = new AudioContext();
-    const analyser = ctx.createAnalyser();
-    return analyser;
+    // Create a dummy analyser once and reuse it to avoid creating multiple AudioContexts
+    if (!this.dummyAnalyser) {
+      this.dummyAudioContext = new AudioContext();
+      this.dummyAnalyser = this.dummyAudioContext.createAnalyser();
+    }
+    return this.dummyAnalyser;
   }
 
   destroy(): void {
@@ -283,6 +284,15 @@ export class SdlAudioPlayer {
     if (this.pollInterval) clearInterval(this.pollInterval);
     if (this.module) {
       this.module._cleanup();
+    }
+    if (this.dummyAudioContext) {
+      // Close the AudioContext asynchronously. Since destroy() is called from the
+      // Player cleanup function when switching backends (see Player.tsx line 374),
+      // and the old player instance is immediately discarded, a race condition
+      // cannot occur - any new getAnalyser() calls will be from a fresh player instance.
+      void this.dummyAudioContext.close();
+      this.dummyAudioContext = null;
+      this.dummyAnalyser = null;
     }
   }
 }
