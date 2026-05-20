@@ -103,6 +103,7 @@ export const Player: React.FC = () => {
   const playerRef = useRef<AnyPlayer | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pendingFilesRef = useRef<File[]>([]);
+  const handleAutoAdvanceRef = useRef<() => void>(() => {});
   const loader = useMemo(() => new AudioLoader(), []);
 
   type EndCallbackPlayer = { setOnEndedCallback?: (cb?: () => void) => void };
@@ -321,6 +322,17 @@ export const Player: React.FC = () => {
     });
   }, [outputMode, loadLocalFile, addToast]);
 
+  // Keep handleAutoAdvanceRef up-to-date with latest state
+  handleAutoAdvanceRef.current = () =>
+    handleQueueAutoAdvance(
+      queue,
+      queueCurrentIndex,
+      shuffle,
+      repeatMode,
+      (track, index) => playTrack(track, index),
+      () => playerRef.current?.play()
+    );
+
   // =============================================================================
   // Player Initialization
   // =============================================================================
@@ -347,7 +359,7 @@ export const Player: React.FC = () => {
     }
 
     player.setStateChangeCallback(setPlayerState);
-    (player as EndCallbackPlayer).setOnEndedCallback?.(() => handleAutoAdvance());
+    (player as EndCallbackPlayer).setOnEndedCallback?.(() => handleAutoAdvanceRef.current());
     playerRef.current = player;
 
     // Apply persisted volume immediately
@@ -466,17 +478,6 @@ export const Player: React.FC = () => {
     if (playerState.duration === 0 && initialTrack) { playTrack(initialTrack, initialIndex); return; }
     playerRef.current?.play();
   }, [playerState.isPlaying, playerState.duration, playTrack, queue, queueCurrentIndex]);
-
-  const handleAutoAdvance = () => {
-    handleQueueAutoAdvance(
-      queue,
-      queueCurrentIndex,
-      shuffle,
-      repeatMode,
-      (track, index) => playTrack(track, index),
-      () => playerRef.current?.play()
-    );
-  };
 
   // =============================================================================
   // Queue Management
