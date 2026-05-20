@@ -706,7 +706,13 @@ async def stream_music(item_id: str):
         # Security: Ensure the resolved path is within MUSIC_DIR
         resolved_path = os.path.realpath(file_path)
         music_dir_resolved = os.path.realpath(MUSIC_DIR)
-        if not resolved_path.startswith(music_dir_resolved):
+        # Use os.path.commonpath for more robust path checking
+        try:
+            common = os.path.commonpath([resolved_path, music_dir_resolved])
+            if common != music_dir_resolved:
+                raise HTTPException(status_code=403, detail="Access denied")
+        except ValueError:
+            # Paths on different drives on Windows
             raise HTTPException(status_code=403, detail="Access denied")
         
         # Determine MIME type based on file extension
@@ -729,7 +735,10 @@ async def stream_music(item_id: str):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error streaming music: {str(e)}")
+        # Log error server-side but return generic message to client
+        import logging
+        logging.error(f"Error streaming music {item_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 # =============================================================================

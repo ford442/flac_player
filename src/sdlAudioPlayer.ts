@@ -286,7 +286,8 @@ export class SdlAudioPlayer {
       this.module._cleanup();
     }
     if (this.dummyAudioContext) {
-      this.dummyAudioContext.close();
+      // Close the AudioContext - the promise resolves when done but we don't need to await
+      void this.dummyAudioContext.close();
       this.dummyAudioContext = null;
       this.dummyAnalyser = null;
     }
