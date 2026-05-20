@@ -18,6 +18,7 @@ from typing import Optional, List, Dict, Any
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from models import (
@@ -675,6 +676,60 @@ async def redirect_to_playlist(share_id: str):
         raise HTTPException(status_code=404, detail="Share not found")
     
     return RedirectResponse(url=f"/?share={share_id}")
+
+
+# =============================================================================
+# API Endpoints - Audio Streaming
+# =============================================================================
+
+@app.get("/api/music/{item_id}")
+async def stream_music(item_id: str):
+    """Stream audio file for a song by ID."""
+    try:
+        # Get song metadata
+        song = await STORAGE_MAP.get(item_id)
+        if not song:
+            raise HTTPException(status_code=404, detail="Song not found")
+        
+        # Get filename from metadata
+        filename = song.get("filename")
+        if not filename:
+            raise HTTPException(status_code=404, detail="Audio file not available for this song")
+        
+        # Construct full file path
+        file_path = os.path.join(MUSIC_DIR, filename)
+        
+        # Verify file exists and is within MUSIC_DIR (security check)
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Audio file not found on disk")
+        
+        # Security: Ensure the resolved path is within MUSIC_DIR
+        resolved_path = os.path.realpath(file_path)
+        music_dir_resolved = os.path.realpath(MUSIC_DIR)
+        if not resolved_path.startswith(music_dir_resolved):
+            raise HTTPException(status_code=403, detail="Access denied")
+        
+        # Determine MIME type based on file extension
+        _, ext = os.path.splitext(filename.lower())
+        if ext == ".flac":
+            media_type = "audio/flac"
+        elif ext in [".wav", ".wave"]:
+            media_type = "audio/wav"
+        elif ext == ".mp3":
+            media_type = "audio/mpeg"
+        else:
+            media_type = "audio/octet-stream"
+        
+        # Return file with streaming
+        return FileResponse(
+            file_path,
+            media_type=media_type,
+            filename=filename
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error streaming music: {str(e)}")
 
 
 # =============================================================================

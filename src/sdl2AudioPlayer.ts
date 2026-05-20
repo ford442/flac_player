@@ -33,6 +33,8 @@ export class Sdl2AudioPlayer {
   private onStateChange?: (state: PlayerState) => void;
   private pollInterval: number | null = null;
   private lastVolume: number = 1.0;
+  private dummyAudioContext: AudioContext | null = null;
+  private dummyAnalyser: AnalyserNode | null = null;
 
   constructor() {
     this.initializeModule();
@@ -45,7 +47,7 @@ export class Sdl2AudioPlayer {
     if (!window.createSdl2AudioModule) {
       console.log('[Sdl2AudioPlayer] Loading sdl2-audio.js...');
       const script = document.createElement('script');
-      script.src = 'sdl2-audio.js';
+      script.src = '/sdl2-audio.js';
       script.async = true;
       document.body.appendChild(script);
 
@@ -209,9 +211,12 @@ export class Sdl2AudioPlayer {
   }
 
   getAnalyser(): AnalyserNode {
-    // Return dummy
-    const ctx = new AudioContext();
-    return ctx.createAnalyser();
+    // Return dummy - create once and reuse to avoid multiple AudioContexts
+    if (!this.dummyAnalyser) {
+      this.dummyAudioContext = new AudioContext();
+      this.dummyAnalyser = this.dummyAudioContext.createAnalyser();
+    }
+    return this.dummyAnalyser;
   }
 
   destroy(): void {
@@ -219,6 +224,11 @@ export class Sdl2AudioPlayer {
     if (this.pollInterval) clearInterval(this.pollInterval);
     if (this.module) {
       this.module._cleanup();
+    }
+    if (this.dummyAudioContext) {
+      this.dummyAudioContext.close();
+      this.dummyAudioContext = null;
+      this.dummyAnalyser = null;
     }
   }
 }
