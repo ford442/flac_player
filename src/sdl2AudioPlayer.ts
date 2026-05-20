@@ -226,7 +226,10 @@ export class Sdl2AudioPlayer {
       this.module._cleanup();
     }
     if (this.dummyAudioContext) {
-      // Close the AudioContext - the promise resolves when done but we don't need to await
+      // Close the AudioContext asynchronously. Since destroy() is called from the
+      // Player cleanup function when switching backends (see Player.tsx line 374),
+      // and the old player instance is immediately discarded, a race condition
+      // cannot occur - any new getAnalyser() calls will be from a fresh player instance.
       void this.dummyAudioContext.close();
       this.dummyAudioContext = null;
       this.dummyAnalyser = null;
