@@ -13,6 +13,7 @@ Features:
 
 import os
 import random
+import logging
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from contextlib import asynccontextmanager
@@ -706,10 +707,13 @@ async def stream_music(item_id: str):
         # Security: Ensure the resolved path is within MUSIC_DIR
         resolved_path = os.path.realpath(file_path)
         music_dir_resolved = os.path.realpath(MUSIC_DIR)
+        # Normalize paths for case-insensitive filesystems (Windows, macOS)
+        resolved_path_norm = os.path.normcase(resolved_path)
+        music_dir_resolved_norm = os.path.normcase(music_dir_resolved)
         # Use os.path.commonpath for more robust path checking
         try:
-            common = os.path.commonpath([resolved_path, music_dir_resolved])
-            if common != music_dir_resolved:
+            common = os.path.normcase(os.path.commonpath([resolved_path_norm, music_dir_resolved_norm]))
+            if common != music_dir_resolved_norm:
                 raise HTTPException(status_code=403, detail="Access denied")
         except ValueError:
             # Paths on different drives on Windows
@@ -730,13 +734,13 @@ async def stream_music(item_id: str):
         return FileResponse(
             file_path,
             media_type=media_type,
-            filename=filename
+            filename=filename,
+            headers={"Accept-Ranges": "bytes"}
         )
     except HTTPException:
         raise
     except Exception as e:
         # Log error server-side but return generic message to client
-        import logging
         logging.error(f"Error streaming music {item_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
