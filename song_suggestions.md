@@ -2687,3 +2687,99 @@ The Tibetan pub crawl without any care!
 **Additional Notes:**
 - **Combo/Fusion:** 2010s Brostep Dubstep / Medieval Hurdy-Gurdy
 - **Thematic Ties:** The hyper-synthetic, chaotic, and speaker-destroying energy of modern dubstep completely replicated by the noisy, continuous, and highly mechanical European peasant instrument.
+
+### Title: Rockabilly Guzheng
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced, high-energy 1950s Rockabilly track with a driving snare beat and slapping bass rhythm. However, the twangy hollow-body electric guitars and upright bass are entirely replaced by a traditional Chinese Guzheng (zither), aggressively plucked and bent at breakneck speed to simulate frantic rock and roll solos over a driving rock beat.
+
+**Lyrics:**
+(Verse 1 - Classic 1950s rockabilly crooner vocal with heavy slapback echo)
+Well, I combed my hair and put my leather on...
+(Guzheng shreds a frantic, twangy rockabilly riff)
+Gonna ride my hot rod till the break of dawn!
+(Guzheng bends a sharp, dissonant chord)
+
+(Chorus)
+(The Guzheng locks into a blazing fast, rhythmic strumming pattern)
+Rocking in Beijing, tearing up the street!
+The ancient zither bringing the heat!
+Blue suede shoes and silk on the floor!
+The Chinese rockabilly leaves you wanting more!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1950s Rockabilly / Traditional Chinese Guzheng
+- **Thematic Ties:** The rebellious, slicked-back, greaser energy of 1950s American rockabilly played with the delicate, sweeping, and ancient acoustic precision of a traditional Chinese court instrument.
+
+### Title: Operatic Nu-Metal
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, aggressive late-90s Nu-Metal track featuring down-tuned, syncopated guitar riffs, turntable scratching, and a driving drum beat. However, the angst-filled, screaming lead vocals are completely replaced by an incredibly fast, highly ornamented Italian Opera soprano, who delivers the angry, rebellious lyrics with perfect classical technique and intense vibrato over the heavy metal bounce.
+
+**Lyrics:**
+(Verse 1 - Grand Italian Operatic Soprano, singing with intense vibrato over heavy riffs)
+Step to the courtyard, the darkness is real!
+(DJ scratches heavily over a bouncing nu-metal groove)
+I cannot escape the pain that I feel!
+(Soprano hits a soaring, dramatic high note)
+
+(Chorus)
+(Massive nu-metal breakdown with heavy guitars and frantic turntable scratching)
+Scream for the aria! Break down the wall!
+The highest soprano answering the call!
+Mosh pit in the opera house, tear up the stage!
+The classical diva is filled with the rage!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Nu-Metal / 19th-Century Italian Opera
+- **Thematic Ties:** The aggressive, angst-ridden, and heavily rhythmic bounce of Nu-Metal completely reimagined through the pristine, aristocratic, and highly refined drama of classical European opera.
+
+### Title: Delta Steel Pan
+
+**Service:** Minimax Audio
+
+**Prompt:** A raw, sorrowful 1930s Delta Blues track featuring a slow, stomping foot-tap rhythm and a gravelly, heartbroken vocal performance. The traditional acoustic slide guitar is entirely replaced by the bright, metallic hammering of a Caribbean Steel Pan, played incredibly slowly to hammer out deep, microtonal blues licks and sad, bending notes over the muddy rhythm.
+
+**Lyrics:**
+(Verse 1 - Gritty, heartbroken blues wail)
+Well, I woke up this morning, the sun was too bright...
+(Steel Pan hammers a slow, weeping blues turnaround with a metallic ping)
+Yeah, I woke up this morning, couldn't sleep through the night...
+(A slow, steady foot stomp keeps the rhythm)
+
+(Chorus)
+(Steel Pan strikes a series of fast, sliding notes mimicking a bottleneck slide)
+Got the delta mud on my island shoes!
+Playing the steel pan with the Delta blues!
+From the sandy beach down to the muddy river bed!
+Got the tropical sorrow inside my head!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1930s Delta Blues / Caribbean Steel Pan
+- **Thematic Ties:** The deeply personal, raw, and muddy sorrow of the American South played on an instrument traditionally reserved for the highly cheerful, sunny, and relaxed environment of a Caribbean beach party.
+
+### Title: Eurodance of the Andes
+
+**Service:** Minimax Audio
+
+**Prompt:** A hyper-energetic 1990s Eurodance track featuring a pulsating four-on-the-floor kick drum, bright synth hooks, and heavy basslines. However, the main synthesizer leads and thumping bass are entirely replaced by a massive ensemble of traditional Peruvian Pan Flutes and Charangos, playing complex, bright arpeggios at 140 BPM over the heavy electronic dance beat.
+
+**Lyrics:**
+(Verse 1 - Echoing, energetic 90s Eurodance vocal)
+Are you ready to jump?! Let's go!
+(A massive flurry of Pan Flutes plays a bright, staccato Eurodance hook)
+Feel the rhythm taking control!
+(Charango strums furiously on the off-beat)
+
+(Chorus)
+(A massive Eurodance chorus erupts with pan flutes providing the main hook)
+Raving in the Andes! Touching the sky!
+The highest altitude making you fly!
+Throw away the synth, let the bamboo ring!
+The Peruvian party is the ultimate thing!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Eurodance / Traditional Peruvian Pan Flutes & Charango
+- **Thematic Ties:** The synthetic, highly processed, and intensely rhythmic club anthems of the 90s perfectly translated into the breathless, high-altitude, and deeply historical acoustic sounds of the Andes mountains.
