@@ -2783,6 +2783,96 @@ The Peruvian party is the ultimate thing!
 **Additional Notes:**
 - **Combo/Fusion:** 1990s Eurodance / Traditional Peruvian Pan Flutes & Charango
 - **Thematic Ties:** The synthetic, highly processed, and intensely rhythmic club anthems of the 90s perfectly translated into the breathless, high-altitude, and deeply historical acoustic sounds of the Andes mountains.
+### Title: The Shoegaze Shamisen
+
+**Service:** Minimax Audio
+
+**Prompt:** A dense, ethereal Shoegaze track characterized by a massive wall of distorted, reverberating sound and a slow, driving drum beat. However, piercing through the wash of noise is the passionate, vibrant instrumentation of a Traditional Japanese Shamisen. The fast-plucking string instrument is completely drenched in massive reverb and delay to create a hypnotic, fuzzy drone.
+
+**Lyrics:**
+(Verse 1 - Whispered, ethereal vocals drenched in reverb)
+The cherry blossoms fade away... the sun starts to blur...
+(A massive wall of fuzz guitar, with a crying Shamisen echoing endlessly)
+Lost inside the pedalboard, a warm and fuzzy stir.
+The Shamisen hums through the reverb tank...
+
+(Chorus)
+(The wall of sound swells, the Shamisen attacks fiercely but echoes into infinity)
+Noise and the mountain! The feedback screams!
+Drowning the temple in static dreams!
+Dancing the kabuki in the endless haze!
+The weeping Shamisen catches the shoegaze!
+
+**Additional Notes:**
+- **Combo/Fusion:** Shoegaze / Traditional Japanese Shamisen
+- **Thematic Ties:** The overwhelming, blurry, and incredibly loud wash of 90s shoegaze aesthetics being sharply contrasted by the articulate, passionate, and fiercely acoustic attacks of a Japanese Shamisen, all submerged in endless reverb.
+
+### Title: The Viking Bossa Nova
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, swaying Brazilian Bossa Nova song with a complex nylon-string acoustic guitar and a light, brushed snare drum. The typically smooth, whispered Portuguese vocals are entirely replaced by the rhythmic, breathy, and guttural sounds of Nordic Viking warriors, weaving a mesmerizing, interlocking vocal pattern over the relaxed tropical groove.
+
+**Lyrics:**
+(Verse 1 - Deep, booming Viking warrior chorus performing a soothing, breathy melody)
+(Nylon-string guitar plays a beautiful, extended jazz chord)
+(Viking singing drops to a rhythmic, interlocking breathy pattern, incredibly smooth)
+(Brushed snare keeps a light, shuffling bossa rhythm)
+
+(Chorus)
+(The Viking warriors match the syncopation of the Bossa Nova beat perfectly)
+(A soft jazz flute solo intertwines with the breathy vocals)
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Bossa Nova / Nordic Viking Folk
+- **Thematic Ties:** The ultimate beachside relaxation and soft, breezy romance of Bossa Nova given an incredibly earthy, rhythmic, and freezing resonance by the indigenous vocal games of the Vikings.
+
+### Title: The Celtic Reggaeton
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, driving Reggaeton beat featuring a thumping 808 sub-bass and classic dembow drum patterns. Instead of modern synthesizers or Spanish rap, the entire vocal structure and harmonic backbone are provided by a chorus of Celtic folk singers, using deep, resonant harmonies and traditional tin whistles to punch out the syncopated Caribbean club rhythm.
+
+**Lyrics:**
+(Verse 1 - Deep, booming Celtic folk singing acting as a rhythmic rap flow)
+(A heavy 808 sub-bass drops on the downbeat)
+(Tin whistle plays a high, piercing melody over the dembow beat)
+Riding the highland to the club tonight!
+
+(Chorus)
+(The Celtic singers hit a massive, multi-part harmony over the reggaeton groove)
+Perrea on the moors! Whine to the pub!
+The sweatiest highlanders kicking up the mud!
+Mueve la cadera, pour the stout!
+Reggaeton Celtic singing all about!
+
+**Additional Notes:**
+- **Combo/Fusion:** Reggaeton / Celtic Folk Singing
+- **Thematic Ties:** The raw, sensual, and heavy club energy of modern Reggaeton clashing beautifully with the harsh, ancient, and resonant nature of Celtic folk singing.
+
+### Title: The Oompah Cyberpunk
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive, fast-paced Cyberpunk Synthwave track featuring dark, pulsating analog basses and futuristic 808 beats. However, the icy, synthetic lead melodies and neon arpeggios are completely replaced by the incredibly bouncy, cheerful instrumentation of an Eastern European polka band, with a frantic accordion and tuba playing at double speed over the digital dystopia.
+
+**Lyrics:**
+(Verse 1 - Heavily vocoded, robotic cyberpunk vocal)
+Hacking the mainframe in the neon glow...
+(Accordion erupts into a blistering, cheerful run)
+Downloading data, watching the network flow.
+(A furious tuba bassline matches the electronic snare drum)
+
+(Chorus)
+(Massive synth drop combined with incredibly fast accordion playing)
+Cyber-oompah, dancing on the grid!
+The fastest polka that you ever did!
+Pierogi clicking in the digital rain!
+Organic cheerfulness in the mainframe brain!
+
+**Additional Notes:**
+- **Combo/Fusion:** Cyberpunk Synthwave / Eastern European Polka
+- **Thematic Ties:** The bleak, highly technological, and emotionally detached dystopia of cyberpunk infused with the bouncy, cheerful, deeply emotional and sweat-drenched passion of an Eastern European polka band.
 
 ### Title: The Tuvan Trap Lord
 
