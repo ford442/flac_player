@@ -3062,3 +3062,96 @@ The medieval monks are getting down to the ground!
 **Additional Notes:**
 - **Combo/Fusion:** Latin Gregorian Chant / 1990s Hip-Hop Beatboxing
 - **Thematic Ties:** The intensely spiritual, slow, and completely beatless devotion of medieval monastic life violently energized by the incredibly rhythmic, aggressive, and purely vocal percussion of golden-era hip-hop.
+### Title: Zero Gravity Flamenco
+
+**Service:** Minimax Audio
+
+**Prompt:** A slow, ethereal, and weightless ambient space track featuring long, reverberating synthesizer drones and the sound of astronauts breathing. Suddenly, the silence of space is completely shattered by the incredibly passionate, fast-paced fingerpicking and furious rasgueado strumming of a traditional Spanish Flamenco acoustic guitar, echoing wildly across the cosmos.
+
+**Lyrics:**
+(Verse 1 - Echoing astronaut radio transmission)
+Houston, we have a beautiful situation...
+(A furious rasgueado strum echoes endlessly)
+
+(Chorus)
+(Massive ambient synth drone combined with incredibly fast fingerpicking)
+Flamenco in the void! Dancing on the stars!
+The fastest acoustic traveling to Mars!
+Castanets clicking in the cosmic dust!
+Organic passion in the rocket's thrust!
+
+**Additional Notes:**
+- **Combo/Fusion:** Ambient Space Music / Traditional Spanish Flamenco
+- **Thematic Ties:** The vast, terrifying, and utterly silent emptiness of deep space completely filled by the raw, acoustic, deeply emotional and sweat-drenched passion of Andalusian Flamenco.
+
+### Title: The Gamelan Breakdown
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive, chugging 2000s Metalcore track with heavily distorted palm-muted riffs and screaming vocals. However, the massive, synchronized breakdowns and melodic guitar harmonies are entirely replaced by a massive, metallic Indonesian Gamelan ensemble, violently striking bronze gongs and metallophones in perfect time with the double-kick drums.
+
+**Lyrics:**
+(Verse 1 - Screamed, aggressive Metalcore vocals)
+THE CIRCLE PIT IS OPEN! THE BRONZE IS COLD!
+(A massive flurry of Gamelan metallophones plays a jagged, palm-muted riff)
+A METALLIC TRUTH THAT WAS NEVER TOLD!
+(Deep, resonant gong strikes on the downbeat of the breakdown)
+
+(Chorus)
+(Massive Metalcore breakdown with full Gamelan ensemble)
+CHUGGING ON THE GONGS! STRIKE IT WITH THE HAMMER!
+DROWNING OUT THE NOISE AND THE ENDLESS CLAMOR!
+BRONZE IN THE PIT, BLEEDING ON THE STAGE!
+THE HEAVIEST GAMELAN IN THE MODERN AGE!
+
+**Additional Notes:**
+- **Combo/Fusion:** 2000s Metalcore / Indonesian Gamelan
+- **Thematic Ties:** The aggressive, syncopated, and highly percussive energy of modern Metalcore completely fused with the ringing, sustaining, and profoundly metallic resonance of a traditional Indonesian ensemble.
+
+### Title: The Highland Skank
+
+**Service:** Minimax Audio
+
+**Prompt:** A hyper-energetic, bouncy 1990s Third-Wave Ska-Punk track with fast upstroke guitar chords and a walking bassline. However, the lively brass section (trumpets and trombones) is entirely replaced by a massive ensemble of Scottish Great Highland Bagpipes and highland snare drums, playing the frantic, staccato ska horn hooks with deafening, continuous drone energy.
+
+**Lyrics:**
+(Verse 1 - Nasally, energetic 90s ska-punk vocal)
+Pick it up, pick it up! We're skanking on the moors!
+(A massive flurry of Bagpipes plays a bright, staccato ska horn line)
+Got the checkered kilts, breaking down the doors!
+(Highland snare drums rattle out a frantic ska-punk beat)
+
+(Chorus)
+(A massive ska chorus erupts with bagpipes providing the main hook)
+Ska from the highlands! We're riding on the beat!
+Loch Ness monster shuffling its feet!
+Throw away the trumpet, let the tartan ring!
+Third-wave Scottish, hear the pipers sing!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Third-Wave Ska-Punk / Scottish Bagpipes
+- **Thematic Ties:** The bouncy, caffeinated, suburban goofiness of 90s ska-punk completely relocated to the misty, loud, and deeply historical highlands of Scotland.
+
+### Title: Edo Dub
+
+**Service:** Minimax Audio
+
+**Prompt:** A laid-back, sun-soaked Jamaican Reggae track with off-beat skanks, a bouncing bassline, and heavy dub echo. However, the cheerful tropical instrumentation is entirely replaced by a traditional Japanese Edo-period ensemble, featuring a bouncy Shamisen playing the off-beat skanks, a deep Taiko drum playing the bassline, and a chorus of Japanese Kabuki singers delivering the reggae vocals in a highly dramatic style.
+
+**Lyrics:**
+(Verse 1 - Dramatic, slow Japanese Kabuki vocal acting as a reggae toaster)
+(Shamisen skanks sharply on the off-beat: CHUK-chuk)
+The sun is shining on the Edo bay...
+(Taiko drum pumps a heavy, dub-style bassline)
+The ronin is smoking the day away...
+
+(Chorus)
+(The Kabuki singers hit a dramatic harmony over the reggae groove)
+One love in Kyoto! Pass the sake round!
+We're skanking in the temple, listening to the sound!
+From Kingston to Tokyo, the rhythm keeps us warm!
+The deepest little reggae in the middle of the storm!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Reggae / Traditional Japanese Edo-Period Ensemble
+- **Thematic Ties:** The incredibly relaxed, warm, and tropical island groove of Jamaican reggae completely relocated to the highly formalized, dramatic, and ancient acoustic environment of feudal Japan.
