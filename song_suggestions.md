@@ -2967,6 +2967,101 @@ Leaving you always wanting some more.
 - **Combo/Fusion:** Brazilian Bossa Nova / Death Metal Blast Beats
 - **Thematic Ties:** The ultimate beachside relaxation and soft, breezy romance of Bossa Nova violently interrupted by the deafening, continuous, and aggressively fast drumming of a traditional death metal track.
 
+### Title: Gamelan on the Prairie
+
+**Service:** Minimax Audio
+
+**Prompt:** A sweet, acoustic 1970s Americana folk song about riding a horse across the open plains, usually accompanied by acoustic guitar and pedal steel. However, the twangy guitars are completely replaced by a massive, shimmering Indonesian Gamelan ensemble playing delicate pentatonic melodies over a simple cowboy shuffle beat.
+
+**Lyrics:**
+(Verse 1 - Soft, breathy 1970s folk vocal)
+Well the sun is setting on the golden plain...
+(Gamelan metallophones shimmer with a delicate, cascading run)
+Riding this old horse through the driving rain.
+(A soft acoustic drum brush keeps a steady cowboy shuffle)
+
+(Chorus)
+(The Gamelan swells into a massive, bright wall of metallic sound)
+Gamelan on the prairie, shining like a star!
+The prettiest little bronze that travelled so far!
+Cowboy hats and sarongs, out in the western breeze!
+The Indonesian folk song brings you to your knees!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Americana Folk / Indonesian Gamelan
+- **Thematic Ties:** The dusty, acoustic, and simple storytelling of American western folk music elevated into a shimmering, complex, and highly structured metallic soundscape of an Indonesian ensemble.
+
+### Title: The Bluegrass Oud
+
+**Service:** Minimax Audio
+
+**Prompt:** A foot-stomping, high-speed Appalachian Bluegrass tune featuring frantic upright bass and a washboard rhythm. The traditional banjo and fiddle solos, however, are entirely swapped out for a highly ornamented Middle Eastern Oud (a fretless lute) and a Darbuka drum, playing blazing fast, microtonal Arabic maqam scales over the syncopated bluegrass beat.
+
+**Lyrics:**
+(Verse 1 - Nasally, high-lonesome Bluegrass tenor vocal)
+Well I'm going up the mountain, to see my sweet gal...
+(Oud shreds a lightning-fast, microtonal bluegrass run)
+Got my overalls on, walking down the canal...
+(Darbuka and washboard play a frantic, interlocking rhythm)
+
+(Chorus)
+(Oud executes a dizzying, highly ornamented solo over a driving bluegrass beat)
+Pluck the fretless string! Ring out the sound!
+The fastest little lute that the holler has found!
+Moonshine and hummus, dancing in the street!
+The Middle Eastern hoedown is bringing the heat!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Middle Eastern Oud & Darbuka
+- **Thematic Ties:** The incredibly fast, intricate, and wooden acoustic picking of American mountain music fused with the intricate, deeply spiritual, and highly complex microtonal melodic structures of classical Middle Eastern instrumentation.
+
+### Title: Theremin in the Trap
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, booming modern Trap hip-hop beat featuring frantic triplet hi-hats and deep 808 subs. The dark, brooding synthesizer melodies and rhythmic stabs are completely replaced by the eerie, wavering, and deeply synthetic swoops of a 1950s Sci-Fi Theremin, playing incredibly fast, microtonal trap melodies over the heavy bass.
+
+**Lyrics:**
+(Verse 1 - Aggressive trap rap flow)
+Rolling through the city, got the bass turned up...
+(Theremin swoops in with an eerie, trembling trap melody)
+Sipping on the syrup in the styrofoam cup...
+(Frantic triplet hi-hats roll underneath the sci-fi wail)
+
+(Chorus)
+(Massive 808 drop with a perfectly tuned, wavering Theremin hook)
+Trap in the spaceship! Beaming me down!
+The spookiest alien in this whole damn town!
+Sci-fi on the block, sliding on the beat!
+The Theremin trap lord is bringing the heat!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern Trap / 1950s Sci-Fi Theremin
+- **Thematic Ties:** The gritty, bass-heavy, street-oriented sound of modern Trap colliding with the eerie, wavering, and profoundly retro-futuristic atmosphere of early science fiction soundtracks.
+
+### Title: The Beatboxing Gregorian
+
+**Service:** Minimax Audio
+
+**Prompt:** A slow, solemn piece of Latin Gregorian Chant sung by a choir of medieval monks. The echoing, monophonic melodies are suddenly and violently interrupted by an incredibly fast, aggressive, and highly rhythmic 1990s Hip-Hop beatboxer, providing heavy vocal percussion, scratch sounds, and deep vocal basslines underneath the sacred chanting.
+
+**Lyrics:**
+(Verse 1 - Slow, reverberating Gregorian Chant)
+Kyrie eleison... (A heavy, spit-fire beatbox snare hits on the off-beat)
+Christe eleison... (Beatboxer drops a low, rumbling vocal bassline)
+(The choir tries to maintain their solemnity while the beatboxer goes wild)
+
+(Chorus)
+(The beatboxer locks into a massive, 90s boom-bap rhythm)
+(Monks chant rhythmically to the vocal percussion)
+Beatbox in the abbey! Spitting on the mic!
+The holiest rhythm that you're gonna like!
+Chanting to the boom-bap, echoing the sound!
+The medieval monks are getting down to the ground!
+
+**Additional Notes:**
+- **Combo/Fusion:** Latin Gregorian Chant / 1990s Hip-Hop Beatboxing
+- **Thematic Ties:** The intensely spiritual, slow, and completely beatless devotion of medieval monastic life violently energized by the incredibly rhythmic, aggressive, and purely vocal percussion of golden-era hip-hop.
 ### Title: Zero Gravity Flamenco
 
 **Service:** Minimax Audio
