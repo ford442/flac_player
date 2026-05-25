@@ -3155,3 +3155,104 @@ The deepest little reggae in the middle of the storm!
 **Additional Notes:**
 - **Combo/Fusion:** Jamaican Reggae / Traditional Japanese Edo-Period Ensemble
 - **Thematic Ties:** The incredibly relaxed, warm, and tropical island groove of Jamaican reggae completely relocated to the highly formalized, dramatic, and ancient acoustic environment of feudal Japan.
+
+### Title: Cyberpunk Bluegrass
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced, high-energy Appalachian Bluegrass breakdown featuring flying banjos, fiddles, and an upright bass, but completely re-imagined with futuristic cyberpunk instrumentation. The banjo is an aggressive, overdriven synth-pluck, the fiddle is a screaming theremin-like lead synthesizer, and the upright bass is an earth-shattering 808 sub-bass. The vocals are sung by an auto-tuned, robotic AI with a southern twang.
+
+**Lyrics:**
+(Verse 1 - Robotic Southern twang vocal)
+Well I uploaded my mind down in silicon holler!
+(Synth-banjo rolls furiously in a traditional Scruggs style)
+Traded my tractor for a crypto dollar!
+(Neon-fiddler shreds a bluegrass lick on a synth)
+
+(Chorus)
+(Massive 808 sub-bass drops on the 1 and 3)
+Oh, the neon moon is shining on the circuit board!
+Plugging in the mainframe, praising the digital lord!
+Got the broadband blazing and the moonshine bright!
+We're picking and grinning in the cyber night!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Cyberpunk Synthwave
+- **Thematic Ties:** The rustic, acoustic, porch-picking charm of traditional bluegrass injected straight into the dystopian, neon-soaked, and aggressive electronic soundscape of 2077.
+
+### Title: The Gregorian Disco
+
+**Service:** Minimax Audio
+
+**Prompt:** A pulsating, glitter-ball 1970s Disco anthem complete with four-on-the-floor kick drums, a slinky funk bassline, and sweeping strings. However, the soaring diva vocals are entirely replaced by a choir of somber, hooded Gregorian Monks chanting the catchy, upbeat disco lyrics in solemn, unison Latin-style chants, perfectly locked into the 120 BPM groove.
+
+**Lyrics:**
+(Verse 1 - Somber, low Gregorian unison chant, locked to a heavy disco beat)
+(Funky slap bass and four-on-the-floor kick drum)
+We are walking in the light of the mirror ball...
+(Sweeping, dramatic disco strings swell)
+We are answering the Saturday night call...
+
+(Chorus)
+(Full choir of monks chanting in perfect rhythm)
+(Funky rhythm guitar scratches a 16th note pattern)
+Gloria! Gloria! Boogie in the nave!
+Dancing through the darkness, rising from the grave!
+Do the hustle, brethren, let your spirit fly!
+Monastic fever burning in the midnight sky!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Disco / Gregorian Chant
+- **Thematic Ties:** The glamorous, sweaty, and hedonistic pulse of 70s disco clashing violently with the ascetic, pious, and deeply solemn traditions of medieval monk choirs.
+
+### Title: Bossa Nova Black Metal
+
+**Service:** Minimax Audio
+
+**Prompt:** A terrifying, chaotic Norwegian Black Metal track featuring furious blast beats, heavily distorted tremolo-picked guitars, and ear-piercing shrieked vocals. However, the composition is suddenly and smoothly re-arranged into a breezy, sophisticated Brazilian Bossa Nova. The blast beats become a soft, syncopated brush pattern on a snare drum, the distorted guitars are replaced by complex, jazzy acoustic guitar chords, but the shrieked, demonic vocals remain exactly the same, screeching softly over the relaxed groove.
+
+**Lyrics:**
+(Verse 1 - Relaxed, breezy acoustic guitar playing complex jazz chords)
+(Soft snare drum brushes play a bossa nova rhythm)
+(Vocalist lets out a terrifying, guttural Black Metal shriek, but at a low volume)
+RIDING ON THE WINDS OF THE FROZEN NORTH!
+(Smooth, walking acoustic bassline gently plucks)
+SUMMER BREEZE IS CALLING ME FORTH!
+
+(Chorus)
+(A gentle, melodic flute plays a lovely counter-melody)
+(Vocalist shrieks with absolute demonic intensity over the soft jazz)
+DRINKING CAIPIRINHAS IN THE ABYSS!
+FEEL THE WARMTH OF THE DARK LORD'S KISS!
+SUNSET ON THE BEACH OF ENDLESS DESPAIR!
+WITH A LITTLE FLOWER IN MY HAIR!
+
+**Additional Notes:**
+- **Combo/Fusion:** Norwegian Black Metal / Brazilian Bossa Nova
+- **Thematic Ties:** The aggressive, lo-fi, and freezing cold aggression of Black Metal forced to relax on a sun-drenched beach in Rio de Janeiro.
+
+### Title: The Didgeridoo Mariachi
+
+**Service:** Minimax Audio
+
+**Prompt:** A festive, romantic Mexican Mariachi song featuring bright trumpets, a bouncing guitarrón bassline, and a passionate, full-throated lead singer. However, the traditional violins and trumpets are entirely replaced by a trio of Australian Aboriginal Didgeridoos, providing a constant, deep, rhythmic drone that aggressively underpins the lively strumming and singing, while the singer belts out songs about the Outback in Spanish.
+
+**Lyrics:**
+(Verse 1 - Bright, fast vihuela strumming)
+(Three didgeridoos lock into a deep, rhythmic drone: WUB-wub-WUB-wub)
+(Passionate Mariachi singer belts out)
+Ay, ay, ay! The desert sun is hot!
+(A bouncing guitarrón plays the bassline underneath the drone)
+From Guadalajara to the kangaroo's spot!
+
+(Chorus)
+(The didgeridoos perform complex, rhythmic breathing patterns acting as the horn section)
+(The singer cries out a classic Mariachi grito: Ayyy-haha-haaaa!)
+We are riding the mariachi across the outback sand!
+The finest didgeridoo band in all the land!
+Pass the tequila, mate, let the rhythm roll!
+A fiesta of the spirit, a desert for the soul!
+
+**Additional Notes:**
+- **Combo/Fusion:** Mexican Mariachi / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The bright, romantic, and highly melodic tradition of Mariachi completely subsumed by the ancient, hypnotic, and profoundly resonant drone of the Australian didgeridoo.
