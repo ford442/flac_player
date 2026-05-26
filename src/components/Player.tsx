@@ -44,7 +44,7 @@ import {
 } from '../utils/queueUtils';
 import { formatTime, shuffleArray, getPreferredStorageUrls, isFastStorageUrl, FAST_STORAGE_HOST } from '../utils/audioUtils';
 import { startProjectMBridge } from '../utils/projectMBridge';
-import { clearTrackCache } from '../storage/trackCache';
+import { clearTrackCache, getOrFetchTrack } from '../storage/trackCache';
 import './Player.css';
 
 // =============================================================================
@@ -462,7 +462,6 @@ export const Player: React.FC = () => {
             // Buffer mode: fetch entire file then decode (try offline cache first)
             let arrayBuffer: ArrayBuffer;
             try {
-              const { getOrFetchTrack } = await import('../storage/trackCache');
               const response = await getOrFetchTrack(candidateUrl);
               arrayBuffer = await response.arrayBuffer();
             } catch {

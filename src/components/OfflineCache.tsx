@@ -97,9 +97,14 @@ function formatBytes(bytes: number): string {
 export const CacheStatsPanel: React.FC<CacheStatsPanelProps> = ({ onClearAll }) => {
   const [sizeBytes, setSizeBytes] = useState(0);
 
+  const refresh = useCallback(() => setSizeBytes(getCacheSizeBytes()), []);
+
+  // Read on mount and refresh every 10 seconds to catch changes from other components
   useEffect(() => {
-    setSizeBytes(getCacheSizeBytes());
-  }, []);
+    refresh();
+    const id = setInterval(refresh, 10_000);
+    return () => clearInterval(id);
+  }, [refresh]);
 
   return (
     <div className="flex items-center justify-between text-xs text-gray-400">

@@ -266,9 +266,10 @@ export class StreamingAudioPlayer {
     if (this.nextSourceNode) { try { this.nextSourceNode.disconnect(); } catch { /**/ } this.nextSourceNode = null; }
     if (this.nextGainNode)   { try { this.nextGainNode.disconnect(); }   catch { /**/ } this.nextGainNode   = null; }
     this.nextTrackUrl = null;
-    // Restore primary gain
-    this.gainNode.gain.cancelScheduledValues(0);
-    this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, this.audioContext.currentTime);
+    // Restore primary gain — cancel only future-scheduled values, not past ones
+    const now = this.audioContext.currentTime;
+    this.gainNode.gain.cancelScheduledValues(now);
+    this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, now);
   }
 
   async play(): Promise<void> {

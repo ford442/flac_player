@@ -574,7 +574,8 @@ export class AudioWorkletPlayer {
 
   setPlaybackRate(_rate: number): void {
     // AudioWorkletPlayer does not support variable playback rate;
-    // the worklet processes at fixed sampleRate. No-op for now.
+    // the worklet processes at fixed sampleRate. Switch to Streaming mode for speed control.
+    console.warn('AudioWorkletPlayer: playback rate control is not supported. Switch to Streaming mode to use this feature.');
   }
 
   setEQBandGain(bandIndex: number, gainDb: number): void {
