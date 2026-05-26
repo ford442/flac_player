@@ -6,8 +6,8 @@
 
 # Test info
 
-- Name: smoke.spec.ts >> FLAC Player Smoke Tests >> homepage loads without errors
-- Location: tests/smoke.spec.ts:4:7
+- Name: smoke.spec.ts >> FLAC Player Smoke Tests >> WebGPU availability is detected
+- Location: tests/smoke.spec.ts:19:7
 
 # Error details
 
