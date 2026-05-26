@@ -22,6 +22,7 @@ import {
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { usePlayerState, AudioOutputMode } from '../hooks/usePlayerState';
 import { useToastNotifications } from '../hooks/useToastNotifications';
+import { useAudioSettings } from '../hooks/useAudioSettings';
 import { LibraryView } from './LibraryView';
 import { QueuePanel } from './QueuePanel';
 import { ShaderGUI } from './ShaderGUI/ShaderGUI';
@@ -29,6 +30,8 @@ import { MetadataPanel } from './MetadataPanel';
 import { FileDropZone } from './FileDropZone';
 import { ToastContainer } from './Toast';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
+import { EQPanel } from './EQPanel';
+import { CacheStatsPanel } from './OfflineCache';
 import { checkBackendHealth } from '../utils/healthCheck';
 import {
   handleQueueAutoAdvance,
@@ -41,13 +44,14 @@ import {
 } from '../utils/queueUtils';
 import { formatTime, shuffleArray, getPreferredStorageUrls, isFastStorageUrl, FAST_STORAGE_HOST } from '../utils/audioUtils';
 import { startProjectMBridge } from '../utils/projectMBridge';
+import { clearTrackCache } from '../storage/trackCache';
 import './Player.css';
 
 // =============================================================================
 // Types & Constants
 // =============================================================================
 
-type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists';
+type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'settings';
 type LibraryViewMode = 'grid' | 'list';
 type StorageSourceFilter = 'all' | 'fast';
 
@@ -72,6 +76,7 @@ export const Player: React.FC = () => {
   // State management
   const { playerState, setPlayerState, outputMode, setOutputMode, error, setError, currentTrack, setCurrentTrack, loadingTrackId, setLoadingTrackId, backendStatus, setBackendStatus } = usePlayerState();
   const { toasts, addToast, removeToast } = useToastNotifications();
+  const { eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate, crossfadeEnabled, setCrossfadeEnabled } = useAudioSettings();
 
   const [activeTab, setActiveTab] = useState<ViewTab>('library');
   const [libraryViewMode, setLibraryViewMode] = useState<LibraryViewMode>('grid');
@@ -248,6 +253,35 @@ export const Player: React.FC = () => {
     try { localStorage.setItem('flac_volume', String(volume)); } catch { /* no-op */ }
   }, [volume]);
 
+  // Apply EQ changes to live player
+  useEffect(() => {
+    const p = playerRef.current as { setEQBandGain?: (i: number, g: number) => void } | null;
+    eqGains.forEach((g, i) => p?.setEQBandGain?.(i, g));
+  }, [eqGains]);
+
+  // Apply playback rate to live player
+  useEffect(() => {
+    const p = playerRef.current as { setPlaybackRate?: (r: number) => void } | null;
+    p?.setPlaybackRate?.(playbackRate);
+  }, [playbackRate]);
+
+  // Apply crossfade setting to live player (streaming only)
+  useEffect(() => {
+    const p = playerRef.current as { setCrossfadeEnabled?: (e: boolean) => void } | null;
+    p?.setCrossfadeEnabled?.(crossfadeEnabled);
+  }, [crossfadeEnabled]);
+
+  // Preload the next track when crossfade is enabled and queue index changes
+  useEffect(() => {
+    if (!crossfadeEnabled || outputMode !== 'streaming') return;
+    const nextIndex = getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode);
+    if (nextIndex === -1) return;
+    const nextTrack = queue[nextIndex];
+    if (!nextTrack) return;
+    const p = playerRef.current as { preloadNext?: (url: string) => void } | null;
+    p?.preloadNext?.(nextTrack.url);
+  }, [crossfadeEnabled, outputMode, queue, queueCurrentIndex, shuffle, repeatMode]);
+
   // Persist playback position periodically
   useEffect(() => {
     if (isSharedPlaylist) return;
@@ -375,6 +409,13 @@ export const Player: React.FC = () => {
     // Apply persisted volume immediately
     player.setVolume(muted ? 0 : volume);
 
+    // Apply persisted EQ and playback rate
+    type EQPlayer = { setEQBandGain?: (i: number, g: number) => void; setPlaybackRate?: (r: number) => void; setCrossfadeEnabled?: (e: boolean) => void };
+    const eqPlayer = player as EQPlayer;
+    eqGains.forEach((g, i) => eqPlayer.setEQBandGain?.(i, g));
+    eqPlayer.setPlaybackRate?.(playbackRate);
+    eqPlayer.setCrossfadeEnabled?.(crossfadeEnabled);
+
     // Start project-M bridge for popup integration
     const analyser = player.getAnalyser();
     const stopProjectMBridge = startProjectMBridge(analyser);
@@ -418,8 +459,16 @@ export const Player: React.FC = () => {
             // Streaming: set src and wait for canplay — no full download
             await playerRef.current.loadURL(candidateUrl);
           } else {
-            // Buffer mode: fetch entire file then decode
-            const arrayBuffer = await loader.loadFromURL(candidateUrl);
+            // Buffer mode: fetch entire file then decode (try offline cache first)
+            let arrayBuffer: ArrayBuffer;
+            try {
+              const { getOrFetchTrack } = await import('../storage/trackCache');
+              const response = await getOrFetchTrack(candidateUrl);
+              arrayBuffer = await response.arrayBuffer();
+            } catch {
+              // Fall back to direct loader
+              arrayBuffer = await loader.loadFromURL(candidateUrl);
+            }
             await (playerRef.current as AudioPlayer).loadAudio(arrayBuffer);
           }
           loaded = true;
@@ -888,7 +937,8 @@ export const Player: React.FC = () => {
               { id: 'library',     label: '📚 Library',    count: library.length },
               { id: 'now-playing', label: '▶️ Now Playing' },
               { id: 'queue',       label: '📋 Queue',      count: queue.length },
-              { id: 'playlists',   label: '☁️ Playlists',  count: playlists.length }
+              { id: 'playlists',   label: '☁️ Playlists',  count: playlists.length },
+              { id: 'settings',    label: '⚙️ Settings' },
             ].map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id as ViewTab)}
                 className={`w-full flex items-center justify-between px-4 py-2 rounded-lg text-left transition-colors ${
@@ -1089,6 +1139,48 @@ export const Player: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+            <div className="flex-1 overflow-auto p-6">
+              <div className="max-w-lg mx-auto space-y-8">
+                <h2 className="text-xl font-semibold">Audio Settings</h2>
+
+                {/* EQ + Speed + Crossfade */}
+                <div className="bg-white/5 rounded-xl p-5 border border-white/10">
+                  <EQPanel
+                    eqGains={eqGains}
+                    onBandChange={setEQBandGain}
+                    onReset={resetEQ}
+                    playbackRate={playbackRate}
+                    onPlaybackRateChange={setPlaybackRate}
+                    crossfadeEnabled={crossfadeEnabled}
+                    onCrossfadeChange={setCrossfadeEnabled}
+                  />
+                </div>
+
+                {/* Audio output mode */}
+                <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Audio Engine</span>
+                  <select value={outputMode} onChange={(e) => setOutputMode(e.target.value as AudioOutputMode)}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm text-white">
+                    <option value="streaming">Streaming (recommended)</option>
+                    <option value="worklet">AudioWorklet (buffered)</option>
+                    <option value="web-audio">Web Audio (buffered)</option>
+                  </select>
+                </div>
+
+                {/* Offline cache */}
+                <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Offline Cache</span>
+                  <p className="text-xs text-gray-500">
+                    Recently played tracks are cached automatically (up to 500 MB, LRU eviction).
+                    You can also download individual tracks from the library for offline use.
+                  </p>
+                  <CacheStatsPanel onClearAll={() => { clearTrackCache().then(() => addToast('Offline cache cleared', 'success')); }} />
                 </div>
               </div>
             </div>

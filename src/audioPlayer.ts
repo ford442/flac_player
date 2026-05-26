@@ -1,5 +1,6 @@
 // Audio player with load/play/pause/seek functionality
 import { decodeAudioWithBuffer } from './audioDecoder';
+import { EQChain } from './audio/EQChain';
 
 export interface PlayerState {
   isPlaying: boolean;
@@ -12,20 +13,24 @@ export class AudioPlayer {
   private audioContext: AudioContext;
   private sourceNode: AudioBufferSourceNode | null = null;
   private gainNode: GainNode;
+  private eqChain: EQChain;
   private analyser: AnalyserNode;
   private audioBuffer: AudioBuffer | null = null;
   private startTime: number = 0;
   private pausedAt: number = 0;
   private isPlaying: boolean = false;
+  private playbackRate: number = 1.0;
   private onStateChange?: (state: PlayerState) => void;
 
   constructor() {
     this.audioContext = new AudioContext();
     this.gainNode = this.audioContext.createGain();
+    this.eqChain = new EQChain(this.audioContext);
     this.analyser = this.audioContext.createAnalyser();
     this.analyser.fftSize = 2048;
 
-    this.gainNode.connect(this.analyser);
+    this.gainNode.connect(this.eqChain.input);
+    this.eqChain.output.connect(this.analyser);
     this.analyser.connect(this.audioContext.destination);
   }
 
@@ -122,8 +127,11 @@ export class AudioPlayer {
       }
     };
 
+    // Apply playback rate
+    this.sourceNode.playbackRate.value = this.playbackRate;
+
     // Start playback from the paused position
-    this.startTime = this.audioContext.currentTime - this.pausedAt;
+    this.startTime = this.audioContext.currentTime - this.pausedAt / this.playbackRate;
     this.sourceNode.start(0, this.pausedAt);
     this.isPlaying = true;
 
@@ -135,8 +143,8 @@ export class AudioPlayer {
       return;
     }
 
-    // Calculate current position
-    this.pausedAt = this.audioContext.currentTime - this.startTime;
+    // Calculate current position (adjusted for playback rate)
+    this.pausedAt = (this.audioContext.currentTime - this.startTime) * this.playbackRate;
 
     // Stop the source node
     this.sourceNode.stop();
@@ -187,7 +195,7 @@ export class AudioPlayer {
 
     if (this.isPlaying) {
       return Math.min(
-        this.audioContext.currentTime - this.startTime,
+        (this.audioContext.currentTime - this.startTime) * this.playbackRate,
         this.audioBuffer.duration
       );
     }
@@ -212,6 +220,21 @@ export class AudioPlayer {
     this.gainNode.gain.value = Math.max(0, Math.min(1, volume));
   }
 
+  setPlaybackRate(rate: number): void {
+    this.playbackRate = Math.max(0.25, Math.min(4.0, rate));
+    if (this.sourceNode) {
+      this.sourceNode.playbackRate.value = this.playbackRate;
+    }
+  }
+
+  setEQBandGain(bandIndex: number, gainDb: number): void {
+    this.eqChain.setBandGain(bandIndex, gainDb);
+  }
+
+  getEQGains(): number[] {
+    return this.eqChain.getAllGains();
+  }
+
   getAnalyser(): AnalyserNode {
     return this.analyser;
   }
@@ -219,6 +242,7 @@ export class AudioPlayer {
   destroy(): void {
     this.stop();
     this.gainNode.disconnect();
+    this.eqChain.disconnect();
     this.analyser.disconnect();
     this.audioContext.close();
   }
