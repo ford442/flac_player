@@ -572,10 +572,15 @@ export class AudioWorkletPlayer {
     }
   }
 
+  private _warnedPlaybackRate = false;
+
   setPlaybackRate(_rate: number): void {
     // AudioWorkletPlayer does not support variable playback rate;
     // the worklet processes at fixed sampleRate. Switch to Streaming mode for speed control.
-    console.warn('AudioWorkletPlayer: playback rate control is not supported. Switch to Streaming mode to use this feature.');
+    if (!this._warnedPlaybackRate) {
+      this._warnedPlaybackRate = true;
+      console.warn('AudioWorkletPlayer: playback rate control is not supported. Switch to Streaming mode to use this feature.');
+    }
   }
 
   setEQBandGain(bandIndex: number, gainDb: number): void {

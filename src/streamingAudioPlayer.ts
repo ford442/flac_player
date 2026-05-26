@@ -223,7 +223,9 @@ export class StreamingAudioPlayer {
     this.nextSourceNode.connect(this.gainNode);
 
     this.nextGainNode.disconnect();
-    this.gainNode.gain.setValueAtTime(1, this.audioContext.currentTime);
+    const now = this.audioContext.currentTime;
+    this.gainNode.gain.cancelScheduledValues(now);
+    this.gainNode.gain.setValueAtTime(1, now);
 
     this.nextAudioElement = null;
     this.nextSourceNode   = null;

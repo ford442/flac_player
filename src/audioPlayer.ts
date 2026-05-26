@@ -18,6 +18,7 @@ export class AudioPlayer {
   private audioBuffer: AudioBuffer | null = null;
   private startTime: number = 0;
   private pausedAt: number = 0;
+  private rateAtPause: number = 1.0;
   private isPlaying: boolean = false;
   private playbackRate: number = 1.0;
   private onStateChange?: (state: PlayerState) => void;
@@ -143,8 +144,10 @@ export class AudioPlayer {
       return;
     }
 
-    // Calculate current position (adjusted for playback rate)
-    this.pausedAt = (this.audioContext.currentTime - this.startTime) * this.playbackRate;
+    // Capture the rate used during this segment before stopping
+    this.rateAtPause = this.playbackRate;
+    // Calculate current position (adjusted for the rate that was actually playing)
+    this.pausedAt = (this.audioContext.currentTime - this.startTime) * this.rateAtPause;
 
     // Stop the source node
     this.sourceNode.stop();
@@ -221,9 +224,15 @@ export class AudioPlayer {
   }
 
   setPlaybackRate(rate: number): void {
-    this.playbackRate = Math.max(0.25, Math.min(4.0, rate));
-    if (this.sourceNode) {
-      this.sourceNode.playbackRate.value = this.playbackRate;
+    const clampedRate = Math.max(0.25, Math.min(4.0, rate));
+    if (this.isPlaying && this.sourceNode) {
+      // Recalculate startTime so getCurrentTime() stays accurate after rate change
+      const currentPos = this.getCurrentTime();
+      this.playbackRate = clampedRate;
+      this.sourceNode.playbackRate.value = clampedRate;
+      this.startTime = this.audioContext.currentTime - currentPos / clampedRate;
+    } else {
+      this.playbackRate = clampedRate;
     }
   }
 

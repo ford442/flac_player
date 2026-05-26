@@ -464,8 +464,8 @@ export const Player: React.FC = () => {
             try {
               const response = await getOrFetchTrack(candidateUrl);
               arrayBuffer = await response.arrayBuffer();
-            } catch {
-              // Fall back to direct loader
+            } catch (cacheErr) {
+              console.warn('Offline cache miss or error, falling back to network fetch:', cacheErr);
               arrayBuffer = await loader.loadFromURL(candidateUrl);
             }
             await (playerRef.current as AudioPlayer).loadAudio(arrayBuffer);
