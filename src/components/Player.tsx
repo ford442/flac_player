@@ -1104,6 +1104,13 @@ export const Player: React.FC = () => {
               <MetadataPanel
                 file={currentFile}
                 audioUrl={currentTrack.url}
+                trackInfo={{
+                  title: currentTrack.title || currentTrack.name,
+                  artist: currentTrack.artist || currentTrack.author,
+                  duration: currentTrack.duration || playerState.duration,
+                  coverUrl: currentTrack.cover_url,
+                  cacheKey: currentTrack.id || currentTrack.url,
+                }}
               />
             )}
           </div>
