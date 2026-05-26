@@ -45,9 +45,15 @@ interface MetadataCacheEntry {
   metadata: Record<string, unknown> | null;
   formatSpecs: AudioFormatSpecs | null;
   albumArt: string | null;
+  cachedAt: number;
 }
 
 const metadataCache = new Map<string, MetadataCacheEntry>();
+const METADATA_CACHE_TTL_MS = 5 * 60 * 1000;
+
+interface TrackMetadata {
+  no?: number;
+}
 
 function formatChannelCount(channels: number): string {
   if (channels === 1) return 'Mono';
@@ -85,11 +91,15 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
       if (cacheKey) {
         const cached = metadataCache.get(cacheKey);
         if (cached) {
+          if ((Date.now() - cached.cachedAt) > METADATA_CACHE_TTL_MS) {
+            metadataCache.delete(cacheKey);
+          } else {
           setMetadata(cached.metadata);
           setFormatSpecs(cached.formatSpecs);
-          setAlbumArt(cached.albumArt || trackInfo?.coverUrl || null);
+          setAlbumArt(cached.albumArt);
           setIsLoading(false);
           return;
+          }
         }
       }
 
@@ -113,7 +123,7 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
         const fallbackArt = trackInfo?.coverUrl || null;
         setAlbumArt(fallbackArt);
         if (cacheKey) {
-          metadataCache.set(cacheKey, { metadata: null, formatSpecs: null, albumArt: fallbackArt });
+          metadataCache.set(cacheKey, { metadata: null, formatSpecs: null, albumArt: fallbackArt, cachedAt: Date.now() });
         }
         setIsLoading(false);
         return;
@@ -145,6 +155,7 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
               metadata: parsedMetadata,
               formatSpecs: parsedFormat,
               albumArt: base64,
+              cachedAt: Date.now(),
             });
           }
         } else {
@@ -155,6 +166,7 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
               metadata: parsedMetadata,
               formatSpecs: parsedFormat,
               albumArt: fallbackArt,
+              cachedAt: Date.now(),
             });
           }
         }
@@ -165,7 +177,7 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
         const fallbackArt = trackInfo?.coverUrl || null;
         setAlbumArt(fallbackArt);
         if (cacheKey) {
-          metadataCache.set(cacheKey, { metadata: null, formatSpecs: null, albumArt: fallbackArt });
+          metadataCache.set(cacheKey, { metadata: null, formatSpecs: null, albumArt: fallbackArt, cachedAt: Date.now() });
         }
       } finally {
         if (!cancelled) setIsLoading(false);
@@ -175,7 +187,7 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
     loadMetadata();
 
     return () => { cancelled = true; };
-  }, [file, audioUrl, cacheKey, trackInfo?.coverUrl]);
+  }, [file, audioUrl, cacheKey]);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
@@ -186,7 +198,7 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
   const displayTitle = (metadata?.title as string) || trackInfo?.title || file?.name?.replace(/\.[^/.]+$/, '') || fallbackUrlTitle || 'Unknown Track';
   const displayArtist = (metadata?.artist as string) || trackInfo?.artist || 'Unknown Artist';
   const displayAlbum = (metadata?.album as string) || trackInfo?.album || '';
-  const displayTrackNumber = ((metadata?.track as { no?: number } | undefined)?.no) || undefined;
+  const displayTrackNumber = ((metadata?.track as TrackMetadata | undefined)?.no) || undefined;
 
   // Prefer values from parsed format, fall back to props
   const displaySampleRate = formatSpecs?.sampleRate ?? sampleRateProp;
