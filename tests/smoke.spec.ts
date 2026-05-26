@@ -117,4 +117,24 @@ test.describe('FLAC Player Smoke Tests', () => {
     const scrollYAfter = await page.evaluate(() => window.scrollY);
     expect(scrollYAfter).toBe(scrollYBefore);
   });
+
+  test('advanced library exposes a manual rescan action', async ({ page }) => {
+    let syncRequests = 0;
+    await page.route('**/api/admin/sync-music**', async (route) => {
+      syncRequests += 1;
+      await route.fulfill({
+        status: 202,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'accepted' })
+      });
+    });
+
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Open Advanced Library' }).click();
+
+    const rescanButton = page.getByRole('button', { name: /Rescan Library|Rescanning/ });
+    await expect(rescanButton).toBeVisible();
+    await rescanButton.click();
+    await expect.poll(() => syncRequests).toBeGreaterThan(0);
+  });
 });

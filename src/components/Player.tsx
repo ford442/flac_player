@@ -89,6 +89,7 @@ export const Player: React.FC = () => {
     unique_tags: 0, top_tags: []
   });
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
+  const [isResyncingLibrary, setIsResyncingLibrary] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [minRating, setMinRating] = useState<number>(0);
@@ -180,6 +181,35 @@ export const Player: React.FC = () => {
   const loadStats = useCallback(async () => {
     try { setStats(await loader.fetchStats()); } catch { /* no-op */ }
   }, [loader]);
+
+  const triggerLibraryResync = useCallback(async () => {
+    if (isResyncingLibrary) return;
+
+    setIsResyncingLibrary(true);
+    try {
+      const result = await loader.triggerLibraryResync();
+      addToast(
+        result.isAcceptedOrRunning
+          ? 'Library rescan accepted. Refreshing catalog...'
+          : 'Library rescan completed. Refreshing catalog...',
+        'success'
+      );
+
+      const healthy = await checkBackend();
+      if (healthy) {
+        await Promise.all([loadLibrary(), loadTags(), loadStats()]);
+      } else {
+        addToast('Rescan initiated, but catalog refresh failed - backend is currently unreachable', 'info');
+      }
+    } catch (error) {
+      addToast(
+        error instanceof Error ? error.message : 'Failed to trigger library rescan',
+        'error'
+      );
+    } finally {
+      setIsResyncingLibrary(false);
+    }
+  }, [isResyncingLibrary, loader, addToast, checkBackend, loadLibrary, loadTags, loadStats]);
 
   useEffect(() => {
     if (isSharedPlaylist) return;
@@ -806,14 +836,23 @@ export const Player: React.FC = () => {
       <>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         {!isSharedPlaylist && (
-          <a
-            href="https://storage.noahcohn.com/admin"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="fixed top-4 right-4 z-40 px-4 py-2 rounded-lg bg-purple-600/90 text-white text-sm font-semibold hover:bg-purple-500 transition-colors shadow-lg"
-          >
-            ⬆️ Add Music
-          </a>
+          <div className="fixed top-4 right-4 z-40 flex gap-2">
+            <button
+              onClick={triggerLibraryResync}
+              disabled={isResyncingLibrary}
+              className="px-4 py-2 rounded-lg bg-blue-600/90 text-white text-sm font-semibold hover:bg-blue-500 transition-colors shadow-lg disabled:opacity-60"
+            >
+              {isResyncingLibrary ? '⏳ Rescanning...' : '🔄 Rescan Library'}
+            </button>
+            <a
+              href="https://storage.noahcohn.com/admin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-lg bg-purple-600/90 text-white text-sm font-semibold hover:bg-purple-500 transition-colors shadow-lg"
+            >
+              ⬆️ Add Music
+            </a>
+          </div>
         )}
         {showHelp && <KeyboardHelpModal onClose={() => setShowHelp(false)} />}
         {isSharedPlaylist && sharedPlaylistTitle && (
@@ -910,14 +949,23 @@ export const Player: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           {!isSharedPlaylist && (
-            <a
-              href="https://storage.noahcohn.com/admin"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-2 bg-purple-500/20 text-purple-200 rounded-lg hover:bg-purple-500/30 transition-colors text-sm font-medium"
-            >
-              ⬆️ Add Music
-            </a>
+            <>
+              <button
+                onClick={triggerLibraryResync}
+                disabled={isResyncingLibrary}
+                className="px-3 py-2 bg-blue-500/20 text-blue-200 rounded-lg hover:bg-blue-500/30 transition-colors text-sm font-medium disabled:opacity-60"
+              >
+                {isResyncingLibrary ? '⏳ Rescanning...' : '🔄 Rescan Library'}
+              </button>
+              <a
+                href="https://storage.noahcohn.com/admin"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-2 bg-purple-500/20 text-purple-200 rounded-lg hover:bg-purple-500/30 transition-colors text-sm font-medium"
+              >
+                ⬆️ Add Music
+              </a>
+            </>
           )}
           <button onClick={() => setShowHelp(true)} className="px-3 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm" title="Keyboard shortcuts (?)">⌨️ ?</button>
           <button onClick={() => setShowQueue(true)} className="relative px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm">

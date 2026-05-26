@@ -175,6 +175,10 @@ export class AudioLoader {
     return songApi.fetchStats();
   }
 
+  async triggerLibraryResync(): Promise<songApi.MusicResyncResult> {
+    return songApi.triggerMusicResync();
+  }
+
   async fetchPlaylist(
     sortBy: SortBy = 'date',
     sortDesc: boolean = true,
