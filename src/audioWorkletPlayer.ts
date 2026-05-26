@@ -176,6 +176,7 @@ export class AudioWorkletPlayer {
   private audioContext: AudioContext | null = null;
   private workletNode: AudioWorkletNode | ScriptProcessorNode | null = null;
   private gainNode: GainNode | null = null;
+  private eqChain: import('./audio/EQChain').EQChain | null = null;
   private analyser: AnalyserNode | null = null;
   private audioBuffer: Float32Array | null = null;
   private channels: number = 0;
@@ -184,6 +185,7 @@ export class AudioWorkletPlayer {
   private isStreaming: boolean = false;
   private duration: number = 0;
   private currentTime: number = 0;
+  private playbackRate: number = 1.0;
   private onStateChange?: (state: PlayerState) => void;
   private onEndedCallback?: () => void;
   private useScriptProcessor: boolean = false;
@@ -206,8 +208,12 @@ export class AudioWorkletPlayer {
       });
 
       this.gainNode = this.audioContext.createGain();
+      this.eqChain = new (await import('./audio/EQChain')).EQChain(this.audioContext);
       this.analyser = this.audioContext.createAnalyser();
       this.analyser.fftSize = 2048;
+
+      // Wire: gainNode → eqChain → analyser → destination
+      // (analyser/destination connection happens in createWorkletNode/createScriptProcessorNode)
 
       if (this.audioContext.audioWorklet && this.workletUrl) {
         try {
@@ -394,7 +400,7 @@ export class AudioWorkletPlayer {
   }
 
   private createWorkletNode(startSample: number): void {
-    if (!this.audioContext || !this.gainNode || !this.analyser || !this.audioBuffer) return;
+    if (!this.audioContext || !this.gainNode || !this.eqChain || !this.analyser || !this.audioBuffer) return;
 
     this.workletNode = new AudioWorkletNode(this.audioContext, 'flac-processor', {
       numberOfInputs: 0,
@@ -406,7 +412,8 @@ export class AudioWorkletPlayer {
     });
 
     this.workletNode.connect(this.gainNode);
-    this.gainNode.connect(this.analyser);
+    this.gainNode.connect(this.eqChain.input);
+    this.eqChain.output.connect(this.analyser);
     this.analyser.connect(this.audioContext.destination);
 
     (this.workletNode as AudioWorkletNode).port.postMessage({
@@ -437,7 +444,7 @@ export class AudioWorkletPlayer {
   }
 
   private createScriptProcessorNode(startSample: number): void {
-    if (!this.audioContext || !this.gainNode || !this.analyser || !this.audioBuffer) return;
+    if (!this.audioContext || !this.gainNode || !this.eqChain || !this.analyser || !this.audioBuffer) return;
 
     const bufferSize = 4096;
     let position = startSample;
@@ -477,7 +484,8 @@ export class AudioWorkletPlayer {
     };
 
     this.workletNode.connect(this.gainNode);
-    this.gainNode.connect(this.analyser);
+    this.gainNode.connect(this.eqChain.input);
+    this.eqChain.output.connect(this.analyser);
     this.analyser.connect(this.audioContext.destination);
   }
 
@@ -564,6 +572,25 @@ export class AudioWorkletPlayer {
     }
   }
 
+  private _warnedPlaybackRate = false;
+
+  setPlaybackRate(_rate: number): void {
+    // AudioWorkletPlayer does not support variable playback rate;
+    // the worklet processes at fixed sampleRate. Switch to Streaming mode for speed control.
+    if (!this._warnedPlaybackRate) {
+      this._warnedPlaybackRate = true;
+      console.warn('AudioWorkletPlayer: playback rate control is not supported. Switch to Streaming mode to use this feature.');
+    }
+  }
+
+  setEQBandGain(bandIndex: number, gainDb: number): void {
+    this.eqChain?.setBandGain(bandIndex, gainDb);
+  }
+
+  getEQGains(): number[] {
+    return this.eqChain?.getAllGains() ?? [0, 0, 0, 0, 0];
+  }
+
   getAnalyser(): AnalyserNode {
     return this.analyser!;
   }
@@ -571,6 +598,7 @@ export class AudioWorkletPlayer {
   destroy(): void {
     this.stop();
     if (this.gainNode) this.gainNode.disconnect();
+    if (this.eqChain) this.eqChain.disconnect();
     if (this.analyser) this.analyser.disconnect();
     if (this.audioContext) this.audioContext.close();
     if (this.workletUrl) URL.revokeObjectURL(this.workletUrl);
