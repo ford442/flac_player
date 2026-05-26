@@ -3256,3 +3256,99 @@ A fiesta of the spirit, a desert for the soul!
 **Additional Notes:**
 - **Combo/Fusion:** Mexican Mariachi / Australian Aboriginal Didgeridoo
 - **Thematic Ties:** The bright, romantic, and highly melodic tradition of Mariachi completely subsumed by the ancient, hypnotic, and profoundly resonant drone of the Australian didgeridoo.
+
+### Title: The Court Jester's Drill
+
+**Service:** Minimax Audio
+
+**Prompt:** An aggressive, modern Chicago Drill rap track featuring a heavy, sliding 808 bassline and frantic hi-hats. However, the dark piano melodies and ominous synthesizers are entirely replaced by a delicate 16th-century Renaissance Lute and a plucking Harpsichord, playing intricate, courtly Elizabethan melodies over the trap beat.
+
+**Lyrics:**
+(Verse 1 - Aggressive, fast-paced drill rap flow)
+We slide on the courtyard, drawing the sword...
+(A frantic, delicate lute arpeggio sweeps across the trap beat)
+I got shooters in the castle, protecting the lord.
+(Harpsichord plucks an ominous, minor-key trill)
+
+(Chorus)
+(Massive sliding 808 bass drops underneath the delicate lute)
+Spin the carriage! We riding at dawn!
+Got the crossbow loaded on the royal lawn!
+Drill in the kingdom, hitting the mark!
+The heaviest lute playing out in the dark!
+
+**Additional Notes:**
+- **Combo/Fusion:** Chicago Drill Rap / Renaissance Lute & Harpsichord
+- **Thematic Ties:** The aggressive, hyper-modern, street-oriented storytelling of drill rap delivered over the delicate, highly formalized, courtly instrumentation of 16th-century European royalty.
+
+### Title: The Enlightened Hustle
+
+**Service:** Minimax Audio
+
+**Prompt:** A glittering, four-on-the-floor 1970s Disco anthem featuring a driving funk bassline and sweeping string sections. However, the soaring diva lead vocals are completely replaced by the deep, resonant drone of Tibetan Throat Singing, and the rhythmic guitar scratches are replaced by the echoing chime of massive Tibetan Singing Bowls.
+
+**Lyrics:**
+(Verse 1 - Deep, continuous Tibetan throat singing drone)
+(Funky, driving bassline locks into a steady disco groove)
+Oooooohhhhhh... the mirror ball spins...
+(A massive Singing Bowl rings out with a long, sustained shimmer)
+Shedding the ego, where the party begins...
+
+(Chorus)
+(Sweeping 70s disco strings soar over the throat singing)
+Do the Enlightened Hustle! Dance on the floor!
+Chanting the mantra, opening the door!
+Bell-bottom monks in the neon light!
+Reaching Nirvana on Saturday night!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Disco / Tibetan Singing Bowls & Throat Singing
+- **Thematic Ties:** The glittery, hedonistic, floor-filling groove of a 1970s roller disco colliding with the deeply meditative, ego-dissolving, ancient vibrations of Tibetan spiritual practices.
+
+### Title: The Edo Pub Brawl
+
+**Service:** Minimax Audio
+
+**Prompt:** A rowdy, fast-paced Irish Celtic Punk Rock song with aggressive power chords and a driving drumbeat. However, the traditional fiddle and tin whistle are completely replaced by a frantically plucked Japanese Koto and the airy, breathy wail of a Shakuhachi bamboo flute, playing lightning-fast reels and jigs over the punk distortion.
+
+**Lyrics:**
+(Verse 1 - Raspy, shouting punk rock vocal)
+Well, we gathered in the tavern, looking for a fight!
+(Koto aggressively plucks a high-speed Celtic reel)
+Drinking all the sake, screaming in the night!
+(Shakuhachi blasts a shrill, piercing jig melody)
+
+(Chorus)
+(Distorted punk guitars crash under the frantic Koto)
+Raise up your glasses! Draw your katana!
+The rowdiest ronin from here to Havana!
+Spilling the Guinness on the tatami mat!
+The Celtic samurai, where you at?!
+
+**Additional Notes:**
+- **Combo/Fusion:** Irish Punk Rock / Japanese Koto & Shakuhachi
+- **Thematic Ties:** The rowdy, beer-spilling, pub-brawling acoustic aggression of Celtic punk rock completely recontextualized by the delicate, airy, and highly refined traditional instruments of feudal Japan.
+
+### Title: The Subwoofer Alps
+
+**Service:** Minimax Audio
+
+**Prompt:** A booming, high-energy 1980s Miami Bass track featuring a massive, speaker-rattling 808 kick drum and rapid-fire Roland TR-808 percussion. The typical party-hype rapping is entirely replaced by a virtuosic, high-speed Swiss Alpine Yodeler, who perfectly syncopates their incredibly fast, oscillating falsetto jumps with the hyperactive bass beat.
+
+**Lyrics:**
+(Verse 1 - Incredibly fast, rhythmic yodeling locking into the 808 beat)
+(Massive, sustained sub-bass rattles the trunk)
+Yodel-ay-hee-hoo, drop the bass down low!
+(Rapid-fire 808 hi-hats stutter and roll)
+Echoing in the mountains, watching the speakers blow!
+
+(Chorus)
+(The yodeler hits an impossibly high, sustained falsetto note over the booming beat)
+Miami in the Alps! Shaking the snow!
+The heaviest yodel that you'll ever know!
+Lederhosen on the beach, cranking the dial!
+Alpine bass music, making you smile!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Miami Bass / Swiss Alpine Yodeling
+- **Thematic Ties:** The booming, bass-heavy, car-shaking electronic dance music of 1980s Miami violently infused with the high-pitched, rapidly oscillating vocal gymnastics of traditional Swiss Alpine yodeling.
