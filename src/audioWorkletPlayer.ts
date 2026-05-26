@@ -574,6 +574,7 @@ export class AudioWorkletPlayer {
 
   private _warnedPlaybackRate = false;
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   setPlaybackRate(_rate: number): void {
     // AudioWorkletPlayer does not support variable playback rate;
     // the worklet processes at fixed sampleRate. Switch to Streaming mode for speed control.
