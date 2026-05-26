@@ -119,11 +119,9 @@ export class StreamingAudioPlayer {
    */
   preloadNext(url: string): void {
     this.nextTrackUrl = url;
-    // Create next element early so the browser can start buffering
+    // Use the factory so the element has CORS config and event listeners already attached
     if (!this.nextAudioElement) {
-      this.nextAudioElement = document.createElement('audio');
-      this.nextAudioElement.crossOrigin = 'anonymous';
-      this.nextAudioElement.preload = 'auto';
+      this.nextAudioElement = this._makeAudioElement();
     }
     if (this.nextAudioElement.src !== url) {
       this.nextAudioElement.src = url;
@@ -161,11 +159,9 @@ export class StreamingAudioPlayer {
     const ctx = this.audioContext;
     const fadeDuration = Math.min(CROSSFADE_DURATION, this.audioElement.duration - this.audioElement.currentTime);
 
-    // Set up next element
+    // Set up next element — use factory for consistent CORS + event listener config
     if (!this.nextAudioElement) {
-      this.nextAudioElement = document.createElement('audio');
-      this.nextAudioElement.crossOrigin = 'anonymous';
-      this.nextAudioElement.preload = 'auto';
+      this.nextAudioElement = this._makeAudioElement();
       this.nextAudioElement.src = this.nextTrackUrl;
     }
 
@@ -233,22 +229,7 @@ export class StreamingAudioPlayer {
     this.nextTrackUrl     = null;
     this.crossfadeActive  = false;
 
-    // Re-attach event listeners for timeupdate / ended on the new primary element
-    this.audioElement.addEventListener('timeupdate', () => {
-      this.notifyStateChange();
-      this._maybeTriggerCrossfade();
-    });
-    this.audioElement.addEventListener('play',           () => this.notifyStateChange());
-    this.audioElement.addEventListener('pause',          () => this.notifyStateChange());
-    this.audioElement.addEventListener('durationchange', () => this.notifyStateChange());
-    this.audioElement.addEventListener('loadedmetadata', () => this.notifyStateChange());
-    this.audioElement.addEventListener('ended', () => {
-      this.notifyStateChange();
-      if (!this.crossfadeActive) {
-        try { this.onEndedCallback?.(); } catch { /* noop */ }
-      }
-    });
-
+    // The promoted element already has listeners from _makeAudioElement(); no re-attachment needed.
     this.notifyStateChange();
     // Notify queue so it can advance to the next track internally
     try { this.onEndedCallback?.(); } catch { /* noop */ }
