@@ -6,8 +6,8 @@
 
 # Test info
 
-- Name: smoke.spec.ts >> FLAC Player Smoke Tests >> homepage loads without errors
-- Location: tests/smoke.spec.ts:4:7
+- Name: smoke.spec.ts >> FLAC Player Smoke Tests >> theme toggle switches to light mode
+- Location: tests/smoke.spec.ts:55:7
 
 # Error details
 

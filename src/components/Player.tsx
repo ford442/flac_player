@@ -31,7 +31,7 @@ import { ToastContainer } from './Toast';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { checkBackendHealth } from '../utils/healthCheck';
 import { handleQueueAutoAdvance, reorderQueueIndex, addTrackToQueue, playNextTrack, removeFromQueue as removeFromQueueUtil } from '../utils/queueUtils';
-import { formatTime, shuffleArray } from '../utils/audioUtils';
+import { formatTime, shuffleArray, getPreferredStorageUrls, isFastStorageUrl, FAST_STORAGE_HOST } from '../utils/audioUtils';
 import { startProjectMBridge } from '../utils/projectMBridge';
 import './Player.css';
 
@@ -41,6 +41,7 @@ import './Player.css';
 
 type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists';
 type LibraryViewMode = 'grid' | 'list';
+type StorageSourceFilter = 'all' | 'fast';
 
 type AnyPlayer = AudioPlayer | AudioWorkletPlayer | SdlAudioPlayer | Sdl2AudioPlayer | StreamingAudioPlayer;
 
@@ -81,6 +82,7 @@ export const Player: React.FC = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [untaggedOnly, setUntaggedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>('date');
+  const [storageSourceFilter, setStorageSourceFilter] = useState<StorageSourceFilter>('all');
   const [volume, setVolume] = useState(() => {
     try { const v = parseFloat(localStorage.getItem('flac_volume') || '1'); return isNaN(v) ? 1 : Math.max(0, Math.min(1, v)); } catch { return 1; }
   });
@@ -398,13 +400,33 @@ export const Player: React.FC = () => {
     setError('');
 
     try {
-      if (playerRef.current instanceof StreamingAudioPlayer) {
-        // Streaming: set src and wait for canplay — no full download
-        await playerRef.current.loadURL(url);
-      } else {
-        // Buffer mode: fetch entire file then decode
-        const arrayBuffer = await loader.loadFromURL(url);
-        await (playerRef.current as AudioPlayer).loadAudio(arrayBuffer);
+      const candidateUrls = getPreferredStorageUrls(url);
+      let loaded = false;
+      let lastError: unknown;
+
+      for (const candidateUrl of candidateUrls) {
+        try {
+          if (playerRef.current instanceof StreamingAudioPlayer) {
+            // Streaming: set src and wait for canplay — no full download
+            await playerRef.current.loadURL(candidateUrl);
+          } else {
+            // Buffer mode: fetch entire file then decode
+            const arrayBuffer = await loader.loadFromURL(candidateUrl);
+            await (playerRef.current as AudioPlayer).loadAudio(arrayBuffer);
+          }
+          loaded = true;
+          break;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+
+      if (!loaded) {
+        const fallbackError = new Error(`Failed to load audio from any source: ${candidateUrls.join(', ')}`);
+        if (lastError instanceof Error && lastError.message) {
+          fallbackError.message = `${fallbackError.message} (${lastError.message})`;
+        }
+        throw fallbackError;
       }
 
       if (track) {
@@ -694,6 +716,12 @@ export const Player: React.FC = () => {
     };
   }, [handleLocalFiles]);
 
+  const fastMirrorCount = useMemo(() => library.filter(track => isFastStorageUrl(track.url)).length, [library]);
+  const displayedLibrary = useMemo(
+    () => storageSourceFilter === 'fast' ? library.filter(track => isFastStorageUrl(track.url)) : library,
+    [library, storageSourceFilter]
+  );
+
   // =============================================================================
   // Render — default ShaderGUI mode
   // =============================================================================
@@ -702,6 +730,16 @@ export const Player: React.FC = () => {
     return (
       <>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
+        {!isSharedPlaylist && (
+          <a
+            href="https://storage.noahcohn.com/admin"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="fixed top-4 right-4 z-40 px-4 py-2 rounded-lg bg-purple-600/90 text-white text-sm font-semibold hover:bg-purple-500 transition-colors shadow-lg"
+          >
+            ⬆️ Add Music
+          </a>
+        )}
         {showHelp && <KeyboardHelpModal onClose={() => setShowHelp(false)} />}
         {isSharedPlaylist && sharedPlaylistTitle && (
           <div className="fixed top-0 left-0 right-0 z-40 flex items-center justify-center pt-4 pointer-events-none">
@@ -796,6 +834,16 @@ export const Player: React.FC = () => {
           />
         </div>
         <div className="flex items-center gap-2">
+          {!isSharedPlaylist && (
+            <a
+              href="https://storage.noahcohn.com/admin"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2 bg-purple-500/20 text-purple-200 rounded-lg hover:bg-purple-500/30 transition-colors text-sm font-medium"
+            >
+              ⬆️ Add Music
+            </a>
+          )}
           <button onClick={() => setShowHelp(true)} className="px-3 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm" title="Keyboard shortcuts (?)">⌨️ ?</button>
           <button onClick={() => setShowQueue(true)} className="relative px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm">
             📋 Queue
@@ -849,6 +897,15 @@ export const Player: React.FC = () => {
                 <option value="random">Random</option>
               </select>
             </div>
+            <div>
+              <label className="text-xs text-gray-500 uppercase">Storage Source</label>
+              <select value={storageSourceFilter} onChange={(e) => setStorageSourceFilter(e.target.value as StorageSourceFilter)}
+                className="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm">
+                <option value="all">All tracks</option>
+                <option value="fast">Fast mirror only</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-2">{fastMirrorCount}/{library.length} tracks available on fast mirror ({FAST_STORAGE_HOST})</p>
+            </div>
           </div>
 
           <div className="flex-1 p-4 border-t border-white/10 overflow-auto">
@@ -880,20 +937,20 @@ export const Player: React.FC = () => {
                   <button onClick={() => setLibraryViewMode('list')} className={`p-2 rounded ${libraryViewMode === 'list' ? 'bg-white/20' : 'hover:bg-white/10'}`}>☰ List</button>
                   <div className="w-px h-5 bg-white/20 mx-1" />
                   <button
-                    onClick={() => playAll(library)}
-                    disabled={library.length === 0}
+                    onClick={() => playAll(displayedLibrary)}
+                    disabled={displayedLibrary.length === 0}
                     className="px-3 py-1.5 text-xs bg-purple-500/20 text-purple-300 rounded hover:bg-purple-500/30 disabled:opacity-40 transition-colors"
                     title="Clear queue and play all visible tracks"
-                  >⏵ Play All ({library.length})</button>
+                  >⏵ Play All ({displayedLibrary.length})</button>
                   <button
-                    onClick={() => playAll(library, true)}
-                    disabled={library.length === 0}
+                    onClick={() => playAll(displayedLibrary, true)}
+                    disabled={displayedLibrary.length === 0}
                     className="px-3 py-1.5 text-xs bg-purple-500/20 text-purple-300 rounded hover:bg-purple-500/30 disabled:opacity-40 transition-colors"
                     title="Clear queue and shuffle all visible tracks"
                   >🔀 Shuffle All</button>
                   <button
-                    onClick={() => addAllToQueue(library)}
-                    disabled={library.length === 0}
+                    onClick={() => addAllToQueue(displayedLibrary)}
+                    disabled={displayedLibrary.length === 0}
                     className="px-3 py-1.5 text-xs bg-white/10 text-gray-300 rounded hover:bg-white/20 disabled:opacity-40 transition-colors"
                     title="Add all visible tracks to queue (skip duplicates)"
                   >➕ Add All</button>
@@ -910,7 +967,7 @@ export const Player: React.FC = () => {
                 )}
               </div>
               <LibraryView
-                tracks={library} allTags={allTags} stats={stats}
+                tracks={displayedLibrary} allTags={allTags} stats={stats}
                 currentTrackId={currentTrack?.id} loadingTrackId={loadingTrackId}
                 isPlaying={playerState.isPlaying} viewMode={libraryViewMode}
                 onTrackClick={(track) => { addToQueueFn(track); playTrack(track, queue.length); }}
@@ -965,6 +1022,26 @@ export const Player: React.FC = () => {
                     className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30 disabled:opacity-50">
                     {isLoadingPlaylists ? 'Loading...' : '🔄 Refresh'}
                   </button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+                  <a
+                    href="https://storage.noahcohn.com/admin"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-4 bg-purple-500/10 border border-purple-500/30 rounded-lg hover:bg-purple-500/20 transition-colors"
+                  >
+                    <div className="font-medium text-purple-200">Open Storage Admin</div>
+                    <div className="text-sm text-gray-400 mt-1">Upload and organize tracks in a new tab.</div>
+                  </a>
+                  <a
+                    href="https://github.com/ford442/contabo_storage_manager"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-4 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition-colors"
+                  >
+                    <div className="font-medium text-white">contabo_storage_manager</div>
+                    <div className="text-sm text-gray-400 mt-1">Backend management workflows used by this playlist sync.</div>
+                  </a>
                 </div>
                 {playlists.length === 0 && !isLoadingPlaylists && (
                   <div className="text-gray-400 text-center py-12">

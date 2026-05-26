@@ -20,6 +20,37 @@ export function buildTrackUrl(item: any, apiBaseUrl: string): string {
   return `${apiBaseUrl}/api/music/${item.id}`;
 }
 
+export const FAST_STORAGE_HOST = 'storage.1ink.us';
+export const PRIMARY_STORAGE_HOST = 'storage.noahcohn.com';
+
+export function isFastStorageUrl(url?: string): boolean {
+  if (!url) return false;
+  try {
+    return new URL(url).hostname === FAST_STORAGE_HOST;
+  } catch {
+    return false;
+  }
+}
+
+export function getPreferredStorageUrls(url?: string): string[] {
+  if (!url) return [];
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === FAST_STORAGE_HOST) {
+      return [url];
+    }
+    if (parsed.hostname === PRIMARY_STORAGE_HOST) {
+      const preferred = new URL(url);
+      preferred.hostname = FAST_STORAGE_HOST;
+      return [preferred.toString(), url];
+    }
+    return [url];
+  } catch {
+    return [url];
+  }
+}
+
 // =============================================================================
 // Playlist Management
 // =============================================================================
