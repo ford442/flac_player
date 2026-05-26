@@ -1,5 +1,43 @@
 import { PlaylistTrack, RepeatMode } from '../audioLoader';
 
+export const getNextQueueIndex = (
+  queueLength: number,
+  queueCurrentIndex: number,
+  shuffle: boolean,
+  repeatMode: RepeatMode
+): number => {
+  if (queueLength === 0) return -1;
+
+  const currentIndex = queueCurrentIndex >= 0 && queueCurrentIndex < queueLength ? queueCurrentIndex : -1;
+
+  if (shuffle) {
+    if (queueLength === 1) {
+      return repeatMode === 'all' ? 0 : -1;
+    }
+    let nextIndex: number;
+    do {
+      nextIndex = Math.floor(Math.random() * queueLength);
+    } while (nextIndex === currentIndex);
+    return nextIndex;
+  }
+
+  const nextIndex = currentIndex + 1;
+  if (nextIndex < queueLength) return nextIndex;
+  return repeatMode === 'all' ? 0 : -1;
+};
+
+export const getPreviousQueueIndex = (
+  queueLength: number,
+  queueCurrentIndex: number,
+  repeatMode: RepeatMode
+): number => {
+  if (queueLength === 0) return -1;
+  const currentIndex = queueCurrentIndex >= 0 && queueCurrentIndex < queueLength ? queueCurrentIndex : -1;
+  if (currentIndex > 0) return currentIndex - 1;
+  if (currentIndex === -1) return queueLength - 1;
+  return repeatMode === 'all' ? queueLength - 1 : -1;
+};
+
 export const handleQueueAutoAdvance = (
   queue: PlaylistTrack[],
   queueCurrentIndex: number,
@@ -14,25 +52,8 @@ export const handleQueueAutoAdvance = (
     return;
   }
 
-  let nextIndex: number;
-  if (shuffle) {
-    if (queue.length === 1) {
-      nextIndex = 0;
-    } else {
-      do {
-        nextIndex = Math.floor(Math.random() * queue.length);
-      } while (nextIndex === queueCurrentIndex);
-    }
-  } else {
-    nextIndex = queueCurrentIndex + 1;
-    if (nextIndex >= queue.length) {
-      if (repeatMode === 'all') {
-        nextIndex = 0;
-      } else {
-        return;
-      }
-    }
-  }
+  const nextIndex = getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode);
+  if (nextIndex === -1) return;
 
   const nextTrack = queue[nextIndex];
   if (nextTrack) {

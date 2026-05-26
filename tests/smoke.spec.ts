@@ -1,6 +1,24 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('FLAC Player Smoke Tests', () => {
+  test('queue controls respect repeat-all navigation at queue boundaries', async ({ page }) => {
+    await page.addInitScript((queueState) => {
+      localStorage.setItem('flac_player_queue', JSON.stringify(queueState));
+    }, {
+      tracks: [
+        { id: 'track-1', name: 'Track One', title: 'Track One', author: 'Test Artist', url: 'https://example.com/1.flac', duration: 180 },
+        { id: 'track-2', name: 'Track Two', title: 'Track Two', author: 'Test Artist', url: 'https://example.com/2.flac', duration: 210 }
+      ],
+      currentIndex: 1,
+      shuffle: false,
+      repeat: 'all'
+    });
+
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Open Advanced Library' }).click();
+    await expect(page.getByRole('button', { name: 'Next track' })).toBeEnabled();
+  });
+
   test('homepage loads without errors', async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on('pageerror', (err) => consoleErrors.push(err.message));
