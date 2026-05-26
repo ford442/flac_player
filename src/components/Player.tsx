@@ -30,7 +30,15 @@ import { FileDropZone } from './FileDropZone';
 import { ToastContainer } from './Toast';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { checkBackendHealth } from '../utils/healthCheck';
-import { handleQueueAutoAdvance, reorderQueueIndex, addTrackToQueue, playNextTrack, removeFromQueue as removeFromQueueUtil } from '../utils/queueUtils';
+import {
+  handleQueueAutoAdvance,
+  reorderQueueIndex,
+  addTrackToQueue,
+  playNextTrack,
+  removeFromQueue as removeFromQueueUtil,
+  getNextQueueIndex,
+  getPreviousQueueIndex
+} from '../utils/queueUtils';
 import { formatTime, shuffleArray, getPreferredStorageUrls, isFastStorageUrl, FAST_STORAGE_HOST } from '../utils/audioUtils';
 import { startProjectMBridge } from '../utils/projectMBridge';
 import './Player.css';
@@ -474,6 +482,20 @@ export const Player: React.FC = () => {
     }
   };
 
+  const playNextInQueue = useCallback(() => {
+    const nextIndex = getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode);
+    if (nextIndex === -1) return;
+    const nextTrack = queue[nextIndex];
+    if (nextTrack) playTrack(nextTrack, nextIndex);
+  }, [queue, queueCurrentIndex, shuffle, repeatMode, playTrack]);
+
+  const playPreviousInQueue = useCallback(() => {
+    const previousIndex = getPreviousQueueIndex(queue.length, queueCurrentIndex, repeatMode);
+    if (previousIndex === -1) return;
+    const previousTrack = queue[previousIndex];
+    if (previousTrack) playTrack(previousTrack, previousIndex);
+  }, [queue, queueCurrentIndex, repeatMode, playTrack]);
+
   const loadCloudPlaylist = useCallback(async (playlistId: string) => {
     setIsLoadingPlaylists(true);
     try {
@@ -567,7 +589,12 @@ export const Player: React.FC = () => {
   const removeFromQueueFn = (index: number) => {
     setQueue(prev => {
       const newQueue = removeFromQueueUtil(prev, index);
-      if (index < queueCurrentIndex) setQueueCurrentIndex(prev => prev - 1);
+      setQueueCurrentIndex(prevIndex => {
+        if (prevIndex === -1) return -1;
+        if (index < prevIndex) return prevIndex - 1;
+        if (index === prevIndex) return newQueue.length > 0 ? Math.min(prevIndex, newQueue.length - 1) : -1;
+        return prevIndex;
+      });
       return newQueue;
     });
   };
@@ -672,8 +699,8 @@ export const Player: React.FC = () => {
     onPlayPause: togglePlayback,
     onSeekForward:  () => { if (playerRef.current) playerRef.current.seek(Math.min(playerState.currentTime + 10, playerState.duration)); },
     onSeekBackward: () => { if (playerRef.current) playerRef.current.seek(Math.max(playerState.currentTime - 10, 0)); },
-    onNext:     () => { if (queue.length > 0 && queueCurrentIndex < queue.length - 1) playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1); },
-    onPrevious: () => { if (queue.length > 0 && queueCurrentIndex > 0) playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1); },
+    onNext: playNextInQueue,
+    onPrevious: playPreviousInQueue,
     onSearchFocus: () => searchInputRef.current?.focus(),
     onVolumeUp:   () => { handleVolumeChange(Math.min(1, volume + 0.1)); },
     onVolumeDown: () => { handleVolumeChange(Math.max(0, volume - 0.1)); },
@@ -772,8 +799,8 @@ export const Player: React.FC = () => {
           onTrackClick={(index) => playTrack(queue[index], index)}
           onVolumeChange={handleVolumeChange}
           onMute={toggleMute}
-          onNext={() => { if (queue.length > 0 && queueCurrentIndex < queue.length - 1) playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1); }}
-          onPrevious={() => { if (queue.length > 0 && queueCurrentIndex > 0) playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1); }}
+          onNext={playNextInQueue}
+          onPrevious={playPreviousInQueue}
           onToggleFallback={() => setShowHtmlFallback(true)}
           showFallbackToggle={!isSharedPlaylist}
           onFileSelect={handleLocalFiles}
@@ -991,8 +1018,8 @@ export const Player: React.FC = () => {
                 onTrackClick={(index) => playTrack(queue[index], index)}
                 onVolumeChange={handleVolumeChange}
                 onMute={toggleMute}
-                onNext={() => { if (queue.length > 0 && queueCurrentIndex < queue.length - 1) playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1); }}
-                onPrevious={() => { if (queue.length > 0 && queueCurrentIndex > 0) playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1); }}
+                onNext={playNextInQueue}
+                onPrevious={playPreviousInQueue}
                 onFileSelect={handleLocalFiles}
               />
             </div>
@@ -1083,18 +1110,18 @@ export const Player: React.FC = () => {
 
           <div className="w-1/3 flex flex-col items-center">
             <div className="flex items-center gap-4 mb-2">
-              <button onClick={() => { if (queue.length > 0 && queueCurrentIndex > 0) playTrack(queue[queueCurrentIndex - 1], queueCurrentIndex - 1); }}
+              <button onClick={playPreviousInQueue}
                 className="text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                disabled={queueCurrentIndex <= 0 || playerState.isLoading}
+                disabled={getPreviousQueueIndex(queue.length, queueCurrentIndex, repeatMode) === -1 || playerState.isLoading}
                 aria-label="Previous track">⏮</button>
               <button onClick={togglePlayback} disabled={playerState.isLoading}
                 className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center text-xl hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-label={playerState.isPlaying ? 'Pause' : 'Play'}>
                 {playerState.isLoading ? <div className="spinner" style={{ borderTopColor: '#000' }} /> : playerState.isPlaying ? '⏸' : '▶'}
               </button>
-              <button onClick={() => { if (queue.length > 0 && queueCurrentIndex < queue.length - 1) playTrack(queue[queueCurrentIndex + 1], queueCurrentIndex + 1); }}
+              <button onClick={playNextInQueue}
                 className="text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                disabled={queueCurrentIndex >= queue.length - 1 || playerState.isLoading}
+                disabled={getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode) === -1 || playerState.isLoading}
                 aria-label="Next track">⏭</button>
             </div>
             <div className="w-full max-w-md flex items-center gap-3">

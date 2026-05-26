@@ -25,7 +25,20 @@ export function loadQueueFromStorage(): QueueState | null {
   try {
     const data = localStorage.getItem(QUEUE_STORAGE_KEY);
     if (data) {
-      return JSON.parse(data);
+      const parsed = JSON.parse(data) as Partial<QueueState>;
+      if (!parsed || !Array.isArray(parsed.tracks)) return null;
+      const repeat: RepeatMode = parsed.repeat === 'all' || parsed.repeat === 'one' ? parsed.repeat : 'off';
+      const currentIndexRaw = typeof parsed.currentIndex === 'number' ? parsed.currentIndex : -1;
+      const currentIndex = parsed.tracks.length === 0
+        ? -1
+        : Math.min(Math.max(Math.floor(currentIndexRaw), 0), parsed.tracks.length - 1);
+
+      return {
+        tracks: parsed.tracks,
+        currentIndex,
+        shuffle: !!parsed.shuffle,
+        repeat
+      };
     }
   } catch (e) {
     console.warn('Failed to load queue:', e);
