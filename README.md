@@ -72,8 +72,10 @@ The compiled files will be in the `dist/` directory, ready for static hosting.
 ### Storage & Library Management
 
 - Use **⬆️ Add Music** in the player UI to open the storage admin in a new tab: `https://storage.noahcohn.com/admin`
+- Use **🔄 Rescan Library** in the player UI after uploads to trigger `POST /api/admin/sync-music?type=music` and refresh `songs.json` indexing.
 - The player now prefers `storage.1ink.us` for streaming for tracks served from `storage.noahcohn.com`, and safely falls back to the original URL if the fast mirror is unavailable.
 - In HTML mode, use the **Storage Source** selector to browse all tracks or only fast-mirror tracks from `storage.1ink.us`.
+- For reliable cataloging, upload through the storage admin workflow (not direct mirror/FTP writes), then run a rescan if tracks do not appear immediately.
 - Cloud playlist workflows are backed by `https://github.com/ford442/contabo_storage_manager` (linked from the Playlists tab).
 
 ### Supported URL Formats

@@ -20,6 +20,33 @@ const debug = {
   }
 };
 
+const SYNC_MUSIC_ENDPOINTS = [
+  {
+    url: `${API_BASE_URL}/api/admin/sync-music?type=music`,
+    init: { method: 'POST' as const }
+  },
+  {
+    url: `${API_BASE_URL}/api/admin/sync-music`,
+    init: {
+      method: 'POST' as const,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'music' })
+    }
+  }
+] as const;
+
+const wait = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+const SYNC_REQUEST_TIMEOUT_MS = 20_000;
+const SYNC_RETRY_BASE_DELAY_MS = 400;
+
+export interface MusicResyncResult {
+  endpoint: string;
+  status: number;
+  statusText: string;
+  payload: unknown;
+  isAcceptedOrRunning: boolean;
+}
+
 export function getApiBaseUrl(): string {
   return API_BASE_URL;
 }
@@ -198,6 +225,87 @@ export async function fetchStats(): Promise<LibraryStats> {
       top_tags: []
     };
   }
+}
+
+export async function triggerMusicResync(maxAttempts: number = 3): Promise<MusicResyncResult> {
+  const attempts = Math.max(1, maxAttempts);
+  let lastError: unknown = null;
+  const acceptedStatuses = new Set([202, 409]);
+  const getRetryDelay = (attempt: number): number => SYNC_RETRY_BASE_DELAY_MS * (2 ** (attempt - 1));
+
+  for (const endpoint of SYNC_MUSIC_ENDPOINTS) {
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), SYNC_REQUEST_TIMEOUT_MS);
+
+      try {
+        debug.log('SYNC_MUSIC_REQUEST', { endpoint: endpoint.url, attempt, attempts });
+
+        const response = await fetch(endpoint.url, {
+          mode: 'cors',
+          credentials: 'omit',
+          signal: controller.signal,
+          ...endpoint.init
+        });
+
+        clearTimeout(timeout);
+
+        const bodyText = await response.text();
+        let payload: unknown = bodyText;
+        if (bodyText) {
+          try {
+            payload = JSON.parse(bodyText);
+          } catch {
+            payload = bodyText;
+          }
+        }
+
+        const isAcceptedOrRunning = acceptedStatuses.has(response.status);
+        if (response.ok || isAcceptedOrRunning) {
+          debug.log('SYNC_MUSIC_SUCCESS', { endpoint: endpoint.url, status: response.status });
+          return {
+            endpoint: endpoint.url,
+            status: response.status,
+            statusText: response.statusText,
+            payload,
+            isAcceptedOrRunning
+          };
+        }
+
+        // Retry transient server failures and rate limits, but do not retry 4xx request errors.
+        const shouldRetrySameEndpoint = response.status >= 500 || response.status === 429;
+        debug.warn('SYNC_MUSIC_FAILED_RESPONSE', {
+          endpoint: endpoint.url,
+          status: response.status,
+          attempt,
+          shouldRetrySameEndpoint
+        });
+
+        if (!shouldRetrySameEndpoint) {
+          break;
+        }
+        if (attempt < attempts) {
+          await wait(getRetryDelay(attempt));
+        }
+      } catch (error) {
+        clearTimeout(timeout);
+        lastError = error;
+        debug.warn('SYNC_MUSIC_REQUEST_ERROR', {
+          endpoint: endpoint.url,
+          attempt,
+          message: error instanceof Error ? error.message : String(error)
+        });
+        if (attempt < attempts) {
+          await wait(getRetryDelay(attempt));
+        }
+      }
+    }
+  }
+
+  if (lastError instanceof Error) {
+    throw new Error(`Failed to trigger library rescan: ${lastError.message}`);
+  }
+  throw new Error('Failed to trigger library rescan via admin sync endpoint');
 }
 
 // =============================================================================
