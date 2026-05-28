@@ -3352,3 +3352,96 @@ Alpine bass music, making you smile!
 **Additional Notes:**
 - **Combo/Fusion:** 1980s Miami Bass / Swiss Alpine Yodeling
 - **Thematic Ties:** The booming, bass-heavy, car-shaking electronic dance music of 1980s Miami violently infused with the high-pitched, rapidly oscillating vocal gymnastics of traditional Swiss Alpine yodeling.
+
+### Title: Monastic Breakbeat
+
+**Service:** Minimax Audio
+
+**Prompt:** A high-tempo 1990s Jungle drum & bass track featuring incredibly fast, complex chopped breakbeats and heavy, distorted sub-bass, overlaid entirely with a solemn, slow, monophonic medieval Gregorian chant sung in Latin by a choir of monks in an echoey stone cathedral. The juxtaposition of hyper-kinetic percussion and serene, ancient vocalization.
+
+**Lyrics:**
+(Fast, frantic Amen breaks slice through the silence)
+(A deep, heavy sub-bass wobble vibrates the stone walls)
+Pater noster in the rave, echoing the night
+(Monks chant in slow, haunting unison)
+Sanctus, sanctus, feeling the bassline hit just right!
+
+(Chorus)
+(Breakbeats double in speed, chaotic and relentless)
+Illuminated manuscripts and laser lights!
+Gregorian jungle, surviving the nights!
+(Monks hit a low, resonant drone that harmonizes with the sub-bass)
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Jungle Drum & Bass / Medieval Gregorian Chant
+- **Thematic Ties:** The hyperactive, futuristic, and chaotic energy of 90s Jungle completely contrasted by the slow, sacred, reverb-heavy solemnity of medieval monks chanting in Latin.
+
+### Title: Neon Galleon
+
+**Service:** Minimax Audio
+
+**Prompt:** A driving, neon-soaked 1980s Synthwave track with pulsing analog basslines, shimmering arpeggiators, and explosive gated-reverb snare drums. The vocals are a gruff, booming chorus of 18th-century sailors singing a traditional, rhythmic sea shanty about hauling ropes and hunting whales, their rowdy pirate voices drenched in neon cyber-reverb.
+
+**Lyrics:**
+(Pulsing, driving analog synth bassline revs up)
+Heave away, my neon boys, heave away!
+(Explosive gated snare drum hits like a cannon)
+The grid is dark but we'll find the bay!
+
+(Chorus)
+(Rowdy, unified sailor chorus singing over shimmering arpeggiators)
+Haul on the mainline, watch the lasers glow!
+Down to the cyber-depths we go!
+Drink your digital rum and sing with the crew!
+The glowing kraken is coming for you!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Synthwave / 18th-Century Sea Shanty
+- **Thematic Ties:** The neon-lit, nostalgic, synthesizer-heavy atmosphere of 80s retro-futurism commandeered by a rowdy crew of historical sailors singing a gritty, rhythmic work song.
+
+### Title: Rustbelt Hoe-down
+
+**Service:** Minimax Audio
+
+**Prompt:** A punishing, dark, and repetitive Industrial Techno track featuring a distorted, pounding 4/4 kick drum, screeching acid synths, and metallic factory clangs. Instead of typical techno elements, the lead melody and rhythm are aggressively driven by a frantic, high-speed Appalachian Bluegrass ensemble—featuring a blazing fast 5-string banjo, a screeching fiddle, and rhythmic washboard scraping perfectly in time with the techno beat.
+
+**Lyrics:**
+(Distorted, punishing 4/4 techno kick drum pounds relentlessly)
+(Frantic, high-speed banjo picking tears through the distortion)
+Got my moonshine running through the factory gears!
+(A screeching fiddle battles an acid synth line)
+Ain't seen the sun in a hundred years!
+
+(Chorus)
+(Metallic clangs and washboard scraping syncopate perfectly)
+Stomp your boots on the steel floor!
+The techno tractor's coming through the door!
+Swing your partner, watch out for the sparks!
+Industrial bluegrass lighting up the dark!
+
+**Additional Notes:**
+- **Combo/Fusion:** Industrial Techno / Appalachian Bluegrass
+- **Thematic Ties:** The cold, mechanical, repetitive aggression of underground industrial techno violently clashing with the fast, acoustic, porch-stomping liveliness of rural mountain bluegrass.
+
+### Title: The Roaring Outback
+
+**Service:** Minimax Audio
+
+**Prompt:** A lively, upbeat 1920s Chicago Swing Jazz track featuring a bouncy upright bass, swinging drum brushes, and a bright brass section. The traditional clarinet and saxophone solos are entirely replaced by a deep, resonant, and rhythmically complex Aboriginal Australian Didgeridoo, which somehow perfectly swings with the jazz rhythm and creates a bizarre, droning undercurrent to the speakeasy vibe.
+
+**Lyrics:**
+(Upbeat, swinging jazz rhythm with brushes on the snare)
+(A deep, rhythmic didgeridoo drone starts swinging on the off-beats)
+Put on your flapper dress, pour the bootleg gin!
+Listen to that wooden tube, watch the room spin!
+
+(Chorus)
+(A bright trumpet section harmonizes with the droning didgeridoo)
+It's the roaring outback, swinging in the club!
+Trading the saxophone for the outback scrub!
+Doing the Charleston to the ancient drone!
+The craziest jazz that Chicago's ever known!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1920s Chicago Swing Jazz / Aboriginal Australian Didgeridoo
+- **Thematic Ties:** The sophisticated, bouncy, brass-heavy energy of roaring twenties speakeasy jazz fundamentally altered by the deep, continuous, and ancient drone of a traditional Aboriginal wind instrument.
