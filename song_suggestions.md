@@ -3445,3 +3445,92 @@ The craziest jazz that Chicago's ever known!
 **Additional Notes:**
 - **Combo/Fusion:** 1920s Chicago Swing Jazz / Aboriginal Australian Didgeridoo
 - **Thematic Ties:** The sophisticated, bouncy, brass-heavy energy of roaring twenties speakeasy jazz fundamentally altered by the deep, continuous, and ancient drone of a traditional Aboriginal wind instrument.
+
+### Title: The Cyberpunk Cossack
+
+**Service:** Minimax Audio
+
+**Prompt:** A high-octane 1980s synthwave track with pulsing neon analog basslines and gated snare drums. But instead of a blazing keytar solo, the lead instrument is a traditional Russian balalaika, rapidly strumming in perfect time with the arpeggiator, accompanied by a booming Russian men's choir singing about uploading their minds to the grid.
+
+**Lyrics:**
+(Pulsing retrowave bassline, heavily side-chained)
+(Frantic, high-speed balalaika tremolo picking slices through the synths)
+Neon rain falls on the frozen steppe!
+(Booming Russian male choir enters, singing in deep unison)
+Upload the soul, forget the flesh!
+
+(Chorus)
+Dance the gopak on the digital floor!
+We don't need the physical world anymore!
+Synths and balalaikas, burning through the wire!
+The cyberpunk cossack, filled with neon fire!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Synthwave / Traditional Russian Folk
+- **Thematic Ties:** The futuristic, artificial, and neon-drenched aesthetic of synthwave clashing wildly with the acoustic, hyper-energetic, and historically rich tradition of Russian folk music and balalaika strumming.
+
+### Title: The Rasta Highlander
+
+**Service:** Minimax Audio
+
+**Prompt:** A laid-back, heavy-bass Jamaican Reggae track with a slow, skanking guitar rhythm and dub delays. But the lead melody and solos are played by a full, screeching Scottish Great Highland bagpipe. The bagpipe player somehow manages to play with a laid-back, syncopated reggae feel, while a smooth reggae vocalist sings about the foggy lochs of Scotland.
+
+**Lyrics:**
+(Deep, booming dub bassline and echoing snare rimshots)
+(A loud, droning bagpipe enters, surprisingly playing a chill, syncopated melody)
+Yeah, mon... the highlands are cool and misty today.
+
+(Chorus)
+(Bagpipes echo into the distance with heavy tape delay)
+Walking through the heather with an irie vibe.
+The rasta highlander, joining the tribe.
+Kilt flowing in the warm island breeze!
+Playing the pipes underneath the palm trees!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Reggae / Scottish Bagpipe Folk
+- **Thematic Ties:** The warm, relaxed, and deeply syncopated groove of island reggae forced into a bizarre marriage with the loud, piercing, and rigid sound of traditional Scottish marching bagpipes.
+
+### Title: Gregorian Grunge
+
+**Service:** Minimax Audio
+
+**Prompt:** A gritty, angst-filled 1990s Seattle Grunge Rock song with heavily distorted, sludge-like electric guitars and thrashing drums. However, the vocals are entirely performed by a solemn choir of Gregorian monks singing in perfect, haunting Latin harmony, contrasting beautifully with the aggressive, sludgy grunge instrumentation.
+
+**Lyrics:**
+(Heavy, distorted, drop-D grunge guitar riff repeats slowly)
+(A choir of monks enters, singing smoothly in perfect unison)
+In the shadow of the flannel, we find our grace.
+(Thrashing drums kick in, but the monks remain calm and harmonic)
+
+(Chorus)
+Domine, guide us through the rain!
+Apathy and sorrow, holy is the pain!
+Distortion pedals ringing in the sacred hall!
+Gregorian grunge, standing tall!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Seattle Grunge / Medieval Gregorian Chant
+- **Thematic Ties:** The raw, muddy, and emotionally tortured sound of 90s alternative rock overlaid with the pure, disciplined, and ancient vocal harmonies of medieval monastic chanting.
+
+### Title: The Andean Astronaut
+
+**Service:** Minimax Audio
+
+**Prompt:** An epic, sweeping orchestral cinematic soundtrack meant for a space opera, featuring massive brass swells and soaring strings. Yet, the main thematic instrument soaring above the orchestra is a traditional Andean pan flute (siku), bringing an airy, breathy, and distinctively South American mountain flavor to the vast emptiness of outer space.
+
+**Lyrics:**
+(Massive cinematic strings swell, echoing into the void)
+(A breathy, fluttering pan flute plays a soaring, lonely melody)
+Looking down at Earth from the silver ship...
+
+(Chorus)
+(French horns and strings build to a massive crescendo)
+The condor flies through the stars tonight!
+Breathing the vacuum, bathing in the light!
+Pan flutes echoing across the galaxy!
+The Andean astronaut, floating free!
+
+**Additional Notes:**
+- **Combo/Fusion:** Orchestral Space Opera / Andean Pan Flute Folk
+- **Thematic Ties:** The massive, complex, and futuristic scale of cinematic space music anchored by the simple, airy, and deeply terrestrial sound of traditional South American mountain flutes.
