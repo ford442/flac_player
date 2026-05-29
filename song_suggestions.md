@@ -3534,3 +3534,98 @@ The Andean astronaut, floating free!
 **Additional Notes:**
 - **Combo/Fusion:** Orchestral Space Opera / Andean Pan Flute Folk
 - **Thematic Ties:** The massive, complex, and futuristic scale of cinematic space music anchored by the simple, airy, and deeply terrestrial sound of traditional South American mountain flutes.
+
+### Title: Mariachi on the Moon
+
+**Service:** Minimax Audio
+
+**Prompt:** A slow, ethereal, and weightless ambient space track featuring long, reverberating synthesizer drones and the sound of astronauts breathing. Suddenly, the silence of space is completely shattered by a passionate, acoustic Mexican Mariachi band, with blaring trumpets and aggressively strummed vihuelas playing a triumphant ranchera.
+
+**Lyrics:**
+(Verse 1 - Echoing astronaut radio transmission)
+Houston, we have a beautiful situation...
+(Mariachi trumpets blast a soaring, vibrato-heavy fanfare)
+
+(Chorus)
+(Massive ambient synth drone combined with passionate mariachi strumming)
+Mariachi in the void! Dancing on the stars!
+The loudest acoustic traveling to Mars!
+Sombreros floating in the cosmic dust!
+Organic passion in the rocket's thrust!
+
+**Additional Notes:**
+- **Combo/Fusion:** Ambient Space Music / Traditional Mexican Mariachi
+- **Thematic Ties:** The vast, terrifying, and utterly silent emptiness of deep space completely filled by the raw, acoustic, deeply emotional and festive passion of a Mariachi band.
+
+### Title: The Shoegaze Didgeridoo
+
+**Service:** Minimax Audio
+
+**Prompt:** A dense, ethereal Shoegaze track characterized by a massive wall of distorted, reverberating sound and a slow, driving drum beat. However, piercing through the wash of noise is the deep, continuous, and earthy growl of an Australian Aboriginal Didgeridoo. The droning instrument is completely drenched in massive reverb and delay to create a hypnotic, fuzzy foundation.
+
+**Lyrics:**
+(Verse 1 - Whispered, ethereal vocals drenched in reverb)
+The outback fades away... the sun starts to blur...
+(A massive wall of fuzz guitar, with a crying Didgeridoo echoing endlessly)
+Lost inside the pedalboard, a warm and fuzzy stir.
+The drone hums through the reverb tank...
+
+(Chorus)
+(The wall of sound swells, the Didgeridoo attacks fiercely but echoes into infinity)
+Noise and the desert! The feedback screams!
+Drowning the red dust in static dreams!
+Dancing the dreamtime in the endless haze!
+The weeping didgeridoo catches the shoegaze!
+
+**Additional Notes:**
+- **Combo/Fusion:** Shoegaze / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The overwhelming, blurry, and incredibly loud wash of 90s shoegaze aesthetics being sharply grounded by the ancient, deeply resonant, and earthy drone of the Australian outback, all submerged in endless reverb.
+
+### Title: The Hurdy-Gurdy Trap Lord
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, dark modern Trap hip-hop beat featuring frantic triplet hi-hats and deep 808 sub-basses. The entire melodic and atmospheric backing is completely composed of the continuous, buzzing drone and rhythmic cranking of a Medieval European Hurdy-Gurdy, perfectly mimicking the dark minor-key trap synths and grinding out the heavy frequencies.
+
+**Lyrics:**
+(Verse 1 - Aggressive trap rap flow)
+(Bass drops a low 808 note matching the hurdy-gurdy pitch)
+Rolling through the castle, riding on the steed...
+(Hurdy-gurdy cranks out a high, sustained harmony over the trap hi-hats)
+Sipping fermented mead, no looking back!
+(MC ad-libs: "Skrrt, skrrt!")
+
+(Chorus)
+(Massive 808 drop with a perfectly tuned, buzzing hurdy-gurdy swell)
+Trap in the tavern! The harmonics are tight!
+We're singing in the courtyard in the middle of the night!
+Iron on the saddle, chainmail on the grind!
+Leaving the regular synth leads behind!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern Trap / Medieval Hurdy-Gurdy
+- **Thematic Ties:** The gritty, bass-heavy, street-oriented sound of modern Trap colliding with the deeply resonant, ancient, and decidedly rustic European peasant instrument.
+
+### Title: Synthwave of the Andes
+
+**Service:** Minimax Audio
+
+**Prompt:** A driving, neon-soaked 1980s Synthwave track featuring pulsing analog basslines and heavy gated-reverb snare drums. But the soaring synthesizer leads and robotic vocoder vocals are entirely replaced by a massive ensemble of traditional Peruvian Pan Flutes and Charangos, playing complex, bright arpeggios perfectly harmonizing with the digital dystopia.
+
+**Lyrics:**
+(Verse 1 - Robotic, heavily vocoded 80s vocal)
+(A pulsing, arpeggiated synth bassline drives the rhythm)
+Cruising the cyber-mountains, lasers in the sky...
+(Pan flutes shift into incredibly high-pitched, breathy overtones)
+The neon llama is glowing, watching the cars go by.
+
+(Chorus)
+(Massive synth chords rise alongside the delicate Charango plucking)
+Digital nomad! Riding on the grid!
+The highest altitude that the ancient world hid!
+Overtones shining in the ultraviolet light!
+The oldest human synthesizer singing in the night!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Synthwave / Traditional Peruvian Pan Flutes & Charango
+- **Thematic Ties:** The pristine, highly artificial, and futuristic aesthetic of 80s synthwave elevated by the breathless, high-altitude, and deeply historical acoustic sounds of the Andes mountains.
