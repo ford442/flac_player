@@ -3629,3 +3629,99 @@ The oldest human synthesizer singing in the night!
 **Additional Notes:**
 - **Combo/Fusion:** 1980s Synthwave / Traditional Peruvian Pan Flutes & Charango
 - **Thematic Ties:** The pristine, highly artificial, and futuristic aesthetic of 80s synthwave elevated by the breathless, high-altitude, and deeply historical acoustic sounds of the Andes mountains.
+
+### Title: Gamelan Boom Bap
+
+**Service:** Minimax Audio
+
+**Prompt:** A gritty, dusty 1990s New York Boom Bap hip-hop track featuring heavy, sampled drum breaks. However, the jazzy piano loop and horn samples are entirely replaced by a massive, metallic Indonesian Gamelan ensemble, violently striking bronze gongs and metallophones in perfect syncopation to create a head-nodding, metallic jazz-hop groove.
+
+**Lyrics:**
+(Verse 1 - Smooth, aggressive 90s New York rap flow)
+Step into the temple, Brooklyn on the map...
+(Gamelan metallophones play a complex, descending jazz-hop chord progression)
+Spitting that fire, caught inside the trap.
+(Deep, resonant gong strikes on the downbeat of the drum break)
+
+(Chorus)
+(DJ scratches a Gamelan vocal chant sample over the heavy beat)
+Boom bap in Bali! Slicing through the beat!
+The heaviest bronze walking down the street!
+Gongs of the block, keeping it so real!
+The ancient Indonesian hip-hop feel!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Boom Bap Hip Hop / Indonesian Gamelan
+- **Thematic Ties:** The dusty, sample-heavy grit and head-nodding bounce of 90s East Coast hip-hop perfectly matching the ringing, sustaining, and profoundly metallic polyrhythms of a traditional Indonesian ensemble.
+
+### Title: Tuvan Ska-Punk
+
+**Service:** Minimax Audio
+
+**Prompt:** A hyper-energetic, bouncy 1990s Third-Wave Ska-Punk track with fast upstroke guitar chords and a walking bassline. However, the lively brass section—typically trumpets and trombones—is entirely replaced by the deep, rumbling Kargyraa sub-harmonics and piercing Sygyt whistling overtones of a Tuvan throat singer, perfectly blasting out the frantic, staccato ska horn hooks.
+
+**Lyrics:**
+(Verse 1 - Nasally, energetic 90s ska-punk vocal)
+Pick it up, pick it up! We're skanking in the yurt!
+(Throat singer blasts a bright, staccato ska horn line using Sygyt overtones)
+Got the checkered Vans, kicking up the dirt!
+(Electric guitar upstrokes furiously on the off-beat)
+
+(Chorus)
+(A massive ska chorus erupts with throat singing providing the main hook)
+Ska from the steppes! We're riding on the beat!
+Nomads in the mosh pit, shuffling their feet!
+Throw away the trumpet, let the vocal cords ring!
+Third-wave Mongolian, hear the throat singer sing!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Third-Wave Ska-Punk / Tuvan Throat Singing
+- **Thematic Ties:** The bouncy, caffeinated, suburban goofiness of 90s ska-punk completely relocated to the freezing, windy, and deeply historical expanses of the Mongolian steppes.
+
+### Title: The Appalachian Drill
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, menacing modern UK Drill hip-hop track featuring sliding 808 sub-basses and frantic, skittering triplet hi-hats. However, the eerie piano loops and dark synthesizer pads are entirely replaced by a frantic, high-speed Appalachian Bluegrass banjo and a twangy washboard, violently contrasting with the aggressive, fast-paced drill rapping.
+
+**Lyrics:**
+(Verse 1 - Aggressive, fast-paced UK Drill rap flow)
+(Banjo plucks a dark, minor-key bluegrass roll)
+Yeah, stepping in the holler, drawing the steel...
+(Massive, sliding 808 bass drops under the banjo)
+Moonshine in the flask, making them feel!
+
+(Chorus)
+(The skittering hi-hats go into overdrive while the banjo plays a fast flourish)
+Drill in the mountains! Sliding on the creek!
+The banjo crying out, making the floorboards squeak!
+Overalls and the puffer jacket, stepping so cold!
+The most menacing hoedown ever told!
+
+**Additional Notes:**
+- **Combo/Fusion:** UK Drill Hip-Hop / Appalachian Bluegrass Banjo
+- **Thematic Ties:** The dark, aggressive, and menacing street energy of modern drill rap violently contrasted by the impossibly fast, twangy, and deeply rural atmosphere of a mountain bluegrass hoedown.
+
+### Title: Flamenco Eurodance
+
+**Service:** Minimax Audio
+
+**Prompt:** A hyper-energetic 1990s Eurodance track featuring a pulsating four-on-the-floor kick drum, bright synth hooks, and heavy basslines. However, the main synthesizer leads are entirely replaced by the passionate, fast-paced fingerpicking and furious rasgueado strumming of a traditional Spanish Flamenco acoustic guitar, playing complex arpeggios at 140 BPM.
+
+**Lyrics:**
+(Verse 1 - Echoing, energetic 90s Eurodance vocal)
+Are you ready to jump?! Let's go!
+(A massive flurry of Flamenco guitar plays a bright, staccato Eurodance hook)
+Feel the rhythm taking control!
+(Rhythmic handclaps sync perfectly with the electronic snare)
+
+(Chorus)
+(A massive Eurodance chorus erupts with Flamenco providing the main hook)
+Raving in Madrid! Touching the sky!
+The deepest passion making you fly!
+Throw away the synth, let the nylon ring!
+The Spanish party is the ultimate thing!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s Eurodance / Traditional Spanish Flamenco
+- **Thematic Ties:** The synthetic, highly processed, and intensely rhythmic club anthems of the 90s perfectly translated into the raw, passionate, and deeply acoustic sounds of Andalusian Flamenco.
