@@ -3821,3 +3821,95 @@ Pipe organ pop, hands in the air!
 **Additional Notes:**
 - **Combo/Fusion:** Modern K-Pop / Gothic Pipe Organ
 - **Thematic Ties:** The pristine, synchronized, and highly modern sheen of K-Pop completely invaded by the terrifying, ancient, and decidedly massive acoustic power of a classical European pipe organ.
+
+### Title: The Flamenco Erhu
+
+**Service:** Minimax Audio
+
+**Prompt:** A passionate, rhythmic Spanish Flamenco track featuring intense hand-clapping (palmas), furious cajon beats, and rhythmic foot stomping. However, the rapid, intricate nylon-string guitar solos and passionate vocals are completely replaced by the sorrowful, expressive, and sliding melodies of a Chinese two-stringed Erhu, soaring above the complex Andalusian rhythms.
+
+**Lyrics:**
+(Verse 1 - No human vocals, just the weeping Erhu)
+(Rapid palmas set a frantic 12/8 rhythm)
+(Erhu plays a weeping, highly ornamented flamenco melody, bending pitches beautifully)
+(Cajon strikes a deep, resonant bass on the downbeat)
+
+(Chorus)
+(The Erhu mimics the passionate wail of a cantaor with intense vibrato)
+(The clapping and stomping hit a unified, dramatic climax)
+(A sudden silence, broken only by a long, trailing Erhu slide)
+
+**Additional Notes:**
+- **Combo/Fusion:** Spanish Flamenco / Chinese Erhu
+- **Thematic Ties:** The raw, percussive, and fiery energy of traditional Spanish flamenco beautifully contrasted by the incredibly vocal, weeping, and delicate expressiveness of ancient Chinese strings.
+
+### Title: Surf Rock Sitar
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced, energetic 1960s Californian Surf Rock tune featuring a driving drum beat, splashing cymbals, and a pulsing bassline. But the classic heavily-reverbed Fender Stratocaster lead is entirely replaced by an Indian Sitar, twanging out rapid, microtonal surf rock riffs and bending notes wildly over the beach party groove.
+
+**Lyrics:**
+(Verse 1 - Classic surf rock backing vocals)
+(Driving, fast-paced tom-tom drum beat)
+(Sitar enters with a lightning-fast, tremolo-picked surf rock melody)
+Catching the wave on the Ganges shore!
+(Sitar bends a massive note, mimicking a whammy bar dive)
+
+(Chorus)
+(Splashing ride cymbal and heavy bassline)
+Surfin' the karma! Hang ten on the beach!
+The wildest little guru that the ocean could teach!
+Sitar in the sand, playing under the sun!
+The psychedelic surf party has only begun!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1960s Surf Rock / Indian Sitar
+- **Thematic Ties:** The sunny, reverb-drenched, carefree attitude of Southern California surf culture infused with the complex, resonant, and deeply spiritual twang of classical Indian instrumentation.
+
+### Title: Bluegrass Bossa Nova
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, swaying Brazilian Bossa Nova track with light, brushed snare drums and a soft, whispered Portuguese vocal melody. However, the lush, jazzy nylon-string guitar chords are completely replaced by the frantic, high-speed plucking of an Appalachian Banjo, playing complex jazz chords with a metallic twang while a mandolin provides syncopated chops.
+
+**Lyrics:**
+(Verse 1 - Soft, breathy Bossa Nova vocal)
+The girl from Ipanema goes walking by...
+(Banjo plucks a fast, complex jazz chord progression with a metallic twang)
+Under the beautiful, hazy blue sky...
+(Mandolin chops softly on the off-beat)
+
+(Chorus)
+(The brushed snare keeps a light, shuffling bossa rhythm)
+Moonshine in Rio, sipping it slow...
+Banjo on the beach, watching her go!
+The sweetest little twang on the Copacabana!
+Bossa nova dreaming in the deep savanna!
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Bossa Nova / Appalachian Bluegrass
+- **Thematic Ties:** The incredibly relaxed, sultry, and sophisticated sway of Brazilian Bossa Nova completely upended by the fast, metallic, and distinctly rural twang of Appalachian bluegrass instrumentation.
+
+### Title: The Disco Bagpipe
+
+**Service:** Minimax Audio
+
+**Prompt:** A glittering, high-energy 1970s Disco track featuring a driving four-on-the-floor beat, sweeping string sections, and a funky syncopated bassline. Instead of a soaring falsetto diva or a blasting brass section, the main vocal hooks and solos are delivered by the incredibly loud, continuous, and piercing wail of Scottish Great Highland Bagpipes.
+
+**Lyrics:**
+(Verse 1 - No human vocals, just the bagpipes 'singing')
+(Driving four-on-the-floor disco beat)
+(Funky, syncopated bassline grooves beneath)
+(Bagpipes blast a highly rhythmic, syncopated disco hook)
+(Lush disco strings swell in the background)
+
+(Chorus)
+(The beat drops with a flurry of hi-hats)
+(Bagpipes hit an impossibly high, sustained note, mimicking a diva's wail)
+(The rhythm section locks into an infectious, danceable groove)
+(A disco whistle blows rhythmically alongside the drone)
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Disco / Scottish Great Highland Bagpipes
+- **Thematic Ties:** The glamorous, synthetic, and rhythm-obsessed nightlife of the 70s disco era completely dominated by the deafening, continuous, and aggressively traditional drone of the Scottish highlands.
