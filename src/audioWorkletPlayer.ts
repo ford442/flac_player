@@ -67,6 +67,11 @@ class FlacProcessor extends AudioWorkletProcessor {
     this.hasEnded = false;
     this.totalRead = 0;
 
+    // PCM tap for projectM visualization (512 samples per channel)
+    this.pcmBlockSize = 512;
+    this.pcmAccum = null;
+    this.pcmAccumPos = 0;
+
     const ringSeconds = options?.processorOptions?.ringBufferSeconds || 30;
     const ringChannels = options?.processorOptions?.channels || 2;
     const ringSampleRate = options?.processorOptions?.sampleRate || 44100;
@@ -80,6 +85,8 @@ class FlacProcessor extends AudioWorkletProcessor {
         this.position = 0;
         this.isStreaming = false;
         this.ringBuffer.clear();
+        this.pcmAccum = null;
+        this.pcmAccumPos = 0;
       } else if (e.data.type === 'startStreaming') {
         this.isStreaming = true;
         this.channels = e.data.channels || 2;
@@ -87,6 +94,8 @@ class FlacProcessor extends AudioWorkletProcessor {
         this.hasEnded = false;
         this.totalRead = 0;
         this.ringBuffer.clear();
+        this.pcmAccum = null;
+        this.pcmAccumPos = 0;
       } else if (e.data.type === 'chunk') {
         if (this.isStreaming) {
           this.ringBuffer.write(e.data.buffer);
@@ -95,13 +104,43 @@ class FlacProcessor extends AudioWorkletProcessor {
         this.hasEnded = true;
       } else if (e.data.type === 'seek') {
         this.position = Math.floor(e.data.position * sampleRate) * this.channels;
+        this.pcmAccum = null;
+        this.pcmAccumPos = 0;
       } else if (e.data.type === 'stop') {
         this.buffer = null;
         this.position = 0;
         this.isStreaming = false;
         this.ringBuffer.clear();
+        this.pcmAccum = null;
+        this.pcmAccumPos = 0;
       }
     };
+  }
+
+  // Accumulate output frames into fixed-size interleaved PCM blocks and post
+  // them to the main thread for projectM visualization.  The buffer ownership
+  // is transferred (zero-copy) so we allocate a fresh Float32Array each block.
+  _tapPCM(output, frames) {
+    if (!this.channels || frames === 0) return;
+    for (let i = 0; i < frames; i++) {
+      if (!this.pcmAccum) {
+        this.pcmAccum = new Float32Array(this.pcmBlockSize * this.channels);
+        this.pcmAccumPos = 0;
+      }
+      for (let ch = 0; ch < Math.min(output.length, this.channels); ch++) {
+        this.pcmAccum[this.pcmAccumPos * this.channels + ch] = output[ch][i];
+      }
+      this.pcmAccumPos++;
+      if (this.pcmAccumPos >= this.pcmBlockSize) {
+        const toSend = this.pcmAccum;
+        this.pcmAccum = null;
+        this.pcmAccumPos = 0;
+        this.port.postMessage(
+          { type: 'projectm-pcm', buffer: toSend, channels: this.channels, sampleRate: this.sampleRate },
+          [toSend.buffer]
+        );
+      }
+    }
   }
 
   process(inputs, outputs, parameters) {
@@ -137,6 +176,8 @@ class FlacProcessor extends AudioWorkletProcessor {
       }
     }
 
+    this._tapPCM(output, frames);
+
     if (frames > 0 && this.position % (this.channels * 44100) < this.channels * 128) {
       this.port.postMessage({ type: 'position', position: this.position / (this.channels * sampleRate) });
     }
@@ -155,6 +196,8 @@ class FlacProcessor extends AudioWorkletProcessor {
     }
 
     this.totalRead += readFrames * this.channels;
+
+    this._tapPCM(output, frames);
 
     if (this.hasEnded && this.ringBuffer.getAvailable() === 0 && readFrames < frames) {
       this.hasEnded = false;
@@ -190,6 +233,7 @@ export class AudioWorkletPlayer {
   private onEndedCallback?: () => void;
   private useScriptProcessor: boolean = false;
   private workletUrl: string | null = null;
+  private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
 
   constructor() {
     this.setupWorkletUrl();
@@ -242,6 +286,19 @@ export class AudioWorkletPlayer {
 
   setOnEndedCallback(callback?: () => void): void {
     this.onEndedCallback = callback;
+  }
+
+  /**
+   * Register a callback that receives interleaved PCM blocks (512 samples/ch)
+   * directly from the audio worklet thread.  Use this to feed a projectM
+   * visualizer with audio-clock-synchronized PCM data.
+   *
+   * Pass `undefined` to unregister.
+   */
+  setPCMCallback(
+    callback: ((buffer: Float32Array, channels: number, sampleRate: number) => void) | undefined
+  ): void {
+    this.onPCMBlock = callback;
   }
 
   private notifyStateChange(): void {
@@ -343,6 +400,10 @@ export class AudioWorkletPlayer {
         }
       } else if (e.data.type === 'position') {
         this.currentTime = e.data.position;
+      } else if (e.data.type === 'projectm-pcm') {
+        if (this.onPCMBlock) {
+          this.onPCMBlock(e.data.buffer, e.data.channels, e.data.sampleRate);
+        }
       }
     };
 
@@ -432,6 +493,10 @@ export class AudioWorkletPlayer {
         }
       } else if (e.data.type === 'position') {
         this.currentTime = e.data.position;
+      } else if (e.data.type === 'projectm-pcm') {
+        if (this.onPCMBlock) {
+          this.onPCMBlock(e.data.buffer, e.data.channels, e.data.sampleRate);
+        }
       }
     };
 

@@ -141,7 +141,65 @@ Cross-Origin-Embedder-Policy: require-corp
 
 Without these headers, the browser will block the AudioWorklet/SharedArrayBuffer functionality and the SDL audio backend may fall back to ScriptProcessor or fail to initialize. If you cannot set these headers, the project includes a ScriptProcessor→AudioWorklet shim as a fallback, but enabling COOP/COEP is the recommended path for best audio performance.
 
-## License
+## Project-M Visualizer Integration
+
+The player can feed raw PCM audio data to a [projectM](https://github.com/projectM-visualizer/projectm) (or compatible) visualizer running in a popup window or an iframe on the same page.
+
+### How it works
+
+When the **AudioWorklet** backend is active (the default for modern browsers), the `FlacProcessor` worklet accumulates 512 samples per channel from both buffered and streaming playback and posts them to the main thread as audio-clock-synchronized PCM blocks (~86 blocks/s at 44,100 Hz).  The main thread then forwards every block to the visualizer via:
+
+1. `window.opener.postMessage` / `window.parent.postMessage` – cross-origin safe; works for popups opened with `window.open` and for `<iframe>` embeds.
+2. `BroadcastChannel('projectm-audio')` – same-origin fallback for multi-tab or worker usage.
+
+For non-worklet modes (streaming, SDL, ScriptProcessor fallback) the existing AnalyserNode + `requestAnimationFrame` path is used instead (~60 fps, mono).
+
+### Receiving PCM in projectM
+
+On the visualizer side listen for `message` events and pass the PCM data to projectM's audio input:
+
+```js
+// Popup / iframe approach
+window.addEventListener('message', (e) => {
+  if (e.data?.type === 'pcm') {
+    // e.data.buffer  – Float32Array of interleaved samples
+    // e.data.channels – number of channels (1 or 2)
+    projectM.addPCMfloat(e.data.buffer, e.data.channels);
+  }
+});
+
+// BroadcastChannel approach (same origin only)
+const bc = new BroadcastChannel('projectm-audio');
+bc.onmessage = (e) => {
+  if (e.data?.type === 'pcm') {
+    projectM.addPCMfloat(e.data.buffer, e.data.channels);
+  }
+};
+```
+
+### Opening as a popup
+
+```js
+const player = window.open('https://<your-flac-player-url>', 'flac_player');
+// Now listen for 'message' events as shown above.
+```
+
+### Embedding as an iframe
+
+```html
+<iframe src="https://<your-flac-player-url>" id="flac_player"></iframe>
+<script>
+  window.addEventListener('message', (e) => {
+    if (e.data?.type === 'pcm') {
+      projectM.addPCMfloat(e.data.buffer, e.data.channels);
+    }
+  });
+</script>
+```
+
+> **Note:** Cross-origin isolation (`Cross-Origin-Opener-Policy: same-origin` + `Cross-Origin-Embedder-Policy: require-corp`) is required for the AudioWorklet backend.  See the [AudioWorklet / Cross-Origin Isolation](#audioworklet--cross-origin-isolation) section above.
+
+
 
 MIT
 

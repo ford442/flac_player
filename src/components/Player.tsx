@@ -43,7 +43,7 @@ import {
   getPreviousQueueIndex
 } from '../utils/queueUtils';
 import { formatTime, shuffleArray, getPreferredStorageUrls, isFastStorageUrl, FAST_STORAGE_HOST } from '../utils/audioUtils';
-import { startProjectMBridge } from '../utils/projectMBridge';
+import { startProjectMBridge, sendProjectMPCM, closeProjectMBridgeChannel } from '../utils/projectMBridge';
 import { clearTrackCache, getOrFetchTrack } from '../storage/trackCache';
 import './Player.css';
 
@@ -446,9 +446,22 @@ export const Player: React.FC = () => {
     eqPlayer.setPlaybackRate?.(playbackRate);
     eqPlayer.setCrossfadeEnabled?.(crossfadeEnabled);
 
-    // Start project-M bridge for popup integration
-    const analyser = player.getAnalyser();
-    const stopProjectMBridge = startProjectMBridge(analyser);
+    // Start project-M bridge for popup / iframe visualization integration.
+    // Worklet mode: tap audio-clock-synchronized PCM blocks directly from the
+    // worklet thread (512 samples/ch at ~86 blocks/s).
+    // Other modes: poll the AnalyserNode via requestAnimationFrame (~60 fps).
+    let stopProjectMBridge: () => void;
+    if (player instanceof AudioWorkletPlayer) {
+      player.setPCMCallback((buffer, channels) => {
+        sendProjectMPCM(buffer, channels);
+      });
+      stopProjectMBridge = () => {
+        player.setPCMCallback(undefined);
+        closeProjectMBridgeChannel();
+      };
+    } else {
+      stopProjectMBridge = startProjectMBridge(player.getAnalyser());
+    }
 
     // Load pending local files after mode switch
     if (pendingFilesRef.current.length > 0) {
