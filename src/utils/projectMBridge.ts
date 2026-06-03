@@ -7,13 +7,76 @@
  *   2. Fallback: BroadcastChannel('projectm-audio')
  *      – kept for same-origin usage.
  *
- * Usage:
- *   const stopBridge = startProjectMBridge(analyser);
- *   // ... later when cleaning up:
- *   stopBridge();
+ * Two complementary approaches are provided:
+ *
+ *   **Worklet PCM tap (preferred, audio-clock-synchronized)**
+ *   When using AudioWorkletPlayer, register a PCM callback with
+ *   `player.setPCMCallback((buf, ch) => sendProjectMPCM(buf, ch))`.
+ *   The worklet emits 512-sample interleaved blocks at the audio clock rate
+ * (~86 blocks/s at 44,100 Hz).  Call `closeProjectMBridgeChannel()` for
+ *   cleanup when the player is destroyed.
+ *
+ *   **AnalyserNode RAF approach (non-worklet fallback)**
+ *   `const stop = startProjectMBridge(analyser)` polls the AnalyserNode at
+ *   requestAnimationFrame rate (~60 fps) and forwards mono waveform data.
+ *   Call `stop()` for cleanup.
+ *
+ * Usage (opening as a projectM popup / embedding as an iframe):
+ *   Open/embed `https://<your-flac-player-url>` from a projectM window and
+ *   listen for `message` events on the visualizer side:
+ *
+ *   ```js
+ *   window.addEventListener('message', (e) => {
+ *     if (e.data?.type === 'pcm') {
+ *       projectM.addPCMfloat(e.data.buffer, e.data.channels);
+ *     }
+ *   });
+ *   ```
+ *
+ *   The same PCM packets are also available via BroadcastChannel for
+ *   same-origin consumers:
+ *
+ *   ```js
+ *   const ch = new BroadcastChannel('projectm-audio');
+ *   ch.onmessage = (e) => {
+ *     if (e.data?.type === 'pcm') {
+ *       projectM.addPCMfloat(e.data.buffer, e.data.channels);
+ *     }
+ *   };
+ *   ```
  */
 
-/** Send a Float32Array of PCM samples to the projectM visualizer. */
+// Module-level BroadcastChannel used by sendProjectMPCM.
+// undefined  = not yet attempted
+// null       = attempted but unavailable (e.g. Safari private browsing)
+let _pcmChannel: BroadcastChannel | null | undefined;
+
+function getPCMChannel(): BroadcastChannel | null {
+  if (_pcmChannel === undefined) {
+    try {
+      _pcmChannel = new BroadcastChannel('projectm-audio');
+    } catch {
+      _pcmChannel = null;
+    }
+  }
+  return _pcmChannel;
+}
+
+/** Close the module-level BroadcastChannel created by sendProjectMPCM.
+ *  Call this when the player is destroyed to release the channel resource. */
+export function closeProjectMBridgeChannel(): void {
+  if (_pcmChannel) {
+    _pcmChannel.close();
+  }
+  _pcmChannel = undefined; // allow re-creation on next sendProjectMPCM call
+}
+
+/** Send a Float32Array of interleaved PCM samples to the projectM visualizer.
+ *
+ *  This forwards the data via two transports:
+ *   - window.opener / window.parent postMessage (cross-origin popups/iframes)
+ *   - BroadcastChannel('projectm-audio') (same-origin tabs/workers)
+ */
 export function sendProjectMPCM(float32Array: Float32Array, channels = 1): void {
   const msg = { type: 'pcm', buffer: float32Array, channels };
 
@@ -28,6 +91,16 @@ export function sendProjectMPCM(float32Array: Float32Array, channels = 1): void 
     }
   } catch (ex) {
     console.debug('[projectMBridge] postMessage failed (non-fatal):', ex);
+  }
+
+  // Fallback: BroadcastChannel for same-origin usage
+  const ch = getPCMChannel();
+  if (ch) {
+    try {
+      ch.postMessage(msg);
+    } catch (ex) {
+      console.debug('[projectMBridge] BroadcastChannel.postMessage failed (non-fatal):', ex);
+    }
   }
 }
 
