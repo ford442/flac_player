@@ -3913,3 +3913,92 @@ Bossa nova dreaming in the deep savanna!
 **Additional Notes:**
 - **Combo/Fusion:** 1970s Disco / Scottish Great Highland Bagpipes
 - **Thematic Ties:** The glamorous, synthetic, and rhythm-obsessed nightlife of the 70s disco era completely dominated by the deafening, continuous, and aggressively traditional drone of the Scottish highlands.
+
+### Title: The Caribbean Cathedral
+
+**Service:** Minimax Audio
+
+**Prompt:** A solemn, terrifying Gothic Pipe Organ fugue echoing through a dark stone cathedral. However, the heavy, booming pedal notes and massive minor-key chords are completely replaced by a cheerful, resonant Caribbean Steel Pan ensemble, hammering out the terrifying Bach-style counterpoint with an unmistakably sunny, metallic twang.
+
+**Lyrics:**
+(Verse 1 - Echoing, solemn Latin chanting but sung with a tropical bounce)
+Dies irae, dies illa... (Steel pans hammer a furious, minor-key baroque fugue)
+Solvet saeclum in favilla...
+(The steel pan ensemble echoes endlessly in the stone cathedral)
+
+(Chorus)
+Gothic chords on the island! Steel pans in the dark!
+The sunniest little fugue that ever left a mark!
+Vampires on the beach, Bach in the sand!
+The most terrifying calypso in all the land!
+
+**Additional Notes:**
+- **Combo/Fusion:** Gothic Baroque Pipe Organ / Caribbean Steel Pan
+- **Thematic Ties:** The terrifying, massive, and deeply European acoustic power of a Gothic cathedral completely subverted by the cheerful, sunny, and metallic resonance of an island beach party.
+
+### Title: Bavarian Outback
+
+**Service:** Minimax Audio
+
+**Prompt:** A lively, bouncing Bavarian Oompah brass band playing a cheerful Oktoberfest waltz. However, the bouncy tuba bassline and the upbeat accordion are entirely replaced by the deep, continuous, and earthy growl of an Australian Aboriginal Didgeridoo, pulsing a heavy drone underneath the cheerful German drinking songs.
+
+**Lyrics:**
+(Verse 1 - Cheerful German singing)
+Ein prosit, ein prosit! (Didgeridoo growls a massive, rhythmic drone on the off-beats)
+Der Gemütlichkeit! (Clinking beer steins lock into the outback rhythm)
+
+(Chorus)
+(The Didgeridoo begins to syncopate heavily, driving the waltz into a tribal frenzy)
+Oompah in the desert! Dust on the shoes!
+The grandest Oktoberfest with the outback blues!
+Lederhosen shaking to the Aboriginal sound!
+The heaviest drone in the beer hall ground!
+
+**Additional Notes:**
+- **Combo/Fusion:** Bavarian Oompah Brass Band / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The bouncy, relentlessly cheerful, and beer-soaked energy of a German Oktoberfest completely overwhelmed and grounded by the ancient, deeply resonant, and earthy drone of the Australian outback.
+
+### Title: Appalachian Gregorian
+
+**Service:** Minimax Audio
+
+**Prompt:** A foot-stomping, high-speed Appalachian Bluegrass tune featuring frantic banjo picking, a driving upright bass, and a washboard rhythm. However, the high-lonesome vocals and tight country harmonies are entirely replaced by a solemn choir of medieval monks singing reverberating Latin Gregorian chants perfectly in sync with the high-speed bluegrass hoedown.
+
+**Lyrics:**
+(Verse 1 - Fast, frantic Latin chant in unison)
+Kyrie eleison! (Banjo plucks a lightning-fast, major-key bluegrass roll)
+Christe eleison! (Washboard scrapes furiously, keeping the country beat)
+
+(Chorus)
+(Monks harmonize a massive, joyful chord over the driving bluegrass beat)
+Chanting in the holler! Praise the holy name!
+The fastest little abbey, it's never gonna be the same!
+Moonshine and the scripture, dancing in the street!
+The medieval hoedown is bringing the heat!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Latin Gregorian Chant
+- **Thematic Ties:** The incredibly fast, intricate, and wooden acoustic picking of American mountain music fused with the ancient, austere, and profoundly vocal devotion of a medieval monk choir.
+
+### Title: The Sitar Speakeasy
+
+**Service:** Minimax Audio
+
+**Prompt:** An upbeat, lively 1920s Chicago Swing Jazz track featuring a bouncy upright bass, swinging drum brushes, and a bright brass section. The traditional clarinet and saxophone solos are entirely replaced by a classical Indian Sitar, twanging out incredibly fast, microtonal swing jazz riffs and bending notes wildly over the roaring twenties speakeasy groove.
+
+**Lyrics:**
+(Verse 1 - Smooth, old-school jazz crooner)
+Well, pack your bags, we're heading to Bombay!
+(Sitar shreds a lightning-fast, microtonal swing jazz lick)
+Gonna find a guru, gonna hide away!
+(Upright bass walks a rapid, driving line)
+
+(Chorus)
+Oh, the Sitar Swing is tearing up the town!
+The heaviest brass is laying it down!
+From the Taj Mahal to the dancehall floor!
+Swing it, maharaja, let the good times roar!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1920s Chicago Swing Jazz / Classical Indian Sitar
+- **Thematic Ties:** The sophisticated, bouncy, brass-heavy energy of roaring twenties speakeasy jazz fundamentally altered by the complex, resonant, and deeply spiritual twang of classical Indian instrumentation.
