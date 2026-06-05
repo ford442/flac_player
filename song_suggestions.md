@@ -4002,3 +4002,97 @@ Swing it, maharaja, let the good times roar!
 **Additional Notes:**
 - **Combo/Fusion:** 1920s Chicago Swing Jazz / Classical Indian Sitar
 - **Thematic Ties:** The sophisticated, bouncy, brass-heavy energy of roaring twenties speakeasy jazz fundamentally altered by the complex, resonant, and deeply spiritual twang of classical Indian instrumentation.
+
+### Title: Neon Highlands
+
+**Service:** Minimax Audio
+
+**Prompt:** A pulsating, high-energy 1980s Cyberpunk Synthwave track featuring a driving 4/4 electronic drum beat, arpeggiated analog synth bass, and swirling neon synth pads. The soaring electric guitar solo is entirely replaced by the loud, droning, and aggressively triumphant squawk of traditional Scottish Great Highland Bagpipes, playing a rapid cyber-Celtic melody over the futuristic synthwave groove.
+
+**Lyrics:**
+(Verse 1 - Robotic vocoder voice)
+Data streams flowing through the grid tonight...
+(Bagpipes burst in with a shrieking, hyper-fast, syncopated melody)
+Cyber-clans clash in the neon light!
+(Heavy, driving synth bass pulses intensely)
+
+(Chorus - Distorted cyber-punk vocalist)
+Highlands in the mainframe, plaid in the wire!
+Pumping the synth to fuel the fire!
+The droning pipe echoes through the digital rain!
+We're hacking the code with a Celtic refrain!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Cyberpunk Synthwave / Scottish Great Highland Bagpipes
+- **Thematic Ties:** The futuristic, neon-soaked, dystopian vibe of 80s synthwave fundamentally disrupted by the raw, ancient, ear-piercing dominance of traditional Scottish bagpipes.
+
+### Title: Monks on the Pipeline
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced, high-energy 1960s California Surf Rock song featuring heavily reverberated, twangy Fender Stratocaster electric guitars, frantic drum fills, and a driving, bouncy bassline. The energetic, upbeat surf rock vocals are entirely replaced by a choir of solemn monks singing deep, resonant, a cappella Gregorian Chants in Latin, perfectly harmonized and entirely oblivious to the beach party music behind them.
+
+**Lyrics:**
+(Verse 1 - Solemn, deep choir of monks chanting in harmony)
+Kyrie eleison... Dominus vobiscum...
+(Frantic, high-reverb surf guitar solo shreds wildly underneath)
+In saecula saeculorum...
+
+(Chorus - Monks chanting rhythmically while the drums go crazy)
+Pacem in terris, catching the wave!
+(Twangy guitar glissando slide down the neck)
+Sanctus, sanctus, wiping out in the cave!
+Benedictus qui venit, hanging ten today!
+(Heavy surf drum roll fills the silence)
+
+**Additional Notes:**
+- **Combo/Fusion:** 1960s Surf Rock / Gregorian Chant
+- **Thematic Ties:** The sunny, energetic, rebellious beach culture of 60s surf rock violently clashing with the solemn, ancient, deeply spiritual, and slow-paced atmosphere of medieval Latin church chanting.
+
+### Title: The Outback Ballroom
+
+**Service:** Minimax Audio
+
+**Prompt:** A graceful, elegant 19th-century Viennese Waltz in 3/4 time, featuring sweeping orchestral strings, delicate woodwinds, and a majestic grand piano. The delicate, dancing flute sections are completely overtaken by the deep, rhythmic, buzzing drone and percussive vocalizations of an Australian Aboriginal Didgeridoo, weaving a primal rhythm through the sophisticated ballroom orchestration.
+
+**Lyrics:**
+(Verse 1 - Elegant operatic soprano singing gracefully)
+Waltzing beneath the crystal chandeliers so bright...
+(Didgeridoo enters with a deep, earthy, rhythmic wobble)
+The strings are weeping in the pale moonlight...
+(Soprano continues, unfazed by the buzzing drone)
+
+(Chorus)
+Spinning around in the grandest of halls!
+(Didgeridoo barks and rhythmically groans)
+The outback spirit answers the calls!
+A waltz of two worlds, so beautiful and strange!
+(Orchestra swells to a dramatic peak over the continuous drone)
+
+**Additional Notes:**
+- **Combo/Fusion:** Classical Viennese Waltz / Australian Didgeridoo
+- **Thematic Ties:** The refined, high-society elegance and strict time signature of a classical Austrian waltz completely invaded by the ancient, earthy, continuous breathing, and droning rhythm of indigenous Australian instrumentation.
+
+### Title: La Vie En Doom
+
+**Service:** Minimax Audio
+
+**Prompt:** A sluggish, crushing Doom Metal track featuring incredibly heavy, distorted, low-tuned electric guitars and slow, thunderous, bone-rattling drum hits. The guttural metal vocals and lead guitar melodies are replaced by a whimsical, romantic French Musette Accordion and a charming, breathy Parisian cabaret singer, crooning sweetly about croissants and the Eiffel Tower over the apocalyptic metal riff.
+
+**Lyrics:**
+(Verse 1 - Breathy, romantic Parisian cabaret singer)
+Ah, l'amour, walking down the Champs-Élysées...
+(Crushingly heavy, slow, distorted doom metal guitar riff drops in)
+Drinking café au lait, wasting the day...
+(Accordion plays a whimsical, fast Parisian melody over the slow metal dirge)
+
+(Chorus)
+(Guttural demon growl) C'EST MAGNIFIQUE!
+(Cabaret singer) The romance is dark, the skies are so bleak!
+(Accordion wails a frantic solo as the double-kick drums thunder)
+A lovely evening in the depths of hell!
+(Demon growl) THE EIFFEL TOWER FALLS AS WELL!
+
+**Additional Notes:**
+- **Combo/Fusion:** French Musette Chanson / Heavy Doom Metal
+- **Thematic Ties:** The lighthearted, romantic, sidewalk-cafe atmosphere of a traditional French accordion chanson horrifyingly submerged beneath the slow, apocalyptic, sludgy despair of extreme doom metal.
