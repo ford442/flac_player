@@ -4096,3 +4096,96 @@ A lovely evening in the depths of hell!
 **Additional Notes:**
 - **Combo/Fusion:** French Musette Chanson / Heavy Doom Metal
 - **Thematic Ties:** The lighthearted, romantic, sidewalk-cafe atmosphere of a traditional French accordion chanson horrifyingly submerged beneath the slow, apocalyptic, sludgy despair of extreme doom metal.
+
+### Title: Trap House Klezmer
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, dark modern Trap hip-hop beat featuring frantic triplet hi-hats and deep, speaker-rattling 808 sub-basses. However, the dark synthesizer melodies and rhythmic stabs are completely replaced by a frantic, wildly joyful Eastern European Klezmer ensemble. A weeping clarinet and a bouncy accordion shred complex, lightning-fast traditional Jewish folk melodies perfectly over the trap groove.
+
+**Lyrics:**
+(Verse 1 - Aggressive trap rap flow)
+Rolling through the block, got the ice on my neck...
+(Klezmer clarinet wails a frantic, high-pitched trill)
+Stacking up the paper, pulling a blank check!
+(Accordion pumps a rapid, syncopated minor-key chord)
+
+(Chorus)
+(Massive 808 drop with the full Klezmer band erupting in a joyful frenzy)
+Trap in the shtetl! Bouncing to the bass!
+The fastest little clarinet all up in your face!
+Dreidels and the diamonds, spinning on the floor!
+The heaviest hora leaves you begging for more!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern Trap / Eastern European Klezmer
+- **Thematic Ties:** The booming, bass-heavy, and dangerous street energy of modern trap hip-hop invaded by the frantic, wildly joyful, and highly ornamented instrumentation of traditional Jewish celebration music.
+
+### Title: Surf Rock of the Steppes
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced, high-energy 1960s California Surf Rock song featuring heavy spring reverb and a driving, frantic drum beat. The classic, twangy Fender Stratocaster electric guitar leads and rapid-fire tremolo picking are entirely replaced by a screeching Morin Khuur (horsehead fiddle), while the upbeat surf vocals are performed by a deep, rumbling Tuvan throat singer using Kargyraa sub-harmonics.
+
+**Lyrics:**
+(Verse 1 - Deep, rumbling Kargyraa throat singing acting as a surf rock vocal)
+(A heavy, driving tom-tom surf drum beat kicks in)
+Catching the wave on the frozen plain...
+(Morin Khuur shreds a lightning-fast, tremolo-picked surf rock melody)
+Riding my horse through the freezing rain...
+
+(Chorus)
+(The throat singer shifts into piercing Sygyt overtones for the chorus)
+Surfin' the steppes! Hang ten on the yak!
+The wildest little nomad, never coming back!
+Throat singing in the tube, under the sun!
+The Mongolian beach party has only begun!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1960s Surf Rock / Tuvan Throat Singing & Morin Khuur
+- **Thematic Ties:** The sunny, carefree, and beach-bum energy of California surf rock completely relocated to the freezing, windy, and fiercely nomadic expanses of the Mongolian steppes.
+
+### Title: The Gregorian Mariachi
+
+**Service:** Minimax Audio
+
+**Prompt:** A vibrant, passionate traditional Mexican Mariachi performance featuring a driving waltz rhythm. However, the bright trumpets and vihuelas are completely overpowered by a solemn choir of medieval monks. The monks sing the passionate Spanish lyrics using slow, deeply resonant, and echoing Latin Gregorian chant harmonies, completely ignoring the festive acoustic strumming behind them.
+
+**Lyrics:**
+(Verse 1 - Slow, reverberating Gregorian Chant in perfect unison)
+(Acoustic vihuelas furiously strum a fast-paced waltz progression)
+Corazón espinado... my heart is in pain...
+(A solitary trumpet plays a bright, joyful fanfare, contrasting the monks)
+Llorando en la noche... crying in the rain...
+
+(Chorus)
+(Monks harmonize a massive, echoing chord over the mariachi beat)
+Kyrie cantina! The tequila and the cross!
+Singing for the señorita, mourning for the loss!
+Sombreros in the abbey, acoustic and divine!
+The holiest mariachi drinking holy wine!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Mexican Mariachi / Latin Gregorian Chant
+- **Thematic Ties:** The vibrant, passionate, and fiercely festive acoustic strumming of Mexican Mariachi undercut by the slow, solemn, and intensely spiritual chanting of a medieval monk choir.
+
+### Title: The 8-Bit Gospel
+
+**Service:** Minimax Audio
+
+**Prompt:** A powerful, soul-stirring African-American Gospel track with a stomping, clapping rhythm. However, the immense, uplifting choir and Hammond organ are completely replaced by the harsh, bleeping square waves of a 1980s 8-bit chiptune synthesizer. The digital console plays the massive, complex vocal harmonies and soaring emotional runs using entirely synthetic, retro video game sounds.
+
+**Lyrics:**
+(Verse 1 - No human vocals, just 8-bit square wave leads)
+(A harsh white-noise snare simulates the rhythmic church clapping)
+(8-bit synth blasts a furious, highly ornamented gospel run)
+(A secondary square wave provides a deep, walking bassline)
+
+(Chorus)
+(The synths mimic the massive power of a full choir with complex chords)
+(8-bit arpeggios cascade down like a frantic organ solo)
+(The digital clapping and synthesized voices hit a unified, dramatic climax)
+
+**Additional Notes:**
+- **Combo/Fusion:** African-American Gospel Choir / 1980s 8-Bit Chiptune
+- **Thematic Ties:** The immense, deeply emotional, and profoundly human power of a traditional gospel choir violently digitized into the cold, synthetic, and relentlessly cheery square waves of early arcade consoles.
