@@ -21,7 +21,7 @@ export interface PlayerFallbackViewProps {
   removeToast: (id: string) => void;
   showHelp: boolean;
   setShowHelp: (v: boolean) => void;
-  backendStatus: 'unknown' | 'up' | 'down';
+  backendStatus: 'checking' | 'up' | 'down';
   onRetry: () => void;
   queue: PlaylistTrack[];
   queueCurrentIndex: number;
@@ -102,7 +102,7 @@ export interface PlayerFallbackViewProps {
   onSmartMix: () => void;
   onShareQueue: () => void;
   onUpdateTrack: (id: string, updates: Partial<PlaylistTrack>) => Promise<void>;
-  onTrashTrack: (id: string) => void;
+  onTrashTrack: (id: string) => Promise<void>;
   onLoadCloudPlaylist: (id: string) => void;
   onSetShowHtmlFallback: (v: boolean) => void;
   onClearCache: () => void;
