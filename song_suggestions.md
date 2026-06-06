@@ -4189,3 +4189,99 @@ The holiest mariachi drinking holy wine!
 **Additional Notes:**
 - **Combo/Fusion:** African-American Gospel Choir / 1980s 8-Bit Chiptune
 - **Thematic Ties:** The immense, deeply emotional, and profoundly human power of a traditional gospel choir violently digitized into the cold, synthetic, and relentlessly cheery square waves of early arcade consoles.
+
+### Title: Neon Cyber-Polka
+
+**Service:** Minimax Audio
+
+**Prompt:** A high-octane Cyberpunk Synthwave track heavily driven by futuristic, thumping synth basses, neon arpeggios, and aggressive electronic drums. Instead of the typical 80s lead synth, the main melodies and solos are aggressively performed by a traditional Polish acoustic Polka band featuring an upbeat, bouncy tuba and a frantically joyous accordion.
+
+**Lyrics:**
+(Verse 1 - Monotone robotic vocoder)
+Data streams uploading, neon city lights...
+(Joyous, bouncy acoustic Polka accordion shreds a hyper-fast melody)
+Hacking through the mainframe, staying up all night!
+(Tuba provides a deep, comical 'oom-pah' bassline under the synthwave beat)
+
+(Chorus)
+(The vocoder harmonies swell alongside the frantic accordion)
+Cyber-Polka! Dancing in the grid!
+The fastest little hacker that the world has ever hid!
+Kielbasa in the databank, vodka in the wire!
+The accordion is sparking and the tuba is on fire!
+
+**Additional Notes:**
+- **Combo/Fusion:** Cyberpunk Synthwave / Traditional Polish Polka
+- **Thematic Ties:** The dark, gritty, and neon-lit dystopian futurescape of cyberpunk electronica rudely interrupted by the ridiculously cheerful, bouncy, and deeply traditional acoustic sounds of a rural Polish village dance.
+
+### Title: The Flamenco Harpsichordist
+
+**Service:** Minimax Audio
+
+**Prompt:** A passionate, fiery Spanish Flamenco track featuring complex, rhythmic handclapping (palmas) and driving cajón beats. However, the traditional acoustic Flamenco guitar is completely replaced by a delicate, plucking Baroque Harpsichord. The harpsichordist attempts to play the furious rasgueado strumming techniques and fast picado runs using the stiff, highly formal mechanics of a 17th-century European court instrument.
+
+**Lyrics:**
+(Verse 1 - Passionate, wailing Flamenco cante jondo singing)
+Ay, mi amor, the night is burning deep...
+(The harpsichord plucks a frantic, highly complex Flamenco scale)
+The shadows of the dancer, the promises we keep...
+(A rhythmic flurry of handclaps and cajón strikes follow the harpsichord)
+
+(Chorus)
+(The singer belts out a powerful, emotionally charged melody)
+Fuego en el palacio! Fire in the court!
+The harpsichord is bleeding, the rhythm cutting short!
+Dancing for the king with a rose between your teeth!
+The wooden keys are shattering from the passion underneath!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Spanish Flamenco / Baroque Harpsichord
+- **Thematic Ties:** The raw, sweaty, and fiercely passionate rhythmic intensity of Andalusian Flamenco forced out through the incredibly rigid, delicate, and highly formal plucking mechanism of a royal Baroque harpsichord.
+
+### Title: Celtic Drill
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, menacing UK Drill track driven by sliding 808 sub-basses, rapid, syncopated hi-hat triplets, and a grim, tense atmosphere. But the eerie synthesizer melodies are completely replaced by an incredibly fast, highly ornamented Irish traditional folk session, featuring a screaming Uilleann pipe and a frantic acoustic fiddle playing jigs over the drill beat.
+
+**Lyrics:**
+(Verse 1 - Aggressive, breathless UK Drill rap flow)
+Step on the block, man's wearing the green...
+(A frantic fiddle shreds a high-speed Irish jig)
+Baddest piper that you've ever seen!
+(Uilleann pipes wail a high, screeching note over the sliding 808 bass)
+
+(Chorus)
+(The Drill beat hits its darkest, most aggressive drop)
+Shamrock drill, skipping through the mist!
+Got the shillelagh clenched inside the fist!
+Bodhrán banging when the ops roll by!
+The fastest little fiddle gonna make you cry!
+
+**Additional Notes:**
+- **Combo/Fusion:** UK Drill / Traditional Irish Folk Music
+- **Thematic Ties:** The cold, menacing, and ultra-modern aggressive swagger of UK drill music completely overrun by the blindingly fast, hyper-cheerful, and highly ornamented acoustic melodies of an Irish pub session.
+
+### Title: Death Metal Gamelan
+
+**Service:** Minimax Audio
+
+**Prompt:** A brutal, extreme Death Metal track featuring blast-beat drumming, heavily distorted guitars, and low, guttural growls. The relentless guitar riffs and solos are completely replaced by an incredibly fast, highly complex Indonesian Gamelan ensemble. The metallic clanging of gongs and metallophones are played at impossible speeds to mimic the aggression of death metal.
+
+**Lyrics:**
+(Verse 1 - Low, guttural death metal growls)
+From the depths of the temple, the shadows awake!
+(A massive, thunderous hit of a giant gong followed by rapid metallophone strikes)
+The bronze is screaming, the mountains shake!
+(Blast beats and double-kick drums sync perfectly with the frantic gamelan melody)
+
+(Chorus)
+(The growler roars with intense aggression)
+Forged in the fire! Striking the brass!
+The gamelan of doom is kicking your ass!
+Gongs of destruction! Hammers of hate!
+The Indonesian metal is sealing your fate!
+
+**Additional Notes:**
+- **Combo/Fusion:** Extreme Death Metal / Indonesian Gamelan
+- **Thematic Ties:** The violent, aggressive, and ear-shattering intensity of extreme death metal translated completely into the resonant, metallic, and mathematically complex chiming of traditional Indonesian bronze percussion.
