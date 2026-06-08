@@ -4189,3 +4189,94 @@ The holiest mariachi drinking holy wine!
 **Additional Notes:**
 - **Combo/Fusion:** African-American Gospel Choir / 1980s 8-Bit Chiptune
 - **Thematic Ties:** The immense, deeply emotional, and profoundly human power of a traditional gospel choir violently digitized into the cold, synthetic, and relentlessly cheery square waves of early arcade consoles.
+
+### Title: Cyberpunk Didgeridoo
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced, neon-drenched Cyberpunk Synthwave track featuring heavy analog synth bass and driving electronic drum machine beats. The central lead instrument is an ancient Australian Aboriginal didgeridoo, heavily processed with delay and distortion, rhythmically pulsing alongside the synthetic arpeggios.
+
+**Lyrics:**
+(Verse 1 - Pulsing synth bass)
+Neon rain falls on the outback
+Circuits wired to the ancient track
+Holograms dance in the red dust
+Silicon dreams and a world of rust
+
+(Chorus - Distorted didgeridoo takes the lead)
+Breathe the neon, feel the drone!
+Digital spirits in the wire and bone!
+(Didgeridoo rhythmically pulses with heavy delay)
+Cyberpunk rhythm in the ancient zone!
+
+**Additional Notes:**
+- **Combo/Fusion:** Australian Aboriginal / Cyberpunk Synthwave
+- **Thematic Ties:** Ancient earth frequencies and indigenous traditions meeting futuristic neon cityscapes and synthetic life.
+
+### Title: Andean Death Metal
+
+**Service:** Minimax Audio
+
+**Prompt:** A brutal, hyper-aggressive Death Metal track featuring blast beats and heavily distorted drop-tuned guitars. However, the demonic guttural growls are replaced by the cheerful, airy piping of Andean pan flutes (zampoñas) playing incredibly fast, terrifying arpeggios, while a charango frantically strums the distorted rhythm.
+
+**Lyrics:**
+(Verse 1 - Guitars chug heavily while pan flutes trill aggressively)
+The condor falls, the mountain bleeds!
+Blood on the snow where the llama feeds!
+(Blast beats explode as a charango strums furiously)
+Frost on the peak, the ancient ones cry!
+
+(Chorus - Guttural roar mixed with airy flutes)
+Death in the Andes! The glacier breaks!
+(Zampoñas shred a lightning-fast death metal solo)
+Feel the wrath when the summit wakes!
+
+**Additional Notes:**
+- **Combo/Fusion:** Andean Folk / Death Metal
+- **Thematic Ties:** The peaceful, airy sounds of the high Andes violently contrasted with the aggressive, blast-beat driven fury and darkness of extreme death metal.
+
+### Title: Reggae Bagpipes
+
+**Service:** Minimax Audio
+
+**Prompt:** A laid-back, sun-baked Jamaican Reggae tune with a deep, dubby bassline, a steady one-drop drum beat, and off-beat guitar skanks. The smooth vocal melodies and brass section are entirely replaced by the loud, continuous, and piercing drone of Scottish highland bagpipes playing a relaxed, syncopated island melody.
+
+**Lyrics:**
+(Verse 1 - Deep bass and guitar skanks)
+Sun is shining on the loch today
+Dreadlocks blowing in the highland breeze
+(Bagpipes play a relaxed reggae melody)
+Kilts are swaying to the island ease
+
+(Chorus - Smooth reggae harmony)
+One love, one clan, under the sun!
+(Bagpipe solo with heavy dub delay and echo)
+Highland reggae, till the day is done!
+Pass the haggis, pass the peace!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Reggae / Scottish Traditional
+- **Thematic Ties:** The laid-back, sun-soaked groove of Jamaican reggae clashing with the loud, abrasive, and droning wail of Scottish highland bagpipes.
+
+### Title: Bluegrass Sitar
+
+**Service:** Minimax Audio
+
+**Prompt:** A frantic, high-energy Appalachian Bluegrass barn-burner played at breakneck speed with an upright bass and a washboard. The lightning-fast banjo picking and fiddle sawing are entirely replaced by a classical Indian sitar and a tabla, frantically bending notes and playing microtonal scales in a relentless bluegrass rhythm.
+
+**Lyrics:**
+(Verse 1 - Tabla plays a fast bluegrass train beat)
+Well my baby left me in Mumbai
+Took my train and said goodbye
+(Sitar shreds a lightning-fast bluegrass solo with intense pitch bending)
+Gonna drink my moonshine by the Taj Mahal!
+
+(Chorus - High lonesome Appalachian harmony)
+Oh, the Ganges River runs so cold!
+Appalachian raga, brave and bold!
+(Sitar and washboard duel at breakneck speed)
+Yee-haw, namaste, my heart is sold!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Indian Classical
+- **Thematic Ties:** The frantic, foot-stomping energy of American Appalachian string bands meeting the deeply spiritual, microtonal complexity of traditional Indian classical ragas.
