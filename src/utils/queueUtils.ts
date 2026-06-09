@@ -6,24 +6,18 @@ export const getNextQueueIndex = (
   shuffle: boolean,
   repeatMode: RepeatMode
 ): number => {
-  if (queueLength === 0) return -1;
+  if (queueLength <= 0) return -1;
 
-  const currentIndex = queueCurrentIndex >= 0 && queueCurrentIndex < queueLength ? queueCurrentIndex : -1;
-
-  if (shuffle) {
-    if (queueLength === 1) {
-      return repeatMode === 'all' ? 0 : -1;
-    }
-    let nextIndex: number;
-    do {
-      nextIndex = Math.floor(Math.random() * queueLength);
-    } while (nextIndex === currentIndex);
-    return nextIndex;
+  if (repeatMode === 'all') {
+    return (queueCurrentIndex + 1) % queueLength;
   }
 
-  const nextIndex = currentIndex + 1;
-  if (nextIndex < queueLength) return nextIndex;
-  return repeatMode === 'all' ? 0 : -1;
+  if (repeatMode === 'one') {
+    return queueCurrentIndex;
+  }
+
+  const next = queueCurrentIndex + 1;
+  return next < queueLength ? next : -1;
 };
 
 export const getPreviousQueueIndex = (
@@ -31,11 +25,14 @@ export const getPreviousQueueIndex = (
   queueCurrentIndex: number,
   repeatMode: RepeatMode
 ): number => {
-  if (queueLength === 0) return -1;
-  const currentIndex = queueCurrentIndex >= 0 && queueCurrentIndex < queueLength ? queueCurrentIndex : -1;
-  if (currentIndex > 0) return currentIndex - 1;
-  if (currentIndex === -1) return queueLength - 1;
-  return repeatMode === 'all' ? queueLength - 1 : -1;
+  if (queueLength <= 0) return -1;
+
+  if (repeatMode === 'all') {
+    return (queueCurrentIndex - 1 + queueLength) % queueLength;
+  }
+
+  if (queueCurrentIndex > 0) return queueCurrentIndex - 1;
+  return -1;
 };
 
 export const handleQueueAutoAdvance = (
