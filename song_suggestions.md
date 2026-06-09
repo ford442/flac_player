@@ -4189,3 +4189,100 @@ The holiest mariachi drinking holy wine!
 **Additional Notes:**
 - **Combo/Fusion:** African-American Gospel Choir / 1980s 8-Bit Chiptune
 - **Thematic Ties:** The immense, deeply emotional, and profoundly human power of a traditional gospel choir violently digitized into the cold, synthetic, and relentlessly cheery square waves of early arcade consoles.
+
+### Title: Mount Olympus Drop
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, aggressive 2000s Dubstep track featuring massive wobbling sub-basses and chaotic electronic drum patterns. However, the abrasive synthesizer growls and melodic drops are entirely replaced by the delicate plucking of an Ancient Greek Lyre and the piercing, reedy wail of an Aulos (double-reed pipe), playing frantic, microtonal Hellenic melodies over the filthy club rhythm.
+
+**Lyrics:**
+(Verse 1 - Aggressive, heavily auto-tuned MC vocals)
+Stepping out the pantheon, Zeus is on the track!
+(The Lyre plucks a rapid, syncopated melody over the building snare roll)
+Got the lightning in my hand, ain't no turning back!
+(Aulos blasts a piercing, dissonant trill)
+
+(Chorus)
+(Massive dubstep drop with the Lyre and Aulos replacing the synth growls)
+Olympus in the club! We dropping the bass!
+The heaviest toga party in the whole damn place!
+Wobble with the gods, nectar in the cup!
+The Ancient Greek dubstep is tearing it up!
+
+**Additional Notes:**
+- **Combo/Fusion:** 2000s Dubstep / Ancient Greek Lyre & Aulos
+- **Thematic Ties:** The filthy, modern, speaker-destroying chaos of early dubstep violently crashing into the delicate, mathematical, and mythic acoustics of ancient Hellenic instrumentation.
+
+### Title: Boy Band Sacrifice
+
+**Service:** Minimax Audio
+
+**Prompt:** A slick, overly-produced 1990s R&B boy band slow jam with a heavy synthesized bassline, snapping drum machine, and lush vocal harmonies. However, the passionate, melismatic lead vocals are entirely replaced by the terrifying, airy shrieks of an Aztec death whistle, while the sensual saxophone solos are replaced by breathy, high-altitude Andean Zampoñas (pan flutes).
+
+**Lyrics:**
+(Verse 1 - Lush male backing harmonies)
+(Backing vocals: "Ooh yeah, baby, don't leave me...")
+(Aztec death whistle enters with a horrifying, sustained, airy shriek)
+You know my heart is beating just for you, girl...
+(Zampoñas play a complex, R&B-style trill)
+
+(Chorus)
+(Heavy drum machine beat drops with snaps on the two and four)
+Making love on the pyramid, under the moon!
+The death whistle crying out a romantic tune!
+Matching outfits and the sacrifice, baby close the door!
+The most terrifying slow jam that you've ever heard before!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s R&B Boy Band / Ancient Aztec & Andean Instruments
+- **Thematic Ties:** The impossibly smooth, romantic, and highly manufactured bedroom-jam atmosphere of 90s R&B completely possessed by the blood-curdling, terrifying, and ancient acoustics of Pre-Columbian rituals.
+
+### Title: The Aristocrat's Riddim
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, energetic Jamaican Dancehall track featuring a pounding, syncopated riddim and booming sub-bass. The modern tropical synthesizers and auto-tuned vocals are completely replaced by a pristine, highly refined 18th-century Classical Harpsichord and a rich Cello, violently bowing and plucking aggressive, staccato Mozart-style runs that perfectly match the chaotic, twerking club rhythm.
+
+**Lyrics:**
+(Verse 1 - Gruff Jamaican Dancehall MC flow, heavily echoed)
+(Harpsichord frantically plucks out a syncopated dancehall beat)
+Step into the ballroom, make way for the king!
+(Cello bows a blistering, fast-paced dancehall bassline)
+Hear the loud strings make the whole club ring!
+(Heavy sub-bass drops on the off-beat)
+
+(Chorus)
+(The Harpsichord goes into an incredibly fast, highly ornamented solo over the heavy bass)
+Classical in the dancehall! Whine to the Bach!
+The fanciest little riddim that's spinning on the block!
+Powdered wigs in the club, stepping to the bass!
+The 18th-century dancehall is taking over the place!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Dancehall / 18th-Century Classical Harpsichord & Cello
+- **Thematic Ties:** The raw, sensual, and heavy tropical club energy of Jamaican Dancehall completely overwhelmed by the delicate, highly structured, and aristocratic precision of classical European string and keyboard instruments.
+
+### Title: Shredding the Tatami
+
+**Service:** Minimax Audio
+
+**Prompt:** A flamboyant, stadium-shaking 1980s Hair Metal anthem featuring massive arena drum beats and soaring, high-pitched rock vocals. However, the blistering, distorted electric guitar solos and heavy power chords are entirely replaced by a delicately plucked, traditional Japanese Koto and the airy, breathy wail of a Shakuhachi bamboo flute, aggressively attempting to shred through the glam rock chaos.
+
+**Lyrics:**
+(Verse 1 - Soaring, high-pitched Hair Metal vocal)
+Riding down the highway on a steel machine!
+(Koto plucks a furious, heavy, power-chord progression)
+The wildest little ronin that you've ever seen!
+(Shakuhachi blasts a shrill, piercing stadium-rock melody)
+
+(Chorus)
+(Massive arena rock drum beat drops)
+Shredding the tatami! Hair spray in the breeze!
+The heaviest koto bringing you to your knees!
+Spandex and the kimono, tearing up the stage!
+The glam rock samurai in the modern age!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Hair Metal / Traditional Japanese Koto & Shakuhachi
+- **Thematic Ties:** The sleazy, excessively glamorous, and highly amplified arena rock energy of the 80s completely recontextualized by the delicate, airy, and highly refined traditional instruments of feudal Japan.
