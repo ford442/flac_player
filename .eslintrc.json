@@ -17,10 +17,13 @@
     "sourceType": "module"
   },
   "plugins": [
+    "react-hooks",
     "react",
     "@typescript-eslint"
   ],
   "rules": {
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
     "@typescript-eslint/no-explicit-any": "off"
