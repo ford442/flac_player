@@ -4566,3 +4566,97 @@ The holiest bassline taking control!
 **Additional Notes:**
 - **Combo/Fusion:** Atlanta Trap / Latin Gregorian Chant
 - **Thematic Ties:** The dark, menacing, and distinctly modern urban energy of Atlanta trap music contrasted by the slow, solemn, and intensely spiritual chanting of a medieval monk choir.
+
+### Title: The K-Pop Bagpiper
+
+**Service:** Minimax Audio
+
+**Prompt:** A slick, hyper-produced modern K-Pop dance track with a driving EDM beat and complex vocal harmonies. However, the shiny synthesizer leads and heavy bass drops are entirely replaced by the loud, continuous, and piercing wail of Scottish Great Highland Bagpipes, blasting out impossibly catchy, syncopated K-Pop melodies.
+
+**Lyrics:**
+(Verse 1 - Crisp, synchronized K-Pop boy band vocals)
+Walking through Gangnam, looking so fresh...
+(Bagpipes blast out a massive, buzzing EDM bassline)
+Got the style, got the moves, putting you to the test!
+(A bright, piercing bagpipe run plays a syncopated pop hook)
+
+(Chorus)
+(Massive, synchronized pop explosion)
+Blow the pipes, baby! Spin it around!
+The highland sound is taking the town!
+Dancing in Seoul with a Scottish flair!
+Bagpipe pop, hands in the air!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern K-Pop / Scottish Great Highland Bagpipes
+- **Thematic Ties:** The pristine, synchronized, and highly modern sheen of K-Pop completely invaded by the deafening, ancient, and decidedly massive acoustic power of traditional Scottish bagpipes.
+
+### Title: Death Metal Harpsichord
+
+**Service:** Minimax Audio
+
+**Prompt:** A brutal, hyper-aggressive Death Metal track featuring blast beats and heavily distorted drop-tuned guitars. However, the demonic guttural growls are replaced by the delicate, highly structured, and aristocratic precision of an 18th-century Classical Harpsichord playing incredibly fast, terrifying arpeggios, while a cello frantically bows the distorted rhythm.
+
+**Lyrics:**
+(Verse 1 - Guitars chug heavily while harpsichord trills aggressively)
+The symphony falls, the concerto bleeds!
+Blood on the ivory where the maestro feeds!
+(Blast beats explode as a cello bows furiously)
+Frost on the strings, the ancient ones cry!
+
+(Chorus - Guttural roar mixed with delicate harpsichord)
+Death in the ballroom! The symphony breaks!
+(Harpsichord shreds a lightning-fast death metal solo)
+Feel the wrath when the maestro wakes!
+
+**Additional Notes:**
+- **Combo/Fusion:** 18th-Century Classical Harpsichord / Death Metal
+- **Thematic Ties:** The peaceful, elegant sounds of the high classical era violently contrasted with the aggressive, blast-beat driven fury and darkness of extreme death metal.
+
+### Title: Synthwave Shamisen
+
+**Service:** Minimax Audio
+
+**Prompt:** A driving, neon-soaked 1980s Synthwave track featuring pulsing analog basslines and heavy gated-reverb snare drums. But the soaring synthesizer leads and robotic vocoder vocals are entirely replaced by a massive ensemble of traditional Japanese Shamisens, playing complex, bright arpeggios perfectly harmonizing with the digital dystopia.
+
+**Lyrics:**
+(Verse 1 - Robotic, heavily vocoded 80s vocal)
+(A pulsing, arpeggiated synth bassline drives the rhythm)
+Cruising the cyber-dojo, lasers in the sky...
+(Shamisens shift into incredibly fast, twangy overtones)
+The neon samurai is glowing, watching the cars go by.
+
+(Chorus)
+(Massive synth chords rise alongside the delicate Shamisen plucking)
+Digital ronin! Riding on the grid!
+The fastest tempo that the ancient world hid!
+Twangy strings shining in the ultraviolet light!
+The oldest human synthesizer singing in the night!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Synthwave / Traditional Japanese Shamisen
+- **Thematic Ties:** The pristine, highly artificial, and futuristic aesthetic of 80s synthwave elevated by the breathless, high-speed, and deeply historical acoustic sounds of feudal Japan.
+
+### Title: The Bossa Nova Balalaika
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, swaying Brazilian Bossa Nova song with a complex nylon-string acoustic guitar and a light, brushed snare drum. The typically smooth, whispered Portuguese vocals are entirely replaced by a booming Russian Men's Choir singing in deep, resonant harmony, while the delicate guitar solos are swapped for a frantically fast, hyper-rhythmic Russian Balalaika playing jazz chords.
+
+**Lyrics:**
+(Verse 1 - Deep, booming Russian men's choir singing softly)
+(Nylon-string guitar plays a beautiful, extended jazz chord)
+The girl from Ipanema walking in the snow...
+(Balalaika plucks a frantic, highly rhythmic bossa nova fill)
+Watching the cold wind gently blow...
+
+(Chorus)
+(The choir hits a massive, dramatic harmony over the bossa beat)
+Bossa nova in the tundra! Swaying on the ice!
+The balalaika playing something very nice!
+Warm hearts freezing in the tropical breeze!
+The Russian choir brings you to your knees!
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Bossa Nova / Russian Balalaika & Men's Choir
+- **Thematic Ties:** The ultimate beachside relaxation and soft, breezy romance of Bossa Nova violently interrupted by the booming resonance and hyper-energetic acoustics of traditional Russian folk music.
