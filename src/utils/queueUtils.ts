@@ -31,11 +31,14 @@ export const getPreviousQueueIndex = (
   queueCurrentIndex: number,
   repeatMode: RepeatMode
 ): number => {
-  if (queueLength === 0) return -1;
-  const currentIndex = queueCurrentIndex >= 0 && queueCurrentIndex < queueLength ? queueCurrentIndex : -1;
-  if (currentIndex > 0) return currentIndex - 1;
-  if (currentIndex === -1) return queueLength - 1;
-  return repeatMode === 'all' ? queueLength - 1 : -1;
+  if (queueLength <= 0) return -1;
+
+  if (repeatMode === 'all') {
+    return (queueCurrentIndex - 1 + queueLength) % queueLength;
+  }
+
+  if (queueCurrentIndex > 0) return queueCurrentIndex - 1;
+  return -1;
 };
 
 export const handleQueueAutoAdvance = (

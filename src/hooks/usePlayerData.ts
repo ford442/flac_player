@@ -142,13 +142,13 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
     }
   }, [isResyncingLibrary, loader, addToast, checkBackend, loadLibrary, loadTags, loadStats]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (isSharedPlaylist) return;
     checkBackend().then(healthy => { if (healthy) loadLibrary(); });
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (isSharedPlaylist) return;
     loadTags(); loadStats();

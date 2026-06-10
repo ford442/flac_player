@@ -11,7 +11,6 @@ import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { EQPanel } from './EQPanel';
 import { CacheStatsPanel } from './OfflineCache';
 import { formatTime, FAST_STORAGE_HOST } from '../utils/audioUtils';
-import { getNextQueueIndex, getPreviousQueueIndex } from '../utils/queueUtils';
 
 type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'settings';
 type LibraryViewMode = 'grid' | 'list';
@@ -439,7 +438,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
             <div className="flex items-center gap-4 mb-2">
               <button onClick={onPrevious}
                 className="text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                disabled={getPreviousQueueIndex(queue.length, queueCurrentIndex, repeatMode) === -1 || isLoading}
+                disabled={false}
                 aria-label="Previous track">⏮</button>
               <button onClick={onPlay} disabled={isLoading}
                 className="w-12 h-12 bg-white text-black rounded-full flex items-center justify-center text-xl hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
@@ -448,7 +447,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
               </button>
               <button onClick={onNext}
                 className="text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                disabled={getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode) === -1 || isLoading}
+                disabled={false}
                 aria-label="Next track">⏭</button>
             </div>
             <div className="w-full max-w-md flex items-center gap-3">
