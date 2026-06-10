@@ -4280,3 +4280,289 @@ Yee-haw, namaste, my heart is sold!
 **Additional Notes:**
 - **Combo/Fusion:** Appalachian Bluegrass / Indian Classical
 - **Thematic Ties:** The frantic, foot-stomping energy of American Appalachian string bands meeting the deeply spiritual, microtonal complexity of traditional Indian classical ragas.
+### Title: Mount Olympus Drop
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, aggressive 2000s Dubstep track featuring massive wobbling sub-basses and chaotic electronic drum patterns. However, the abrasive synthesizer growls and melodic drops are entirely replaced by the delicate plucking of an Ancient Greek Lyre and the piercing, reedy wail of an Aulos (double-reed pipe), playing frantic, microtonal Hellenic melodies over the filthy club rhythm.
+
+**Lyrics:**
+(Verse 1 - Aggressive, heavily auto-tuned MC vocals)
+Stepping out the pantheon, Zeus is on the track!
+(The Lyre plucks a rapid, syncopated melody over the building snare roll)
+Got the lightning in my hand, ain't no turning back!
+(Aulos blasts a piercing, dissonant trill)
+
+(Chorus)
+(Massive dubstep drop with the Lyre and Aulos replacing the synth growls)
+Olympus in the club! We dropping the bass!
+The heaviest toga party in the whole damn place!
+Wobble with the gods, nectar in the cup!
+The Ancient Greek dubstep is tearing it up!
+
+**Additional Notes:**
+- **Combo/Fusion:** 2000s Dubstep / Ancient Greek Lyre & Aulos
+- **Thematic Ties:** The filthy, modern, speaker-destroying chaos of early dubstep violently crashing into the delicate, mathematical, and mythic acoustics of ancient Hellenic instrumentation.
+
+### Title: Boy Band Sacrifice
+
+**Service:** Minimax Audio
+
+**Prompt:** A slick, overly-produced 1990s R&B boy band slow jam with a heavy synthesized bassline, snapping drum machine, and lush vocal harmonies. However, the passionate, melismatic lead vocals are entirely replaced by the terrifying, airy shrieks of an Aztec death whistle, while the sensual saxophone solos are replaced by breathy, high-altitude Andean Zampoñas (pan flutes).
+
+**Lyrics:**
+(Verse 1 - Lush male backing harmonies)
+(Backing vocals: "Ooh yeah, baby, don't leave me...")
+(Aztec death whistle enters with a horrifying, sustained, airy shriek)
+You know my heart is beating just for you, girl...
+(Zampoñas play a complex, R&B-style trill)
+
+(Chorus)
+(Heavy drum machine beat drops with snaps on the two and four)
+Making love on the pyramid, under the moon!
+The death whistle crying out a romantic tune!
+Matching outfits and the sacrifice, baby close the door!
+The most terrifying slow jam that you've ever heard before!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s R&B Boy Band / Ancient Aztec & Andean Instruments
+- **Thematic Ties:** The impossibly smooth, romantic, and highly manufactured bedroom-jam atmosphere of 90s R&B completely possessed by the blood-curdling, terrifying, and ancient acoustics of Pre-Columbian rituals.
+
+### Title: The Aristocrat's Riddim
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, energetic Jamaican Dancehall track featuring a pounding, syncopated riddim and booming sub-bass. The modern tropical synthesizers and auto-tuned vocals are completely replaced by a pristine, highly refined 18th-century Classical Harpsichord and a rich Cello, violently bowing and plucking aggressive, staccato Mozart-style runs that perfectly match the chaotic, twerking club rhythm.
+
+**Lyrics:**
+(Verse 1 - Gruff Jamaican Dancehall MC flow, heavily echoed)
+(Harpsichord frantically plucks out a syncopated dancehall beat)
+Step into the ballroom, make way for the king!
+(Cello bows a blistering, fast-paced dancehall bassline)
+Hear the loud strings make the whole club ring!
+(Heavy sub-bass drops on the off-beat)
+
+(Chorus)
+(The Harpsichord goes into an incredibly fast, highly ornamented solo over the heavy bass)
+Classical in the dancehall! Whine to the Bach!
+The fanciest little riddim that's spinning on the block!
+Powdered wigs in the club, stepping to the bass!
+The 18th-century dancehall is taking over the place!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Dancehall / 18th-Century Classical Harpsichord & Cello
+- **Thematic Ties:** The raw, sensual, and heavy tropical club energy of Jamaican Dancehall completely overwhelmed by the delicate, highly structured, and aristocratic precision of classical European string and keyboard instruments.
+
+### Title: Shredding the Tatami
+
+**Service:** Minimax Audio
+
+**Prompt:** A flamboyant, stadium-shaking 1980s Hair Metal anthem featuring massive arena drum beats and soaring, high-pitched rock vocals. However, the blistering, distorted electric guitar solos and heavy power chords are entirely replaced by a delicately plucked, traditional Japanese Koto and the airy, breathy wail of a Shakuhachi bamboo flute, aggressively attempting to shred through the glam rock chaos.
+
+**Lyrics:**
+(Verse 1 - Soaring, high-pitched Hair Metal vocal)
+Riding down the highway on a steel machine!
+(Koto plucks a furious, heavy, power-chord progression)
+The wildest little ronin that you've ever seen!
+(Shakuhachi blasts a shrill, piercing stadium-rock melody)
+
+(Chorus)
+(Massive arena rock drum beat drops)
+Shredding the tatami! Hair spray in the breeze!
+The heaviest koto bringing you to your knees!
+Spandex and the kimono, tearing up the stage!
+The glam rock samurai in the modern age!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Hair Metal / Traditional Japanese Koto & Shakuhachi
+- **Thematic Ties:** The sleazy, excessively glamorous, and highly amplified arena rock energy of the 80s completely recontextualized by the delicate, airy, and highly refined traditional instruments of feudal Japan.
+
+### Title: Mount Olympus Drop
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, aggressive 2000s Dubstep track featuring massive wobbling sub-basses and chaotic electronic drum patterns. However, the abrasive synthesizer growls and melodic drops are entirely replaced by the delicate plucking of an Ancient Greek Lyre and the piercing, reedy wail of an Aulos (double-reed pipe), playing frantic, microtonal Hellenic melodies over the filthy club rhythm.
+
+**Lyrics:**
+(Verse 1 - Aggressive, heavily auto-tuned MC vocals)
+Stepping out the pantheon, Zeus is on the track!
+(The Lyre plucks a rapid, syncopated melody over the building snare roll)
+Got the lightning in my hand, ain't no turning back!
+(Aulos blasts a piercing, dissonant trill)
+
+(Chorus)
+(Massive dubstep drop with the Lyre and Aulos replacing the synth growls)
+Olympus in the club! We dropping the bass!
+The heaviest toga party in the whole damn place!
+Wobble with the gods, nectar in the cup!
+The Ancient Greek dubstep is tearing it up!
+
+**Additional Notes:**
+- **Combo/Fusion:** 2000s Dubstep / Ancient Greek Lyre & Aulos
+- **Thematic Ties:** The filthy, modern, speaker-destroying chaos of early dubstep violently crashing into the delicate, mathematical, and mythic acoustics of ancient Hellenic instrumentation.
+
+### Title: Boy Band Sacrifice
+
+**Service:** Minimax Audio
+
+**Prompt:** A slick, overly-produced 1990s R&B boy band slow jam with a heavy synthesized bassline, snapping drum machine, and lush vocal harmonies. However, the passionate, melismatic lead vocals are entirely replaced by the terrifying, airy shrieks of an Aztec death whistle, while the sensual saxophone solos are replaced by breathy, high-altitude Andean Zampoñas (pan flutes).
+
+**Lyrics:**
+(Verse 1 - Lush male backing harmonies)
+(Backing vocals: "Ooh yeah, baby, don't leave me...")
+(Aztec death whistle enters with a horrifying, sustained, airy shriek)
+You know my heart is beating just for you, girl...
+(Zampoñas play a complex, R&B-style trill)
+
+(Chorus)
+(Heavy drum machine beat drops with snaps on the two and four)
+Making love on the pyramid, under the moon!
+The death whistle crying out a romantic tune!
+Matching outfits and the sacrifice, baby close the door!
+The most terrifying slow jam that you've ever heard before!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s R&B Boy Band / Ancient Aztec & Andean Instruments
+- **Thematic Ties:** The impossibly smooth, romantic, and highly manufactured bedroom-jam atmosphere of 90s R&B completely possessed by the blood-curdling, terrifying, and ancient acoustics of Pre-Columbian rituals.
+
+### Title: The Aristocrat's Riddim
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, energetic Jamaican Dancehall track featuring a pounding, syncopated riddim and booming sub-bass. The modern tropical synthesizers and auto-tuned vocals are completely replaced by a pristine, highly refined 18th-century Classical Harpsichord and a rich Cello, violently bowing and plucking aggressive, staccato Mozart-style runs that perfectly match the chaotic, twerking club rhythm.
+
+**Lyrics:**
+(Verse 1 - Gruff Jamaican Dancehall MC flow, heavily echoed)
+(Harpsichord frantically plucks out a syncopated dancehall beat)
+Step into the ballroom, make way for the king!
+(Cello bows a blistering, fast-paced dancehall bassline)
+Hear the loud strings make the whole club ring!
+(Heavy sub-bass drops on the off-beat)
+
+(Chorus)
+(The Harpsichord goes into an incredibly fast, highly ornamented solo over the heavy bass)
+Classical in the dancehall! Whine to the Bach!
+The fanciest little riddim that's spinning on the block!
+Powdered wigs in the club, stepping to the bass!
+The 18th-century dancehall is taking over the place!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Dancehall / 18th-Century Classical Harpsichord & Cello
+- **Thematic Ties:** The raw, sensual, and heavy tropical club energy of Jamaican Dancehall completely overwhelmed by the delicate, highly structured, and aristocratic precision of classical European string and keyboard instruments.
+
+### Title: Shredding the Tatami
+
+**Service:** Minimax Audio
+
+**Prompt:** A flamboyant, stadium-shaking 1980s Hair Metal anthem featuring massive arena drum beats and soaring, high-pitched rock vocals. However, the blistering, distorted electric guitar solos and heavy power chords are entirely replaced by a delicately plucked, traditional Japanese Koto and the airy, breathy wail of a Shakuhachi bamboo flute, aggressively attempting to shred through the glam rock chaos.
+
+**Lyrics:**
+(Verse 1 - Soaring, high-pitched Hair Metal vocal)
+Riding down the highway on a steel machine!
+(Koto plucks a furious, heavy, power-chord progression)
+The wildest little ronin that you've ever seen!
+(Shakuhachi blasts a shrill, piercing stadium-rock melody)
+
+(Chorus)
+(Massive arena rock drum beat drops)
+Shredding the tatami! Hair spray in the breeze!
+The heaviest koto bringing you to your knees!
+Spandex and the kimono, tearing up the stage!
+The glam rock samurai in the modern age!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Hair Metal / Traditional Japanese Koto & Shakuhachi
+- **Thematic Ties:** The sleazy, excessively glamorous, and highly amplified arena rock energy of the 80s completely recontextualized by the delicate, airy, and highly refined traditional instruments of feudal Japan.
+### Title: The Alpine Bossa Nova
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, swaying Brazilian Bossa Nova featuring complex, jazzy nylon-string guitar chords. However, the smooth, whispered Portuguese vocals and gentle flute melodies are entirely replaced by the loud, booming, and resonant blasts of a massive Swiss Alphorn, accompanied by enthusiastic Bavarian yodeling.
+
+**Lyrics:**
+(Verse 1 - Loud, enthusiastic Yodeling)
+Yodel-ay-hee-hoo, on the beach of Ipanema...
+(Alphorn blasts a massive, deep jazz chord)
+Yodel-ay-hee-hoo, under the tropical moon...
+
+(Chorus)
+(Brushed snare keeps a light bossa rhythm)
+Lederhosen in the sand, yodeling by the sea!
+The biggest horn in the Swiss Alps, playing for you and me!
+Bossa of the mountains, swaying in the breeze!
+The happiest little yodeler that you'd ever please!
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Bossa Nova / Swiss Alphorn & Yodeling
+- **Thematic Ties:** The ultimate beachside relaxation and soft romance of Bossa Nova violently interrupted by the deafening, booming resonance and alpine cheerfulness of traditional Swiss mountain music.
+
+### Title: The Klezmer Reggaeton
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, driving Reggaeton beat featuring a thumping 808 sub-bass and classic dembow drum patterns. But instead of modern synthesizers or Spanish vocals, the driving melodic hooks and energetic solos are provided by a frantic, wailing Eastern European Klezmer clarinet and a bouncy accordion, playing complex minor-key Jewish folk scales.
+
+**Lyrics:**
+(Verse 1 - Fast-paced, rhythmic chanting)
+Oy vey, baila, dancing in the street!
+(Clarinet wails a frantic, pitch-bending Klezmer solo over the dembow beat)
+Hava nagila, feel the Caribbean heat!
+(Accordion pumps out a syncopated reggaeton bassline)
+
+(Chorus)
+(Heavy 808 sub-bass drops on the downbeat)
+Klezmer in the club! The rabbi starts to whine!
+Spinning the dreidel and drinking the wine!
+Dembow and the hora, shaking up the floor!
+The wildest little party that you ever saw!
+
+**Additional Notes:**
+- **Combo/Fusion:** Reggaeton / Eastern European Klezmer
+- **Thematic Ties:** The raw, sensual, and heavy club energy of modern Reggaeton infused with the frantic, wailing, and hyper-energetic minor-key melodies of traditional Jewish celebration music.
+
+### Title: The Taiko Disco
+
+**Service:** Minimax Audio
+
+**Prompt:** A glittering, glamorous 1970s Disco anthem featuring a soaring string section and a funky slap-bass line. However, the standard four-on-the-floor drum kit is completely replaced by an earth-shattering, massive ensemble of Japanese Taiko drummers, violently striking their enormous drums in unison to provide the disco beat.
+
+**Lyrics:**
+(Verse 1 - Smooth, soulful 70s Disco diva vocal)
+Underneath the mirror ball, I see you standing there...
+(A massive, earth-shaking Taiko drum strike on the downbeat)
+Got the platform shoes, and the perfect hair...
+(Funky slap-bass grooves in between the booming Taiko hits)
+
+(Chorus)
+(Soaring disco strings elevate the chorus)
+Do the hustle! Feel the ancient boom!
+The biggest drums in the disco room!
+Boogie wonderland with a samurai strike!
+The heaviest disco that you ever did like!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Disco / Japanese Taiko Drumming
+- **Thematic Ties:** The glittering, glamorous, and synthetic world of 70s disco grounded and overpowered by the sweaty, muscular, and earth-shaking acoustic power of traditional Japanese festival drumming.
+
+### Title: The Gregorian Trap
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, menacing Atlanta Trap track featuring rapid-fire hi-hat rolls, deep 808 glides, and sparse synthesizer melodies. The typical mumble-rap vocals are entirely replaced by a choir of solemn, echoing medieval monks, singing their spiritual devotion in perfect, slow-moving Latin Gregorian chant while completely ignoring the frantic trap beat.
+
+**Lyrics:**
+(Verse 1 - Slow, reverberating Gregorian Chant)
+Pater noster... (Frantic, rattling 16th-note hi-hat roll)
+Qui es in caelis... (A massive 808 bass glides down an octave)
+Sanctificetur nomen tuum... (Trap snare hits on the three)
+
+(Chorus)
+(Monks hit a massive, echoing multi-part harmony)
+Trap in the cathedral! The 808 is divine!
+Chanting in the bando, drinking holy wine!
+Monks in the trap house, praying for the soul!
+The holiest bassline taking control!
+
+**Additional Notes:**
+- **Combo/Fusion:** Atlanta Trap / Latin Gregorian Chant
+- **Thematic Ties:** The dark, menacing, and distinctly modern urban energy of Atlanta trap music contrasted by the slow, solemn, and intensely spiritual chanting of a medieval monk choir.
