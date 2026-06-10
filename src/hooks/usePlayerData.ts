@@ -36,11 +36,38 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
   const [sortBy, setSortBy] = useState<SortBy>('date');
   const [storageSourceFilter, setStorageSourceFilter] = useState<'all' | 'fast'>('all');
 
-  const [queue, setQueue] = useState<PlaylistTrack[]>([]);
-  const [queueCurrentIndex, setQueueCurrentIndex] = useState(-1);
+  const [queue, setQueue] = useState<PlaylistTrack[]>(() => {
+    try {
+      const data = localStorage.getItem('flac_player_queue');
+      if (data) {
+        const parsed = JSON.parse(data);
+        return Array.isArray(parsed.tracks) ? parsed.tracks : [];
+      }
+    } catch (e) { }
+    return [];
+  });
+  const [queueCurrentIndex, setQueueCurrentIndex] = useState(() => {
+    try {
+      const data = localStorage.getItem('flac_player_queue');
+      if (data) {
+        const parsed = JSON.parse(data);
+        return typeof parsed.currentIndex === 'number' ? parsed.currentIndex : -1;
+      }
+    } catch (e) { }
+    return -1;
+  });
   const [showQueue, setShowQueue] = useState(false);
   const [shuffle, setShuffle] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>(() => {
+    try {
+      const data = localStorage.getItem('flac_player_queue');
+      if (data) {
+        const parsed = JSON.parse(data);
+        return parsed.repeat === 'all' || parsed.repeat === 'one' ? parsed.repeat : 'off';
+      }
+    } catch (e) { }
+    return 'off';
+  });
 
   const [volume, setVolume] = useState(() => {
     try { const v = parseFloat(localStorage.getItem('flac_volume') || '1'); return isNaN(v) ? 1 : Math.max(0, Math.min(1, v)); } catch { return 1; }
