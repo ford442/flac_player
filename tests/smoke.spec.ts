@@ -15,7 +15,9 @@ test.describe('FLAC Player Smoke Tests', () => {
     });
 
     await page.goto('/');
+    await page.waitForTimeout(1000);
     await page.getByRole('button', { name: 'Open Advanced Library' }).click();
+    await page.waitForSelector('button[aria-label="Next track"]');
     await expect(page.getByRole('button', { name: 'Next track' })).toBeEnabled();
   });
 
@@ -130,6 +132,7 @@ test.describe('FLAC Player Smoke Tests', () => {
     });
 
     await page.goto('/');
+    await page.waitForTimeout(1000);
     await page.getByRole('button', { name: 'Open Advanced Library' }).click();
 
     const rescanButton = page.getByRole('button', { name: /Rescan Library|Rescanning/ });

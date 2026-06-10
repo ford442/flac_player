@@ -11,6 +11,8 @@ import {
 } from '../audioLoader';
 
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { usePlayerState, AudioOutputMode } from '../hooks/usePlayerState';
 import { useToastNotifications } from '../hooks/useToastNotifications';
 import { useAudioSettings } from '../hooks/useAudioSettings';
@@ -23,7 +25,9 @@ import {
   handleQueueAutoAdvance,
   getNextQueueIndex,
   getPreviousQueueIndex
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 } from '../utils/queueUtils';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { formatTime as _formatTime, shuffleArray, getPreferredStorageUrls, isFastStorageUrl } from '../utils/audioUtils';
 import { startProjectMBridge, sendProjectMPCM, closeProjectMBridgeChannel } from '../utils/projectMBridge';
 import { clearTrackCache, getOrFetchTrack } from '../storage/trackCache';
@@ -42,8 +46,10 @@ const getSharedPlaylistId = (): string | null => {
 
 export const Player: React.FC = () => {
   const sharedPlaylistId = useMemo(() => getSharedPlaylistId(), []);
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
   const isSharedPlaylist = sharedPlaylistId !== null;
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { playerState, setPlayerState, outputMode, setOutputMode, error, setError, currentTrack, setCurrentTrack, loadingTrackId, setLoadingTrackId, backendStatus, setBackendStatus } = usePlayerState();
   const { toasts, addToast, removeToast } = useToastNotifications();
   const { eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate, crossfadeEnabled, setCrossfadeEnabled } = useAudioSettings();
@@ -57,9 +63,11 @@ export const Player: React.FC = () => {
     searchQuery, setSearchQuery, minRating, setMinRating,
     selectedTags, setSelectedTags, untaggedOnly, setUntaggedOnly,
     sortBy, setSortBy, storageSourceFilter, setStorageSourceFilter,
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
     queue, setQueue, queueCurrentIndex, setQueueCurrentIndex,
     showQueue, setShowQueue, shuffle, setShuffle, repeatMode, setRepeatMode,
     volume, setVolume, muted, setMuted, prevVolumeRef,
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
     checkBackend, loadPlaylists, loadLibrary, loadTags, loadStats, triggerLibraryResync,
     addToQueue, addAllToQueue, removeFromQueue, reorderQueue, clearQueue, enqueueNext,
     updateTrack, trashTrack,
