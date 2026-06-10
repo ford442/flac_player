@@ -4189,3 +4189,97 @@ The holiest mariachi drinking holy wine!
 **Additional Notes:**
 - **Combo/Fusion:** African-American Gospel Choir / 1980s 8-Bit Chiptune
 - **Thematic Ties:** The immense, deeply emotional, and profoundly human power of a traditional gospel choir violently digitized into the cold, synthetic, and relentlessly cheery square waves of early arcade consoles.
+
+### Title: The Alpine Bossa Nova
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, swaying Brazilian Bossa Nova featuring complex, jazzy nylon-string guitar chords. However, the smooth, whispered Portuguese vocals and gentle flute melodies are entirely replaced by the loud, booming, and resonant blasts of a massive Swiss Alphorn, accompanied by enthusiastic Bavarian yodeling.
+
+**Lyrics:**
+(Verse 1 - Loud, enthusiastic Yodeling)
+Yodel-ay-hee-hoo, on the beach of Ipanema...
+(Alphorn blasts a massive, deep jazz chord)
+Yodel-ay-hee-hoo, under the tropical moon...
+
+(Chorus)
+(Brushed snare keeps a light bossa rhythm)
+Lederhosen in the sand, yodeling by the sea!
+The biggest horn in the Swiss Alps, playing for you and me!
+Bossa of the mountains, swaying in the breeze!
+The happiest little yodeler that you'd ever please!
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Bossa Nova / Swiss Alphorn & Yodeling
+- **Thematic Ties:** The ultimate beachside relaxation and soft romance of Bossa Nova violently interrupted by the deafening, booming resonance and alpine cheerfulness of traditional Swiss mountain music.
+
+### Title: The Klezmer Reggaeton
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, driving Reggaeton beat featuring a thumping 808 sub-bass and classic dembow drum patterns. But instead of modern synthesizers or Spanish vocals, the driving melodic hooks and energetic solos are provided by a frantic, wailing Eastern European Klezmer clarinet and a bouncy accordion, playing complex minor-key Jewish folk scales.
+
+**Lyrics:**
+(Verse 1 - Fast-paced, rhythmic chanting)
+Oy vey, baila, dancing in the street!
+(Clarinet wails a frantic, pitch-bending Klezmer solo over the dembow beat)
+Hava nagila, feel the Caribbean heat!
+(Accordion pumps out a syncopated reggaeton bassline)
+
+(Chorus)
+(Heavy 808 sub-bass drops on the downbeat)
+Klezmer in the club! The rabbi starts to whine!
+Spinning the dreidel and drinking the wine!
+Dembow and the hora, shaking up the floor!
+The wildest little party that you ever saw!
+
+**Additional Notes:**
+- **Combo/Fusion:** Reggaeton / Eastern European Klezmer
+- **Thematic Ties:** The raw, sensual, and heavy club energy of modern Reggaeton infused with the frantic, wailing, and hyper-energetic minor-key melodies of traditional Jewish celebration music.
+
+### Title: The Taiko Disco
+
+**Service:** Minimax Audio
+
+**Prompt:** A glittering, glamorous 1970s Disco anthem featuring a soaring string section and a funky slap-bass line. However, the standard four-on-the-floor drum kit is completely replaced by an earth-shattering, massive ensemble of Japanese Taiko drummers, violently striking their enormous drums in unison to provide the disco beat.
+
+**Lyrics:**
+(Verse 1 - Smooth, soulful 70s Disco diva vocal)
+Underneath the mirror ball, I see you standing there...
+(A massive, earth-shaking Taiko drum strike on the downbeat)
+Got the platform shoes, and the perfect hair...
+(Funky slap-bass grooves in between the booming Taiko hits)
+
+(Chorus)
+(Soaring disco strings elevate the chorus)
+Do the hustle! Feel the ancient boom!
+The biggest drums in the disco room!
+Boogie wonderland with a samurai strike!
+The heaviest disco that you ever did like!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Disco / Japanese Taiko Drumming
+- **Thematic Ties:** The glittering, glamorous, and synthetic world of 70s disco grounded and overpowered by the sweaty, muscular, and earth-shaking acoustic power of traditional Japanese festival drumming.
+
+### Title: The Gregorian Trap
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, menacing Atlanta Trap track featuring rapid-fire hi-hat rolls, deep 808 glides, and sparse synthesizer melodies. The typical mumble-rap vocals are entirely replaced by a choir of solemn, echoing medieval monks, singing their spiritual devotion in perfect, slow-moving Latin Gregorian chant while completely ignoring the frantic trap beat.
+
+**Lyrics:**
+(Verse 1 - Slow, reverberating Gregorian Chant)
+Pater noster... (Frantic, rattling 16th-note hi-hat roll)
+Qui es in caelis... (A massive 808 bass glides down an octave)
+Sanctificetur nomen tuum... (Trap snare hits on the three)
+
+(Chorus)
+(Monks hit a massive, echoing multi-part harmony)
+Trap in the cathedral! The 808 is divine!
+Chanting in the bando, drinking holy wine!
+Monks in the trap house, praying for the soul!
+The holiest bassline taking control!
+
+**Additional Notes:**
+- **Combo/Fusion:** Atlanta Trap / Latin Gregorian Chant
+- **Thematic Ties:** The dark, menacing, and distinctly modern urban energy of Atlanta trap music contrasted by the slow, solemn, and intensely spiritual chanting of a medieval monk choir.
