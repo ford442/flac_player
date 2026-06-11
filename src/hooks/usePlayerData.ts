@@ -43,7 +43,9 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
         const parsed = JSON.parse(data);
         return Array.isArray(parsed.tracks) ? parsed.tracks : [];
       }
-    } catch (e) { }
+    } catch (e) {
+      // Ignore parsing errors
+    }
     return [];
   });
   const [queueCurrentIndex, setQueueCurrentIndex] = useState(() => {
@@ -53,7 +55,9 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
         const parsed = JSON.parse(data);
         return typeof parsed.currentIndex === 'number' ? parsed.currentIndex : -1;
       }
-    } catch (e) { }
+    } catch (e) {
+      // Ignore parsing errors
+    }
     return -1;
   });
   const [showQueue, setShowQueue] = useState(false);
@@ -65,7 +69,9 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
         const parsed = JSON.parse(data);
         return parsed.repeat === 'all' || parsed.repeat === 'one' ? parsed.repeat : 'off';
       }
-    } catch (e) { }
+    } catch (e) {
+      // Ignore parsing errors
+    }
     return 'off';
   });
 
