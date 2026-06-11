@@ -4660,3 +4660,97 @@ The Russian choir brings you to your knees!
 **Additional Notes:**
 - **Combo/Fusion:** Brazilian Bossa Nova / Russian Balalaika & Men's Choir
 - **Thematic Ties:** The ultimate beachside relaxation and soft, breezy romance of Bossa Nova violently interrupted by the booming resonance and hyper-energetic acoustics of traditional Russian folk music.
+### Title: K-Pop Hurdy-Gurdy
+
+**Service:** Minimax Audio
+
+**Prompt:** A slick, hyper-produced modern K-Pop dance track with a driving EDM beat and complex vocal harmonies. However, the shiny synthesizer leads and heavy bass drops are entirely replaced by the continuous, grating drone of a medieval Hurdy-Gurdy and the squawking, reedy stabs of a Renaissance Crumhorn, playing impossibly catchy K-Pop melodies.
+
+**Lyrics:**
+(Verse 1 - Crisp, synchronized K-Pop boy band vocals)
+Walking through Gangnam, looking so fresh...
+(Hurdy-Gurdy cranks out a massive, buzzing EDM bassline)
+Got the style, got the moves, putting you to the test!
+(Crumhorn blasts a bright, syncopated pop hook)
+
+(Chorus)
+(Massive, synchronized pop explosion)
+Crank the wheel, baby! Spin it around!
+The medieval sound is taking the town!
+Dancing in Seoul with a renaissance flair!
+Hurdy-gurdy pop, hands in the air!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern K-Pop / Medieval Hurdy-Gurdy & Crumhorn
+- **Thematic Ties:** The pristine, synchronized, and highly modern sheen of K-Pop completely invaded by the buzzing, droning, and decidedly unpolished sounds of 12th-century European peasant instruments.
+
+### Title: Samba of the Shamisen
+
+**Service:** Minimax Audio
+
+**Prompt:** A high-energy, infectious Brazilian Samba track with a massive bateria of whistles, surdo drums, and cuícas. The upbeat Portuguese vocals and cavaquinho leads are completely replaced by the twangy, percussive plucking of a traditional Japanese Shamisen and the breathy, haunting wail of a Shakuhachi flute, playing a relentlessly cheerful carnival rhythm.
+
+**Lyrics:**
+(Verse 1 - Energetic, rhythmic whistling and cuíca squeaks)
+(A massive whistle blast and a flurry of samba drums)
+(Shamisen plucks a fast, syncopated samba melody)
+(Shakuhachi blasts a bright, piercing carnival hook)
+
+(Chorus)
+(The Shamisen locks into an incredibly fast, highly rhythmic strumming pattern over the driving bateria)
+Carnival in Kyoto! Feathers in the hair!
+The happiest little ronin that the coast has ever seen!
+Samba of the samurai, dancing in the sun!
+The Japanese carnival has just begun!
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Samba / Traditional Japanese Shamisen & Shakuhachi
+- **Thematic Ties:** The colorful, sunny, and incredibly rhythmic street parties of Brazilian carnival violently crashed by the highly formalized, delicate, and microtonal string and woodwind traditions of feudal Japan.
+
+### Title: The Bluegrass Theremin
+
+**Service:** Minimax Audio
+
+**Prompt:** A foot-stomping, high-speed Appalachian Bluegrass tune featuring frantic banjo, fiddle, and mandolin playing. However, the twangy acoustic strings are completely replaced by the eerie, wavering, and deeply synthetic swoops of a 1950s Sci-Fi Theremin, playing blazing fast, major-key country hoedown melodies over a syncopated washboard beat.
+
+**Lyrics:**
+(Verse 1 - Nasally, high-lonesome Bluegrass tenor vocal)
+Well I'm going up the mountain, to see my sweet gal...
+(Theremin swoops in with a lightning-fast, wavering bluegrass roll)
+Got my overalls on, walking down the canal...
+(Washboard scrapes furiously, keeping the country beat)
+
+(Chorus)
+(Theremin executes a dizzying, highly ornamented solo over a driving bluegrass beat)
+Swoop the antenna! Ring out the sound!
+The fastest little alien that the holler has found!
+Moonshine and sci-fi, dancing in the street!
+The extraterrestrial hoedown is bringing the heat!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / 1950s Sci-Fi Theremin
+- **Thematic Ties:** The incredibly fast, intricate, and wooden acoustic picking of American mountain music fused with the eerie, wavering, and profoundly retro-futuristic atmosphere of early science fiction soundtracks.
+
+### Title: Drill of the Steppes
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, menacing modern UK Drill hip-hop track featuring sliding 808 sub-basses and frantic, skittering triplet hi-hats. However, the eerie piano loops and dark synthesizer pads are entirely replaced by the deep, rumbling Kargyraa sub-harmonics and piercing Sygyt whistling overtones of a Tuvan throat singer, perfectly mimicking the dark minor-key trap synths and ad-libbing rhythmically.
+
+**Lyrics:**
+(Verse 1 - Aggressive, fast-paced UK Drill rap flow)
+(Throat singer blasts a dark, minor-key drill melody using Sygyt overtones)
+Yeah, stepping in the yurt, drawing the steel...
+(Massive, sliding 808 bass drops under the throat singing)
+Fermented milk in the flask, making them feel!
+
+(Chorus)
+(The skittering hi-hats go into overdrive while the throat singer delivers a rapid-fire vocal leap)
+Drill in the tundra! Sliding on the ice!
+The throat singer crying out, rolling the dice!
+Fur coats and the puffer jacket, stepping so cold!
+The most menacing nomad story ever told!
+
+**Additional Notes:**
+- **Combo/Fusion:** UK Drill Hip-Hop / Tuvan Throat Singing
+- **Thematic Ties:** The dark, aggressive, and menacing street energy of modern drill rap violently contrasted by the deeply resonant, earthy, and ancient vocal techniques of Mongolian nomads.
