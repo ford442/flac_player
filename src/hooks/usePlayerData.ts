@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
+  loadQueueFromStorage,
   AudioLoader, PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo, CloudPlaylist,
   saveQueueToStorage, clearQueueStorage, getCachedLibrary, setCachedLibrary
 } from '../audioLoader';
@@ -36,11 +37,12 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
   const [sortBy, setSortBy] = useState<SortBy>('date');
   const [storageSourceFilter, setStorageSourceFilter] = useState<'all' | 'fast'>('all');
 
-  const [queue, setQueue] = useState<PlaylistTrack[]>([]);
-  const [queueCurrentIndex, setQueueCurrentIndex] = useState(-1);
+  const initialQueueData = loadQueueFromStorage() || { tracks: [], currentIndex: -1, shuffle: false, repeat: 'off' };
+  const [queue, setQueue] = useState<PlaylistTrack[]>(initialQueueData.tracks);
+  const [queueCurrentIndex, setQueueCurrentIndex] = useState(initialQueueData.currentIndex);
   const [showQueue, setShowQueue] = useState(false);
-  const [shuffle, setShuffle] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<RepeatMode>('off');
+  const [shuffle, setShuffle] = useState(initialQueueData.shuffle);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>(initialQueueData.repeat);
 
   const [volume, setVolume] = useState(() => {
     try { const v = parseFloat(localStorage.getItem('flac_volume') || '1'); return isNaN(v) ? 1 : Math.max(0, Math.min(1, v)); } catch { return 1; }
@@ -115,14 +117,12 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
     }
   }, [isResyncingLibrary, loader, addToast, checkBackend, loadLibrary, loadTags, loadStats]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
+    useEffect(() => {
     if (isSharedPlaylist) return;
     checkBackend().then(healthy => { if (healthy) loadLibrary(); });
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
+    useEffect(() => {
     if (isSharedPlaylist) return;
     loadTags(); loadStats();
   }, []);

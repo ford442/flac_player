@@ -11,7 +11,7 @@ import {
 } from '../audioLoader';
 
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
-import { usePlayerState, AudioOutputMode } from '../hooks/usePlayerState';
+import { usePlayerState } from '../hooks/usePlayerState';
 import { useToastNotifications } from '../hooks/useToastNotifications';
 import { useAudioSettings } from '../hooks/useAudioSettings';
 import { usePlayerData } from '../hooks/usePlayerData';
@@ -24,7 +24,7 @@ import {
   getNextQueueIndex,
   getPreviousQueueIndex
 } from '../utils/queueUtils';
-import { formatTime as _formatTime, shuffleArray, getPreferredStorageUrls, isFastStorageUrl } from '../utils/audioUtils';
+import { shuffleArray, getPreferredStorageUrls, isFastStorageUrl } from '../utils/audioUtils';
 import { startProjectMBridge, sendProjectMPCM, closeProjectMBridgeChannel } from '../utils/projectMBridge';
 import { clearTrackCache, getOrFetchTrack } from '../storage/trackCache';
 import './Player.css';
@@ -44,7 +44,7 @@ export const Player: React.FC = () => {
   const sharedPlaylistId = useMemo(() => getSharedPlaylistId(), []);
   const isSharedPlaylist = sharedPlaylistId !== null;
 
-  const { playerState, setPlayerState, outputMode, setOutputMode, error, setError, currentTrack, setCurrentTrack, loadingTrackId, setLoadingTrackId, backendStatus, setBackendStatus } = usePlayerState();
+  const { playerState, setPlayerState, outputMode, setOutputMode, setError, currentTrack, setCurrentTrack, loadingTrackId, setLoadingTrackId, backendStatus, setBackendStatus } = usePlayerState();
   const { toasts, addToast, removeToast } = useToastNotifications();
   const { eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate, crossfadeEnabled, setCrossfadeEnabled } = useAudioSettings();
 
@@ -60,7 +60,7 @@ export const Player: React.FC = () => {
     queue, setQueue, queueCurrentIndex, setQueueCurrentIndex,
     showQueue, setShowQueue, shuffle, setShuffle, repeatMode, setRepeatMode,
     volume, setVolume, muted, setMuted, prevVolumeRef,
-    checkBackend, loadPlaylists, loadLibrary, loadTags, loadStats, triggerLibraryResync,
+    checkBackend, loadPlaylists, loadLibrary, loadStats, triggerLibraryResync,
     addToQueue, addAllToQueue, removeFromQueue, reorderQueue, clearQueue, enqueueNext,
     updateTrack, trashTrack,
   } = data;
@@ -130,7 +130,7 @@ export const Player: React.FC = () => {
       }
     };
     initializeApp();
-  }, [loader, addToast]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loader, addToast]);
 
   // =============================================================================
   // Local file loading
@@ -251,7 +251,7 @@ export const Player: React.FC = () => {
       (player as EndCallbackPlayer).setOnEndedCallback?.(undefined);
       player.destroy();
     };
-  }, [outputMode, loadLocalFile]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [outputMode, loadLocalFile]);
 
   // Apply live settings to player
   useEffect(() => {
@@ -366,14 +366,14 @@ export const Player: React.FC = () => {
     if (nextIndex === -1) return;
     const nextTrack = queue[nextIndex];
     if (nextTrack) playTrack(nextTrack, nextIndex);
-  }, [queue, queueCurrentIndex, shuffle, repeatMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [queue, queueCurrentIndex, shuffle, repeatMode]);
 
   const playPreviousInQueue = useCallback(() => {
     const previousIndex = getPreviousQueueIndex(queue.length, queueCurrentIndex, repeatMode);
     if (previousIndex === -1) return;
     const previousTrack = queue[previousIndex];
     if (previousTrack) playTrack(previousTrack, previousIndex);
-  }, [queue, queueCurrentIndex, repeatMode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [queue, queueCurrentIndex, repeatMode]);
 
   const togglePlayback = useCallback(() => {
     if (playerState.isPlaying) { playerRef.current?.pause(); return; }
@@ -382,7 +382,7 @@ export const Player: React.FC = () => {
     const initialTrack = queue[initialIndex];
     if (playerState.duration === 0 && initialTrack) { playTrack(initialTrack, initialIndex); return; }
     playerRef.current?.play();
-  }, [playerState.isPlaying, playerState.duration, queue, queueCurrentIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [playerState.isPlaying, playerState.duration, queue, queueCurrentIndex]);
 
   const loadCloudPlaylist = useCallback(async (playlistId: string) => {
     try {
@@ -397,7 +397,7 @@ export const Player: React.FC = () => {
     } catch {
       addToast('Failed to load playlist tracks', 'error');
     }
-  }, [loader, library, addToast]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loader, library, addToast]);
 
   const playAll = (tracks: PlaylistTrack[], shuffled = false) => {
     if (tracks.length === 0) return;

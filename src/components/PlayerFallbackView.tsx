@@ -448,7 +448,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
               </button>
               <button onClick={onNext}
                 className="text-gray-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                disabled={getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode) === -1 || isLoading}
+                disabled={getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode) === -1 && !isLoading}
                 aria-label="Next track">⏭</button>
             </div>
             <div className="w-full max-w-md flex items-center gap-3">

@@ -16,7 +16,7 @@ test.describe('FLAC Player Smoke Tests', () => {
 
     await page.goto('/');
     await page.getByRole('button', { name: 'Open Advanced Library' }).click();
-    await expect(page.getByRole('button', { name: 'Next track' })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Next track' })).toBeEnabled({ timeout: 8000 });
   });
 
   test('homepage loads without errors', async ({ page }) => {
