@@ -4754,3 +4754,99 @@ The most menacing nomad story ever told!
 **Additional Notes:**
 - **Combo/Fusion:** UK Drill Hip-Hop / Tuvan Throat Singing
 - **Thematic Ties:** The dark, aggressive, and menacing street energy of modern drill rap violently contrasted by the deeply resonant, earthy, and ancient vocal techniques of Mongolian nomads.
+
+### Title: The Hurdy-Gurdy Samurai
+
+**Service:** Minimax Audio
+
+**Prompt:** A tense, dramatic Japanese samurai folk ballad featuring the deep boom of a Taiko drum and the piercing melody of a Hichiriki. But the traditional Shamisen is completely replaced by a furious, passionately cranked Medieval Hurdy-Gurdy, grinding out the ancient Japanese pentatonic scales with aggressive peasant energy while a Japanese vocalist belts an emotional tale of a fallen ronin.
+
+**Lyrics:**
+(Verse 1 - Intense, dramatic Japanese Enka-style vocal)
+The blade is drawn under the cherry tree...
+(A massive Taiko drum boom, followed instantly by furious Hurdy-Gurdy cranking)
+My honor bound, the wind blows free!
+
+(Chorus)
+(Hurdy-Gurdy playing a wildly passionate, continuous drone while the Hichiriki wails)
+Cranking in Edo! Drink the sake down!
+The most passionate ronin in the entire town!
+Wooden wheels and the katana, spinning in a trance!
+The European samurai is ready for the dance!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Japanese Folk / Medieval Hurdy-Gurdy
+- **Thematic Ties:** The fiercely disciplined, ancient, and dramatic tension of Japanese Samurai folk storytelling completely derailed by the buzzing, continuous, and distinctly rustic European peasant instrument.
+
+### Title: Caribbean Gregorian
+
+**Service:** Minimax Audio
+
+**Prompt:** A bright, bouncing Caribbean Calypso track with a lively, syncopated rhythm and cheerful acoustic guitar skanking. But the upbeat, tropical melodies and lead vocals are entirely performed by a solemn choir of medieval monks singing Latin Gregorian chants, their voices echoing heavily as they maintain absolute pious seriousness over the sunny island groove.
+
+**Lyrics:**
+(Verse 1 - Solemn, slow Gregorian Chant over a quiet, bouncy calypso guitar)
+Kyrie eleison, Christe eleison...
+(Steel pan begins to sequence a fast, cheerful rhythm)
+Kyrie eleison, the night is long...
+(A classic calypso horn section builds tension)
+
+(Chorus)
+(Full calypso beat drops, monks singing solemnly)
+Gloria in excelsis deo! Drink the rum!
+Chanting monks in the tropical sun!
+From the ancient abbey to the sandy beach!
+We chant the rhythm that the islands teach!
+
+**Additional Notes:**
+- **Combo/Fusion:** Caribbean Calypso / Latin Gregorian Chant
+- **Thematic Ties:** The sunny, relaxed, and impossibly cheerful Caribbean beach-party energy completely contrasted by the solemn, austere, disciplined, and ancient reverberations of medieval monastic devotion.
+
+### Title: The 8-Bit Tango
+
+**Service:** Minimax Audio
+
+**Prompt:** A passionate, sultry Argentine Tango with a sharp, dramatic staccato rhythm. But the traditional bandoneon and acoustic guitars are completely replaced by the harsh, bleeping square waves of a 1980s 8-bit chiptune synthesizer, creating a hyper-futuristic, wavering melody while a robotic AI vocalist smoothly croons about love in the digital realm.
+
+**Lyrics:**
+(Verse 1 - Smooth, robotic AI vocal with a slight metallic echo)
+(8-bit synth plucks a sharp, dramatic tango rhythm)
+Dancing on the motherboard, holding you close...
+(A harsh square wave swoops in with a passionate, wavering trill)
+In the vacuum of cyberspace, you're the one I love most.
+
+(Chorus)
+(Massive, glitching chiptune drop with a driving tango beat)
+Tango in the cosmos! Sweeping across the grid!
+The most passionate robot that you ever did!
+Pixels crying in the zero gravity!
+An 8-bit romance for all eternity!
+
+**Additional Notes:**
+- **Combo/Fusion:** Argentine Tango / 1980s 8-Bit Chiptune
+- **Thematic Ties:** The intensely passionate, sharp, and romantic energy of traditional tango completely digitized into the cold, wavering, and synthetic soundscape of retro gaming.
+
+### Title: The Didgeridoo Chanson
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, romantic 1930s French Chanson featuring a weeping accordion and a delicate acoustic guitar. The soft, whispered French vocals are completely interrupted when the song abruptly explodes into the deep, continuous, and earthy growl of an Australian Aboriginal Didgeridoo, rhythmically pulsing and barking out a heavy drone alongside the Parisian cafe vibe.
+
+**Lyrics:**
+(Verse 1 - Soft, romantic French crooner vocal)
+Sous le ciel de Paris, l'amour est doux...
+(Accordion plays a gentle, swaying melody)
+Mon cœur bat si fort, seulement pour vous...
+(A waiter drops a coffee cup, triggering a massive didgeridoo drone)
+
+(Chorus)
+(Explosive didgeridoo rhythm with deep, earthy growls)
+CROISSANT IN THE OUTBACK! THE EIFFEL TOWER SHAKES!
+(Didgeridoo pulsing heavily matching the rhythm of an incredibly fast accordion)
+DRINKING CAFE AU LAIT AS THE GROUND AWAKES!
+(Abruptly returns to soft French crooning)
+...Et un petit café, s'il vous plaît.
+
+**Additional Notes:**
+- **Combo/Fusion:** 1930s French Chanson / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The impossibly romantic, relaxed, and delicate atmosphere of a Parisian café violently obliterated by the terrifying, deep, and earthy drone of the Australian outback.
