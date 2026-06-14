@@ -39,5 +39,7 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: npm ci
+      - name: Clean APT sources to fix Microsoft repo 403 errors
+        run: sudo rm -f /etc/apt/sources.list.d/azure-cli.list /etc/apt/sources.list.d/microsoft-prod.list && sudo apt-get update
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
