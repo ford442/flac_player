@@ -21,6 +21,7 @@ import { ShaderGUI } from './ShaderGUI/ShaderGUI';
 import { ToastContainer } from './Toast';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { PlayerFallbackView } from './PlayerFallbackView';
+import { EmbedPlayerView } from './EmbedPlayerView';
 import {
   handleQueueAutoAdvance,
   getNextQueueIndex,
@@ -30,6 +31,7 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { formatTime as _formatTime, shuffleArray, getPreferredStorageUrls, isFastStorageUrl } from '../utils/audioUtils';
 import { startProjectMBridge, sendProjectMPCM, closeProjectMBridgeChannel } from '../utils/projectMBridge';
+import { IS_PROJECTM_EMBED } from '../utils/embedMode';
 import { clearTrackCache, getOrFetchTrack } from '../storage/trackCache';
 import './Player.css';
 
@@ -522,6 +524,34 @@ export const Player: React.FC = () => {
     () => storageSourceFilter === 'fast' ? library.filter(track => isFastStorageUrl(track.url)) : library,
     [library, storageSourceFilter]
   );
+
+  // =============================================================================
+  // Render — Project-M embed / audio-only mode
+  // =============================================================================
+  // When opened as a Project-M PCM feeder (?projectm=1 / window.name), skip
+  // ShaderGUI and PlayerFallbackView entirely so the WebGPU visualizer never
+  // initializes. The audio engine + PCM bridge are wired in the effects above
+  // (which run regardless of this branch), so audio keeps flowing to the host.
+  if (IS_PROJECTM_EMBED) {
+    return (
+      <>
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <EmbedPlayerView
+          currentTrack={currentTrack}
+          isPlaying={playerState.isPlaying}
+          isLoading={playerState.isLoading}
+          currentTime={playerState.currentTime}
+          duration={playerState.duration}
+          onPlay={togglePlayback}
+          onStop={() => playerRef.current?.stop()}
+          onSeek={(t) => playerRef.current?.seek(t)}
+          onNext={playNextInQueue}
+          onPrevious={playPreviousInQueue}
+          onFileSelect={handleLocalFiles}
+        />
+      </>
+    );
+  }
 
   // =============================================================================
   // Render — ShaderGUI mode
