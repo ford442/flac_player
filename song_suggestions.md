@@ -4189,3 +4189,761 @@ The holiest mariachi drinking holy wine!
 **Additional Notes:**
 - **Combo/Fusion:** African-American Gospel Choir / 1980s 8-Bit Chiptune
 - **Thematic Ties:** The immense, deeply emotional, and profoundly human power of a traditional gospel choir violently digitized into the cold, synthetic, and relentlessly cheery square waves of early arcade consoles.
+
+### Title: Cyberpunk Didgeridoo
+
+**Service:** Minimax Audio
+
+**Prompt:** A fast-paced, neon-drenched Cyberpunk Synthwave track featuring heavy analog synth bass and driving electronic drum machine beats. The central lead instrument is an ancient Australian Aboriginal didgeridoo, heavily processed with delay and distortion, rhythmically pulsing alongside the synthetic arpeggios.
+
+**Lyrics:**
+(Verse 1 - Pulsing synth bass)
+Neon rain falls on the outback
+Circuits wired to the ancient track
+Holograms dance in the red dust
+Silicon dreams and a world of rust
+
+(Chorus - Distorted didgeridoo takes the lead)
+Breathe the neon, feel the drone!
+Digital spirits in the wire and bone!
+(Didgeridoo rhythmically pulses with heavy delay)
+Cyberpunk rhythm in the ancient zone!
+
+**Additional Notes:**
+- **Combo/Fusion:** Australian Aboriginal / Cyberpunk Synthwave
+- **Thematic Ties:** Ancient earth frequencies and indigenous traditions meeting futuristic neon cityscapes and synthetic life.
+
+### Title: Andean Death Metal
+
+**Service:** Minimax Audio
+
+**Prompt:** A brutal, hyper-aggressive Death Metal track featuring blast beats and heavily distorted drop-tuned guitars. However, the demonic guttural growls are replaced by the cheerful, airy piping of Andean pan flutes (zampoñas) playing incredibly fast, terrifying arpeggios, while a charango frantically strums the distorted rhythm.
+
+**Lyrics:**
+(Verse 1 - Guitars chug heavily while pan flutes trill aggressively)
+The condor falls, the mountain bleeds!
+Blood on the snow where the llama feeds!
+(Blast beats explode as a charango strums furiously)
+Frost on the peak, the ancient ones cry!
+
+(Chorus - Guttural roar mixed with airy flutes)
+Death in the Andes! The glacier breaks!
+(Zampoñas shred a lightning-fast death metal solo)
+Feel the wrath when the summit wakes!
+
+**Additional Notes:**
+- **Combo/Fusion:** Andean Folk / Death Metal
+- **Thematic Ties:** The peaceful, airy sounds of the high Andes violently contrasted with the aggressive, blast-beat driven fury and darkness of extreme death metal.
+
+### Title: Reggae Bagpipes
+
+**Service:** Minimax Audio
+
+**Prompt:** A laid-back, sun-baked Jamaican Reggae tune with a deep, dubby bassline, a steady one-drop drum beat, and off-beat guitar skanks. The smooth vocal melodies and brass section are entirely replaced by the loud, continuous, and piercing drone of Scottish highland bagpipes playing a relaxed, syncopated island melody.
+
+**Lyrics:**
+(Verse 1 - Deep bass and guitar skanks)
+Sun is shining on the loch today
+Dreadlocks blowing in the highland breeze
+(Bagpipes play a relaxed reggae melody)
+Kilts are swaying to the island ease
+
+(Chorus - Smooth reggae harmony)
+One love, one clan, under the sun!
+(Bagpipe solo with heavy dub delay and echo)
+Highland reggae, till the day is done!
+Pass the haggis, pass the peace!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Reggae / Scottish Traditional
+- **Thematic Ties:** The laid-back, sun-soaked groove of Jamaican reggae clashing with the loud, abrasive, and droning wail of Scottish highland bagpipes.
+
+### Title: Bluegrass Sitar
+
+**Service:** Minimax Audio
+
+**Prompt:** A frantic, high-energy Appalachian Bluegrass barn-burner played at breakneck speed with an upright bass and a washboard. The lightning-fast banjo picking and fiddle sawing are entirely replaced by a classical Indian sitar and a tabla, frantically bending notes and playing microtonal scales in a relentless bluegrass rhythm.
+
+**Lyrics:**
+(Verse 1 - Tabla plays a fast bluegrass train beat)
+Well my baby left me in Mumbai
+Took my train and said goodbye
+(Sitar shreds a lightning-fast bluegrass solo with intense pitch bending)
+Gonna drink my moonshine by the Taj Mahal!
+
+(Chorus - High lonesome Appalachian harmony)
+Oh, the Ganges River runs so cold!
+Appalachian raga, brave and bold!
+(Sitar and washboard duel at breakneck speed)
+Yee-haw, namaste, my heart is sold!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / Indian Classical
+- **Thematic Ties:** The frantic, foot-stomping energy of American Appalachian string bands meeting the deeply spiritual, microtonal complexity of traditional Indian classical ragas.
+### Title: Mount Olympus Drop
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, aggressive 2000s Dubstep track featuring massive wobbling sub-basses and chaotic electronic drum patterns. However, the abrasive synthesizer growls and melodic drops are entirely replaced by the delicate plucking of an Ancient Greek Lyre and the piercing, reedy wail of an Aulos (double-reed pipe), playing frantic, microtonal Hellenic melodies over the filthy club rhythm.
+
+**Lyrics:**
+(Verse 1 - Aggressive, heavily auto-tuned MC vocals)
+Stepping out the pantheon, Zeus is on the track!
+(The Lyre plucks a rapid, syncopated melody over the building snare roll)
+Got the lightning in my hand, ain't no turning back!
+(Aulos blasts a piercing, dissonant trill)
+
+(Chorus)
+(Massive dubstep drop with the Lyre and Aulos replacing the synth growls)
+Olympus in the club! We dropping the bass!
+The heaviest toga party in the whole damn place!
+Wobble with the gods, nectar in the cup!
+The Ancient Greek dubstep is tearing it up!
+
+**Additional Notes:**
+- **Combo/Fusion:** 2000s Dubstep / Ancient Greek Lyre & Aulos
+- **Thematic Ties:** The filthy, modern, speaker-destroying chaos of early dubstep violently crashing into the delicate, mathematical, and mythic acoustics of ancient Hellenic instrumentation.
+
+### Title: Boy Band Sacrifice
+
+**Service:** Minimax Audio
+
+**Prompt:** A slick, overly-produced 1990s R&B boy band slow jam with a heavy synthesized bassline, snapping drum machine, and lush vocal harmonies. However, the passionate, melismatic lead vocals are entirely replaced by the terrifying, airy shrieks of an Aztec death whistle, while the sensual saxophone solos are replaced by breathy, high-altitude Andean Zampoñas (pan flutes).
+
+**Lyrics:**
+(Verse 1 - Lush male backing harmonies)
+(Backing vocals: "Ooh yeah, baby, don't leave me...")
+(Aztec death whistle enters with a horrifying, sustained, airy shriek)
+You know my heart is beating just for you, girl...
+(Zampoñas play a complex, R&B-style trill)
+
+(Chorus)
+(Heavy drum machine beat drops with snaps on the two and four)
+Making love on the pyramid, under the moon!
+The death whistle crying out a romantic tune!
+Matching outfits and the sacrifice, baby close the door!
+The most terrifying slow jam that you've ever heard before!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s R&B Boy Band / Ancient Aztec & Andean Instruments
+- **Thematic Ties:** The impossibly smooth, romantic, and highly manufactured bedroom-jam atmosphere of 90s R&B completely possessed by the blood-curdling, terrifying, and ancient acoustics of Pre-Columbian rituals.
+
+### Title: The Aristocrat's Riddim
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, energetic Jamaican Dancehall track featuring a pounding, syncopated riddim and booming sub-bass. The modern tropical synthesizers and auto-tuned vocals are completely replaced by a pristine, highly refined 18th-century Classical Harpsichord and a rich Cello, violently bowing and plucking aggressive, staccato Mozart-style runs that perfectly match the chaotic, twerking club rhythm.
+
+**Lyrics:**
+(Verse 1 - Gruff Jamaican Dancehall MC flow, heavily echoed)
+(Harpsichord frantically plucks out a syncopated dancehall beat)
+Step into the ballroom, make way for the king!
+(Cello bows a blistering, fast-paced dancehall bassline)
+Hear the loud strings make the whole club ring!
+(Heavy sub-bass drops on the off-beat)
+
+(Chorus)
+(The Harpsichord goes into an incredibly fast, highly ornamented solo over the heavy bass)
+Classical in the dancehall! Whine to the Bach!
+The fanciest little riddim that's spinning on the block!
+Powdered wigs in the club, stepping to the bass!
+The 18th-century dancehall is taking over the place!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Dancehall / 18th-Century Classical Harpsichord & Cello
+- **Thematic Ties:** The raw, sensual, and heavy tropical club energy of Jamaican Dancehall completely overwhelmed by the delicate, highly structured, and aristocratic precision of classical European string and keyboard instruments.
+
+### Title: Shredding the Tatami
+
+**Service:** Minimax Audio
+
+**Prompt:** A flamboyant, stadium-shaking 1980s Hair Metal anthem featuring massive arena drum beats and soaring, high-pitched rock vocals. However, the blistering, distorted electric guitar solos and heavy power chords are entirely replaced by a delicately plucked, traditional Japanese Koto and the airy, breathy wail of a Shakuhachi bamboo flute, aggressively attempting to shred through the glam rock chaos.
+
+**Lyrics:**
+(Verse 1 - Soaring, high-pitched Hair Metal vocal)
+Riding down the highway on a steel machine!
+(Koto plucks a furious, heavy, power-chord progression)
+The wildest little ronin that you've ever seen!
+(Shakuhachi blasts a shrill, piercing stadium-rock melody)
+
+(Chorus)
+(Massive arena rock drum beat drops)
+Shredding the tatami! Hair spray in the breeze!
+The heaviest koto bringing you to your knees!
+Spandex and the kimono, tearing up the stage!
+The glam rock samurai in the modern age!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Hair Metal / Traditional Japanese Koto & Shakuhachi
+- **Thematic Ties:** The sleazy, excessively glamorous, and highly amplified arena rock energy of the 80s completely recontextualized by the delicate, airy, and highly refined traditional instruments of feudal Japan.
+
+### Title: Mount Olympus Drop
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, aggressive 2000s Dubstep track featuring massive wobbling sub-basses and chaotic electronic drum patterns. However, the abrasive synthesizer growls and melodic drops are entirely replaced by the delicate plucking of an Ancient Greek Lyre and the piercing, reedy wail of an Aulos (double-reed pipe), playing frantic, microtonal Hellenic melodies over the filthy club rhythm.
+
+**Lyrics:**
+(Verse 1 - Aggressive, heavily auto-tuned MC vocals)
+Stepping out the pantheon, Zeus is on the track!
+(The Lyre plucks a rapid, syncopated melody over the building snare roll)
+Got the lightning in my hand, ain't no turning back!
+(Aulos blasts a piercing, dissonant trill)
+
+(Chorus)
+(Massive dubstep drop with the Lyre and Aulos replacing the synth growls)
+Olympus in the club! We dropping the bass!
+The heaviest toga party in the whole damn place!
+Wobble with the gods, nectar in the cup!
+The Ancient Greek dubstep is tearing it up!
+
+**Additional Notes:**
+- **Combo/Fusion:** 2000s Dubstep / Ancient Greek Lyre & Aulos
+- **Thematic Ties:** The filthy, modern, speaker-destroying chaos of early dubstep violently crashing into the delicate, mathematical, and mythic acoustics of ancient Hellenic instrumentation.
+
+### Title: Boy Band Sacrifice
+
+**Service:** Minimax Audio
+
+**Prompt:** A slick, overly-produced 1990s R&B boy band slow jam with a heavy synthesized bassline, snapping drum machine, and lush vocal harmonies. However, the passionate, melismatic lead vocals are entirely replaced by the terrifying, airy shrieks of an Aztec death whistle, while the sensual saxophone solos are replaced by breathy, high-altitude Andean Zampoñas (pan flutes).
+
+**Lyrics:**
+(Verse 1 - Lush male backing harmonies)
+(Backing vocals: "Ooh yeah, baby, don't leave me...")
+(Aztec death whistle enters with a horrifying, sustained, airy shriek)
+You know my heart is beating just for you, girl...
+(Zampoñas play a complex, R&B-style trill)
+
+(Chorus)
+(Heavy drum machine beat drops with snaps on the two and four)
+Making love on the pyramid, under the moon!
+The death whistle crying out a romantic tune!
+Matching outfits and the sacrifice, baby close the door!
+The most terrifying slow jam that you've ever heard before!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1990s R&B Boy Band / Ancient Aztec & Andean Instruments
+- **Thematic Ties:** The impossibly smooth, romantic, and highly manufactured bedroom-jam atmosphere of 90s R&B completely possessed by the blood-curdling, terrifying, and ancient acoustics of Pre-Columbian rituals.
+
+### Title: The Aristocrat's Riddim
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, energetic Jamaican Dancehall track featuring a pounding, syncopated riddim and booming sub-bass. The modern tropical synthesizers and auto-tuned vocals are completely replaced by a pristine, highly refined 18th-century Classical Harpsichord and a rich Cello, violently bowing and plucking aggressive, staccato Mozart-style runs that perfectly match the chaotic, twerking club rhythm.
+
+**Lyrics:**
+(Verse 1 - Gruff Jamaican Dancehall MC flow, heavily echoed)
+(Harpsichord frantically plucks out a syncopated dancehall beat)
+Step into the ballroom, make way for the king!
+(Cello bows a blistering, fast-paced dancehall bassline)
+Hear the loud strings make the whole club ring!
+(Heavy sub-bass drops on the off-beat)
+
+(Chorus)
+(The Harpsichord goes into an incredibly fast, highly ornamented solo over the heavy bass)
+Classical in the dancehall! Whine to the Bach!
+The fanciest little riddim that's spinning on the block!
+Powdered wigs in the club, stepping to the bass!
+The 18th-century dancehall is taking over the place!
+
+**Additional Notes:**
+- **Combo/Fusion:** Jamaican Dancehall / 18th-Century Classical Harpsichord & Cello
+- **Thematic Ties:** The raw, sensual, and heavy tropical club energy of Jamaican Dancehall completely overwhelmed by the delicate, highly structured, and aristocratic precision of classical European string and keyboard instruments.
+
+### Title: Shredding the Tatami
+
+**Service:** Minimax Audio
+
+**Prompt:** A flamboyant, stadium-shaking 1980s Hair Metal anthem featuring massive arena drum beats and soaring, high-pitched rock vocals. However, the blistering, distorted electric guitar solos and heavy power chords are entirely replaced by a delicately plucked, traditional Japanese Koto and the airy, breathy wail of a Shakuhachi bamboo flute, aggressively attempting to shred through the glam rock chaos.
+
+**Lyrics:**
+(Verse 1 - Soaring, high-pitched Hair Metal vocal)
+Riding down the highway on a steel machine!
+(Koto plucks a furious, heavy, power-chord progression)
+The wildest little ronin that you've ever seen!
+(Shakuhachi blasts a shrill, piercing stadium-rock melody)
+
+(Chorus)
+(Massive arena rock drum beat drops)
+Shredding the tatami! Hair spray in the breeze!
+The heaviest koto bringing you to your knees!
+Spandex and the kimono, tearing up the stage!
+The glam rock samurai in the modern age!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Hair Metal / Traditional Japanese Koto & Shakuhachi
+- **Thematic Ties:** The sleazy, excessively glamorous, and highly amplified arena rock energy of the 80s completely recontextualized by the delicate, airy, and highly refined traditional instruments of feudal Japan.
+### Title: The Alpine Bossa Nova
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, swaying Brazilian Bossa Nova featuring complex, jazzy nylon-string guitar chords. However, the smooth, whispered Portuguese vocals and gentle flute melodies are entirely replaced by the loud, booming, and resonant blasts of a massive Swiss Alphorn, accompanied by enthusiastic Bavarian yodeling.
+
+**Lyrics:**
+(Verse 1 - Loud, enthusiastic Yodeling)
+Yodel-ay-hee-hoo, on the beach of Ipanema...
+(Alphorn blasts a massive, deep jazz chord)
+Yodel-ay-hee-hoo, under the tropical moon...
+
+(Chorus)
+(Brushed snare keeps a light bossa rhythm)
+Lederhosen in the sand, yodeling by the sea!
+The biggest horn in the Swiss Alps, playing for you and me!
+Bossa of the mountains, swaying in the breeze!
+The happiest little yodeler that you'd ever please!
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Bossa Nova / Swiss Alphorn & Yodeling
+- **Thematic Ties:** The ultimate beachside relaxation and soft romance of Bossa Nova violently interrupted by the deafening, booming resonance and alpine cheerfulness of traditional Swiss mountain music.
+
+### Title: The Klezmer Reggaeton
+
+**Service:** Minimax Audio
+
+**Prompt:** A heavy, driving Reggaeton beat featuring a thumping 808 sub-bass and classic dembow drum patterns. But instead of modern synthesizers or Spanish vocals, the driving melodic hooks and energetic solos are provided by a frantic, wailing Eastern European Klezmer clarinet and a bouncy accordion, playing complex minor-key Jewish folk scales.
+
+**Lyrics:**
+(Verse 1 - Fast-paced, rhythmic chanting)
+Oy vey, baila, dancing in the street!
+(Clarinet wails a frantic, pitch-bending Klezmer solo over the dembow beat)
+Hava nagila, feel the Caribbean heat!
+(Accordion pumps out a syncopated reggaeton bassline)
+
+(Chorus)
+(Heavy 808 sub-bass drops on the downbeat)
+Klezmer in the club! The rabbi starts to whine!
+Spinning the dreidel and drinking the wine!
+Dembow and the hora, shaking up the floor!
+The wildest little party that you ever saw!
+
+**Additional Notes:**
+- **Combo/Fusion:** Reggaeton / Eastern European Klezmer
+- **Thematic Ties:** The raw, sensual, and heavy club energy of modern Reggaeton infused with the frantic, wailing, and hyper-energetic minor-key melodies of traditional Jewish celebration music.
+
+### Title: The Taiko Disco
+
+**Service:** Minimax Audio
+
+**Prompt:** A glittering, glamorous 1970s Disco anthem featuring a soaring string section and a funky slap-bass line. However, the standard four-on-the-floor drum kit is completely replaced by an earth-shattering, massive ensemble of Japanese Taiko drummers, violently striking their enormous drums in unison to provide the disco beat.
+
+**Lyrics:**
+(Verse 1 - Smooth, soulful 70s Disco diva vocal)
+Underneath the mirror ball, I see you standing there...
+(A massive, earth-shaking Taiko drum strike on the downbeat)
+Got the platform shoes, and the perfect hair...
+(Funky slap-bass grooves in between the booming Taiko hits)
+
+(Chorus)
+(Soaring disco strings elevate the chorus)
+Do the hustle! Feel the ancient boom!
+The biggest drums in the disco room!
+Boogie wonderland with a samurai strike!
+The heaviest disco that you ever did like!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1970s Disco / Japanese Taiko Drumming
+- **Thematic Ties:** The glittering, glamorous, and synthetic world of 70s disco grounded and overpowered by the sweaty, muscular, and earth-shaking acoustic power of traditional Japanese festival drumming.
+
+### Title: The Gregorian Trap
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, menacing Atlanta Trap track featuring rapid-fire hi-hat rolls, deep 808 glides, and sparse synthesizer melodies. The typical mumble-rap vocals are entirely replaced by a choir of solemn, echoing medieval monks, singing their spiritual devotion in perfect, slow-moving Latin Gregorian chant while completely ignoring the frantic trap beat.
+
+**Lyrics:**
+(Verse 1 - Slow, reverberating Gregorian Chant)
+Pater noster... (Frantic, rattling 16th-note hi-hat roll)
+Qui es in caelis... (A massive 808 bass glides down an octave)
+Sanctificetur nomen tuum... (Trap snare hits on the three)
+
+(Chorus)
+(Monks hit a massive, echoing multi-part harmony)
+Trap in the cathedral! The 808 is divine!
+Chanting in the bando, drinking holy wine!
+Monks in the trap house, praying for the soul!
+The holiest bassline taking control!
+
+**Additional Notes:**
+- **Combo/Fusion:** Atlanta Trap / Latin Gregorian Chant
+- **Thematic Ties:** The dark, menacing, and distinctly modern urban energy of Atlanta trap music contrasted by the slow, solemn, and intensely spiritual chanting of a medieval monk choir.
+
+### Title: The K-Pop Bagpiper
+
+**Service:** Minimax Audio
+
+**Prompt:** A slick, hyper-produced modern K-Pop dance track with a driving EDM beat and complex vocal harmonies. However, the shiny synthesizer leads and heavy bass drops are entirely replaced by the loud, continuous, and piercing wail of Scottish Great Highland Bagpipes, blasting out impossibly catchy, syncopated K-Pop melodies.
+
+**Lyrics:**
+(Verse 1 - Crisp, synchronized K-Pop boy band vocals)
+Walking through Gangnam, looking so fresh...
+(Bagpipes blast out a massive, buzzing EDM bassline)
+Got the style, got the moves, putting you to the test!
+(A bright, piercing bagpipe run plays a syncopated pop hook)
+
+(Chorus)
+(Massive, synchronized pop explosion)
+Blow the pipes, baby! Spin it around!
+The highland sound is taking the town!
+Dancing in Seoul with a Scottish flair!
+Bagpipe pop, hands in the air!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern K-Pop / Scottish Great Highland Bagpipes
+- **Thematic Ties:** The pristine, synchronized, and highly modern sheen of K-Pop completely invaded by the deafening, ancient, and decidedly massive acoustic power of traditional Scottish bagpipes.
+
+### Title: Death Metal Harpsichord
+
+**Service:** Minimax Audio
+
+**Prompt:** A brutal, hyper-aggressive Death Metal track featuring blast beats and heavily distorted drop-tuned guitars. However, the demonic guttural growls are replaced by the delicate, highly structured, and aristocratic precision of an 18th-century Classical Harpsichord playing incredibly fast, terrifying arpeggios, while a cello frantically bows the distorted rhythm.
+
+**Lyrics:**
+(Verse 1 - Guitars chug heavily while harpsichord trills aggressively)
+The symphony falls, the concerto bleeds!
+Blood on the ivory where the maestro feeds!
+(Blast beats explode as a cello bows furiously)
+Frost on the strings, the ancient ones cry!
+
+(Chorus - Guttural roar mixed with delicate harpsichord)
+Death in the ballroom! The symphony breaks!
+(Harpsichord shreds a lightning-fast death metal solo)
+Feel the wrath when the maestro wakes!
+
+**Additional Notes:**
+- **Combo/Fusion:** 18th-Century Classical Harpsichord / Death Metal
+- **Thematic Ties:** The peaceful, elegant sounds of the high classical era violently contrasted with the aggressive, blast-beat driven fury and darkness of extreme death metal.
+
+### Title: Synthwave Shamisen
+
+**Service:** Minimax Audio
+
+**Prompt:** A driving, neon-soaked 1980s Synthwave track featuring pulsing analog basslines and heavy gated-reverb snare drums. But the soaring synthesizer leads and robotic vocoder vocals are entirely replaced by a massive ensemble of traditional Japanese Shamisens, playing complex, bright arpeggios perfectly harmonizing with the digital dystopia.
+
+**Lyrics:**
+(Verse 1 - Robotic, heavily vocoded 80s vocal)
+(A pulsing, arpeggiated synth bassline drives the rhythm)
+Cruising the cyber-dojo, lasers in the sky...
+(Shamisens shift into incredibly fast, twangy overtones)
+The neon samurai is glowing, watching the cars go by.
+
+(Chorus)
+(Massive synth chords rise alongside the delicate Shamisen plucking)
+Digital ronin! Riding on the grid!
+The fastest tempo that the ancient world hid!
+Twangy strings shining in the ultraviolet light!
+The oldest human synthesizer singing in the night!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Synthwave / Traditional Japanese Shamisen
+- **Thematic Ties:** The pristine, highly artificial, and futuristic aesthetic of 80s synthwave elevated by the breathless, high-speed, and deeply historical acoustic sounds of feudal Japan.
+
+### Title: The Bossa Nova Balalaika
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, swaying Brazilian Bossa Nova song with a complex nylon-string acoustic guitar and a light, brushed snare drum. The typically smooth, whispered Portuguese vocals are entirely replaced by a booming Russian Men's Choir singing in deep, resonant harmony, while the delicate guitar solos are swapped for a frantically fast, hyper-rhythmic Russian Balalaika playing jazz chords.
+
+**Lyrics:**
+(Verse 1 - Deep, booming Russian men's choir singing softly)
+(Nylon-string guitar plays a beautiful, extended jazz chord)
+The girl from Ipanema walking in the snow...
+(Balalaika plucks a frantic, highly rhythmic bossa nova fill)
+Watching the cold wind gently blow...
+
+(Chorus)
+(The choir hits a massive, dramatic harmony over the bossa beat)
+Bossa nova in the tundra! Swaying on the ice!
+The balalaika playing something very nice!
+Warm hearts freezing in the tropical breeze!
+The Russian choir brings you to your knees!
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Bossa Nova / Russian Balalaika & Men's Choir
+- **Thematic Ties:** The ultimate beachside relaxation and soft, breezy romance of Bossa Nova violently interrupted by the booming resonance and hyper-energetic acoustics of traditional Russian folk music.
+### Title: K-Pop Hurdy-Gurdy
+
+**Service:** Minimax Audio
+
+**Prompt:** A slick, hyper-produced modern K-Pop dance track with a driving EDM beat and complex vocal harmonies. However, the shiny synthesizer leads and heavy bass drops are entirely replaced by the continuous, grating drone of a medieval Hurdy-Gurdy and the squawking, reedy stabs of a Renaissance Crumhorn, playing impossibly catchy K-Pop melodies.
+
+**Lyrics:**
+(Verse 1 - Crisp, synchronized K-Pop boy band vocals)
+Walking through Gangnam, looking so fresh...
+(Hurdy-Gurdy cranks out a massive, buzzing EDM bassline)
+Got the style, got the moves, putting you to the test!
+(Crumhorn blasts a bright, syncopated pop hook)
+
+(Chorus)
+(Massive, synchronized pop explosion)
+Crank the wheel, baby! Spin it around!
+The medieval sound is taking the town!
+Dancing in Seoul with a renaissance flair!
+Hurdy-gurdy pop, hands in the air!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern K-Pop / Medieval Hurdy-Gurdy & Crumhorn
+- **Thematic Ties:** The pristine, synchronized, and highly modern sheen of K-Pop completely invaded by the buzzing, droning, and decidedly unpolished sounds of 12th-century European peasant instruments.
+
+### Title: Samba of the Shamisen
+
+**Service:** Minimax Audio
+
+**Prompt:** A high-energy, infectious Brazilian Samba track with a massive bateria of whistles, surdo drums, and cuícas. The upbeat Portuguese vocals and cavaquinho leads are completely replaced by the twangy, percussive plucking of a traditional Japanese Shamisen and the breathy, haunting wail of a Shakuhachi flute, playing a relentlessly cheerful carnival rhythm.
+
+**Lyrics:**
+(Verse 1 - Energetic, rhythmic whistling and cuíca squeaks)
+(A massive whistle blast and a flurry of samba drums)
+(Shamisen plucks a fast, syncopated samba melody)
+(Shakuhachi blasts a bright, piercing carnival hook)
+
+(Chorus)
+(The Shamisen locks into an incredibly fast, highly rhythmic strumming pattern over the driving bateria)
+Carnival in Kyoto! Feathers in the hair!
+The happiest little ronin that the coast has ever seen!
+Samba of the samurai, dancing in the sun!
+The Japanese carnival has just begun!
+
+**Additional Notes:**
+- **Combo/Fusion:** Brazilian Samba / Traditional Japanese Shamisen & Shakuhachi
+- **Thematic Ties:** The colorful, sunny, and incredibly rhythmic street parties of Brazilian carnival violently crashed by the highly formalized, delicate, and microtonal string and woodwind traditions of feudal Japan.
+
+### Title: The Bluegrass Theremin
+
+**Service:** Minimax Audio
+
+**Prompt:** A foot-stomping, high-speed Appalachian Bluegrass tune featuring frantic banjo, fiddle, and mandolin playing. However, the twangy acoustic strings are completely replaced by the eerie, wavering, and deeply synthetic swoops of a 1950s Sci-Fi Theremin, playing blazing fast, major-key country hoedown melodies over a syncopated washboard beat.
+
+**Lyrics:**
+(Verse 1 - Nasally, high-lonesome Bluegrass tenor vocal)
+Well I'm going up the mountain, to see my sweet gal...
+(Theremin swoops in with a lightning-fast, wavering bluegrass roll)
+Got my overalls on, walking down the canal...
+(Washboard scrapes furiously, keeping the country beat)
+
+(Chorus)
+(Theremin executes a dizzying, highly ornamented solo over a driving bluegrass beat)
+Swoop the antenna! Ring out the sound!
+The fastest little alien that the holler has found!
+Moonshine and sci-fi, dancing in the street!
+The extraterrestrial hoedown is bringing the heat!
+
+**Additional Notes:**
+- **Combo/Fusion:** Appalachian Bluegrass / 1950s Sci-Fi Theremin
+- **Thematic Ties:** The incredibly fast, intricate, and wooden acoustic picking of American mountain music fused with the eerie, wavering, and profoundly retro-futuristic atmosphere of early science fiction soundtracks.
+
+### Title: Drill of the Steppes
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, menacing modern UK Drill hip-hop track featuring sliding 808 sub-basses and frantic, skittering triplet hi-hats. However, the eerie piano loops and dark synthesizer pads are entirely replaced by the deep, rumbling Kargyraa sub-harmonics and piercing Sygyt whistling overtones of a Tuvan throat singer, perfectly mimicking the dark minor-key trap synths and ad-libbing rhythmically.
+
+**Lyrics:**
+(Verse 1 - Aggressive, fast-paced UK Drill rap flow)
+(Throat singer blasts a dark, minor-key drill melody using Sygyt overtones)
+Yeah, stepping in the yurt, drawing the steel...
+(Massive, sliding 808 bass drops under the throat singing)
+Fermented milk in the flask, making them feel!
+
+(Chorus)
+(The skittering hi-hats go into overdrive while the throat singer delivers a rapid-fire vocal leap)
+Drill in the tundra! Sliding on the ice!
+The throat singer crying out, rolling the dice!
+Fur coats and the puffer jacket, stepping so cold!
+The most menacing nomad story ever told!
+
+**Additional Notes:**
+- **Combo/Fusion:** UK Drill Hip-Hop / Tuvan Throat Singing
+- **Thematic Ties:** The dark, aggressive, and menacing street energy of modern drill rap violently contrasted by the deeply resonant, earthy, and ancient vocal techniques of Mongolian nomads.
+
+### Title: The Hurdy-Gurdy Samurai
+
+**Service:** Minimax Audio
+
+**Prompt:** A tense, dramatic Japanese samurai folk ballad featuring the deep boom of a Taiko drum and the piercing melody of a Hichiriki. But the traditional Shamisen is completely replaced by a furious, passionately cranked Medieval Hurdy-Gurdy, grinding out the ancient Japanese pentatonic scales with aggressive peasant energy while a Japanese vocalist belts an emotional tale of a fallen ronin.
+
+**Lyrics:**
+(Verse 1 - Intense, dramatic Japanese Enka-style vocal)
+The blade is drawn under the cherry tree...
+(A massive Taiko drum boom, followed instantly by furious Hurdy-Gurdy cranking)
+My honor bound, the wind blows free!
+
+(Chorus)
+(Hurdy-Gurdy playing a wildly passionate, continuous drone while the Hichiriki wails)
+Cranking in Edo! Drink the sake down!
+The most passionate ronin in the entire town!
+Wooden wheels and the katana, spinning in a trance!
+The European samurai is ready for the dance!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Japanese Folk / Medieval Hurdy-Gurdy
+- **Thematic Ties:** The fiercely disciplined, ancient, and dramatic tension of Japanese Samurai folk storytelling completely derailed by the buzzing, continuous, and distinctly rustic European peasant instrument.
+
+### Title: Caribbean Gregorian
+
+**Service:** Minimax Audio
+
+**Prompt:** A bright, bouncing Caribbean Calypso track with a lively, syncopated rhythm and cheerful acoustic guitar skanking. But the upbeat, tropical melodies and lead vocals are entirely performed by a solemn choir of medieval monks singing Latin Gregorian chants, their voices echoing heavily as they maintain absolute pious seriousness over the sunny island groove.
+
+**Lyrics:**
+(Verse 1 - Solemn, slow Gregorian Chant over a quiet, bouncy calypso guitar)
+Kyrie eleison, Christe eleison...
+(Steel pan begins to sequence a fast, cheerful rhythm)
+Kyrie eleison, the night is long...
+(A classic calypso horn section builds tension)
+
+(Chorus)
+(Full calypso beat drops, monks singing solemnly)
+Gloria in excelsis deo! Drink the rum!
+Chanting monks in the tropical sun!
+From the ancient abbey to the sandy beach!
+We chant the rhythm that the islands teach!
+
+**Additional Notes:**
+- **Combo/Fusion:** Caribbean Calypso / Latin Gregorian Chant
+- **Thematic Ties:** The sunny, relaxed, and impossibly cheerful Caribbean beach-party energy completely contrasted by the solemn, austere, disciplined, and ancient reverberations of medieval monastic devotion.
+
+### Title: The 8-Bit Tango
+
+**Service:** Minimax Audio
+
+**Prompt:** A passionate, sultry Argentine Tango with a sharp, dramatic staccato rhythm. But the traditional bandoneon and acoustic guitars are completely replaced by the harsh, bleeping square waves of a 1980s 8-bit chiptune synthesizer, creating a hyper-futuristic, wavering melody while a robotic AI vocalist smoothly croons about love in the digital realm.
+
+**Lyrics:**
+(Verse 1 - Smooth, robotic AI vocal with a slight metallic echo)
+(8-bit synth plucks a sharp, dramatic tango rhythm)
+Dancing on the motherboard, holding you close...
+(A harsh square wave swoops in with a passionate, wavering trill)
+In the vacuum of cyberspace, you're the one I love most.
+
+(Chorus)
+(Massive, glitching chiptune drop with a driving tango beat)
+Tango in the cosmos! Sweeping across the grid!
+The most passionate robot that you ever did!
+Pixels crying in the zero gravity!
+An 8-bit romance for all eternity!
+
+**Additional Notes:**
+- **Combo/Fusion:** Argentine Tango / 1980s 8-Bit Chiptune
+- **Thematic Ties:** The intensely passionate, sharp, and romantic energy of traditional tango completely digitized into the cold, wavering, and synthetic soundscape of retro gaming.
+
+### Title: The Didgeridoo Chanson
+
+**Service:** Minimax Audio
+
+**Prompt:** A gentle, romantic 1930s French Chanson featuring a weeping accordion and a delicate acoustic guitar. The soft, whispered French vocals are completely interrupted when the song abruptly explodes into the deep, continuous, and earthy growl of an Australian Aboriginal Didgeridoo, rhythmically pulsing and barking out a heavy drone alongside the Parisian cafe vibe.
+
+**Lyrics:**
+(Verse 1 - Soft, romantic French crooner vocal)
+Sous le ciel de Paris, l'amour est doux...
+(Accordion plays a gentle, swaying melody)
+Mon cœur bat si fort, seulement pour vous...
+(A waiter drops a coffee cup, triggering a massive didgeridoo drone)
+
+(Chorus)
+(Explosive didgeridoo rhythm with deep, earthy growls)
+CROISSANT IN THE OUTBACK! THE EIFFEL TOWER SHAKES!
+(Didgeridoo pulsing heavily matching the rhythm of an incredibly fast accordion)
+DRINKING CAFE AU LAIT AS THE GROUND AWAKES!
+(Abruptly returns to soft French crooning)
+...Et un petit café, s'il vous plaît.
+
+**Additional Notes:**
+- **Combo/Fusion:** 1930s French Chanson / Australian Aboriginal Didgeridoo
+- **Thematic Ties:** The impossibly romantic, relaxed, and delicate atmosphere of a Parisian café violently obliterated by the terrifying, deep, and earthy drone of the Australian outback.
+
+### Title: Gagaku in the Trap
+
+**Service:** Minimax Audio
+
+**Prompt:** A dark, booming modern Trap hip-hop beat featuring frantic triplet hi-hats, deep 808 subs, and a heavy, sliding bassline. However, all the atmospheric synthesizers and rhythmic stabs are completely replaced by the incredibly slow, piercing, and ethereal sounds of traditional Japanese Gagaku court music. A screeching Hichiriki flute plays the high-pitched trap melodies, while the Sho creates an eerie, continuous cluster chord drone over the trap beat.
+
+**Lyrics:**
+(Verse 1 - Aggressive trap rap flow)
+Rolling through the court, got the silk on my back...
+(Hichiriki wails a slow, microtonal, bending note over the trap hi-hats)
+Sipping on the green tea, no looking back!
+(Sho plays an ethereal, dissonant cluster chord that swells ominously)
+
+(Chorus)
+(Massive 808 drop with a perfectly tuned, piercing Hichiriki hook)
+Trap in the palace! The shogun is here!
+The oldest little flute that you ever did hear!
+Edo on the block, sliding on the beat!
+The Gagaku trap lord is bringing the heat!
+
+**Additional Notes:**
+- **Combo/Fusion:** Modern Trap / Traditional Japanese Gagaku
+- **Thematic Ties:** The gritty, bass-heavy, street-oriented sound of modern Trap colliding with the incredibly slow, formal, and ancient atmosphere of Japanese court music.
+
+### Title: The Shoegaze Polka
+
+**Service:** Minimax Audio
+
+**Prompt:** A dense, ethereal Shoegaze track characterized by a massive wall of distorted, reverberating sound and a slow, driving drum beat. However, piercing through the wash of noise is the bouncy, relentless cheerfulness of an Eastern European polka band. The tuba basslines and frantic accordion melodies are completely drenched in massive reverb and delay, creating a hypnotic, fuzzy drone that is bizarrely upbeat.
+
+**Lyrics:**
+(Verse 1 - Whispered, ethereal vocals drenched in reverb)
+The village fades away... the sun starts to blur...
+(A massive wall of fuzz guitar, with a crying accordion echoing endlessly)
+Lost inside the pedalboard, a warm and fuzzy stir.
+The tuba hums through the reverb tank...
+
+(Chorus)
+(The wall of sound swells, the accordion attacks fiercely but echoes into infinity)
+Noise and the pierogi! The feedback screams!
+Drowning the dance floor in static dreams!
+Dancing the polka in the endless haze!
+The weeping accordion catches the shoegaze!
+
+**Additional Notes:**
+- **Combo/Fusion:** Shoegaze / Eastern European Polka
+- **Thematic Ties:** The overwhelming, blurry, and incredibly loud wash of 90s shoegaze aesthetics being sharply contrasted by the articulate, bouncy, and fiercely cheerful attacks of a polka band, all submerged in endless reverb.
+
+### Title: The Mariachi Breakcore
+
+**Service:** Minimax Audio
+
+**Prompt:** A frantic, hyper-speed Breakcore track featuring insanely complex, chopped-up Amen breaks and distorted gabber kicks at 220 BPM. The main melodic and atmospheric elements are completely composed of a passionate, vibrant traditional Mexican Mariachi performance. The bright trumpets and vigorously strummed vihuelas are glitched, stuttered, and pitch-shifted to match the chaotic rhythm.
+
+**Lyrics:**
+(Verse 1 - Passionate Mariachi vocalist belting out a ranchera)
+(Vocalist hits a soaring, dramatic note)
+¡Mi corazón está roto! My heart is broken!
+(Abrupt explosion of distorted, 220 BPM chopped Amen breaks)
+(Vihuelas are caught in a rapid-fire stutter effect)
+¡La-la-la-la-la tormenta! The storm!
+
+(Chorus)
+(Massive, stuttering gabber kicks drop under the soaring mariachi vocal)
+Fiesta in the matrix! The trumpet starts to glitch!
+Singing to the server at a terrifying pitch!
+Breakbeats and the cantina, tearing up the hall!
+The grandest digital ranchera to answer the call!
+
+**Additional Notes:**
+- **Combo/Fusion:** Traditional Mexican Mariachi / Breakcore
+- **Thematic Ties:** The vibrant, passionate, and fiercely festive acoustic strumming of Mexican Mariachi violently accelerated by the terrifying speed, aggression, and digital chaos of modern breakcore.
+
+### Title: Synthwave of the Bagpipes
+
+**Service:** Minimax Audio
+
+**Prompt:** A driving, neon-soaked 1980s Synthwave track featuring pulsing analog basslines and heavy gated-reverb snare drums. But the soaring synthesizer leads and robotic vocoder vocals are entirely replaced by the incredibly loud, continuous, and piercing wail of Scottish Great Highland Bagpipes, playing complex, bright melodies perfectly harmonizing with the digital dystopia.
+
+**Lyrics:**
+(Verse 1 - Robotic, heavily vocoded 80s vocal)
+(A pulsing, arpeggiated synth bassline drives the rhythm)
+Cruising the cyber-highlands, lasers in the sky...
+(Bagpipes shift into an incredibly loud, piercing melody)
+The neon loch is glowing, watching the cars go by.
+
+(Chorus)
+(Massive synth chords rise alongside the deafening bagpipe drone)
+Digital piper! Riding on the grid!
+The loudest sound that the ancient world hid!
+Tartan shining in the ultraviolet light!
+The oldest human synthesizer singing in the night!
+
+**Additional Notes:**
+- **Combo/Fusion:** 1980s Synthwave / Scottish Great Highland Bagpipes
+- **Thematic Ties:** The pristine, highly artificial, and futuristic aesthetic of 80s synthwave elevated by the deafening, ancient, and decidedly massive acoustic power of traditional Scottish bagpipes.

@@ -232,6 +232,13 @@ Without these headers:
 - Runs at 60fps via `requestAnimationFrame`
 - Falls back gracefully if WebGPU not supported (Chrome 113+, Edge 113+)
 
+### WebGL2 Fallback (`src/visuals/`)
+- **Renderer selection**: `src/visuals/rendererSelection.ts` — `webgpu → webgl2 → canvas2d` with `?visualizer=` URL param, `localStorage`, and `window.DEBUG_VISUALIZER`
+- **WebGL2 reference renderer**: `src/visuals/webgl2/WebGL2Visualizer.ts` — GLSL port of `src/shaders/waveform.ts` with shared uniform/audio data via `src/visuals/visualSync.ts`
+- **Canvas2D last resort**: `src/visuals/webglFallback.ts` — basic frequency bars when both GPU backends fail
+- **Debug helpers**: `window.currentVisualizer`, Alt+D debug mode cycling (uv, waveform-only, audio-bins, spectrum), debug panel in ShaderGUI (🎛 button)
+- **3D mode on WebGL2**: Renders GUI shader (3D cube is WebGPU-only)
+
 ### ShaderGUI Component
 The `ShaderGUI` component (`src/components/ShaderGUI/ShaderGUI.tsx`) is a hardware-inspired control panel rendered in the "now-playing" tab. It features:
 - **Top Screen**: WebGPU canvas with real-time WGSL shader (waveform, scanlines, chromatic aberration, pulse bloom, knob/LED glows)

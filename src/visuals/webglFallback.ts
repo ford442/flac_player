@@ -1,6 +1,6 @@
 // src/visuals/webglFallback.ts
-// Graceful fallback visualizer using Canvas2D (with optional WebGL attempt).
-// Draws animated frequency bars + waveform when WebGPU is unavailable.
+// Final fallback visualizer using Canvas2D when WebGPU and WebGL2 are unavailable.
+// Draws animated frequency bars + waveform. Prefer WebGL2Visualizer for shader parity.
 
 export class CanvasFallbackVisualizer {
   private canvas: HTMLCanvasElement;

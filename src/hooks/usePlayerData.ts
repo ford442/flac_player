@@ -117,12 +117,12 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
     }
   }, [isResyncingLibrary, loader, addToast, checkBackend, loadLibrary, loadTags, loadStats]);
 
-    useEffect(() => {
+  useEffect(() => {
     if (isSharedPlaylist) return;
     checkBackend().then(healthy => { if (healthy) loadLibrary(); });
   }, []);
 
-    useEffect(() => {
+  useEffect(() => {
     if (isSharedPlaylist) return;
     loadTags(); loadStats();
   }, []);

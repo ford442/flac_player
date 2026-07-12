@@ -9,7 +9,7 @@
     *   **Audio Engines:**
         *   *Native:* Web Audio API (`AudioContext`, `AudioBufferSourceNode`, `AnalyserNode`).
         *   *WASM:* SDL3 (Simple DirectMedia Layer) compiled via Emscripten to WebAssembly, utilizing AudioWorklets and Pthreads.
-    *   **Visualization:** WebGPU (WGSL shaders) for high-performance graphics.
+    *   **Visualization:** WebGPU (WGSL shaders) primary; WebGL2 (GLSL reference) and Canvas2D fallbacks via `src/visuals/rendererSelection.ts`.
     *   **Deployment:** Python script (`deploy.py`) using Paramiko for SFTP.
 *   **Design Patterns:**
     *   **Strategy Pattern (Audio Backend):** The `Player` component switches between `AudioPlayer` (native) and `SdlAudioPlayer` (WASM) implementations based on user selection. Both adhere to a similar implicit interface (load, play, pause, seek).
@@ -30,6 +30,9 @@
 *   **WebGPU Visualizer:**
     *   **Entry Point:** `src/webgpuVisualizer.ts`
     *   **Description:** Renders audio-reactive graphics (flat waveform or 3D cube) using raw WebGPU commands and WGSL shaders. Connects to the audio `AnalyserNode`.
+*   **WebGL2 Fallback Visualizer:**
+    *   **Entry Point:** `src/visuals/webgl2/WebGL2Visualizer.ts`
+    *   **Description:** GLSL port of the ShaderGUI waveform shader for visual debugging when WebGPU is unavailable or hard to inspect. Shares uniform/audio packing via `src/visuals/visualSync.ts`. Toggle with `?visualizer=webgl2` or the ShaderGUI debug panel.
 *   **Audio Loading & Playlist:**
     *   **Entry Point:** `src/audioLoader.ts`
     *   **Description:** Handles fetching files from HTTP, Google Cloud Storage (`gs://` protocol conversion), and FTP proxies. Fetches playlist metadata from `ford442-storage-manager.hf.space`.

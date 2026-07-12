@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import type { VisualizerBackend } from '../../visuals/types';
 import './ShaderGUI.css';
 
 interface TopScreenProps {
@@ -6,6 +7,7 @@ interface TopScreenProps {
   artist?: string;
   title?: string;
   webGPUSupported?: boolean;
+  activeBackend?: VisualizerBackend;
   onCanvasResize?: () => void;
   onCanvasDoubleClick?: () => void;
   isLoading?: boolean;
@@ -15,6 +17,7 @@ export const TopScreen: React.FC<TopScreenProps> = ({
   canvasRef,
   artist,
   title,
+  activeBackend,
   onCanvasResize,
   onCanvasDoubleClick,
   isLoading = false,
@@ -64,6 +67,7 @@ export const TopScreen: React.FC<TopScreenProps> = ({
         width={640}
         height={160}
         onDoubleClick={onCanvasDoubleClick}
+        data-visualizer={activeBackend ?? 'webgpu'}
         style={{
           background: 'linear-gradient(180deg, #0A0A1A 0%, #1A1A2E 100%)',
         }}

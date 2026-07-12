@@ -6,6 +6,7 @@ A high-quality React application for playing FLAC and WAV audio files with WebGP
 
 - **FLAC and WAV Support**: Decodes and plays FLAC and WAV audio files using the Web Audio API
 - **WebGPU Visualization**: Real-time audio visualization using WebGPU shaders
+- **WebGL2 Fallback**: Toggleable WebGL2 reference renderer for shader debugging and browsers without WebGPU
 - **Multiple Audio Sources**: Load audio from:
   - Google Cloud Storage buckets
   - FTP servers (via HTTP/HTTPS proxy)
@@ -22,7 +23,8 @@ A high-quality React application for playing FLAC and WAV audio files with WebGP
 
 - React 18
 - TypeScript
-- WebGPU API
+- WebGPU API (primary visualization)
+- WebGL2 API (reference fallback, shader-debug friendly)
 - Web Audio API
 - Webpack 5
 - CSS3 with modern gradients
@@ -67,7 +69,32 @@ The compiled files will be in the `dist/` directory, ready for static hosting.
 2. Click "Load" or press Enter
 3. Once loaded, use the Play/Pause button to control playback
 4. Use the seek slider to navigate through the audio
-5. Watch the WebGPU visualization respond to the audio
+5. Watch the visualization respond to the audio (WebGPU by default, WebGL2 or Canvas2D fallback when needed)
+
+### Visualization Backends
+
+The ShaderGUI visualizer resolves backends automatically: **WebGPU → WebGL2 → Canvas2D**.
+
+| Backend | When used | Debug |
+|---------|-----------|-------|
+| `webgpu` | Default when adapter available | — |
+| `webgl2` | Manual override or WebGPU failure | Alt+D cycles debug modes |
+| `canvas2d` | Last resort when GPU shaders unavailable | Basic bars + waveform |
+
+**Force a backend:**
+
+```
+?visualizer=webgl2
+?renderer=webgl2          # alias (sibling-project compat)
+```
+
+**From devtools:**
+
+```js
+window.DEBUG_VISUALIZER = 'webgl2';
+window.currentVisualizer.setDebugMode('uv');
+window.currentVisualizer.readPixels();
+```
 
 ### Storage & Library Management
 
@@ -98,11 +125,12 @@ https://your-ftp-proxy.com/path/to/file.flac
 
 ## Browser Requirements
 
-- Modern browser with WebGPU support (Chrome 113+, Edge 113+)
+- Modern browser with WebGPU support (Chrome 113+, Edge 113+) for full GPU visuals
+- WebGL2 for reference fallback visualization (most modern browsers)
 - Web Audio API support (all modern browsers)
 - CORS-enabled audio sources
 
-If WebGPU is not supported, the player will still work but without visualization.
+If WebGPU is not supported, the player falls back to WebGL2 (shader parity) or Canvas2D (basic bars).
 
 ## Deployment
 

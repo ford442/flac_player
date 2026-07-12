@@ -1,98 +1,99 @@
 cat << 'INNER_EOF' >> song_suggestions.md
 
-### Title: Samurai of the Bayou
+### Title: Gagaku in the Trap
 
 **Service:** Minimax Audio
 
-**Prompt:** A gritty, stomping Louisiana Swamp Blues track featuring a slow, heavy drum beat and a grooving washboard rhythm. However, the traditional weeping slide guitar and harmonica solos are entirely replaced by the sharp, microtonal bends of a traditional Japanese Shamisen and the breathy, haunting wail of a Shakuhachi flute, perfectly capturing the muddy, soulful delta blues feeling.
+**Prompt:** A dark, booming modern Trap hip-hop beat featuring frantic triplet hi-hats, deep 808 subs, and a heavy, sliding bassline. However, all the atmospheric synthesizers and rhythmic stabs are completely replaced by the incredibly slow, piercing, and ethereal sounds of traditional Japanese Gagaku court music. A screeching Hichiriki flute plays the high-pitched trap melodies, while the Sho creates an eerie, continuous cluster chord drone over the trap beat.
 
 **Lyrics:**
-(Verse 1 - Gritty, soulful blues wail)
-(Washboard scrapes a heavy, dragging swamp rhythm)
-Well I woke up this morning, the swamp was thick as mud...
-(Shamisen plucks a nasty, sliding blues turnaround)
-Yeah I woke up this morning, feeling it in my blood...
+(Verse 1 - Aggressive trap rap flow)
+Rolling through the court, got the silk on my back...
+(Hichiriki wails a slow, microtonal, bending note over the trap hi-hats)
+Sipping on the green tea, no looking back!
+(Sho plays an ethereal, dissonant cluster chord that swells ominously)
 
 (Chorus)
-(Shakuhachi blows a long, mournful blues note)
-Got the Mississippi ronin, walking down the trail!
-Hear the ancient flute, listen to it wail!
-Gator in the water, katana by my side!
-The deepest, muddy blues on this swampy ride!
+(Massive 808 drop with a perfectly tuned, piercing Hichiriki hook)
+Trap in the palace! The shogun is here!
+The oldest little flute that you ever did hear!
+Edo on the block, sliding on the beat!
+The Gagaku trap lord is bringing the heat!
 
 **Additional Notes:**
-- **Combo/Fusion:** Louisiana Swamp Blues / Traditional Japanese Shamisen & Shakuhachi
-- **Thematic Ties:** The raw, muddy, and deeply soulful acoustic tradition of the American South seamlessly intertwined with the highly formalized, delicate, and microtonal string and woodwind traditions of feudal Japan.
+- **Combo/Fusion:** Modern Trap / Traditional Japanese Gagaku
+- **Thematic Ties:** The gritty, bass-heavy, street-oriented sound of modern Trap colliding with the incredibly slow, formal, and ancient atmosphere of Japanese court music.
 
-### Title: The Mongolian Disco
+### Title: The Shoegaze Polka
 
 **Service:** Minimax Audio
 
-**Prompt:** A glittering, fast-paced 1970s Disco track featuring a relentless four-on-the-floor beat, sweeping string arrangements, and a grooving electric bassline. Suddenly, the elegant strings and falsetto vocals are overpowered by a booming Tuvan throat singer, using deep Kargyraa rumbles and high Sygyt whistling overtones to blast out a triumphant, syncopated disco melody while dancers hustle beneath a mirror ball.
+**Prompt:** A dense, ethereal Shoegaze track characterized by a massive wall of distorted, reverberating sound and a slow, driving drum beat. However, piercing through the wash of noise is the bouncy, relentless cheerfulness of an Eastern European polka band. The tuba basslines and frantic accordion melodies are completely drenched in massive reverb and delay, creating a hypnotic, fuzzy drone that is bizarrely upbeat.
 
 **Lyrics:**
-(Verse 1 - Deep, rumbling Kargyraa throat singing acting as a rhythmic disco vocal)
-(A bouncy four-on-the-floor electro-swing beat drops)
-(Sygyt overtone whistle plays a high, syncopated disco solo)
-(Sweeping 70s strings try to harmonize with the throat singing)
+(Verse 1 - Whispered, ethereal vocals drenched in reverb)
+The village fades away... the sun starts to blur...
+(A massive wall of fuzz guitar, with a crying accordion echoing endlessly)
+Lost inside the pedalboard, a warm and fuzzy stir.
+The tuba hums through the reverb tank...
 
 (Chorus)
-(Massive disco drop with a booming bassline)
-Do the Steppe Hustle! Spin under the light!
-Throat singing grooving on a Saturday night!
-Fur coats and bell-bottoms, pointing to the sky!
-The deepest disco inferno, making you fly!
+(The wall of sound swells, the accordion attacks fiercely but echoes into infinity)
+Noise and the pierogi! The feedback screams!
+Drowning the dance floor in static dreams!
+Dancing the polka in the endless haze!
+The weeping accordion catches the shoegaze!
 
 **Additional Notes:**
-- **Combo/Fusion:** 1970s Disco / Tuvan Throat Singing
-- **Thematic Ties:** The glamorous, highly produced, and string-laden elegance of a 1970s discotheque completely blown away by the deeply historical, resonant, and highly organic acoustic techniques of Mongolian nomadic singing.
+- **Combo/Fusion:** Shoegaze / Eastern European Polka
+- **Thematic Ties:** The overwhelming, blurry, and incredibly loud wash of 90s shoegaze aesthetics being sharply contrasted by the articulate, bouncy, and fiercely cheerful attacks of a polka band, all submerged in endless reverb.
 
-### Title: Black Metal Barbershop
+### Title: The Mariachi Breakcore
 
 **Service:** Minimax Audio
 
-**Prompt:** A terrifying, chaotic Norwegian Black Metal track featuring furious blast beats, heavily distorted tremolo-picked guitars, and ear-piercing shrieked vocals. However, the composition is abruptly completely a cappella, performed by a four-part Barbershop Quartet. They sing the terrifying, Satanic lyrics using bright, impeccably tuned major-key harmonies and snappy finger clicks, completely ignoring the dark subject matter.
+**Prompt:** A frantic, hyper-speed Breakcore track featuring insanely complex, chopped-up Amen breaks and distorted gabber kicks at 220 BPM. The main melodic and atmospheric elements are completely composed of a passionate, vibrant traditional Mexican Mariachi performance. The bright trumpets and vigorously strummed vihuelas are glitched, stuttered, and pitch-shifted to match the chaotic rhythm.
 
 **Lyrics:**
-(Verse 1 - Four singers harmonizing brightly in a major key)
-(Snappy finger clicks on the off-beat)
-Hello dark lord, hello my master...
-(The lead singer performs a rapid, breathy, cheerful falsetto)
-Hello my burning church!
-(The bass singer drops an incredibly deep, resonant hum)
+(Verse 1 - Passionate Mariachi vocalist belting out a ranchera)
+(Vocalist hits a soaring, dramatic note)
+¡Mi corazón está roto! My heart is broken!
+(Abrupt explosion of distorted, 220 BPM chopped Amen breaks)
+(Vihuelas are caught in a rapid-fire stutter effect)
+¡La-la-la-la-la tormenta! The storm!
 
 (Chorus)
-(The quartet locks into a complex, interlocking major-chord harmony)
-Barbershop pole in the frozen hell!
-The happiest little demons that you know so well!
-Striped shirts and corpse paint, singing so sweet!
-The tightest harmonies on the brimstone street!
+(Massive, stuttering gabber kicks drop under the soaring mariachi vocal)
+Fiesta in the matrix! The trumpet starts to glitch!
+Singing to the server at a terrifying pitch!
+Breakbeats and the cantina, tearing up the hall!
+The grandest digital ranchera to answer the call!
 
 **Additional Notes:**
-- **Combo/Fusion:** Norwegian Black Metal / 1910s Barbershop Quartet
-- **Thematic Ties:** The grim, terrifying, and freezing cold aggression of Black Metal completely subverted by the hyper-polished, pristine, and historically American cheerfulness of a barbershop quartet.
+- **Combo/Fusion:** Traditional Mexican Mariachi / Breakcore
+- **Thematic Ties:** The vibrant, passionate, and fiercely festive acoustic strumming of Mexican Mariachi violently accelerated by the terrifying speed, aggression, and digital chaos of modern breakcore.
 
-### Title: The K-Pop Pipe Organ
+### Title: Synthwave of the Bagpipes
 
 **Service:** Minimax Audio
 
-**Prompt:** A slick, hyper-produced modern K-Pop dance track with a driving EDM beat and complex vocal harmonies. However, the shiny synthesizer leads and heavy bass drops are entirely replaced by a massive, terrifying gothic Pipe Organ, blasting out impossibly catchy, syncopated K-Pop melodies with terrifying, cathedral-shaking acoustic power.
+**Prompt:** A driving, neon-soaked 1980s Synthwave track featuring pulsing analog basslines and heavy gated-reverb snare drums. But the soaring synthesizer leads and robotic vocoder vocals are entirely replaced by the incredibly loud, continuous, and piercing wail of Scottish Great Highland Bagpipes, playing complex, bright melodies perfectly harmonizing with the digital dystopia.
 
 **Lyrics:**
-(Verse 1 - Crisp, synchronized K-Pop boy band vocals)
-Walking through Gangnam, looking so fresh...
-(Pipe Organ blasts out a massive, buzzing EDM bassline)
-Got the style, got the moves, putting you to the test!
-(A bright, piercing organ stop plays a syncopated pop hook)
+(Verse 1 - Robotic, heavily vocoded 80s vocal)
+(A pulsing, arpeggiated synth bassline drives the rhythm)
+Cruising the cyber-highlands, lasers in the sky...
+(Bagpipes shift into an incredibly loud, piercing melody)
+The neon loch is glowing, watching the cars go by.
 
 (Chorus)
-(Massive, synchronized pop explosion)
-Pull out the stops, baby! Spin it around!
-The gothic sound is taking the town!
-Dancing in Seoul with a cathedral flair!
-Pipe organ pop, hands in the air!
+(Massive synth chords rise alongside the deafening bagpipe drone)
+Digital piper! Riding on the grid!
+The loudest sound that the ancient world hid!
+Tartan shining in the ultraviolet light!
+The oldest human synthesizer singing in the night!
 
 **Additional Notes:**
-- **Combo/Fusion:** Modern K-Pop / Gothic Pipe Organ
-- **Thematic Ties:** The pristine, synchronized, and highly modern sheen of K-Pop completely invaded by the terrifying, ancient, and decidedly massive acoustic power of a classical European pipe organ.
+- **Combo/Fusion:** 1980s Synthwave / Scottish Great Highland Bagpipes
+- **Thematic Ties:** The pristine, highly artificial, and futuristic aesthetic of 80s synthwave elevated by the deafening, ancient, and decidedly massive acoustic power of traditional Scottish bagpipes.
 INNER_EOF
