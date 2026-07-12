@@ -12,7 +12,7 @@ export const getNextQueueIndex = (
 
   if (shuffle) {
     if (queueLength === 1) {
-      return repeatMode === 'all' ? (queueLength > 0 ? 0 : -1) : -1;
+      return repeatMode === 'all' ? 0 : -1;
     }
     let nextIndex: number;
     do {
@@ -23,7 +23,7 @@ export const getNextQueueIndex = (
 
   const nextIndex = currentIndex + 1;
   if (nextIndex < queueLength) return nextIndex;
-  return repeatMode === 'all' ? (queueLength > 0 ? 0 : -1) : -1;
+  return repeatMode === 'all' ? 0 : -1;
 };
 
 export const getPreviousQueueIndex = (

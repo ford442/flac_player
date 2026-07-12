@@ -4305,30 +4305,6 @@ The Ancient Greek dubstep is tearing it up!
 - **Thematic Ties:** The filthy, modern, speaker-destroying chaos of early dubstep violently crashing into the delicate, mathematical, and mythic acoustics of ancient Hellenic instrumentation.
 
 
-### Title: Mount Olympus Drop
-
-**Service:** Minimax Audio
-
-**Prompt:** A heavy, aggressive 2000s Dubstep track featuring massive wobbling sub-basses and chaotic electronic drum patterns. However, the abrasive synthesizer growls and melodic drops are entirely replaced by the delicate plucking of an Ancient Greek Lyre and the piercing, reedy wail of an Aulos (double-reed pipe), playing frantic, microtonal Hellenic melodies over the filthy club rhythm.
-
-**Lyrics:**
-(Verse 1 - Aggressive, heavily auto-tuned MC vocals)
-Stepping out the pantheon, Zeus is on the track!
-(The Lyre plucks a rapid, syncopated melody over the building snare roll)
-Got the lightning in my hand, ain't no turning back!
-(Aulos blasts a piercing, dissonant trill)
-
-(Chorus)
-(Massive dubstep drop with the Lyre and Aulos replacing the synth growls)
-Olympus in the club! We dropping the bass!
-The heaviest toga party in the whole damn place!
-Wobble with the gods, nectar in the cup!
-The Ancient Greek dubstep is tearing it up!
-
-**Additional Notes:**
-- **Combo/Fusion:** 2000s Dubstep / Ancient Greek Lyre & Aulos
-- **Thematic Ties:** The filthy, modern, speaker-destroying chaos of early dubstep violently crashing into the delicate, mathematical, and mythic acoustics of ancient Hellenic instrumentation.
-
 ### Title: Boy Band Sacrifice
 
 **Service:** Minimax Audio
