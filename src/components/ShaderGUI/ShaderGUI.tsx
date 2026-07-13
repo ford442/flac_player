@@ -84,6 +84,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const animFrameRef = useRef<number>(0);
   const [activeBackend, setActiveBackend] = useState<VisualizerBackend>('webgpu');
   const activeBackendRef = useRef<VisualizerBackend>('webgpu');
+  const isUnmountedRef = useRef(false);
   const [fallbackMessage, setFallbackMessage] = useState('');
   const [showDebugPanel, setShowDebugPanel] = useState(false);
 
@@ -205,6 +206,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
 
   // Initialize visualizer backend (WebGPU → WebGL2 → Canvas2D)
   useEffect(() => {
+    isUnmountedRef.current = false;
     let cancelled = false;
     const isCancelled = () => cancelled;
 
@@ -231,6 +233,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
 
     return () => {
       cancelled = true;
+      isUnmountedRef.current = true;
       destroyAllVisualizers();
     };
   }, [analyser, destroyAllVisualizers, initCanvasFallback, initWebGL2, initWebGPU]);
@@ -241,7 +244,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
 
     destroyAllVisualizers();
     if (backend === 'webgpu') {
-      initWebGPU(canvasRef.current, analyser, () => false);
+      initWebGPU(canvasRef.current, analyser, () => isUnmountedRef.current);
     } else if (backend === 'webgl2') {
       initWebGL2(canvasRef.current, analyser);
     } else {

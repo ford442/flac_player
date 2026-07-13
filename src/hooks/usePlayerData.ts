@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
+  loadQueueFromStorage,
   AudioLoader, PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo, CloudPlaylist,
   saveQueueToStorage, clearQueueStorage, getCachedLibrary, setCachedLibrary
 } from '../audioLoader';
@@ -36,44 +37,12 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
   const [sortBy, setSortBy] = useState<SortBy>('date');
   const [storageSourceFilter, setStorageSourceFilter] = useState<'all' | 'fast'>('all');
 
-  const [queue, setQueue] = useState<PlaylistTrack[]>(() => {
-    try {
-      const data = localStorage.getItem('flac_player_queue');
-      if (data) {
-        const parsed = JSON.parse(data);
-        return Array.isArray(parsed.tracks) ? parsed.tracks : [];
-      }
-    } catch (e) {
-      // Ignore parsing errors
-    }
-    return [];
-  });
-  const [queueCurrentIndex, setQueueCurrentIndex] = useState(() => {
-    try {
-      const data = localStorage.getItem('flac_player_queue');
-      if (data) {
-        const parsed = JSON.parse(data);
-        return typeof parsed.currentIndex === 'number' ? parsed.currentIndex : -1;
-      }
-    } catch (e) {
-      // Ignore parsing errors
-    }
-    return -1;
-  });
+  const initialQueueData = loadQueueFromStorage() || { tracks: [], currentIndex: -1, shuffle: false, repeat: 'off' };
+  const [queue, setQueue] = useState<PlaylistTrack[]>(initialQueueData.tracks);
+  const [queueCurrentIndex, setQueueCurrentIndex] = useState(initialQueueData.currentIndex);
   const [showQueue, setShowQueue] = useState(false);
-  const [shuffle, setShuffle] = useState(false);
-  const [repeatMode, setRepeatMode] = useState<RepeatMode>(() => {
-    try {
-      const data = localStorage.getItem('flac_player_queue');
-      if (data) {
-        const parsed = JSON.parse(data);
-        return parsed.repeat === 'all' || parsed.repeat === 'one' ? parsed.repeat : 'off';
-      }
-    } catch (e) {
-      // Ignore parsing errors
-    }
-    return 'off';
-  });
+  const [shuffle, setShuffle] = useState(initialQueueData.shuffle);
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>(initialQueueData.repeat);
 
   const [volume, setVolume] = useState(() => {
     try { const v = parseFloat(localStorage.getItem('flac_volume') || '1'); return isNaN(v) ? 1 : Math.max(0, Math.min(1, v)); } catch { return 1; }
@@ -148,12 +117,10 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
     }
   }, [isResyncingLibrary, loader, addToast, checkBackend, loadLibrary, loadTags, loadStats]);
 
-
   useEffect(() => {
     if (isSharedPlaylist) return;
     checkBackend().then(healthy => { if (healthy) loadLibrary(); });
   }, []);
-
 
   useEffect(() => {
     if (isSharedPlaylist) return;
