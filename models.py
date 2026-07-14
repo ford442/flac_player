@@ -4,8 +4,8 @@ Pydantic models for FLAC Player API.
 This module defines all request/response models for the FLAC Player backend.
 """
 
-from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any, Literal
+from pydantic import BaseModel, Field, model_validator
 
 
 class SongMetadata(BaseModel):
@@ -129,6 +129,33 @@ class HealthResponse(BaseModel):
     version: str = "1.1.0"
     songs_count: int
     timestamp: str
+
+
+class GenerationRequest(BaseModel):
+    """Request forwarded to the configured music-generation service."""
+    service: Literal["musicgen", "minimax"]
+    prompt: str = Field(..., min_length=1)
+    title: Optional[str] = Field(None, max_length=200)
+    lyrics: Optional[str] = None
+    style: Optional[str] = None
+    source_song_id: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_service_limits(self):
+        token_count = lambda value: len((value or "").split())
+        if self.service == "musicgen":
+            if token_count(self.prompt) > 128:
+                raise ValueError("MusicGen prompts are limited to 128 tokens")
+            if self.lyrics or self.style:
+                raise ValueError("MusicGen accepts a text prompt only")
+        else:
+            if token_count(self.prompt) > 256:
+                raise ValueError("Minimax prompts are limited to 256 tokens")
+            if token_count(self.lyrics) > 512 or len(self.lyrics or "") > 3500:
+                raise ValueError("Minimax lyrics are limited to 512 tokens and 3500 characters")
+            if len(self.style or "") > 2000:
+                raise ValueError("Minimax style is limited to 2000 characters")
+        return self
 
 
 class LibraryStatsResponse(BaseModel):

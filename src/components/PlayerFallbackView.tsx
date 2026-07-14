@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo, CloudPlaylist } from '../audioLoader';
 import { AudioOutputMode } from '../hooks/usePlayerState';
 import { LibraryView } from './LibraryView';
@@ -10,10 +10,11 @@ import { ToastContainer, Toast } from './Toast';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { EQPanel } from './EQPanel';
 import { CacheStatsPanel } from './OfflineCache';
+import { GenerationPanel } from './GenerationPanel';
 import { formatTime, FAST_STORAGE_HOST } from '../utils/audioUtils';
 import { getNextQueueIndex, getPreviousQueueIndex } from '../utils/queueUtils';
 
-type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'settings';
+type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'settings';
 type LibraryViewMode = 'grid' | 'list';
 
 export interface PlayerFallbackViewProps {
@@ -106,6 +107,7 @@ export interface PlayerFallbackViewProps {
   onLoadCloudPlaylist: (id: string) => void;
   onSetShowHtmlFallback: (v: boolean) => void;
   onClearCache: () => void;
+  onGenerationCompleted: (songId: string) => Promise<void>;
 }
 
 export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => {
@@ -128,7 +130,26 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     onPlayAll, onAddAllToQueue, onPlayNow, onPlayNext, onAddToQueue,
     onRemoveFromQueue, onClearQueue, onReorderQueue, onSmartMix, onShareQueue,
     onUpdateTrack, onTrashTrack, onLoadCloudPlaylist, onSetShowHtmlFallback, onClearCache,
+    onGenerationCompleted,
   } = props;
+
+  const [generationModelFilter, setGenerationModelFilter] = useState('all');
+  const [variationTrack, setVariationTrack] = useState<PlaylistTrack | null>(null);
+  const generationModels = useMemo(
+    () => Array.from(new Set(library.map(track => track.generation_model).filter(Boolean) as string[])).sort(),
+    [library]
+  );
+  const filteredDisplayedLibrary = useMemo(
+    () => generationModelFilter === 'all'
+      ? displayedLibrary
+      : displayedLibrary.filter(track => track.generation_model === generationModelFilter),
+    [displayedLibrary, generationModelFilter]
+  );
+
+  const regenerateTrack = (track: PlaylistTrack) => {
+    setVariationTrack(track);
+    setActiveTab('generate');
+  };
 
   return (
     <div className="player min-h-screen bg-[#0f0f1e] text-white flex flex-col">
@@ -205,6 +226,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
               { id: 'now-playing', label: '▶️ Now Playing' },
               { id: 'queue',       label: '📋 Queue',      count: queue.length },
               { id: 'playlists',   label: '☁️ Playlists',  count: playlists.length },
+              { id: 'generate',    label: '✨ Generate' },
               { id: 'settings',    label: '⚙️ Settings' },
             ].map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id as ViewTab)}
@@ -249,6 +271,14 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
               </select>
               <p className="text-xs text-gray-500 mt-2">{fastMirrorCount}/{library.length} tracks available on fast mirror ({FAST_STORAGE_HOST})</p>
             </div>
+            <div>
+              <label className="text-xs text-gray-500 uppercase">Generation Model</label>
+              <select value={generationModelFilter} onChange={(event) => setGenerationModelFilter(event.target.value)}
+                className="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm" aria-label="Generation model filter">
+                <option value="all">All models</option>
+                {generationModels.map(model => <option key={model} value={model}>{model}</option>)}
+              </select>
+            </div>
           </div>
 
           <div className="flex-1 p-4 border-t border-white/10 overflow-auto">
@@ -278,13 +308,13 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
                   <button onClick={() => setLibraryViewMode('grid')} className={`p-2 rounded ${libraryViewMode === 'grid' ? 'bg-white/20' : 'hover:bg-white/10'}`}>⊞ Grid</button>
                   <button onClick={() => setLibraryViewMode('list')} className={`p-2 rounded ${libraryViewMode === 'list' ? 'bg-white/20' : 'hover:bg-white/10'}`}>☰ List</button>
                   <div className="w-px h-5 bg-white/20 mx-1" />
-                  <button onClick={() => onPlayAll(displayedLibrary)} disabled={displayedLibrary.length === 0}
+                  <button onClick={() => onPlayAll(filteredDisplayedLibrary)} disabled={filteredDisplayedLibrary.length === 0}
                     className="px-3 py-1.5 text-xs bg-purple-500/20 text-purple-300 rounded hover:bg-purple-500/30 disabled:opacity-40 transition-colors"
-                    title="Clear queue and play all visible tracks">⏵ Play All ({displayedLibrary.length})</button>
-                  <button onClick={() => onPlayAll(displayedLibrary, true)} disabled={displayedLibrary.length === 0}
+                    title="Clear queue and play all visible tracks">⏵ Play All ({filteredDisplayedLibrary.length})</button>
+                  <button onClick={() => onPlayAll(filteredDisplayedLibrary, true)} disabled={filteredDisplayedLibrary.length === 0}
                     className="px-3 py-1.5 text-xs bg-purple-500/20 text-purple-300 rounded hover:bg-purple-500/30 disabled:opacity-40 transition-colors"
                     title="Clear queue and shuffle all visible tracks">🔀 Shuffle All</button>
-                  <button onClick={() => onAddAllToQueue(displayedLibrary)} disabled={displayedLibrary.length === 0}
+                  <button onClick={() => onAddAllToQueue(filteredDisplayedLibrary)} disabled={filteredDisplayedLibrary.length === 0}
                     className="px-3 py-1.5 text-xs bg-white/10 text-gray-300 rounded hover:bg-white/20 disabled:opacity-40 transition-colors"
                     title="Add all visible tracks to queue (skip duplicates)">➕ Add All</button>
                 </div>
@@ -300,12 +330,13 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
                 )}
               </div>
               <LibraryView
-                tracks={displayedLibrary} allTags={allTags} stats={stats}
+                tracks={filteredDisplayedLibrary} allTags={allTags} stats={stats}
                 currentTrackId={currentTrack?.id} loadingTrackId={loadingTrackId}
                 isPlaying={isPlaying} viewMode={libraryViewMode}
                 onTrackClick={(track) => onTrackClick(track, queue.length)}
                 onTrackDoubleClick={onTrackDoubleClick} onUpdateTrack={onUpdateTrack} onTrashTrack={onTrashTrack}
                 onPlayNow={onPlayNow} onPlayNext={onPlayNext} onAddToQueue={onAddToQueue}
+                onRegenerate={regenerateTrack}
                 isLoading={isLoadingLibrary}
               />
             </div>
@@ -385,6 +416,16 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
             </div>
           )}
 
+          {activeTab === 'generate' && (
+            <div className="flex-1 overflow-auto p-6">
+              <GenerationPanel
+                variationTrack={variationTrack}
+                onVariationConsumed={() => setVariationTrack(null)}
+                onCompleted={onGenerationCompleted}
+              />
+            </div>
+          )}
+
           {activeTab === 'settings' && (
             <div className="flex-1 overflow-auto p-6">
               <div className="max-w-lg mx-auto space-y-8">
@@ -430,6 +471,9 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
                   duration: currentTrack.duration || duration,
                   coverUrl: currentTrack.cover_url,
                   cacheKey: currentTrack.id || currentTrack.url,
+                  generationModel: currentTrack.generation_model,
+                  version: currentTrack.version,
+                  prompt: currentTrack.prompt,
                 }}
               />
             )}

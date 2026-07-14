@@ -17,6 +17,7 @@ jobs:
           cache: 'npm'
       - run: npm ci
       - run: npm run lint
+      - run: npm run typecheck
       - run: npm run build -- --env skipWasm=true 2>/dev/null || npx webpack --mode=production
 
   unit-tests:

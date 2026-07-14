@@ -7,22 +7,20 @@
 // Prerequisites: Contabo bucket CORS must allow GET/HEAD from the
 // app origin and expose Accept-Ranges / Content-Length headers.
 
-import { PlayerState } from './audioPlayer';
-import { EQChain } from './audio/EQChain';
+import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
+import type { AudioBackend, AudioPlaybackState } from './types/audio';
 
 // Crossfade duration in seconds
 const CROSSFADE_DURATION = 3.0;
 // How many seconds before track end to start preloading the next track
 const PRELOAD_AHEAD_S = 8.0;
 
-export class StreamingAudioPlayer {
+export class StreamingAudioPlayer implements AudioBackend {
   private audioContext: AudioContext;
   // Primary audio element
   private audioElement: HTMLAudioElement;
   private sourceNode: MediaElementAudioSourceNode | null = null;
   private gainNode: GainNode;
-  private eqChain: EQChain;
-  private analyser: AnalyserNode;
 
   // Secondary audio element used for crossfade / gapless preloading
   private nextAudioElement: HTMLAudioElement | null = null;
@@ -33,21 +31,23 @@ export class StreamingAudioPlayer {
   private crossfadeEnabled: boolean = false;
   private nextTrackUrl: string | null = null;
 
-  private onStateChange?: (state: PlayerState) => void;
+  private onStateChange?: (state: AudioPlaybackState) => void;
   private onEndedCallback?: () => void;
 
-  constructor() {
-    this.audioContext = new AudioContext();
+  constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
+    this.audioContext = contextManager.getContext();
     this.gainNode = this.audioContext.createGain();
-    this.eqChain = new EQChain(this.audioContext);
-    this.analyser = this.audioContext.createAnalyser();
-    this.analyser.fftSize = 2048;
-
-    this.gainNode.connect(this.eqChain.input);
-    this.eqChain.output.connect(this.analyser);
-    this.analyser.connect(this.audioContext.destination);
+    contextManager.connectInput(this.gainNode);
 
     this.audioElement = this._makeAudioElement();
+  }
+
+  async initialize(): Promise<void> { /* graph is initialized by the manager */ }
+
+  async loadFromArrayBuffer(_buffer: ArrayBuffer, _filename?: string): Promise<void> {
+    void _buffer;
+    void _filename;
+    throw new Error('Streaming mode requires a URL; switch to a buffered backend for local files.');
   }
 
   private _makeAudioElement(): HTMLAudioElement {
@@ -74,7 +74,7 @@ export class StreamingAudioPlayer {
     return el;
   }
 
-  setStateChangeCallback(callback: (state: PlayerState) => void): void {
+  setStateChangeCallback(callback: (state: AudioPlaybackState) => void): void {
     this.onStateChange = callback;
   }
 
@@ -111,6 +111,10 @@ export class StreamingAudioPlayer {
       this.audioElement.addEventListener('canplay', onCanPlay);
       this.audioElement.addEventListener('error',   onError);
     });
+  }
+
+  loadFromURL(url: string): Promise<void> {
+    return this.loadURL(url);
   }
 
   /**
@@ -168,7 +172,7 @@ export class StreamingAudioPlayer {
     if (!this.nextSourceNode) {
       this.nextGainNode = ctx.createGain();
       this.nextGainNode.gain.value = 0;
-      this.nextGainNode.connect(this.eqChain.input);
+      this.contextManager.connectInput(this.nextGainNode);
       this.nextSourceNode = ctx.createMediaElementSource(this.nextAudioElement);
       this.nextSourceNode.connect(this.nextGainNode);
     }
@@ -212,8 +216,7 @@ export class StreamingAudioPlayer {
     this.audioElement = this.nextAudioElement;
     this.sourceNode   = this.nextSourceNode;
 
-    // Reconnect: currently nextSourceNode → nextGainNode → eqChain
-    // We need sourceNode → gainNode → eqChain
+    // Reconnect the promoted source through the primary fade gain.
     // Disconnect nextSourceNode from nextGainNode, reconnect to gainNode
     this.nextSourceNode.disconnect();
     this.nextSourceNode.connect(this.gainNode);
@@ -257,7 +260,7 @@ export class StreamingAudioPlayer {
 
   async play(): Promise<void> {
     if (this.audioContext.state === 'suspended') {
-      await this.audioContext.resume();
+      await this.contextManager.resume();
     }
     await this.audioElement.play();
     this.notifyStateChange();
@@ -282,7 +285,7 @@ export class StreamingAudioPlayer {
   }
 
   setVolume(volume: number): void {
-    this.gainNode.gain.value = Math.max(0, Math.min(1, volume));
+    this.contextManager.setVolume(volume);
   }
 
   setPlaybackRate(rate: number): void {
@@ -294,20 +297,26 @@ export class StreamingAudioPlayer {
   }
 
   setEQBandGain(bandIndex: number, gainDb: number): void {
-    this.eqChain.setBandGain(bandIndex, gainDb);
+    const gains = this.contextManager.getEQGains();
+    gains[bandIndex] = gainDb;
+    this.contextManager.setEQGains(gains);
   }
 
   getEQGains(): number[] {
-    return this.eqChain.getAllGains();
+    return this.contextManager.getEQGains();
+  }
+
+  setEQGains(gains: number[]): void {
+    this.contextManager.setEQGains(gains);
   }
 
   getAnalyser(): AnalyserNode {
-    return this.analyser;
+    return this.contextManager.getAnalyser();
   }
 
   // isLoading is managed externally by loadAudioFromUrl in Player.tsx;
   // we return false here so it doesn't fight with that state.
-  getState(): PlayerState {
+  getState(): AudioPlaybackState {
     const el = this.audioElement;
     return {
       isPlaying: !el.paused && !el.ended,
@@ -326,8 +335,5 @@ export class StreamingAudioPlayer {
       this.sourceNode = null;
     }
     this.gainNode.disconnect();
-    this.eqChain.disconnect();
-    this.analyser.disconnect();
-    this.audioContext.close();
   }
 }

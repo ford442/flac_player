@@ -18,6 +18,7 @@ interface LibraryViewProps {
   onPlayNow?: (track: PlaylistTrack) => void;
   onPlayNext?: (track: PlaylistTrack) => void;
   onAddToQueue?: (track: PlaylistTrack) => void;
+  onRegenerate?: (track: PlaylistTrack) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoading?: boolean;
@@ -44,6 +45,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   onPlayNow,
   onPlayNext,
   onAddToQueue,
+  onRegenerate,
   onLoadMore,
   hasMore,
   isLoading
@@ -240,6 +242,15 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
 
               {/* Quick Actions */}
               <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
+                {track.generation_model && onRegenerate && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onRegenerate(track); }}
+                    className="p-1.5 bg-black/50 rounded text-white hover:bg-fuchsia-500 transition-colors"
+                    title="Regenerate with variations"
+                  >
+                    ✨
+                  </button>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -429,6 +440,15 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                     </div>
                   ) : (
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {track.generation_model && onRegenerate && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onRegenerate(track); }}
+                          className="p-1 text-gray-400 hover:text-fuchsia-400"
+                          title="Regenerate with variations"
+                        >
+                          ✨
+                        </button>
+                      )}
                       {onPlayNow && (
                         <button
                           onClick={(e) => {

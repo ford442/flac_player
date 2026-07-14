@@ -13,10 +13,10 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "strict": false,
+    "strict": true,
     "skipLibCheck": true,
     "outDir": "./dist"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules","src/sdl/build"]
+  "exclude": ["node_modules", "public", "src/sdl/build"]
 }

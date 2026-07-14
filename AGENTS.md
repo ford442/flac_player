@@ -97,7 +97,7 @@ flac_player/
 ├── app.py                      # FastAPI backend (~1261 lines)
 ├── deploy.py                   # Python SFTP deployment script
 ├── package.json                # NPM dependencies and scripts
-├── tsconfig.json               # TypeScript configuration (strict: false)
+├── tsconfig.json               # TypeScript configuration (strict mode enabled)
 ├── webpack.config.js           # Webpack build configuration
 ├── .eslintrc.json              # ESLint rules
 ├── netlify.toml                # Netlify deployment config
@@ -137,6 +137,9 @@ npm run build
 # Code linting
 npm run lint
 
+# Strict TypeScript validation (required before committing)
+npm run typecheck
+
 # Run the FastAPI backend (default port 7860)
 python app.py
 # or
@@ -167,7 +170,7 @@ Copy `.env.example` to `.env` for local development.
 - **ESLint**: `eslint:recommended`, `plugin:react/recommended`, `@typescript-eslint/recommended`
 - **React**: Functional components with hooks
 - **Strict Mode**: React `StrictMode` enabled in development (`src/index.tsx`)
-- **Types**: TypeScript strict mode is OFF (`"strict": false` in `tsconfig.json`)
+- **Types**: TypeScript strict mode is ON (`"strict": true` in `tsconfig.json`)
 - **Target**: ES2020; libraries include DOM, DOM.Iterable, WebWorker
 - **JSX**: `react-jsx` transform (no need to import React for JSX)
 
@@ -175,7 +178,13 @@ Copy `.env.example` to `.env` for local development.
 - Components: PascalCase (e.g., `Player.tsx`, `LibraryView.tsx`)
 - Utilities: camelCase (e.g., `audioLoader.ts`, `flacDecoder.ts`)
 - CSS classes: Tailwind-like utility classes are used inside `Player.css` and `ShaderGUI.css` (e.g., `bg-white/10`, `flex`, `gap-2`)
-- Interfaces: PascalCase with descriptive names (e.g., `PlayerState`, `FlacDecoderResult`)
+- Interfaces: PascalCase with descriptive names (e.g., `PlayerUIState`, `AudioPlaybackState`, `FlacDecoderResult`)
+
+### Strict TypeScript Policy
+- `npm run typecheck` must pass alongside lint; CI runs both on every pull request.
+- Shared domain contracts belong in `src/types/`. Keep backend playback state (`AudioPlaybackState`) distinct from React UI state (`PlayerUIState`).
+- Do not introduce explicit `any` in application code. Use `unknown` at API, worker, and storage boundaries, then narrow it with type guards.
+- Generated Emscripten glue under `public/sdl*.js` is excluded from TypeScript migration and must not be hand-edited.
 
 ### Code Patterns
 - **Observer Pattern**: Players use `setStateChangeCallback` to notify UI of state changes

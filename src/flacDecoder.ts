@@ -18,6 +18,19 @@ export class FlacDecoder {
     { resolve: (value: unknown) => void; reject: (reason?: unknown) => void }
   >();
 
+  private request<T>(
+    type: string,
+    data?: Record<string, unknown>,
+    transfer: Transferable[] = []
+  ): Promise<T> {
+    if (!this.worker) return Promise.reject(new Error('Worker not initialized'));
+    const id = this.nextId++;
+    return new Promise<T>((resolve, reject) => {
+      this.pending.set(id, { resolve: (value) => resolve(value as T), reject });
+      this.worker!.postMessage({ id, type, ...(data ? { data } : {}) }, transfer);
+    });
+  }
+
   constructor() {
     this.worker = new Worker(
       new URL('./workers/flacDecoderWorker.ts', import.meta.url)
@@ -46,57 +59,23 @@ export class FlacDecoder {
   }
 
   async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const id = this.nextId++;
-      this.pending.set(id, { resolve, reject });
-      this.worker?.postMessage({ id, type: 'init' });
-    });
+    return this.request<void>('init');
   }
 
   async reset(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const id = this.nextId++;
-      this.pending.set(id, { resolve, reject });
-      this.worker?.postMessage({ id, type: 'reset' });
-    });
+    return this.request<void>('reset');
   }
 
   async decode(arrayBuffer: ArrayBuffer): Promise<FlacDecoderResult> {
-    if (!this.worker) throw new Error('Worker not initialized');
-
-    return new Promise((resolve, reject) => {
-      const id = this.nextId++;
-      this.pending.set(id, { resolve, reject });
-
-      this.worker!.postMessage(
-        { id, type: 'decode', data: { arrayBuffer } },
-        [arrayBuffer]
-      );
-    }) as Promise<FlacDecoderResult>;
+    return this.request<FlacDecoderResult>('decode', { arrayBuffer }, [arrayBuffer]);
   }
 
   async decodeChunk(arrayBuffer: ArrayBuffer): Promise<FlacDecoderResult | null> {
-    if (!this.worker) throw new Error('Worker not initialized');
-
-    return new Promise((resolve, reject) => {
-      const id = this.nextId++;
-      this.pending.set(id, { resolve, reject });
-
-      this.worker!.postMessage(
-        { id, type: 'decodeChunk', data: { arrayBuffer } },
-        [arrayBuffer]
-      );
-    }) as Promise<FlacDecoderResult | null>;
+    return this.request<FlacDecoderResult | null>('decodeChunk', { arrayBuffer }, [arrayBuffer]);
   }
 
   async flush(): Promise<FlacDecoderResult | null> {
-    if (!this.worker) throw new Error('Worker not initialized');
-
-    return new Promise((resolve, reject) => {
-      const id = this.nextId++;
-      this.pending.set(id, { resolve, reject });
-      this.worker!.postMessage({ id, type: 'flush' });
-    }) as Promise<FlacDecoderResult | null>;
+    return this.request<FlacDecoderResult | null>('flush');
   }
 
   createAudioBuffer(

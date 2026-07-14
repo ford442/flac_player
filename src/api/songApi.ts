@@ -1,6 +1,6 @@
 // API client for song/library management endpoints
 
-import { PlaylistTrack, LibraryStats, TagInfo, ShareResponse, SortBy } from '../audioLoader';
+import type { PlaylistTrack, LibraryStats, TagInfo, ShareResponse, SortBy } from '../types/library';
 
 // API Configuration
 const API_BASE_URL = process.env.REACT_APP_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://storage.noahcohn.com');
@@ -9,16 +9,24 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || (typeof window !== 'undefi
 const DEBUG_MODE = true;
 
 const debug = {
-  log: (label: string, data: any) => {
+  log: (label: string, data: unknown) => {
     if (DEBUG_MODE) console.log(`[FLAC:${label}]`, data);
   },
-  error: (label: string, data: any) => {
+  error: (label: string, data: unknown) => {
     if (DEBUG_MODE) console.error(`[FLAC:${label}]`, data);
   },
-  warn: (label: string, data: any) => {
+  warn: (label: string, data: unknown) => {
     if (DEBUG_MODE) console.warn(`[FLAC:${label}]`, data);
   }
 };
+
+type CatalogSong = Omit<PlaylistTrack, 'url'> & { url?: string };
+
+function isCatalogSong(value: unknown): value is CatalogSong {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.id === 'string' && typeof candidate.name === 'string';
+}
 
 const SYNC_MUSIC_ENDPOINTS = [
   {
@@ -113,10 +121,12 @@ export async function fetchSongs(
       throw new Error(`Failed to fetch library: ${response.status} ${response.statusText}`);
     }
 
-    const tracks = await response.json();
+    const rawTracks: unknown = await response.json();
+    if (!Array.isArray(rawTracks)) throw new Error('Library response is not an array');
+    const tracks = rawTracks.filter(isCatalogSong);
     debug.log('FETCH_LIBRARY_PARSED', { trackCount: tracks.length });
 
-    const tracksWithUrls = tracks.map((item: any) => ({
+    const tracksWithUrls: PlaylistTrack[] = tracks.map((item) => ({
       ...item,
       url: item.url ? (item.url.startsWith('http') ? item.url : `${API_BASE_URL}${item.url}`) : `${API_BASE_URL}/api/music/${item.id}`
     }));
@@ -131,6 +141,21 @@ export async function fetchSongs(
     });
     throw error;
   }
+}
+
+export async function fetchSong(songId: string): Promise<PlaylistTrack> {
+  const response = await fetch(`${API_BASE_URL}/api/songs/${encodeURIComponent(songId)}`, {
+    mode: 'cors',
+    credentials: 'omit'
+  });
+  if (!response.ok) throw new Error(`Generated track is not available in the library (${response.status})`);
+  const item = await response.json() as PlaylistTrack;
+  return {
+    ...item,
+    url: item.url
+      ? (item.url.startsWith('http') ? item.url : `${API_BASE_URL}${item.url}`)
+      : `${API_BASE_URL}/api/music/${item.id}`
+  };
 }
 
 export async function fetchTags(): Promise<TagInfo[]> {
@@ -504,7 +529,17 @@ export async function healthCheck(): Promise<{
 }> {
   debug.log('HEALTH_CHECK_START', { apiBase: API_BASE_URL });
 
-  const results: Record<string, any> = {};
+  type HealthCheckResult = {
+    status?: number;
+    ok?: boolean;
+    error?: string;
+    duration?: string;
+    contentType?: string | null;
+    corsOrigin?: string | null;
+    errorBody?: string;
+    type?: string;
+  };
+  const results: Record<string, HealthCheckResult> = {};
   const endpoints = [
     { name: 'songs', method: 'GET', path: '/api/songs' },
     { name: 'tags', method: 'GET', path: '/api/songs/tags' },
@@ -548,7 +583,7 @@ export async function healthCheck(): Promise<{
     }
   }
 
-  const isHealthy = Object.values(results).every((r: any) => !r.error && r.ok);
+  const isHealthy = Object.values(results).every((result) => !result.error && result.ok === true);
   debug.log('HEALTH_CHECK_RESULT', { isHealthy, apiBase: API_BASE_URL });
 
   return {

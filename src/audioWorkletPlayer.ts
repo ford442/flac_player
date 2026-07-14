@@ -2,13 +2,8 @@
 // Falls back to ScriptProcessorNode if AudioWorklet is not available
 // Phase 2: Added streaming mode with ring buffer for chunked/low-memory playback.
 import { decodeAudio } from './audioDecoder';
-
-export interface PlayerState {
-  isPlaying: boolean;
-  currentTime: number;
-  duration: number;
-  isLoading: boolean;
-}
+import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
+import type { AudioBackend, AudioPlaybackState } from './types/audio';
 
 // AudioWorklet processor code as a string (will be loaded as a blob URL)
 const WORKLET_PROCESSOR_CODE = `
@@ -215,12 +210,10 @@ class FlacProcessor extends AudioWorkletProcessor {
 registerProcessor('flac-processor', FlacProcessor);
 `;
 
-export class AudioWorkletPlayer {
+export class AudioWorkletPlayer implements AudioBackend {
   private audioContext: AudioContext | null = null;
   private workletNode: AudioWorkletNode | ScriptProcessorNode | null = null;
   private gainNode: GainNode | null = null;
-  private eqChain: import('./audio/EQChain').EQChain | null = null;
-  private analyser: AnalyserNode | null = null;
   private audioBuffer: Float32Array | null = null;
   private channels: number = 0;
   private sampleRate: number = 44100;
@@ -229,13 +222,13 @@ export class AudioWorkletPlayer {
   private duration: number = 0;
   private currentTime: number = 0;
   private playbackRate: number = 1.0;
-  private onStateChange?: (state: PlayerState) => void;
+  private onStateChange?: (state: AudioPlaybackState) => void;
   private onEndedCallback?: () => void;
   private useScriptProcessor: boolean = false;
   private workletUrl: string | null = null;
   private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
 
-  constructor() {
+  constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
     this.setupWorkletUrl();
   }
 
@@ -244,20 +237,12 @@ export class AudioWorkletPlayer {
     this.workletUrl = URL.createObjectURL(blob);
   }
 
-  async initialize(): Promise<boolean> {
+  async initialize(): Promise<void> {
+    if (this.audioContext) return;
     try {
-      this.audioContext = new AudioContext({
-        latencyHint: 'playback',
-        sampleRate: 44100
-      });
-
+      this.audioContext = this.contextManager.getContext();
       this.gainNode = this.audioContext.createGain();
-      this.eqChain = new (await import('./audio/EQChain')).EQChain(this.audioContext);
-      this.analyser = this.audioContext.createAnalyser();
-      this.analyser.fftSize = 2048;
-
-      // Wire: gainNode → eqChain → analyser → destination
-      // (analyser/destination connection happens in createWorkletNode/createScriptProcessorNode)
+      this.contextManager.connectInput(this.gainNode);
 
       if (this.audioContext.audioWorklet && this.workletUrl) {
         try {
@@ -273,14 +258,15 @@ export class AudioWorkletPlayer {
         this.useScriptProcessor = true;
       }
 
-      return true;
     } catch (err) {
       console.error('[AudioWorkletPlayer] Failed to initialize:', err);
-      return false;
+      this.audioContext = null;
+      this.gainNode = null;
+      throw err;
     }
   }
 
-  setStateChangeCallback(callback: (state: PlayerState) => void): void {
+  setStateChangeCallback(callback: (state: AudioPlaybackState) => void): void {
     this.onStateChange = callback;
   }
 
@@ -311,13 +297,15 @@ export class AudioWorkletPlayer {
     if (!this.audioContext) {
       await this.initialize();
     }
+    const audioContext = this.audioContext;
+    if (!audioContext) throw new Error('AudioWorklet context failed to initialize');
 
     this.notifyStateChange();
 
     try {
       this.stop();
 
-      const decodedData = await decodeAudio(arrayBuffer, this.audioContext, filename);
+      const decodedData = await decodeAudio(arrayBuffer, audioContext, filename);
 
       this.channels = decodedData.channels;
       this.sampleRate = decodedData.sampleRate;
@@ -341,6 +329,10 @@ export class AudioWorkletPlayer {
     }
   }
 
+  loadFromArrayBuffer(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
+    return this.loadAudio(arrayBuffer, filename);
+  }
+
   // ---------------------------------------------------------------------------
   // Streaming mode (Phase 2)
   // ---------------------------------------------------------------------------
@@ -359,9 +351,7 @@ export class AudioWorkletPlayer {
     this.audioBuffer = null;
     this.isStreaming = true;
 
-    if (this.audioContext!.state === 'suspended') {
-      await this.audioContext!.resume();
-    }
+    await this.contextManager.resume();
 
     if (this.useScriptProcessor) {
       console.warn('[AudioWorkletPlayer] Streaming mode requires AudioWorklet. ScriptProcessor fallback not supported for streaming.');
@@ -380,8 +370,6 @@ export class AudioWorkletPlayer {
     });
 
     this.workletNode.connect(this.gainNode!);
-    this.gainNode!.connect(this.analyser!);
-    this.analyser!.connect(this.audioContext!.destination);
 
     (this.workletNode as AudioWorkletNode).port.postMessage({
       type: 'startStreaming',
@@ -429,7 +417,7 @@ export class AudioWorkletPlayer {
   // ---------------------------------------------------------------------------
 
   play(): void {
-    if (!this.audioContext || !this.gainNode || !this.analyser) {
+    if (!this.audioContext || !this.gainNode) {
       console.error('[AudioWorkletPlayer] Not ready to play');
       return;
     }
@@ -439,7 +427,7 @@ export class AudioWorkletPlayer {
     }
 
     if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume();
+      void this.contextManager.resume();
     }
 
     if (this.isStreaming) {
@@ -461,7 +449,7 @@ export class AudioWorkletPlayer {
   }
 
   private createWorkletNode(startSample: number): void {
-    if (!this.audioContext || !this.gainNode || !this.eqChain || !this.analyser || !this.audioBuffer) return;
+    if (!this.audioContext || !this.gainNode || !this.audioBuffer) return;
 
     this.workletNode = new AudioWorkletNode(this.audioContext, 'flac-processor', {
       numberOfInputs: 0,
@@ -473,9 +461,6 @@ export class AudioWorkletPlayer {
     });
 
     this.workletNode.connect(this.gainNode);
-    this.gainNode.connect(this.eqChain.input);
-    this.eqChain.output.connect(this.analyser);
-    this.analyser.connect(this.audioContext.destination);
 
     (this.workletNode as AudioWorkletNode).port.postMessage({
       type: 'buffer',
@@ -509,7 +494,7 @@ export class AudioWorkletPlayer {
   }
 
   private createScriptProcessorNode(startSample: number): void {
-    if (!this.audioContext || !this.gainNode || !this.eqChain || !this.analyser || !this.audioBuffer) return;
+    if (!this.audioContext || !this.gainNode || !this.audioBuffer) return;
 
     const bufferSize = 4096;
     let position = startSample;
@@ -549,9 +534,6 @@ export class AudioWorkletPlayer {
     };
 
     this.workletNode.connect(this.gainNode);
-    this.gainNode.connect(this.eqChain.input);
-    this.eqChain.output.connect(this.analyser);
-    this.analyser.connect(this.audioContext.destination);
   }
 
   pause(): void {
@@ -622,7 +604,7 @@ export class AudioWorkletPlayer {
     return this.duration;
   }
 
-  getState(): PlayerState {
+  getState(): AudioPlaybackState {
     return {
       isPlaying: this.isPlaying,
       currentTime: this.currentTime,
@@ -632,9 +614,7 @@ export class AudioWorkletPlayer {
   }
 
   setVolume(volume: number): void {
-    if (this.gainNode) {
-      this.gainNode.gain.value = Math.max(0, Math.min(1, volume));
-    }
+    this.contextManager.setVolume(volume);
   }
 
   private _warnedPlaybackRate = false;
@@ -650,23 +630,28 @@ export class AudioWorkletPlayer {
   }
 
   setEQBandGain(bandIndex: number, gainDb: number): void {
-    this.eqChain?.setBandGain(bandIndex, gainDb);
+    const gains = this.contextManager.getEQGains();
+    gains[bandIndex] = gainDb;
+    this.contextManager.setEQGains(gains);
   }
 
   getEQGains(): number[] {
-    return this.eqChain?.getAllGains() ?? [0, 0, 0, 0, 0];
+    return this.contextManager.getEQGains();
+  }
+
+  setEQGains(gains: number[]): void {
+    this.contextManager.setEQGains(gains);
   }
 
   getAnalyser(): AnalyserNode {
-    return this.analyser!;
+    return this.contextManager.getAnalyser();
   }
 
   destroy(): void {
     this.stop();
     if (this.gainNode) this.gainNode.disconnect();
-    if (this.eqChain) this.eqChain.disconnect();
-    if (this.analyser) this.analyser.disconnect();
-    if (this.audioContext) this.audioContext.close();
+    this.gainNode = null;
+    this.audioContext = null;
     if (this.workletUrl) URL.revokeObjectURL(this.workletUrl);
   }
 }

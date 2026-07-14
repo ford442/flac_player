@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { AudioPlayer } from '../audioPlayer';
-import { SdlAudioPlayer } from '../sdlAudioPlayer';
-import { Sdl2AudioPlayer } from '../sdl2AudioPlayer';
-import { AudioWorkletPlayer } from '../audioWorkletPlayer';
-import { StreamingAudioPlayer } from '../streamingAudioPlayer';
+import { createAudioBackend } from '../audio/createAudioBackend';
+import type { ConfigurableAudioBackend } from '../types/audio';
 import {
   AudioLoader,
   PlaylistTrack,
@@ -26,9 +23,6 @@ import { startProjectMBridge, sendProjectMPCM, closeProjectMBridgeChannel } from
 import { IS_PROJECTM_EMBED } from '../utils/embedMode';
 import { clearTrackCache, getOrFetchTrack } from '../storage/trackCache';
 import './Player.css';
-
-type AnyPlayer = AudioPlayer | AudioWorkletPlayer | SdlAudioPlayer | Sdl2AudioPlayer | StreamingAudioPlayer;
-type EndCallbackPlayer = { setOnEndedCallback?: (cb?: () => void) => void };
 
 const getSharedPlaylistId = (): string | null => {
   const params = new URLSearchParams(window.location.search);
@@ -63,14 +57,14 @@ export const Player: React.FC = () => {
     updateTrack, trashTrack,
   } = data;
 
-  const [activeTab, setActiveTab] = useState<'library' | 'now-playing' | 'queue' | 'playlists' | 'settings'>('library');
+  const [activeTab, setActiveTab] = useState<'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'settings'>('library');
   const [libraryViewMode, setLibraryViewMode] = useState<'grid' | 'list'>('grid');
   const [showHtmlFallback, setShowHtmlFallback] = useState(false);
   const [currentFile, setCurrentFile] = useState<File | undefined>(undefined);
   const [showHelp, setShowHelp] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
 
-  const playerRef = useRef<AnyPlayer | null>(null);
+  const playerRef = useRef<ConfigurableAudioBackend | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pendingFilesRef = useRef<File[]>([]);
   const handleAutoAdvanceRef = useRef<() => void>(() => {});
@@ -167,12 +161,12 @@ export const Player: React.FC = () => {
 
       setCurrentTrack(track);
 
-      if (playerRef.current instanceof StreamingAudioPlayer) {
+      if (outputMode === 'streaming') {
         setError('Streaming mode does not support local files. Switch to a buffered audio mode.');
         return;
       }
 
-      await (playerRef.current as AudioPlayer).loadAudio(arrayBuffer, file.name);
+      await playerRef.current.loadFromArrayBuffer(arrayBuffer, file.name);
       playerRef.current.play();
       addToast(`Playing: ${track.title || track.name}`, 'info');
     } catch (err) {
@@ -182,7 +176,7 @@ export const Player: React.FC = () => {
     } finally {
       setPlayerState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [addToast, setCurrentTrack, setError, setPlayerState]);
+  }, [addToast, outputMode, setCurrentTrack, setError, setPlayerState]);
 
   const handleLocalFiles = useCallback((files: File[]) => {
     if (outputMode === 'streaming') {
@@ -206,63 +200,55 @@ export const Player: React.FC = () => {
   // =============================================================================
 
   useEffect(() => {
-    let player: AnyPlayer;
-    if (outputMode === 'streaming') player = new StreamingAudioPlayer();
-    else if (outputMode === 'worklet') player = new AudioWorkletPlayer();
-    else if (outputMode === 'sdl') player = new SdlAudioPlayer();
-    else if (outputMode === 'sdl2') player = new Sdl2AudioPlayer();
-    else player = new AudioPlayer();
-
-    if (outputMode === 'worklet') {
-      (player as AudioWorkletPlayer).initialize().then(ok => {
-        if (!ok) setError('AudioWorklet initialization failed');
-      });
-    }
+    const player = createAudioBackend(outputMode);
+    let cancelled = false;
 
     player.setStateChangeCallback(setPlayerState);
-    (player as EndCallbackPlayer).setOnEndedCallback?.(() => handleAutoAdvanceRef.current());
+    player.setOnEndedCallback(() => handleAutoAdvanceRef.current());
     playerRef.current = player;
     player.setVolume(muted ? 0 : volume);
-
-    type EQPlayer = { setEQBandGain?: (i: number, g: number) => void; setPlaybackRate?: (r: number) => void; setCrossfadeEnabled?: (e: boolean) => void };
-    const eqPlayer = player as EQPlayer;
-    eqGains.forEach((g, i) => eqPlayer.setEQBandGain?.(i, g));
-    eqPlayer.setPlaybackRate?.(playbackRate);
-    eqPlayer.setCrossfadeEnabled?.(crossfadeEnabled);
+    player.setEQGains(eqGains);
+    player.setPlaybackRate(playbackRate);
+    player.setCrossfadeEnabled?.(crossfadeEnabled);
 
     let stopProjectMBridge: () => void;
-    if (player instanceof AudioWorkletPlayer) {
-      player.setPCMCallback((buffer, channels) => sendProjectMPCM(buffer, channels));
-      stopProjectMBridge = () => { player.setPCMCallback(undefined); closeProjectMBridgeChannel(); };
+    const setPCMCallback = player.setPCMCallback?.bind(player);
+    if (setPCMCallback) {
+      setPCMCallback((buffer, channels) => sendProjectMPCM(buffer, channels));
+      stopProjectMBridge = () => { setPCMCallback(undefined); closeProjectMBridgeChannel(); };
     } else {
-      stopProjectMBridge = startProjectMBridge(player.getAnalyser());
+      const analyser = player.getAnalyser();
+      stopProjectMBridge = analyser ? startProjectMBridge(analyser) : () => {};
     }
 
-    if (pendingFilesRef.current.length > 0) {
+    void player.initialize().then(() => {
+      if (cancelled || pendingFilesRef.current.length === 0) return;
       const files = pendingFilesRef.current;
       pendingFilesRef.current = [];
       setTimeout(() => files.forEach((file, i) => setTimeout(() => loadLocalFile(file), i * 100)), 0);
-    }
+    }).catch((err: unknown) => {
+      if (!cancelled) setError(err instanceof Error ? err.message : `${outputMode} initialization failed`);
+    });
 
     return () => {
+      cancelled = true;
       stopProjectMBridge();
-      (player as EndCallbackPlayer).setOnEndedCallback?.(undefined);
+      player.setOnEndedCallback(undefined);
       player.destroy();
     };
   }, [outputMode, loadLocalFile]);
 
   // Apply live settings to player
   useEffect(() => {
-    const p = playerRef.current as { setEQBandGain?: (i: number, g: number) => void } | null;
-    eqGains.forEach((g, i) => p?.setEQBandGain?.(i, g));
+    playerRef.current?.setEQGains(eqGains);
   }, [eqGains]);
 
   useEffect(() => {
-    (playerRef.current as { setPlaybackRate?: (r: number) => void } | null)?.setPlaybackRate?.(playbackRate);
+    playerRef.current?.setPlaybackRate(playbackRate);
   }, [playbackRate]);
 
   useEffect(() => {
-    (playerRef.current as { setCrossfadeEnabled?: (e: boolean) => void } | null)?.setCrossfadeEnabled?.(crossfadeEnabled);
+    playerRef.current?.setCrossfadeEnabled?.(crossfadeEnabled);
   }, [crossfadeEnabled]);
 
   useEffect(() => {
@@ -270,7 +256,7 @@ export const Player: React.FC = () => {
     const nextIndex = getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode);
     if (nextIndex === -1) return;
     const nextTrack = queue[nextIndex];
-    if (nextTrack) (playerRef.current as { preloadNext?: (url: string) => void } | null)?.preloadNext?.(nextTrack.url);
+    if (nextTrack) playerRef.current?.preloadNext?.(nextTrack.url);
   }, [crossfadeEnabled, outputMode, queue, queueCurrentIndex, shuffle, repeatMode]);
 
   useEffect(() => {
@@ -299,8 +285,8 @@ export const Player: React.FC = () => {
       let lastError: unknown;
       for (const candidateUrl of candidateUrls) {
         try {
-          if (playerRef.current instanceof StreamingAudioPlayer) {
-            await playerRef.current.loadURL(candidateUrl);
+          if (outputMode === 'streaming' && playerRef.current.loadFromURL) {
+            await playerRef.current.loadFromURL(candidateUrl);
           } else {
             let arrayBuffer: ArrayBuffer;
             try {
@@ -310,7 +296,7 @@ export const Player: React.FC = () => {
               console.warn('Offline cache miss or error, falling back to network fetch:', cacheErr);
               arrayBuffer = await loader.loadFromURL(candidateUrl);
             }
-            await (playerRef.current as AudioPlayer).loadAudio(arrayBuffer);
+            await playerRef.current.loadFromArrayBuffer(arrayBuffer);
           }
           loaded = true;
           break;
@@ -513,6 +499,14 @@ export const Player: React.FC = () => {
     [library, storageSourceFilter]
   );
 
+  const handleGenerationCompleted = async (songId: string) => {
+    const generatedTrack = await loader.fetchSong(songId);
+    await loadLibrary();
+    playNow(generatedTrack);
+    setActiveTab('now-playing');
+    addToast(`Generated track ready: ${generatedTrack.title || generatedTrack.name}`, 'success');
+  };
+
   // =============================================================================
   // Render — Project-M embed / audio-only mode
   // =============================================================================
@@ -551,6 +545,10 @@ export const Player: React.FC = () => {
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         {!isSharedPlaylist && (
           <div className="fixed top-4 right-4 z-40 flex gap-2">
+            <button onClick={() => { setActiveTab('generate'); setShowHtmlFallback(true); }}
+              className="px-4 py-2 rounded-lg bg-fuchsia-600/90 text-white text-sm font-semibold hover:bg-fuchsia-500 transition-colors shadow-lg">
+              ✨ Generate
+            </button>
             <button onClick={triggerLibraryResync} disabled={isResyncingLibrary}
               className="px-4 py-2 rounded-lg bg-blue-600/90 text-white text-sm font-semibold hover:bg-blue-500 transition-colors shadow-lg disabled:opacity-60">
               {isResyncingLibrary ? '⏳ Rescanning...' : '🔄 Rescan Library'}
@@ -648,6 +646,7 @@ export const Player: React.FC = () => {
       onLoadCloudPlaylist={loadCloudPlaylist}
       onSetShowHtmlFallback={setShowHtmlFallback}
       onClearCache={() => clearTrackCache().then(() => addToast('Offline cache cleared', 'success'))}
+      onGenerationCompleted={handleGenerationCompleted}
     />
   );
 };

@@ -2,6 +2,13 @@
 // Enhanced with AI track support and library management
 
 import * as songApi from './api/songApi';
+import type {
+  CloudPlaylist, LibraryStats, PlaylistTrack, ShareResponse, SortBy, TagInfo
+} from './types/library';
+
+export type {
+  CloudPlaylist, LibraryStats, PlaylistTrack, ShareResponse, SortBy, TagInfo
+} from './types/library';
 
 // Re-export types and storage utilities
 export type { RepeatMode } from './storage/queueStorage';
@@ -14,16 +21,36 @@ export type { CachedLibrary } from './storage/libraryCache';
 const DEBUG_MODE = true;
 
 const debug = {
-  log: (label: string, data: any) => {
+  log: (label: string, data: unknown) => {
     if (DEBUG_MODE) console.log(`[FLAC:${label}]`, data);
   },
-  error: (label: string, data: any) => {
+  error: (label: string, data: unknown) => {
     if (DEBUG_MODE) console.error(`[FLAC:${label}]`, data);
   },
-  warn: (label: string, data: any) => {
+  warn: (label: string, data: unknown) => {
     if (DEBUG_MODE) console.warn(`[FLAC:${label}]`, data);
   }
 };
+
+interface LegacySongFields {
+  id: string;
+  name?: string;
+  filename?: string;
+  rating?: number;
+  description?: string;
+  author?: string;
+  genre?: string;
+  last_played?: string;
+}
+
+type LegacySongRecord = LegacySongFields & ({ name: string } | { filename: string });
+
+function isLegacySongRecord(value: unknown): value is LegacySongRecord {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return typeof candidate.id === 'string'
+    && (typeof candidate.name === 'string' || typeof candidate.filename === 'string');
+}
 
 export interface AudioSource {
   url: string;
@@ -31,63 +58,6 @@ export interface AudioSource {
   name?: string;
 }
 
-export interface PlaylistTrack {
-  id: string;
-  name: string;
-  title?: string;
-  url: string;
-  rating?: number;
-  description?: string;
-  author?: string;
-  artist?: string;
-  genre?: string;
-  cover_url?: string;
-  last_played?: string;
-  type?: string;
-  // New fields for library management
-  duration?: number;
-  play_count?: number;
-  tags?: string[];
-  created_at?: string;
-  // AI-generated track fields
-  generation_model?: string;
-  version?: string;
-  prompt?: string;
-}
-
-export interface ShareResponse {
-  share_id: string;
-  short_url: string;
-  full_url: string;
-  expires_at?: string;
-}
-
-export interface CloudPlaylist {
-  id: string;
-  title: string;
-  description?: string;
-  track_ids: string[];
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface LibraryStats {
-  total_tracks: number;
-  rated_4plus: number;
-  total_duration_hours: number;
-  total_play_count: number;
-  untagged_count: number;
-  trash_count: number;
-  unique_tags: number;
-  top_tags: { name: string; count: number }[];
-}
-
-export interface TagInfo {
-  name: string;
-  count: number;
-}
-
-export type SortBy = 'date' | 'rating' | 'name' | 'last_played' | 'genre' | 'play_count' | 'random';
 export type ViewMode = 'library' | 'now-playing' | 'queue' | 'pile';
 
 export class AudioLoader {
@@ -165,6 +135,10 @@ export class AudioLoader {
     } = {}
   ): Promise<{ tracks: PlaylistTrack[]; total: number }> {
     return songApi.fetchSongs(options);
+  }
+
+  async fetchSong(songId: string): Promise<PlaylistTrack> {
+    return songApi.fetchSong(songId);
   }
 
   async fetchTags(): Promise<TagInfo[]> {
@@ -298,16 +272,18 @@ export class AudioLoader {
         throw new Error(`Failed to fetch playlist: ${response.status}`);
       }
       
-      const data = await response.json();
+      const data: unknown = await response.json();
+      if (!Array.isArray(data)) throw new Error('Legacy playlist response is not an array');
       
       return data
-        .filter((item: any) => {
+        .filter(isLegacySongRecord)
+        .filter((item) => {
           const lowerName = (item.name || item.filename || '').toLowerCase();
           return lowerName.endsWith('.flac') || lowerName.endsWith('.wav');
         })
-        .map((item: any) => ({
+        .map((item) => ({
           id: item.id,
-          name: item.name || item.filename,
+          name: item.name || item.filename || 'Unknown track',
           url: `${apiBase}/api/music/${item.id}`,
           rating: item.rating,
           description: item.description,

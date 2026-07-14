@@ -10,6 +10,7 @@
     "build": "webpack --mode production",
     "postbuild": "test -f dist/sdl-audio.js || test -f dist/public/sdl-audio.js && test -f dist/sdl-audio.wasm || test -f dist/public/sdl-audio.wasm",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
+    "typecheck": "tsc --noEmit",
     "test": "npm run test:decoder && npm run test:e2e",
     "test:decoder": "node tests/decoder.test.mjs",
     "test:e2e": "npx playwright test",

@@ -3,7 +3,7 @@ import type { VisualizerBackend } from '../../visuals/types';
 import './ShaderGUI.css';
 
 interface TopScreenProps {
-  canvasRef: React.RefObject<HTMLCanvasElement | null>;
+  canvasRef: React.RefObject<HTMLCanvasElement>;
   artist?: string;
   title?: string;
   webGPUSupported?: boolean;

@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { PlayerState } from '../audioPlayer';
+import type { PlayerUIState } from '../types/player';
+import type { PlaylistTrack } from '../types/library';
 
 export type AudioOutputMode = 'streaming' | 'web-audio' | 'worklet' | 'sdl' | 'sdl2';
 
-export interface PlayerStateHook {
-  playerState: PlayerState;
-  setPlayerState: (state: PlayerState | ((prev: PlayerState) => PlayerState)) => void;
+export interface UsePlayerStateResult {
+  playerState: PlayerUIState;
+  setPlayerState: (state: PlayerUIState | ((prev: PlayerUIState) => PlayerUIState)) => void;
   outputMode: AudioOutputMode;
   setOutputMode: (mode: AudioOutputMode | ((prev: AudioOutputMode) => AudioOutputMode)) => void;
   error: string;
@@ -18,11 +19,8 @@ export interface PlayerStateHook {
   setBackendStatus: (status: 'checking' | 'up' | 'down' | ((prev: 'checking' | 'up' | 'down') => 'checking' | 'up' | 'down')) => void;
 }
 
-// Import PlaylistTrack type
-import { PlaylistTrack } from '../audioLoader';
-
-export const usePlayerState = (): PlayerStateHook => {
-  const [playerState, setPlayerState] = useState<PlayerState>({
+export const usePlayerState = (): UsePlayerStateResult => {
+  const [playerState, setPlayerState] = useState<PlayerUIState>({
     isPlaying: false,
     currentTime: 0,
     duration: 0,

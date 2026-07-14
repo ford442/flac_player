@@ -14,18 +14,21 @@ Features:
 import os
 import random
 import logging
+import time
+from urllib.parse import quote
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Query, BackgroundTasks
-from fastapi.responses import FileResponse
+import httpx
+from fastapi import FastAPI, HTTPException, Query, BackgroundTasks, Request
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from models import (
     SongMetadata, SongCreate, SongUpdate, SongPatch,
     MusicBrainzResult, ShareRequest, ShareResponse,
-    HealthResponse, LibraryStatsResponse, TagListResponse
+    HealthResponse, LibraryStatsResponse, TagListResponse, GenerationRequest
 )
 from storage import StorageManager, parse_ai_metadata_from_filename, suggest_tags_from_prompt
 from musicbrainz import MusicBrainzClient, enrich_metadata_from_musicbrainz
@@ -47,6 +50,10 @@ CORS_ALLOWED_ORIGINS = [
     for origin in os.getenv("CORS_ALLOWED_ORIGINS", "*").split(",")
     if origin.strip()
 ]
+GENERATION_API_URL = os.getenv("GENERATION_API_URL", "").rstrip("/")
+GENERATION_API_KEY = os.getenv("GENERATION_API_KEY", "")
+GENERATION_RATE_LIMIT_MAX = int(os.getenv("GENERATION_RATE_LIMIT_MAX", "5"))
+GENERATION_RATE_LIMIT_WINDOW = int(os.getenv("GENERATION_RATE_LIMIT_WINDOW", "3600"))
 
 # Ensure directories exist
 os.makedirs(SONGS_DIR, exist_ok=True)
@@ -59,6 +66,7 @@ os.makedirs(MUSIC_DIR, exist_ok=True)
 # Global storage manager
 STORAGE_MAP = StorageManager(INDEX_FILE)
 SHARES_MAP: Dict[str, Dict[str, Any]] = {}
+GENERATION_REQUESTS: Dict[str, List[float]] = {}
 
 
 # =============================================================================
@@ -113,6 +121,83 @@ async def health_check():
         songs_count=len(songs),
         timestamp=datetime.now().isoformat()
     )
+
+
+# =============================================================================
+# API Endpoints - Music Generation Proxy
+# =============================================================================
+
+def _generation_headers() -> Dict[str, str]:
+    headers = {"Accept": "application/json"}
+    if GENERATION_API_KEY:
+        headers["Authorization"] = f"Bearer {GENERATION_API_KEY}"
+    return headers
+
+
+def _check_generation_rate_limit(client_id: str) -> None:
+    now = time.monotonic()
+    cutoff = now - GENERATION_RATE_LIMIT_WINDOW
+    recent = [timestamp for timestamp in GENERATION_REQUESTS.get(client_id, []) if timestamp > cutoff]
+    if len(recent) >= GENERATION_RATE_LIMIT_MAX:
+        retry_after = max(1, int(recent[0] + GENERATION_RATE_LIMIT_WINDOW - now))
+        raise HTTPException(
+            status_code=429,
+            detail="Generation rate limit reached. Please try again later.",
+            headers={"Retry-After": str(retry_after)},
+        )
+    recent.append(now)
+    GENERATION_REQUESTS[client_id] = recent
+
+
+def _proxy_json(response: httpx.Response) -> JSONResponse:
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = {"detail": response.text or "Generation service returned an invalid response"}
+    headers = {}
+    if response.headers.get("retry-after"):
+        headers["Retry-After"] = response.headers["retry-after"]
+    return JSONResponse(content=payload, status_code=response.status_code, headers=headers)
+
+
+@app.post("/api/generate")
+async def create_generation_job(payload: GenerationRequest, request: Request):
+    """Queue a generation job with the configured upstream service."""
+    if not GENERATION_API_URL:
+        raise HTTPException(status_code=503, detail="Music generation is not configured on this server")
+
+    client_id = request.client.host if request.client else "unknown"
+    _check_generation_rate_limit(client_id)
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                f"{GENERATION_API_URL}/api/generate",
+                json=payload.model_dump(exclude_none=True),
+                headers=_generation_headers(),
+            )
+        return _proxy_json(response)
+    except httpx.TimeoutException as exc:
+        raise HTTPException(status_code=504, detail="Generation service timed out") from exc
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail="Generation service is unavailable") from exc
+
+
+@app.get("/api/generate/{job_id}")
+async def get_generation_job(job_id: str):
+    """Return progress and the catalog song ID once generation completes."""
+    if not GENERATION_API_URL:
+        raise HTTPException(status_code=503, detail="Music generation is not configured on this server")
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            response = await client.get(
+                f"{GENERATION_API_URL}/api/generate/{quote(job_id, safe='')}",
+                headers=_generation_headers(),
+            )
+        return _proxy_json(response)
+    except httpx.TimeoutException as exc:
+        raise HTTPException(status_code=504, detail="Generation status request timed out") from exc
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail="Generation service is unavailable") from exc
 
 
 # =============================================================================

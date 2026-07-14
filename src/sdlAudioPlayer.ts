@@ -1,5 +1,6 @@
 import { decodeAudio } from './audioDecoder';
-import { PlayerState } from './audioPlayer';
+import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
+import type { AudioBackend, AudioPlaybackState } from './types/audio';
 
 // Define the Emscripten module interface
 interface SdlModule {
@@ -26,28 +27,36 @@ interface SdlModule {
 // Global function exposed by the WASM script
 declare global {
   function createSdlAudioModule(): Promise<SdlModule>;
+  interface Window {
+    __sdl_script_processor_shim_loaded?: boolean;
+  }
 }
 
-export class SdlAudioPlayer {
+export class SdlAudioPlayer implements AudioBackend {
   private module: SdlModule | null = null;
   private isReady: boolean = false;
   private isPlaying: boolean = false;
   private duration: number = 0;
-  private onStateChange?: (state: PlayerState) => void;
+  private onStateChange?: (state: AudioPlaybackState) => void;
   private pollInterval: number | null = null;
   private lastVolume: number = 1.0;
-  private dummyAudioContext: AudioContext | null = null;
-  private dummyAnalyser: AnalyserNode | null = null;
+  private initialization: Promise<void>;
+  private destroyed = false;
 
-  constructor() {
-    this.initializeModule();
+  constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
+    this.initialization = this.initializeModule();
+  }
+
+  async initialize(): Promise<void> {
+    await this.initialization;
+    if (!this.isReady) throw new Error('SDL Module failed to initialize');
   }
 
   private async initializeModule() {
     console.log('[SdlAudioPlayer] Initializing module...');
     // Load the ScriptProcessor->AudioWorklet shim first (best-effort). This enables environments
     // where ScriptProcessorNode is missing/deprecated to still work via AudioWorkletNode.
-    if (!(window as any).__sdl_script_processor_shim_loaded) {
+    if (!window.__sdl_script_processor_shim_loaded) {
       console.log('[SdlAudioPlayer] Loading script-processor-shim.js...');
       const shim = document.createElement('script');
       shim.src = '/script-processor-shim.js';
@@ -57,7 +66,7 @@ export class SdlAudioPlayer {
       await new Promise<void>((resolve) => {
         shim.onload = () => {
           console.log('[SdlAudioPlayer] script-processor-shim.js loaded.');
-          (window as any).__sdl_script_processor_shim_loaded = true;
+          window.__sdl_script_processor_shim_loaded = true;
           resolve();
         };
         shim.onerror = () => {
@@ -88,9 +97,15 @@ export class SdlAudioPlayer {
       console.log('[SdlAudioPlayer] Calling createSdlAudioModule()...');
       this.module = await window.createSdlAudioModule();
       console.log('[SdlAudioPlayer] Module created. Inspecting keys:', Object.keys(this.module));
-      console.log('[SdlAudioPlayer] Module.wasmMemory:', (this.module as any).wasmMemory);
-      console.log('[SdlAudioPlayer] Module.buffer:', (this.module as any).buffer);
-      console.log('[SdlAudioPlayer] Module.HEAPU8:', (this.module as any).HEAPU8);
+      console.log('[SdlAudioPlayer] Module.wasmMemory:', this.module.wasmMemory);
+      console.log('[SdlAudioPlayer] Module.buffer:', this.module.buffer);
+      console.log('[SdlAudioPlayer] Module.HEAPU8:', this.module.HEAPU8);
+
+      if (this.destroyed) {
+        this.module._cleanup();
+        this.module = null;
+        return;
+      }
 
       const success = this.module._init_audio();
       if (!success) {
@@ -98,6 +113,7 @@ export class SdlAudioPlayer {
       } else {
         console.log('[SdlAudioPlayer] SDL Audio initialized successfully.');
         this.isReady = true;
+        this.module._set_volume(this.lastVolume);
         this.startPolling();
       }
     } catch (err) {
@@ -107,7 +123,7 @@ export class SdlAudioPlayer {
 
   private onEnded?: () => void;
 
-  setStateChangeCallback(callback: (state: PlayerState) => void): void {
+  setStateChangeCallback(callback: (state: AudioPlaybackState) => void): void {
     this.onStateChange = callback;
   }
 
@@ -126,7 +142,7 @@ export class SdlAudioPlayer {
     if (this.pollInterval) window.clearInterval(this.pollInterval);
     this.pollInterval = window.setInterval(() => {
       if (!this.module) return;
-      const current = typeof (this.module as any)._get_current_time === 'function' ? (this.module as any)._get_current_time() : 0;
+      const current = this.module._get_current_time();
       if (this.isPlaying) {
         this.notifyStateChange();
         // Detect end-of-track (small tolerance)
@@ -143,6 +159,7 @@ export class SdlAudioPlayer {
 
   async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
     console.log('[SdlAudioPlayer] loadAudio called with ArrayBuffer of size:', arrayBuffer.byteLength);
+    await this.initialize();
     if (!this.module || !this.isReady) {
       console.warn('[SdlAudioPlayer] Module not ready during loadAudio call.');
       if (!this.module) throw new Error('SDL Module not initialized');
@@ -166,7 +183,7 @@ export class SdlAudioPlayer {
 
       // Allocate memory in WASM (in bytes) and write safely to the current WASM buffer
       // Let C++ allocate the memory and give us a pointer
-      const ptr = (this.module as any)._create_audio_buffer(interleavedLength);
+      const ptr = this.module._create_audio_buffer(interleavedLength);
       if (!ptr) {
         throw new Error('[SdlAudioPlayer] _create_audio_buffer failed to allocate memory.');
       }
@@ -176,11 +193,11 @@ export class SdlAudioPlayer {
       try {
         // Get the correct memory view
         let memoryView: Float32Array | null = null;
-        if ((this.module as any).HEAPF32) {
-          memoryView = (this.module as any).HEAPF32;
-        } else if ((this.module as any).wasmMemory && (this.module as any).wasmMemory.buffer) {
+        if (this.module.HEAPF32) {
+          memoryView = this.module.HEAPF32;
+        } else if (this.module.wasmMemory?.buffer) {
           // Fallback for certain Emscripten versions/configs
-          memoryView = new Float32Array((this.module as any).wasmMemory.buffer);
+          memoryView = new Float32Array(this.module.wasmMemory.buffer);
         }
 
         if (!memoryView) {
@@ -195,15 +212,15 @@ export class SdlAudioPlayer {
         memoryView.set(interleaved, floatIndex);
 
         console.log('[SdlAudioPlayer] Copy successful. Calling _set_audio_data...');
-        (this.module as any)._set_audio_data(interleavedLength, channels, result.sampleRate);
+        this.module._set_audio_data(interleavedLength, channels, result.sampleRate);
         console.log('[SdlAudioPlayer] _set_audio_data returned.');
 
       } catch (err) {
         console.error('[SdlAudioPlayer] Failed to write audio data into WASM heap:', err, {
           ptr,
           interleavedLength,
-          hasWasmMemory: !!(this.module as any).wasmMemory,
-          hasHEAPF32: !!(this.module as any).HEAPF32
+          hasWasmMemory: !!this.module.wasmMemory,
+          hasHEAPF32: !!this.module.HEAPF32
         });
         // No need to free ptr, as it's a direct pointer to a vector's data, not a malloc'd block
         throw err;
@@ -215,6 +232,10 @@ export class SdlAudioPlayer {
       console.error('[SdlAudioPlayer] Error loading audio in SDL player:', error);
       throw error;
     }
+  }
+
+  loadFromArrayBuffer(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
+    return this.loadAudio(arrayBuffer, filename);
   }
 
   play(): void {
@@ -253,7 +274,7 @@ export class SdlAudioPlayer {
     return this.duration;
   }
 
-  getState(): PlayerState {
+  getState(): AudioPlaybackState {
     return {
       isPlaying: this.isPlaying,
       currentTime: this.getCurrentTime(),
@@ -269,30 +290,25 @@ export class SdlAudioPlayer {
     }
   }
 
+  // SDL's Emscripten device is isolated from the Web Audio graph and currently
+  // exposes no playback-rate or EQ hooks. Keep the settings in the shared graph
+  // so they survive switching back to a Web Audio backend.
+  setPlaybackRate(rate: number): void { void rate; /* unsupported by SDL */ }
+
+  setEQGains(gains: number[]): void {
+    this.contextManager.setEQGains(gains);
+  }
+
   getAnalyser(): AnalyserNode {
-    // SDL player doesn't support Web Audio AnalyserNode integration yet
-    // Create a dummy analyser once and reuse it to avoid creating multiple AudioContexts
-    if (!this.dummyAnalyser) {
-      this.dummyAudioContext = new AudioContext();
-      this.dummyAnalyser = this.dummyAudioContext.createAnalyser();
-    }
-    return this.dummyAnalyser;
+    return this.contextManager.getAnalyser();
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.stop();
     if (this.pollInterval) clearInterval(this.pollInterval);
     if (this.module) {
       this.module._cleanup();
-    }
-    if (this.dummyAudioContext) {
-      // Close the AudioContext asynchronously. Since destroy() is called from the
-      // Player cleanup function when switching backends (see Player.tsx line 374),
-      // and the old player instance is immediately discarded, a race condition
-      // cannot occur - any new getAnalyser() calls will be from a fresh player instance.
-      void this.dummyAudioContext.close();
-      this.dummyAudioContext = null;
-      this.dummyAnalyser = null;
     }
   }
 }

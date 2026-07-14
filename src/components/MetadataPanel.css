@@ -226,3 +226,26 @@
   background: rgba(109, 40, 217, 0.12) !important;
   color: #6d28d9 !important;
 }
+
+.metadata-panel .ai-model-badge {
+  background: rgba(168, 85, 247, 0.2) !important;
+  color: #d8b4fe !important;
+}
+
+.generation-prompt {
+  margin-top: 0.8rem;
+  font-size: 0.78rem;
+  opacity: 0.82;
+}
+
+.generation-prompt summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.generation-prompt p {
+  margin: 0.4rem 0 0;
+  line-height: 1.4;
+  max-height: 6rem;
+  overflow: auto;
+}

@@ -1,43 +1,33 @@
 // Audio player with load/play/pause/seek functionality
 import { decodeAudioWithBuffer } from './audioDecoder';
-import { EQChain } from './audio/EQChain';
+import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
+import type { AudioBackend, AudioPlaybackState } from './types/audio';
 
-export interface PlayerState {
-  isPlaying: boolean;
-  currentTime: number;
-  duration: number;
-  isLoading: boolean;
-}
+export type { AudioPlaybackState } from './types/audio';
 
-export class AudioPlayer {
+export class AudioPlayer implements AudioBackend {
   private audioContext: AudioContext;
   private sourceNode: AudioBufferSourceNode | null = null;
   private gainNode: GainNode;
-  private eqChain: EQChain;
-  private analyser: AnalyserNode;
   private audioBuffer: AudioBuffer | null = null;
   private startTime: number = 0;
   private pausedAt: number = 0;
   private rateAtPause: number = 1.0;
   private isPlaying: boolean = false;
   private playbackRate: number = 1.0;
-  private onStateChange?: (state: PlayerState) => void;
+  private onStateChange?: (state: AudioPlaybackState) => void;
 
-  constructor() {
-    this.audioContext = new AudioContext();
+  constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
+    this.audioContext = contextManager.getContext();
     this.gainNode = this.audioContext.createGain();
-    this.eqChain = new EQChain(this.audioContext);
-    this.analyser = this.audioContext.createAnalyser();
-    this.analyser.fftSize = 2048;
-
-    this.gainNode.connect(this.eqChain.input);
-    this.eqChain.output.connect(this.analyser);
-    this.analyser.connect(this.audioContext.destination);
+    contextManager.connectInput(this.gainNode);
   }
+
+  async initialize(): Promise<void> { /* graph is initialized by the manager */ }
 
   private onEndedCallback?: () => void;
 
-  setStateChangeCallback(callback: (state: PlayerState) => void): void {
+  setStateChangeCallback(callback: (state: AudioPlaybackState) => void): void {
     this.onStateChange = callback;
   }
 
@@ -96,6 +86,10 @@ export class AudioPlayer {
     }
   }
 
+  loadFromArrayBuffer(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
+    return this.loadAudio(arrayBuffer, filename);
+  }
+
   play(): void {
     if (!this.audioBuffer) {
       console.error('No audio loaded');
@@ -108,7 +102,7 @@ export class AudioPlayer {
 
     // Resume audio context if suspended
     if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume();
+      void this.contextManager.resume();
     }
 
     // Create and configure source node
@@ -210,7 +204,7 @@ export class AudioPlayer {
     return this.audioBuffer ? this.audioBuffer.duration : 0;
   }
 
-  getState(): PlayerState {
+  getState(): AudioPlaybackState {
     return {
       isPlaying: this.isPlaying,
       currentTime: this.getCurrentTime(),
@@ -220,7 +214,7 @@ export class AudioPlayer {
   }
 
   setVolume(volume: number): void {
-    this.gainNode.gain.value = Math.max(0, Math.min(1, volume));
+    this.contextManager.setVolume(volume);
   }
 
   setPlaybackRate(rate: number): void {
@@ -237,22 +231,25 @@ export class AudioPlayer {
   }
 
   setEQBandGain(bandIndex: number, gainDb: number): void {
-    this.eqChain.setBandGain(bandIndex, gainDb);
+    const gains = this.contextManager.getEQGains();
+    gains[bandIndex] = gainDb;
+    this.contextManager.setEQGains(gains);
   }
 
   getEQGains(): number[] {
-    return this.eqChain.getAllGains();
+    return this.contextManager.getEQGains();
+  }
+
+  setEQGains(gains: number[]): void {
+    this.contextManager.setEQGains(gains);
   }
 
   getAnalyser(): AnalyserNode {
-    return this.analyser;
+    return this.contextManager.getAnalyser();
   }
 
   destroy(): void {
     this.stop();
     this.gainNode.disconnect();
-    this.eqChain.disconnect();
-    this.analyser.disconnect();
-    this.audioContext.close();
   }
 }

@@ -11,6 +11,9 @@ interface TrackInfo {
   duration?: number;
   coverUrl?: string;
   cacheKey?: string;
+  generationModel?: string;
+  version?: string;
+  prompt?: string;
 }
 
 interface MetadataPanelProps {
@@ -259,8 +262,15 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
             {displayBitrate && <span>{displayBitrate} kbps</span>}
             {displayTrackNumber && <span>Track {displayTrackNumber}</span>}
             {displayDuration && <span>{displayDuration}</span>}
-            {metadata?.year && <span>{String(metadata.year)}</span>}
+            {typeof metadata?.year === 'number' && <span>{metadata.year}</span>}
+            {trackInfo?.generationModel && <span className="ai-model-badge">{trackInfo.generationModel}{trackInfo.version ? ` · ${trackInfo.version}` : ''}</span>}
           </div>
+          {trackInfo?.prompt && (
+            <details className="generation-prompt">
+              <summary>Generation prompt</summary>
+              <p>{trackInfo.prompt}</p>
+            </details>
+          )}
         </div>
       </div>
     </div>
