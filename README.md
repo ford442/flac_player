@@ -4,9 +4,15 @@ A high-quality React application for playing FLAC and WAV audio files with WebGP
 
 ## Features
 
-- **FLAC and WAV Support**: Decodes and plays FLAC and WAV audio files using the Web Audio API
-- **WebGPU Visualization**: Real-time audio visualization using WebGPU shaders
-- **WebGL2 Fallback**: Toggleable WebGL2 reference renderer for shader debugging and browsers without WebGPU
+- **Five audio backends**: Streaming (default), Web Audio, AudioWorklet, SDL3 WASM, SDL2 WASM — see [docs/AUDIO_BACKENDS.md](docs/AUDIO_BACKENDS.md)
+- **FLAC and WAV Support**: Decode and play via Web Audio, libflac WASM, or CDN streaming (HTTP range requests)
+- **Streaming playback (default)**: Instant start on remote files without full download; optional **crossfade / gapless** between queue tracks
+- **10-band EQ** and playback-rate control (`EQPanel`)
+- **Offline track cache**: Download tracks for offline playback via Cache API (`OfflineCache` UI)
+- **WebGPU Visualization**: Real-time ShaderGUI hardware panel with audio-reactive WGSL shaders
+- **WebGL2 / Canvas2D fallback**: Automatic fallback when WebGPU is unavailable
+- **projectM Milkdrop** (optional): In-app visualizer — `?aesthetic=projectm|split`; build with `npm run build:projectm`
+- **Library management**: Ratings, tags, smart mix, queue, shareable playlists
 - **Multiple Audio Sources**: Load audio from:
   - Google Cloud Storage buckets
   - FTP servers (via HTTP/HTTPS proxy)
@@ -43,33 +49,85 @@ Start the development server:
 npm start
 ```
 
-If you are developing with the SDL-based audio engine (Emscripten build), build the WASM bundle first:
+Optional verbose logging (`[FLAC:*]` tags in the console):
 
 ```bash
-# make sure emsdk is installed and activated in your shell
-npm run build:wasm
+# .env
+REACT_APP_DEBUG=true
+```
+
+### Tests
+
+```bash
+npm run test:decoder   # libflac decode unit test
+npm run test:e2e       # Playwright smoke tests (tests/smoke.spec.ts)
+npm test               # both
+```
+
+If you are developing with the SDL-based audio engine (Emscripten build), build the WASM bundles first:
+
+```bash
+# One-time: install and activate Emscripten (from repo root)
+git clone https://github.com/emscripten-core/emsdk.git
+cd emsdk && ./emsdk install latest && ./emsdk activate latest
+source ./emsdk_env.sh
+
+# Build both SDL3 and SDL2 WASM artifacts into public/
+cd ..   # back to repo root
+npm run build:wasm              # scripts/build-wasm.sh --all
+npm run build:wasm:sdl3         # SDL3 only (same as bash src/sdl/build.sh)
+npm run build:wasm:sdl2         # SDL2 only (same as bash src/sdl/build_sdl2.sh)
+
 npm start
 ```
+
+**WASM policy:** C++ sources live in `src/sdl/`; compiled `public/sdl-audio.*` and `public/sdl2-audio.*` are committed to the repo. CI runs `npm run verify:wasm` to ensure the source hash in `public/wasm-source.sha256` matches. PRs that touch SDL sources also run an optional emsdk build job.
+
+**Production webpack build** does not compile WASM (no emsdk required). It copies prebuilt artifacts from `public/`:
+
+```bash
+npm run build                   # webpack only (--env skipWasm=true in CI)
+npm run build:all               # build:wasm + webpack
+```
+
+SDL WASM glue (~1.3 MiB) is **not** in the main JS bundle — backend modules and Emscripten scripts load only when the user selects SDL3/SDL2.
 
 This will open the app at `http://localhost:3000`
 
 ## Production Build
 
-Build for production:
+Build for production (uses pre-committed WASM in `public/`; no emsdk needed):
 
 ```bash
 npm run build
+```
+
+Full rebuild including WASM:
+
+```bash
+npm run build:all
 ```
 
 The compiled files will be in the `dist/` directory, ready for static hosting.
 
 ## Usage
 
-1. Enter the URL of a FLAC or WAV file in the input field
-2. Click "Load" or press Enter
-3. Once loaded, use the Play/Pause button to control playback
-4. Use the seek slider to navigate through the audio
-5. Watch the visualization respond to the audio (WebGPU by default, WebGL2 or Canvas2D fallback when needed)
+1. Open the app — **streaming** backend starts tracks quickly from the library (`storage.noahcohn.com` by default)
+2. Switch audio backend in settings if needed (Worklet for projectM PCM tap; Web Audio for debugging)
+3. Use Play/Pause, seek, queue, EQ panel, and crossfade toggle (streaming mode)
+4. Toggle visualizer aesthetic: ShaderGUI, projectM Milkdrop, or split view
+5. Download tracks for offline playback from the library row actions
+
+For manual URL loading: enter a FLAC/WAV URL, click Load, then play.
+
+### Documentation
+
+| Doc | Contents |
+|-----|----------|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System diagram, data flows |
+| [docs/AUDIO_BACKENDS.md](docs/AUDIO_BACKENDS.md) | When to use each backend |
+| [docs/API.md](docs/API.md) | REST + projectM embed |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Open issues #166–#175 |
 
 ### Visualization Backends
 
@@ -171,7 +229,9 @@ Without these headers, the browser will block the AudioWorklet/SharedArrayBuffer
 
 ## Project-M Visualizer Integration
 
-The player can feed raw PCM audio data to a [projectM](https://github.com/projectM-visualizer/projectm) (or compatible) visualizer running in a popup window or an iframe on the same page.
+The player includes an **in-app projectM host** (Milkdrop mode) plus external embed/popup feeding. Toggle aesthetics in the UI or via `?aesthetic=projectm|split|shadergui`. Build WASM with `npm run build:projectm` — see [docs/API.md](docs/API.md#projectm-visualizer-integration).
+
+The player can also feed raw PCM audio data to an external [projectM](https://github.com/projectM-visualizer/projectm) visualizer in a popup window or iframe on the same page.
 
 ### How it works
 

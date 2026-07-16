@@ -1,140 +1,108 @@
 # FLAC Player - Implementation Summary
 
+Last updated: July 2026
+
 ## Project Overview
-A complete React-based FLAC and WAV audio player with WebGPU shader visualization, designed for static hosting.
 
-## Key Features Implemented
+A React/TypeScript high-fidelity audio player with **five interchangeable audio backends**, **WebGPU/WebGL2/Canvas2D visualization**, optional **projectM Milkdrop host**, and **library management** backed by `storage.noahcohn.com`.
 
-### 1. Audio Playback
-- **FLAC/WAV Support**: Uses Web Audio API's native decoding capabilities
-- **Multiple Sources**: 
-  - Google Cloud Storage buckets
-  - FTP servers (via HTTP/HTTPS proxy)
-  - Direct HTTP/HTTPS URLs
-- **Full Controls**: Load, Play, Pause, Seek
-- **Real-time Progress**: Current time and duration tracking
+## Key Features
 
-### 2. WebGPU Visualization
-- **Audio-Reactive Shaders**: Animated waveforms that respond to audio frequency data
-- **Responsive Design**: Adapts to canvas dimensions
-- **Fallback Support**: Gracefully handles browsers without WebGPU support
-- **Uniforms System**: Passes resolution, time, and audio level data to shaders
+### Audio
+- **Five backends:** Streaming (default), Web Audio, AudioWorklet, SDL3 WASM, SDL2 WASM
+- **FLAC/WAV/MP3** via browser decode, libflac WASM, or CDN streaming
+- **10-band EQ**, playback rate, volume
+- **Crossfade / gapless** (streaming mode, 3 s fade)
+- **Offline track cache** via Cache API (`trackCache.ts`)
 
-### 3. Modern UI
-- Gradient-based dark theme
-- Responsive layout
-- Clean, intuitive controls
-- Error handling with user-friendly messages
-- Loading states
+### Library & playback
+- Full library from `GET /api/songs` with filter, sort, pagination
+- Ratings, tags, inline editing, smart mix by shared tags
+- Queue with drag-reorder, repeat/shuffle, shareable playlists (TinyURL)
+- MusicBrainz metadata lookup, AI-generated track fields
+- Upload workflow via storage admin + rescan
 
-### 4. Build System
-- **TypeScript**: Full type safety
-- **Webpack 5**: Modern bundling with code splitting
-- **Development Server**: Hot reload for rapid development
-- **Production Build**: Optimized, minified output
-- **ESLint**: Code quality checks
+### Visualization
+- **ShaderGUI** — hardware-panel WebGPU shader (waveform, knobs, queue screen)
+- **Fallback chain:** WebGPU → WebGL2 → Canvas2D
+- **projectM** — optional in-app Milkdrop WASM (`?aesthetic=projectm|split`)
+- Beat-sync preset switching, `.milk` import
 
-## Project Structure
+### Build & quality
+- TypeScript strict mode, ESLint, `npm run typecheck`
+- Playwright smoke tests (`npm run test:e2e`)
+- WASM artifacts (SDL, optional projectM) committed to `public/`
+- CI: lint, typecheck, verify:wasm, production build
+
+## Project Structure (abbreviated)
 
 ```
 flac_player/
-├── public/
-│   └── index.html              # HTML template
 ├── src/
-│   ├── components/
-│   │   ├── Player.tsx          # Main player component
-│   │   └── Player.css          # Player styles
-│   ├── App.tsx                 # Root application component
-│   ├── App.css                 # Application styles
-│   ├── index.tsx               # Entry point
-│   ├── audioLoader.ts          # Audio source loading
-│   ├── audioPlayer.ts          # Playback management
-│   ├── flacDecoder.ts          # FLAC/WAV decoding
-│   └── webgpuVisualizer.ts     # WebGPU shader visualization
-├── DEPLOYMENT.md               # Deployment guide
-├── README.md                   # Project documentation
-├── package.json                # Dependencies and scripts
-├── tsconfig.json              # TypeScript configuration
-├── webpack.config.js          # Webpack configuration
-├── .eslintrc.json             # ESLint configuration
-├── netlify.toml               # Netlify deployment config
-└── vercel.json                # Vercel deployment config
+│   ├── components/       Player, LibraryView, QueuePanel, ShaderGUI, VisualizerShell, ProjectMHost
+│   ├── audio/            createAudioBackend, AudioContextManager, EQChain, SdlPcmBridge
+│   ├── api/              songApi.ts
+│   ├── storage/          libraryCache, trackCache, queueStorage
+│   ├── visuals/          rendererSelection, WebGL2 fallback
+│   ├── projectm/         ProjectMEngine, projectm_host.cpp
+│   ├── streamingAudioPlayer.ts   # default backend
+│   ├── audioPlayer.ts
+│   ├── audioWorkletPlayer.ts
+│   ├── sdlAudioPlayer.ts / sdl2AudioPlayer.ts
+│   └── audioLoader.ts
+├── public/               SDL + projectM WASM artifacts
+├── scripts/              build-wasm.sh, build-projectm-wasm.sh, verify-wasm-artifacts.sh
+├── docs/                 ARCHITECTURE.md, AUDIO_BACKENDS.md, API.md
+└── tests/                smoke.spec.ts (Playwright)
 ```
-
-## Technical Stack
-
-- **React 18.2.0**: UI framework
-- **TypeScript 5.2.2**: Type safety
-- **WebGPU API**: GPU-accelerated visualization
-- **Web Audio API**: Audio decoding and playback
-- **Webpack 5**: Build system
-- **ESLint**: Code linting
 
 ## Build Commands
 
 ```bash
-# Install dependencies
 npm install
-
-# Development server (http://localhost:3000)
-npm start
-
-# Production build (outputs to dist/)
-npm run build
-
-# Code linting
-npm run lint
+npm start                    # dev server, COOP/COEP headers
+npm run build                # production (prebuilt WASM in public/)
+npm run build:all            # rebuild SDL WASM + webpack
+npm run build:wasm           # SDL3 + SDL2
+npm run build:wasm:sdl3      # SDL3 only (also: bash src/sdl/build.sh)
+npm run build:projectm       # optional Milkdrop WASM
+npm run verify:wasm          # CI artifact freshness check
+npm run typecheck && npm run lint
+npm test                     # decoder unit + Playwright e2e
 ```
 
-## Deployment Ready
+## Current Working State (July 2026)
 
-The application is configured for deployment to:
-- Apache/Nginx servers
-- GitHub Pages
-- Netlify (with netlify.toml)
-- Vercel (with vercel.json)
-- AWS S3 + CloudFront
-- Any static hosting service
+Live against **`https://storage.noahcohn.com`**:
+
+- **Library** — full catalog, CORS, tags, ratings, search, smart mix
+- **Streaming playback** — default backend; range requests against Contabo/static files
+- **Uploads** — storage admin → FLAC conversion → `songs.json` index
+- **Shareable playlists** — `?share=<id>` loads from `/api/share/<id>`
+- **Five audio backends** — user-selectable; lazy-loaded WASM chunks
+- **Visualizer** — ShaderGUI + WebGL2 fallback + optional projectM split mode
+- **Offline cache** — per-track download via Cache API
+- **Tests** — Playwright smoke suite + decoder unit test
 
 ## Browser Requirements
 
-- Modern browser with ES2020+ support
-- Web Audio API (all modern browsers)
-- WebGPU support (Chrome 113+, Edge 113+) - optional for visualization
+- Modern browser (Chrome 90+, Firefox 88+, Safari 14+)
+- Web Audio API (required)
+- WebGPU (optional — WebGL2/Canvas2D fallback)
+- HTTPS + COOP/COEP for AudioWorklet / SDL WASM / projectM
 
-## Security
+## Documentation Map
 
-- ✅ No security vulnerabilities found (CodeQL scan passed)
-- ✅ CORS-compliant audio loading
-- ✅ No hardcoded credentials
-- ✅ Safe DOM manipulation
+| Doc | Purpose |
+|-----|---------|
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | System diagram, data flows, WASM build |
+| [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) | When to use each backend |
+| [API.md](./API.md) | REST endpoints + projectM embed |
+| [DEVELOPER_CONTEXT.md](./DEVELOPER_CONTEXT.md) | Agent-oriented complexity notes |
+| [ROADMAP.md](./ROADMAP.md) | Open issues #166–#174 |
 
-## Code Quality
+## Deployment
 
-- ✅ ESLint passing (0 errors)
-- ✅ TypeScript compilation successful
-- ✅ Code review feedback addressed
-- ✅ Production build optimized (157 KB total)
+Static hosting after `npm run build` → `dist/`. Configure COOP/COEP in production. Set `REACT_APP_API_URL=https://storage.noahcohn.com` for production API.
 
-## Current Working State (April 2026)
-
-The following end-to-end features are **live and operational** with the current `storage.noahcohn.com` backend:
-
-- **Library fetching** — `test.1ink.us/flac-player` successfully fetches the full song library from `storage.noahcohn.com/api/songs` with CORS, filtering, sorting, and pagination.
-- **Song uploads** — Audio files (MP3, FLAC, WAV, OGG, M4A, AAC) can be uploaded via `/api/songs/upload` on the storage server; they are auto-converted to FLAC and indexed into `songs.json`.
-- **Shareable playlists** — Users can create a share link from their queue. The link (`test.1ink.us/flac-player?share=<id>`) loads the playlist directly from `storage.noahcohn.com/api/share/<id>` and auto-plays.
-
-## Next Steps for Users
-
-1. Deploy to preferred hosting platform (see DEPLOYMENT.md)
-2. Configure CORS on audio source servers
-3. Test with actual FLAC/WAV files
-4. Customize shader effects in webgpuVisualizer.ts
-5. Adjust UI theme in CSS files
-
-## Notes
-
-- Audio files must be accessible via CORS-enabled URLs
-- WebGPU visualization is optional - player works without it
-- FLAC support depends on browser's Web Audio API implementation (all modern browsers support it)
-- The application is purely client-side - no server required
+See root `README.md` and `DEPLOYMENT.md` for platform-specific steps.

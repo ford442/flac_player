@@ -3,10 +3,13 @@ node_modules/
 /.pnp
 .pnp.js
 emsdk
+.build/
 venv/
 __pycache__/
 # Testing
 /coverage
+/test-results/
+/playwright-report/
 
 # Production
 /build

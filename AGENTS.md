@@ -4,11 +4,11 @@ This document provides essential information for AI coding agents working on the
 
 ## Project Overview
 
-FLAC Player is a high-fidelity audio player web application with a **React/TypeScript frontend** and a **FastAPI Python backend**. It plays FLAC and WAV audio files directly in the browser and features a multi-backend audio engine (native Web Audio API, AudioWorklet, and C++ SDL-based WASM modules) with real-time WebGPU shader visualization. It also includes advanced library management: track rating, tagging, smart playlist mixing, and playlist sharing.
+FLAC Player is a high-fidelity audio player web application with a **React/TypeScript frontend** and a **FastAPI Python backend**. It plays FLAC and WAV audio files directly in the browser and features a **five-backend audio engine** (streaming, Web Audio API, AudioWorklet, SDL3 WASM, SDL2 WASM) with real-time WebGPU shader visualization. It also includes advanced library management: track rating, tagging, smart playlist mixing, and playlist sharing.
 
 **Key Capabilities:**
 - Play FLAC/WAV audio from URLs (HTTP/HTTPS, Google Cloud Storage)
-- Four audio output backends: Web Audio API, AudioWorklet, SDL3 (WASM), SDL2 (WASM)
+- Five audio output backends: **Streaming** (default), Web Audio API, AudioWorklet, SDL3 (WASM), SDL2 (WASM)
 - Real-time audio visualization using WebGPU shaders (flat waveform + 3D cube + hardware GUI modes)
 - Music library management with ratings, tags, search, and filtering
 - Smart Mix: auto-generate queues based on shared tags
@@ -74,8 +74,8 @@ flac_player/
 │   ├── sdl/
 │   │   ├── audio_engine.cpp    # SDL3 C++ audio engine (~209 lines)
 │   │   ├── audio_engine_sdl2.cpp # SDL2 C++ audio engine
-│   │   ├── build.sh            # SDL3 build script (outputs to public/)
-│   │   └── build_sdl2.sh       # SDL2 build script (outputs to public/)
+│   │   ├── build.sh            # wrapper -> scripts/build-wasm.sh --sdl3
+│   │   └── build_sdl2.sh       # wrapper -> scripts/build-wasm.sh --sdl2
 │   ├── shaders/
 │   │   ├── waveform.ts         # WGSL shader for ShaderGUI
 │   │   └── waveform.wgsl       # Standalone WGSL file (reference)
@@ -122,17 +122,17 @@ pip install -r requirements.txt
 npm start
 
 # Build WASM modules (requires Emscripten/emsdk)
-# NOTE: This ONLY builds SDL2. To build SDL3, run bash src/sdl/build.sh
-npm run build:wasm
+npm run build:wasm              # scripts/build-wasm.sh --all (SDL3 + SDL2)
+npm run build:wasm:sdl3         # SDL3 only — equivalent to bash src/sdl/build.sh
+npm run build:wasm:sdl2         # SDL2 only — equivalent to bash src/sdl/build_sdl2.sh
+npm run build:projectm          # optional projectM Milkdrop host
+npm run verify:wasm             # CI: check committed artifacts match sources
 
-# Build SDL3 manually
-bash src/sdl/build.sh
-
-# Production build
-# - Runs prebuild (build:wasm -> SDL2 only)
-# - Webpack production build
-# - Outputs to dist/
+# Production build (webpack copies prebuilt public/sdl-*.wasm; no emsdk)
 npm run build
+
+# Full rebuild: WASM + webpack
+npm run build:all
 
 # Code linting
 npm run lint
@@ -163,6 +163,7 @@ Copy `.env.example` to `.env` for local development.
 - `REACT_APP_API_URL` — Override API base URL (default: same-origin / `window.location.origin`)
 - `REACT_APP_GA_ID` — Optional Google Analytics 4 Measurement ID
 - `REACT_APP_MIXPANEL_TOKEN` — Optional Mixpanel project token
+- `REACT_APP_DEBUG` — Set to `true` for verbose `[FLAC:*]` console logging (off by default)
 
 ## Code Style Guidelines
 
@@ -188,17 +189,20 @@ Copy `.env.example` to `.env` for local development.
 
 ### Code Patterns
 - **Observer Pattern**: Players use `setStateChangeCallback` to notify UI of state changes
-- **Strategy Pattern**: Four audio player implementations share similar interfaces
+- **Strategy Pattern**: Five audio player implementations share the `AudioBackend` / `ConfigurableAudioBackend` interface via `createAudioBackend()`
 - **Manual Resource Management**: WebGPU resources and audio nodes must be explicitly destroyed
 
 ## Critical Architecture Details
 
 ### Audio Backend Selection
-The `Player.tsx` component maintains four possible audio backends:
-1. **Web Audio** (`audioPlayer.ts`) - Native browser API, full `AnalyserNode` support
-2. **AudioWorklet** (`audioWorkletPlayer.ts`) - Low-latency worklet processor with ScriptProcessor fallback
-3. **SDL3** (`sdlAudioPlayer.ts`) - C++ SDL3 compiled to WASM
-4. **SDL2** (`sdl2AudioPlayer.ts`) - C++ SDL2 compiled to WASM with AudioWorklet
+The `Player.tsx` component selects one of five backends via `createAudioBackend()` (lazy dynamic imports):
+1. **Streaming** (`streamingAudioPlayer.ts`) - Default. HTMLAudioElement + HTTP range requests; crossfade support
+2. **Web Audio** (`audioPlayer.ts`) - Full fetch + decode; buffered `BufferSourceNode`
+3. **AudioWorklet** (`audioWorkletPlayer.ts`) - Low-latency worklet; `setPCMCallback` for projectM PCM tap
+4. **SDL3** (`sdlAudioPlayer.ts`) - C++ SDL3 compiled to WASM; PCM ring → `SdlPcmBridge` → analyser
+5. **SDL2** (`sdl2AudioPlayer.ts`) - C++ SDL2 compiled to WASM with AudioWorklet glue
+
+See `docs/AUDIO_BACKENDS.md` for selection guidance.
 
 Switching backends recreates the player instance and resets audio state.
 
@@ -280,36 +284,45 @@ The FastAPI backend provides the following endpoints (verified from `app.py`):
 ```
 User selects track
     ↓
-audioLoader.loadFromURL() → fetch() with CORS
+audioLoader / songApi → absolute https:// URL from storage.noahcohn.com
     ↓
-flacDecoder.decode() → AudioContext.decodeAudioData()
+createAudioBackend(mode) — streaming (default) | web-audio | worklet | sdl | sdl2
     ↓
-Player backend (Web Audio / Worklet / SDL3 / SDL2)
+AudioContextManager (EQ, analyser, volume)
     ↓
-AnalyserNode → webgpuVisualizer (frequency data)
+AnalyserNode → VisualizerShell (WebGPU / WebGL2 / Canvas2D / projectM)
     ↓
 AudioDestination → Speakers
 ```
 
+Buffered backends: `fetch(url) → decode → AudioBuffer`. Streaming: `<audio src>` + range requests (no full download).
+
 ## Testing Instructions
 
-**IMPORTANT**: No test runner is currently configured. `npm test` will fail.
+```bash
+npm run test:decoder   # libflac decode unit test
+npm run test:e2e       # Playwright smoke tests
+npm run typecheck && npm run lint
+```
 
 Manual testing checklist:
-1. Load a FLAC/WAV file from a URL
+1. Load a track from the library (streaming default — instant start)
 2. Test play/pause/seek controls
 3. Verify WebGPU visualization responds to audio
-4. Switch between audio backends (Web Audio → Worklet → SDL3 → SDL2)
-5. Test playlist loading from `/api/songs`
-6. Verify 3D mode interaction (drag to rotate, click to play/pause)
-7. Test library features: rating a track, adding tags, smart mix
-8. Verify backend health endpoint returns 200
-9. **ShaderGUI**: Verify knobs affect the waveform (RSYCRB = chromatic aberration, FRACTAL = detail, PULSE = bloom)
-10. **ShaderGUI**: Double-click top screen to toggle 3D cube mode
-11. **ShaderGUI**: Verify volume slider is vertical with tick marks
-12. **ShaderGUI**: Confirm active track in bottom screen has highlight + play overlay
-13. Test queue drag-to-reorder functionality
-14. Test keyboard shortcuts: Space (play/pause), Arrows (seek/volume), N/P (next/prev), Q (queue), S (pile), Ctrl+K (search)
+4. Switch between all five audio backends
+5. Test EQ panel and crossfade toggle (streaming mode)
+6. Test offline track download / evict
+7. Test playlist loading from `/api/songs`
+8. Verify 3D mode interaction (drag to rotate, click to play/pause)
+9. Test library features: rating a track, adding tags, smart mix
+10. Verify backend health endpoint returns 200
+11. **ShaderGUI**: Verify knobs affect the waveform (RSYCRB = chromatic aberration, FRACTAL = detail, PULSE = bloom)
+12. **ShaderGUI**: Double-click top screen to toggle 3D cube mode
+13. **ShaderGUI**: Verify volume slider is vertical with tick marks
+14. **ShaderGUI**: Confirm active track in bottom screen has highlight + play overlay
+15. Test queue drag-to-reorder functionality
+16. Test keyboard shortcuts: Space (play/pause), Arrows (seek/volume), N/P (next/prev), Q (queue), S (pile), Ctrl+K (search)
+17. **projectM** (if WASM built): toggle Milkdrop / Split aesthetic; verify fallback when WASM missing
 
 ## Security Considerations
 
@@ -335,9 +348,9 @@ Due to SharedArrayBuffer usage, the app must be served over HTTPS (except localh
 
 ## Known Issues & Limitations
 
-1. **SDL Analyser**: SDL backends return a dummy `AnalyserNode` — visualization may flatline when using SDL audio. The ShaderGUI shader includes a synthetic fallback animation for this case.
-2. **Test Suite**: No automated tests configured
-3. **WASM Build Scope**: `npm run build:wasm` only compiles SDL2. SDL3 must be built manually via `bash src/sdl/build.sh`
+1. **Streaming vs buffered**: Streaming requires URL + CORS + Accept-Ranges; cannot load raw ArrayBuffers. Crossfade is streaming-only.
+2. **Test coverage**: Vitest unit tests (`queueUtils`, `audioDecoder`, `rendererSelection`) + Playwright smoke suite; expand audio pipeline integration ([#172](https://github.com/ford442/flac_player/issues/172))
+3. **WASM Build**: `scripts/build-wasm.sh` builds both SDL3 and SDL2; SDL3 also via `bash src/sdl/build.sh`; `npm run verify:wasm` checks artifact freshness in CI
 4. **Hardcoded Deploy Credentials**: `deploy.py` contains server-specific configuration
 5. **Memory Constraints**: Large audio files may require WASM memory growth (`ALLOW_MEMORY_GROWTH=1` is enabled in build scripts)
 6. **Shader-to-CSS Fragility**: WGSL knob/LED glow positions are hardcoded to match CSS layout. Changing the layout requires updating `waveform.ts`
@@ -347,7 +360,7 @@ Due to SharedArrayBuffer usage, the app must be served over HTTPS (except localh
 1. **Setup**: `npm install` and `pip install -r requirements.txt`
 2. **Data directories**: Ensure `data/music/` and `data/songs/` exist and are writable
 3. **Backend**: `python app.py` (runs on port 7860 by default)
-4. **WASM Build** (if modifying C++): Ensure emsdk is installed and run the appropriate `build.sh` or `build_sdl2.sh`
+4. **WASM Build** (if modifying C++): `npm run build:wasm`, commit `public/sdl-audio.*`, `public/sdl2-audio.*`, and `public/wasm-source.sha256`
 5. **Development**: `npm start` — opens at http://localhost:3000 with hot reload
 6. **Lint**: `npm run lint` — must pass before committing
 7. **Build**: `npm run build` — outputs production bundle to `dist/`

@@ -309,3 +309,83 @@ MusicBrainz API has rate limits:
 - Max 50 requests per second for authenticated users
 
 The backend implements caching to minimize API calls. Results are cached for 5 minutes by default (configurable via `CACHE_TTL`).
+
+## projectM Visualizer Integration
+
+The player supports three visualizer aesthetics (toggle in the UI or via URL):
+
+| Mode | URL param | Description |
+|------|-----------|-------------|
+| Hardware GUI | `?aesthetic=shadergui` (default) | WebGPU/WebGL2 ShaderGUI panel |
+| Milkdrop | `?aesthetic=projectm` | In-app projectM WASM host |
+| Split | `?aesthetic=split` | ShaderGUI (lite GPU) + projectM |
+
+Build the optional projectM WASM bundle:
+
+```bash
+npm run build:projectm
+```
+
+### PCM contract (embed / popup / in-app)
+
+All modes share one PCM pipeline — **no duplicate audio decode**. The player forwards PCM from the active audio backend:
+
+1. **Worklet tap (preferred):** `AudioWorkletPlayer.setPCMCallback()` emits 512-sample interleaved blocks at the audio clock (~86 blocks/s @ 44.1 kHz).
+2. **Analyser fallback:** `startProjectMBridge(analyser)` polls float time-domain data at ~60 fps (mono).
+
+Routing (`src/utils/projectMBridge.ts`):
+
+- **In-app host:** When `ProjectMHost` is mounted, PCM is fed directly to projectM WASM via `registerInAppProjectMHost()`.
+- **External embed:** Same PCM is also sent via `postMessage` and `BroadcastChannel('projectm-audio')`.
+
+### Embed mode (`?projectm=1`)
+
+Use when the FLAC player should act as an **audio-only feeder** for an external projectM page (saves GPU budget — ShaderGUI/WebGPU is not mounted):
+
+```
+https://<player-url>/?projectm=1
+```
+
+Compact transport UI (`EmbedPlayerView`) is shown. PCM bridge is wired automatically.
+
+**Popup:**
+
+```js
+const player = window.open('https://<player-url>/?projectm=1', 'flac-player');
+window.addEventListener('message', (e) => {
+  if (e.data?.type === 'pcm') {
+    projectM.addPCMfloat(e.data.buffer, e.data.channels);
+  }
+});
+```
+
+**iframe:**
+
+```html
+<iframe src="https://<player-url>/?projectm=1" id="flac-player"></iframe>
+<script>
+  const bc = new BroadcastChannel('projectm-audio');
+  bc.onmessage = (e) => {
+    if (e.data?.type === 'pcm') projectM.addPCMfloat(e.data.buffer, e.data.channels);
+  };
+</script>
+```
+
+### Share links with projectM
+
+Append `projectm=1` or `aesthetic=projectm` to share URLs. When using the backend TinyURL share API, include the query param in the returned `full_url`:
+
+```
+https://<player-url>/?share=<id>&aesthetic=projectm
+```
+
+### Requirements
+
+- **Cross-origin isolation** (COOP/COEP) for AudioWorklet + projectM pthread builds — configured in `webpack.config.js` dev server, `netlify.toml`, and `vercel.json`.
+- **Cleanup:** Call the teardown returned by `createProjectMPCMFeed(player)` when destroying the player backend. Track changes invoke `notifyInAppProjectMTrackChange()` (no audio glitch — PCM stream continues).
+
+### Presets (Phase 2)
+
+- Load `.milk` files via the projectM toolbar **📁** button (`projectm_load_preset_data` in WASM).
+- **Beat-sync presets:** enable in split/Milkdrop mode; uses `useBeatDetection` bass peaks.
+- Favorites are stored in `localStorage` under `projectm-favorite-presets` (filename labels).

@@ -1,3 +1,5 @@
+import type { PlaybackPathInfo } from '../utils/playbackPath';
+
 export interface AudioPlaybackState {
   isPlaying: boolean;
   currentTime: number;
@@ -10,7 +12,7 @@ export interface AudioBackend {
   initialize(): Promise<void>;
   destroy(): void;
   loadFromArrayBuffer(buffer: ArrayBuffer, filename?: string): Promise<void>;
-  loadFromURL?(url: string): Promise<void>;
+  loadFromURL?(url: string, options?: { expectedDuration?: number }): Promise<void>;
   play(): void | Promise<void>;
   pause(): void;
   stop(): void;
@@ -31,4 +33,13 @@ export interface ConfigurableAudioBackend extends AudioBackend {
   setPCMCallback?(
     callback: ((buffer: Float32Array, channels: number, sampleRate: number) => void) | undefined
   ): void;
+  getPlaybackPath?(): PlaybackPathInfo | null;
+  loadFromURLStreaming?(
+    url: string,
+    options?: {
+      expectedDuration?: number;
+      cachedResponse?: Response;
+      onProgress?: (loaded: number, total: number | null) => void;
+    }
+  ): Promise<void>;
 }

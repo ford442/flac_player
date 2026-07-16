@@ -2,6 +2,7 @@
 // Enhanced with AI track support and library management
 
 import * as songApi from './api/songApi';
+import { debug } from './utils/debug';
 import type {
   CloudPlaylist, LibraryStats, PlaylistTrack, ShareResponse, SortBy, TagInfo
 } from './types/library';
@@ -16,21 +17,22 @@ export { QUEUE_STORAGE_KEY, saveQueueToStorage, loadQueueFromStorage, clearQueue
 export type { QueueState } from './storage/queueStorage';
 export { LIBRARY_CACHE_KEY, LIBRARY_CACHE_TTL_MS, getCachedLibrary, setCachedLibrary, clearLibraryCache } from './storage/libraryCache';
 export type { CachedLibrary } from './storage/libraryCache';
-
-// Debug mode - set to true to enable detailed logging
-const DEBUG_MODE = true;
-
-const debug = {
-  log: (label: string, data: unknown) => {
-    if (DEBUG_MODE) console.log(`[FLAC:${label}]`, data);
-  },
-  error: (label: string, data: unknown) => {
-    if (DEBUG_MODE) console.error(`[FLAC:${label}]`, data);
-  },
-  warn: (label: string, data: unknown) => {
-    if (DEBUG_MODE) console.warn(`[FLAC:${label}]`, data);
-  }
-};
+export {
+  probeRemoteAudio,
+  fetchByteRange,
+  streamRemoteAudio,
+  streamResponseBody,
+  type RemoteAudioProbe,
+  type RangeFetchProgress,
+} from './utils/rangeFetch';
+export {
+  STREAMING_THRESHOLD_BYTES,
+  selectDecodeStrategy,
+  describePlaybackPath,
+  isFlacUrl,
+  type DecodeStrategy,
+  type PlaybackPathInfo,
+} from './utils/playbackPath';
 
 interface LegacySongFields {
   id: string;
@@ -367,5 +369,11 @@ export class AudioLoader {
     } catch (error) {
       return [];
     }
+  }
+
+  /** Probe remote audio URL for size and range-request support. */
+  async probeAudioUrl(url: string, signal?: AbortSignal) {
+    const { probeRemoteAudio } = await import('./utils/rangeFetch');
+    return probeRemoteAudio(url, signal);
   }
 }

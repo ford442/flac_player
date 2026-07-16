@@ -17,8 +17,9 @@ fetchLibrary()
   → if somehow not absolute, prepend API_BASE_URL
 
 playTrack(track)
-  → loader.loadFromURL(track.url)
-  → fetch(url) → arrayBuffer()  ← this is where 404s surface
+  → createAudioBackend(outputMode)  // default: streaming
+  → streaming: loadFromURL(track.url) → HTMLAudioElement.src (range requests)
+  → buffered backends: fetch(url) → arrayBuffer() → decode  ← 404s surface here
 ```
 
 `track.url` is always set by the backend. If you see a 404:
@@ -39,14 +40,36 @@ in `contabo_storage_manager/packages/python-bridge/app/config.py`.
 
 ## Audio pipeline
 
+Five backends via `src/audio/createAudioBackend.ts`. See `docs/AUDIO_BACKENDS.md`.
+
+**Streaming (default):**
 ```
-fetch(url) → ArrayBuffer → flacDecoder.ts (libflac WASM) → AudioBuffer
-           → AudioWorklet or Web Audio API → speakers
+track.url → HTMLAudioElement → MediaElementSource → AudioContextManager → speakers
+(crossfade uses a second <audio> element; no full-file download)
 ```
 
-No `<audio>` element is used. The full file is loaded into memory before playback starts.
-Range requests (byte-range fetches) are NOT used during load — but nginx must still
-serve `Accept-Ranges` so browser preflight checks pass.
+**Buffered (web-audio, worklet, SDL):**
+```
+fetch(url) → ArrayBuffer → flacDecoder / audioDecoder → AudioBuffer or worklet ring
+           → backend-specific nodes → AudioContextManager → speakers
+```
+
+No `<audio>` element for buffered modes. Streaming uses `<audio>` exclusively.
+
+Worklet backend exposes `setPCMCallback()` for projectM PCM (`createProjectMPCMFeed` in `projectMBridge.ts`).
+
+## Visualizer pipeline
+
+```
+AnalyserNode → VisualizerShell
+  → ShaderGUI: WebGPU → WebGL2 → Canvas2D (rendererSelection.ts)
+  → projectM: optional WASM host (?aesthetic=projectm|split)
+```
+
+## Debug logging
+
+Off by default. Enable with `REACT_APP_DEBUG=true` in `.env` (webpack DefinePlugin).
+Helper: `src/utils/debug.ts` — used by `audioLoader.ts` and `api/songApi.ts`.
 
 ## Key invariants to maintain
 
@@ -54,3 +77,22 @@ serve `Accept-Ranges` so browser preflight checks pass.
   — this only fires when the backend sends a song with no URL (shouldn't happen normally)
 - `loadFromURL()` only handles `http`, `https`, `gs://` schemes — don't pass relative paths
 - The backend must always return absolute `https://` URLs in the `url` field
+- Default output mode is `streaming` (`usePlayerState.ts`)
+
+## WASM builds
+
+```bash
+npm run build:wasm:sdl3    # or bash src/sdl/build.sh
+npm run build:wasm:sdl2    # or bash src/sdl/build_sdl2.sh
+npm run build:projectm     # optional Milkdrop host
+npm run verify:wasm        # CI artifact check
+```
+
+Production webpack (`npm run build`) copies prebuilt artifacts from `public/` — no emsdk required.
+
+## Related docs
+
+- `docs/ARCHITECTURE.md` — system diagram
+- `docs/AUDIO_BACKENDS.md` — backend selection
+- `docs/API.md` — REST + projectM embed
+- `AGENTS.md` — full agent reference

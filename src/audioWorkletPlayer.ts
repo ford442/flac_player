@@ -3,6 +3,9 @@
 // Phase 2: Added streaming mode with ring buffer for chunked/low-memory playback.
 import { decodeAudio } from './audioDecoder';
 import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
+import { runHifiStreamPipeline } from './audio/hifiStreamPipeline';
+import type { PlaybackPathInfo } from './utils/playbackPath';
+import { describePlaybackPath } from './utils/playbackPath';
 import type { AudioBackend, AudioPlaybackState } from './types/audio';
 
 // AudioWorklet processor code as a string (will be loaded as a blob URL)
@@ -227,6 +230,9 @@ export class AudioWorkletPlayer implements AudioBackend {
   private useScriptProcessor: boolean = false;
   private workletUrl: string | null = null;
   private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
+  private streamAbort: AbortController | null = null;
+  private playbackPath: PlaybackPathInfo | null = null;
+  private pipelineTask: Promise<void> | null = null;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
     this.setupWorkletUrl();
@@ -312,6 +318,7 @@ export class AudioWorkletPlayer implements AudioBackend {
       this.duration = decodedData.duration;
       this.currentTime = 0;
       this.isStreaming = false;
+      this.playbackPath = describePlaybackPath('buffered');
 
       this.audioBuffer = decodedData.interleavedBuffer;
 
@@ -330,7 +337,98 @@ export class AudioWorkletPlayer implements AudioBackend {
   }
 
   loadFromArrayBuffer(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
+    this.playbackPath = describePlaybackPath('buffered');
     return this.loadAudio(arrayBuffer, filename);
+  }
+
+  getPlaybackPath(): PlaybackPathInfo | null {
+    return this.playbackPath;
+  }
+
+  /**
+   * Stream-decode a remote FLAC URL via HTTP Range → WASM chunks → worklet ring buffer.
+   * Memory stays bounded; no full-file ArrayBuffer is retained.
+   */
+  async loadFromURLStreaming(
+    url: string,
+    options: {
+      expectedDuration?: number;
+      cachedResponse?: Response;
+      onProgress?: (loaded: number, total: number | null) => void;
+    } = {}
+  ): Promise<void> {
+    if (!this.audioContext) {
+      await this.initialize();
+    }
+    if (this.useScriptProcessor) {
+      throw new Error('Hi-Fi streaming requires AudioWorklet (ScriptProcessor fallback unavailable)');
+    }
+
+    this.cancelStream();
+    this.stopNode();
+    this.isPlaying = false;
+    this.isStreaming = false;
+    this.playbackPath = describePlaybackPath('hifi-stream');
+    this.streamAbort = new AbortController();
+
+    let streamReady: Promise<void> | null = null;
+    let finishResolve!: () => void;
+    let finishReject!: (err: unknown) => void;
+
+    const readyPromise = new Promise<void>((resolve, reject) => {
+      let settled = false;
+      finishResolve = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      finishReject = (err: unknown) => {
+        if (settled) return;
+        settled = true;
+        reject(err instanceof Error ? err : new Error(String(err)));
+      };
+      setTimeout(() => {
+        finishReject(new Error('Streaming playback did not start in time'));
+      }, 30_000);
+    });
+
+    const pipeline = runHifiStreamPipeline({
+      url,
+      cachedResponse: options.cachedResponse,
+      expectedDuration: options.expectedDuration,
+      signal: this.streamAbort.signal,
+      onProgress: (p) => options.onProgress?.(p.loaded, p.total),
+      onMetadata: ({ channels, sampleRate }) => {
+        this.channels = channels;
+        this.sampleRate = sampleRate;
+        streamReady = this.startStreaming(channels, sampleRate).then(() => {
+          if (options.expectedDuration) {
+            this.duration = options.expectedDuration;
+          }
+        });
+        void streamReady.then(() => finishResolve());
+      },
+      onPcmChunk: (interleaved) => {
+        if (streamReady) {
+          void streamReady.then(() => this.appendChunk(interleaved));
+        }
+      },
+      onEnded: () => this.endStreaming(),
+      onError: (err) => {
+        console.error('[AudioWorkletPlayer] Stream error:', err);
+        finishReject(err);
+      },
+    });
+
+    this.pipelineTask = pipeline;
+    pipeline.catch(finishReject);
+    await readyPromise;
+  }
+
+  private cancelStream(): void {
+    this.streamAbort?.abort();
+    this.streamAbort = null;
+    this.pipelineTask = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -342,7 +440,9 @@ export class AudioWorkletPlayer implements AudioBackend {
       await this.initialize();
     }
 
-    this.stop();
+    // Tear down playback nodes only — do not abort an in-flight stream pipeline.
+    this.stopNode();
+    this.isPlaying = false;
 
     this.channels = channels;
     this.sampleRate = sampleRate;
@@ -552,6 +652,7 @@ export class AudioWorkletPlayer implements AudioBackend {
   }
 
   stop(): void {
+    this.cancelStream();
     if (this.isStreaming) {
       this.isStreaming = false;
     }
@@ -648,6 +749,7 @@ export class AudioWorkletPlayer implements AudioBackend {
   }
 
   destroy(): void {
+    this.cancelStream();
     this.stop();
     if (this.gainNode) this.gainNode.disconnect();
     this.gainNode = null;

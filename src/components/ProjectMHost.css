@@ -1,0 +1,107 @@
+.projectm-host {
+  position: relative;
+  width: 100%;
+  min-height: 220px;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.projectm-host__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 220px;
+}
+
+.projectm-host__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  color: #7dd3fc;
+  font-size: 0.875rem;
+  pointer-events: none;
+}
+
+.projectm-host__toolbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+}
+
+.projectm-host__toolbar button {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 4px;
+  padding: 0.2rem 0.45rem;
+  cursor: pointer;
+}
+
+.projectm-host__toolbar button:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.projectm-host__beat-sync {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  color: #ccc;
+  margin-left: auto;
+}
+
+.projectm-host__preset-name {
+  font-size: 0.7rem;
+  color: #aaa;
+  max-width: 8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectm-host__favorites {
+  position: absolute;
+  top: 0.35rem;
+  left: 0.35rem;
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+  max-width: 70%;
+}
+
+.projectm-host__fav-chip {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.projectm-host--error {
+  padding: 1rem;
+  color: #fca5a5;
+  font-size: 0.85rem;
+  background: rgba(127, 29, 29, 0.25);
+}
+
+.projectm-host__hint {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.projectm-host__hint code {
+  color: #e2e8f0;
+}

@@ -1,24 +1,10 @@
 // API client for song/library management endpoints
 
 import type { PlaylistTrack, LibraryStats, TagInfo, ShareResponse, SortBy } from '../types/library';
+import { debug } from '../utils/debug';
 
 // API Configuration
 const API_BASE_URL = process.env.REACT_APP_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://storage.noahcohn.com');
-
-// Debug mode
-const DEBUG_MODE = true;
-
-const debug = {
-  log: (label: string, data: unknown) => {
-    if (DEBUG_MODE) console.log(`[FLAC:${label}]`, data);
-  },
-  error: (label: string, data: unknown) => {
-    if (DEBUG_MODE) console.error(`[FLAC:${label}]`, data);
-  },
-  warn: (label: string, data: unknown) => {
-    if (DEBUG_MODE) console.warn(`[FLAC:${label}]`, data);
-  }
-};
 
 type CatalogSong = Omit<PlaylistTrack, 'url'> & { url?: string };
 

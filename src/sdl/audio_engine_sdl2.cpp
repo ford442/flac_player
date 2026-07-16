@@ -3,6 +3,8 @@
 #include <vector>
 #include <iostream>
 #include <cmath>
+#include <algorithm>
+#include "pcm_ring.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,6 +23,28 @@ struct PlayerState {
     int deviceChannels = 2;
 } g_state;
 
+static void queue_remaining_audio() {
+    if (!g_state.stream || !g_state.deviceId || g_state.audioBuffer.empty()) return;
+
+    size_t samplesRemaining = g_state.audioBuffer.size() - g_state.playHead;
+    if (samplesRemaining == 0) return;
+
+    const float* src = &g_state.audioBuffer[g_state.playHead];
+    const float* scaled = scale_samples(src, (int)samplesRemaining, g_state.volume);
+
+    pcm_ring_write(scaled, (int)samplesRemaining);
+    SDL_AudioStreamPut(g_state.stream, scaled, samplesRemaining * sizeof(float));
+
+    int available = SDL_AudioStreamAvailable(g_state.stream);
+    if (available > 0) {
+        std::vector<Uint8> converted(available);
+        int got = SDL_AudioStreamGet(g_state.stream, converted.data(), available);
+        if (got > 0) {
+            SDL_QueueAudio(g_state.deviceId, converted.data(), got);
+        }
+    }
+}
+
 EMSCRIPTEN_KEEPALIVE
 int init_audio() {
     printf("[C++ SDL2] init_audio called\n");
@@ -29,7 +53,6 @@ int init_audio() {
         return 0;
     }
 
-    // Open default playback device (dummy init)
     SDL_AudioSpec want, have;
     SDL_zero(want);
     want.freq = 44100;
@@ -47,6 +70,7 @@ int init_audio() {
     g_state.deviceFreq = have.freq;
     g_state.deviceChannels = have.channels;
 
+    pcm_ring_init(65536);
     printf("[C++ SDL2] init_audio success. Device ID: %u, Freq: %d\n", g_state.deviceId, have.freq);
     return 1;
 }
@@ -57,8 +81,8 @@ void set_audio_data(float* data, int length, int channels, int sampleRate) {
 
     if (g_state.stream) {
         SDL_FreeAudioStream(g_state.stream);
-        g_state.stream = nullptr;
     }
+    g_state.stream = nullptr;
 
     if (g_state.deviceId) {
         SDL_CloseAudioDevice(g_state.deviceId);
@@ -76,6 +100,7 @@ void set_audio_data(float* data, int length, int channels, int sampleRate) {
     g_state.sampleRate = sampleRate;
     g_state.playHead = 0;
     g_state.isPlaying = false;
+    pcm_ring_reset();
 
     SDL_AudioSpec want, have;
     SDL_zero(want);
@@ -84,14 +109,6 @@ void set_audio_data(float* data, int length, int channels, int sampleRate) {
     want.channels = channels;
     want.samples = 1024;
     want.callback = NULL;
-
-    // Allow frequency changes (0 as last arg to SDL_OpenAudioDevice means SDL can change specs if hardware doesn't support request)
-    // Actually, passing 0 for allowed_changes means "I want exactly this, if not, SDL can simulate/convert".
-    // Wait, SDL_OpenAudioDevice docs:
-    // "allowed_changes: If 0, SDL will match the requested format exactly, or fail." -> THIS IS WRONG for Web (Emscripten).
-    // In Emscripten, SDL_OpenAudioDevice usually gets the browser context.
-    // If we want SDL to handle conversion, we should check `have` vs `want`.
-    // We will use AudioStream for conversion regardless, so we just take what we get.
 
     g_state.deviceId = SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
 
@@ -105,7 +122,6 @@ void set_audio_data(float* data, int length, int channels, int sampleRate) {
 
     printf("[C++ SDL2] Device opened. Freq: %d, Channels: %d\n", have.freq, have.channels);
 
-    // Create stream converting from Source -> Device
     g_state.stream = SDL_NewAudioStream(AUDIO_F32, channels, sampleRate,
                                         have.format, have.channels, have.freq);
 
@@ -124,35 +140,9 @@ void play() {
     g_state.isPlaying = true;
     SDL_PauseAudioDevice(g_state.deviceId, 0);
 
-    // If we haven't queued everything yet (or if we just started), queue it all.
-    // Check if device is starving?
-    // SDL_QueueAudio appends.
-    // We only want to append ONCE per seek/play-start.
-    // But `play()` can be called after `pause()`.
-    // If we paused, the queue is still there. We just unpause.
-
-    // Only if queue is empty AND we haven't finished, we push.
-    // But how do we know if we finished?
-    // We'll trust that if queue is empty, we need to push.
-    // But if we just seeked, we cleared queue.
-
     Uint32 queued = SDL_GetQueuedAudioSize(g_state.deviceId);
     if (queued == 0 && g_state.playHead < g_state.audioBuffer.size()) {
-        size_t samplesRemaining = g_state.audioBuffer.size() - g_state.playHead;
-
-        SDL_AudioStreamPut(g_state.stream, &g_state.audioBuffer[g_state.playHead], samplesRemaining * sizeof(float));
-
-        int available = SDL_AudioStreamAvailable(g_state.stream);
-        if (available > 0) {
-            std::vector<Uint8> converted(available);
-            int got = SDL_AudioStreamGet(g_state.stream, converted.data(), available);
-            if (got > 0) {
-                SDL_QueueAudio(g_state.deviceId, converted.data(), got);
-            }
-        }
-        // Once pushed, we effectively moved playHead to end?
-        // No, playHead remains the *logical* start of the buffer we pushed.
-        // We don't update playHead while playing. We use it as the anchor for time calc.
+        queue_remaining_audio();
     }
 }
 
@@ -176,6 +166,7 @@ void stop() {
     if (g_state.stream) SDL_AudioStreamClear(g_state.stream);
     g_state.isPlaying = false;
     g_state.playHead = 0;
+    pcm_ring_reset();
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -183,7 +174,6 @@ void seek(float time) {
     if (!g_state.deviceId || g_state.audioBuffer.empty()) return;
 
     size_t sampleIndex = (size_t)(time * g_state.sampleRate) * g_state.channels;
-    // Align
     sampleIndex = sampleIndex - (sampleIndex % g_state.channels);
     if (sampleIndex >= g_state.audioBuffer.size()) sampleIndex = g_state.audioBuffer.size();
 
@@ -191,20 +181,10 @@ void seek(float time) {
 
     SDL_ClearQueuedAudio(g_state.deviceId);
     if (g_state.stream) SDL_AudioStreamClear(g_state.stream);
+    pcm_ring_reset();
 
     if (g_state.isPlaying) {
-        // Refill immediately
-        size_t samplesRemaining = g_state.audioBuffer.size() - g_state.playHead;
-        SDL_AudioStreamPut(g_state.stream, &g_state.audioBuffer[g_state.playHead], samplesRemaining * sizeof(float));
-
-        int available = SDL_AudioStreamAvailable(g_state.stream);
-        if (available > 0) {
-             std::vector<Uint8> converted(available);
-             int got = SDL_AudioStreamGet(g_state.stream, converted.data(), available);
-             if (got > 0) {
-                 SDL_QueueAudio(g_state.deviceId, converted.data(), got);
-             }
-        }
+        queue_remaining_audio();
     }
 }
 
@@ -214,34 +194,12 @@ float get_current_time() {
 
     Uint32 queuedBytes = SDL_GetQueuedAudioSize(g_state.deviceId);
 
-    // queuedBytes is in Device Format (float32, deviceChannels, deviceFreq)
-    // We want to convert this to Seconds.
     double queuedSeconds = (double)queuedBytes / (sizeof(float) * g_state.deviceChannels * g_state.deviceFreq);
 
-    // Total duration of file
     double totalDuration = (double)g_state.audioBuffer.size() / (g_state.channels * g_state.sampleRate);
-
-    // But we pushed from playHead to end.
-    // So what is currently playing = (End of File) - (What is left in Queue).
-    // This assumes we pushed EVERYTHING.
-    // If we only pushed a chunk, this is wrong. But we push everything.
-
-    // However, if we Seeked, playHead changed.
-    // If we seek to 10s, we push (Duration - 10s) audio.
-    // Queue has (Duration - 10s).
-    // Time = Duration - Queue.
-    // = Duration - (Duration - 10s) = 10s.
-    // As Queue shrinks, Time increases.
-    // Correct.
-
-    // Wait, playHead logic:
-    // If I seek to 10s. playHead corresponds to 10s.
-    // We pushed data starting at 10s.
-    // The "End" of the audio buffer corresponds to `totalDuration`.
 
     double currentTime = totalDuration - queuedSeconds;
 
-    // Clamp
     if (currentTime < 0) currentTime = 0;
     if (currentTime > totalDuration) currentTime = totalDuration;
 
@@ -250,8 +208,17 @@ float get_current_time() {
 
 EMSCRIPTEN_KEEPALIVE
 void set_volume(float vol) {
-    g_state.volume = vol;
-    // TODO: Implement volume scaling
+    g_state.volume = std::max(0.0f, std::min(1.0f, vol));
+}
+
+EMSCRIPTEN_KEEPALIVE
+PcmRingState* get_pcm_ring_state() {
+    return &g_pcmRing;
+}
+
+EMSCRIPTEN_KEEPALIVE
+float* get_pcm_ring_data() {
+    return pcm_ring_data();
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -259,6 +226,7 @@ void cleanup() {
     if (g_state.stream) SDL_FreeAudioStream(g_state.stream);
     if (g_state.deviceId) SDL_CloseAudioDevice(g_state.deviceId);
     g_state.audioBuffer.clear();
+    pcm_ring_cleanup();
     SDL_Quit();
 }
 

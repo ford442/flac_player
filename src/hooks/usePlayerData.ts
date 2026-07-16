@@ -119,7 +119,19 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
 
   useEffect(() => {
     if (isSharedPlaylist) return;
-    checkBackend().then(healthy => { if (healthy) loadLibrary(); });
+    checkBackend().then(healthy => {
+      if (healthy) {
+        loadLibrary();
+      } else {
+        const cached = getCachedLibrary();
+        if (cached && cached.tracks.length > 0) {
+          setLibrary(cached.tracks);
+          setAllTags(cached.tags);
+          setStats(cached.stats);
+          addToast('Showing cached library (offline)', 'info');
+        }
+      }
+    });
   }, []);
 
   useEffect(() => {

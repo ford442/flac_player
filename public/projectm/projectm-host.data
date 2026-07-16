@@ -1,0 +1,707 @@
+if(ENABLE_TESTING)
+    install(DIRECTORY
+            tests
+            DESTINATION "presets"
+            COMPONENT Tests
+            )
+endif()
+[preset00]
+// test preset defaults, see BuiltinParams.cpp
+// most minimal preset to make something visible
+wave_r=1
+[preset00]
+// test preset defaults, see BuiltinParams.cpp
+// minimal preset to make something visible
+fdecay=0
+warp=0;
+nWaveMode=6
+fWaveScale=1
+fwavesmoothing=0.01
+wave_r=1.0
+wave_g=1.0
+wave_b=1.0
+wave_x=0.500000
+wave_y=0.500000
+[preset00]
+per_frame_1000=// just a double box
+per_frame_1001=//
+
+fDecay=1
+zoom=0
+rot=0.0
+warp=1
+ob_size=0.2
+ob_r=0.0
+ob_g=0.0
+ob_b=0.0
+ob_a=0.0
+ib_size=0.1
+ib_r=1.0
+ib_g=0.0
+ib_b=0.0
+ib_a=1.0
+[preset00]
+per_frame_1000=// one per frame equation
+per_frame_1001=// varies outer frame color - red only
+
+fDecay=0.98
+zoom=0
+rot=0.0
+warp=0.0
+ob_size=0.2
+ob_r=0.0
+ob_g=0.0
+ob_b=0.0
+ob_a=0.0
+ib_size=0.1
+ib_r=1.0
+ib_g=0.0
+ib_b=0.0
+ib_a=1.0
+
+per_frame_1=ib_r=0.7+0.4*sin(3*time);
+[preset00]
+per_frame_1000=// one per frame equation
+per_frame_1001=// varies outer frame color - multi-color
+
+fDecay=0.98
+zoom=0
+rot=0.0
+warp=0.0
+ob_size=0.2
+ob_r=0.0
+ob_g=0.0
+ob_b=0.0
+ob_a=0.0
+ib_size=0.1
+ib_r=0.0
+ib_g=0.0
+ib_b=0.0
+ib_a=1.0
+
+per_frame_1=ib_r=0.7+0.4*sin(3*time);
+per_frame_2=ib_g=0.7+0.4*sin(4*time);
+per_frame_3=ib_b=0.7+0.4*sin(5*time);[preset00]
+per_frame_1000=// one per frame equation
+per_frame_1001=// test multiple equations one line
+
+fDecay=0.98
+zoom=0
+rot=0.0
+warp=0.0
+ob_size=0.2
+ob_r=0.0
+ob_g=0.0
+ob_b=0.0
+ob_a=0.0
+ib_size=0.1
+ib_r=0.0
+ib_g=0.0
+ib_b=0.0
+ib_a=1.0
+
+per_frame_1=ib_r=0.7+0.4*sin(3*time); ib_g=0.7+0.4*sin(4*time); ib_b=0.7+0.4*sin(5*time);[preset00]
+per_frame_1000=// one per frame equation
+per_frame_1001=// test equation spanning two lines
+
+fDecay=0.98
+zoom=0
+rot=0.0
+warp=0.0
+ob_size=0.2
+ob_r=0.0
+ob_g=0.0
+ob_b=0.0
+ob_a=0.0
+ib_size=0.1
+ib_r=0.0
+ib_g=0.0
+ib_b=0.0
+ib_a=1.0
+
+per_frame_1=ib_r=0.7+0.4*
+per_frame_2=   sin(3*time);[preset00]
+per_frame_1000=// one per frame equation
+per_frame_1001=// initialize user variable
+
+fDecay=0.98
+zoom=0
+rot=0.0
+warp=0.0
+ob_size=0.2
+ob_r=0.0
+ob_b=0.0
+ob_a=0.0
+ib_size=0.1
+ib_r=1.0
+ib_g=0.0
+ib_a=1.0
+
+per_frame_init_1=SPEED=10;
+
+per_frame_1=ib_r=0.7+0.4*sin(time*SPEED);
+[preset00]
+fDecay=0.980000
+fWarpScale=2.853000
+fZoomExponent=1.000000
+warp=0.000000
+sx=1.000000
+sy=1.000000
+ob_size=0.2
+ob_r=0.0
+ob_g=0.0
+ob_b=0.0
+ob_a=0.0
+ib_size=0.01
+ib_r=1.0
+ib_g=0.0
+ib_b=0.0
+ib_a=1.0
+
+per_frame_1=ib_r=0.7+0.4*sin(3*time);
+per_frame_2=ib_g=0.7+0.4*sin(4*time);
+per_frame_3=ib_b=0.7+0.4*sin(5*time);
+
+per_pixel_1=zoom=0.9615-rad*0.1;
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=0 Circle
+
+fDecay=0
+nWaveMode=0
+fZoomExponent=1.000000
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000
+
+
+
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=1 RadialBlob
+
+fDecay=0
+nWaveMode=1
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=2 Blob2
+
+fDecay=0
+nWaveMode=2
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=3 Blob3
+
+fDecay=0
+nWaveMode=3
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=4 DerivativeLine
+
+fDecay=0
+nWaveMode=4
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=5 Blob5
+
+fDecay=0
+nWaveMode=5
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=6 Line
+
+fDecay=0
+nWaveMode=6
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=7 DoubleLine
+
+fDecay=0
+nWaveMode=7
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=7 DoubleLine
+
+fDecay=0
+nWaveMode=8
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=7 DoubleLine
+
+fDecay=0
+nWaveMode=9
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=7 DoubleLine
+
+fDecay=0
+nWaveMode=10
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=7 DoubleLine
+
+fDecay=0
+nWaveMode=11
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=7 DoubleLine
+
+fDecay=0
+nWaveMode=12
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=7 DoubleLine
+
+fDecay=0
+nWaveMode=13
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=7 DoubleLine
+
+fDecay=0
+nWaveMode=14
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=7 DoubleLine
+
+fDecay=0
+nWaveMode=15
+warp=0.000000
+wave_r=1
+wave_x=0.500000
+wave_y=0.500000
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=6 Line
+
+fDecay=0
+warp=0.000000
+wave_r=1
+
+// MilkdropWaveform
+nWaveMode=6
+fWaveSmoothing=0.00
+wave_x=0.600000
+wave_y=0.5
+
+// CustomWaveform
+wavecode_0_enabled=1
+wavecode_0_scaling=0.05
+wavecode_0_smoothing=0
+wavecode_0_r=0.000000
+wavecode_0_g=1.000000
+wavecode_0_b=1.000000
+wavecode_0_a=1.000000
+wavecode_0_x=0.5
+wavecode_0_y=0.4
+wave_0_per_point1=x=sample;
+wave_0_per_point2=y=y+value1;
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=6 Line
+
+fDecay=0
+warp=0.000000
+wave_r=1
+
+// MilkdropWaveform
+nWaveMode=6
+fWaveSmoothing=0.01
+wave_x=0.600000
+wave_y=0.5
+
+// CustomWaveform
+wavecode_0_enabled=1
+wavecode_0_scaling=0.05
+wavecode_0_smoothing=0.01
+wavecode_0_r=0.000000
+wavecode_0_g=1.000000
+wavecode_0_b=1.000000
+wavecode_0_a=1.000000
+wavecode_0_x=0.5
+wavecode_0_y=0.4
+wave_0_per_point1=x=sample;
+wave_0_per_point2=y=y+value1;
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=6 Line
+
+fDecay=0
+warp=0.000000
+wave_r=1
+
+// MilkdropWaveform
+nWaveMode=6
+fWaveSmoothing=0.80
+wave_x=0.600000
+wave_y=0.5
+
+// CustomWaveform
+wavecode_0_enabled=1
+wavecode_0_scaling=0.05
+wavecode_0_smoothing=0.80
+wavecode_0_r=0.000000
+wavecode_0_g=1.000000
+wavecode_0_b=1.000000
+wavecode_0_a=1.000000
+wavecode_0_x=0.5
+wavecode_0_y=0.4
+wave_0_per_point1=x=sample;
+wave_0_per_point2=y=y+value1;
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=6 Line
+
+fDecay=0
+warp=0.000000
+wave_r=1
+
+// MilkdropWaveform
+nWaveMode=6
+fWaveSmoothing=0.90
+wave_x=0.600000
+wave_y=0.5
+
+// CustomWaveform
+wavecode_0_enabled=1
+wavecode_0_samples=512
+wavecode_0_scaling=0.05
+wavecode_0_smoothing=0.90
+wavecode_0_r=0.000000
+wavecode_0_g=1.000000
+wavecode_0_b=1.000000
+wavecode_0_a=1.000000
+wave_0_per_point1=x=sample;
+wave_0_per_point2=y=0.4+value1;
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=6 Line
+
+fDecay=0
+warp=0.000000
+wave_r=1
+
+// MilkdropWaveform
+nWaveMode=6
+fWaveSmoothing=0.99
+wave_x=0.600000
+wave_y=0.5
+
+// CustomWaveform
+wavecode_0_enabled=1
+wavecode_0_scaling=0.05
+wavecode_0_smoothing=0.99
+wavecode_0_r=0.000000
+wavecode_0_g=1.000000
+wavecode_0_b=1.000000
+wavecode_0_a=1.000000
+wavecode_0_x=0.5
+wavecode_0_y=0.4
+wave_0_per_point1=x=sample;
+wave_0_per_point2=y=y+value1;
+[preset00]
+per_frame_1000=// simple wave
+per_frame_1001=// MODE=6 Line
+
+fDecay=0
+warp=0.000000
+wave_r=1
+
+// MilkdropWaveform
+nWaveMode=6
+fWaveSmoothing=1.00
+wave_x=0.600000
+wave_y=0.5
+
+// CustomWaveform
+wavecode_0_enabled=1
+wavecode_0_scaling=0.05
+wavecode_0_smoothing=1.00
+wavecode_0_r=0.000000
+wavecode_0_g=1.000000
+wavecode_0_b=1.000000
+wavecode_0_a=1.000000
+wavecode_0_x=0.5
+wavecode_0_y=0.4
+wave_0_per_point1=x=sample;
+wave_0_per_point2=y=y+value1;
+[preset00]
+// use wavecode
+// red circle wave with blue squiggly wave
+
+fDecay=0.980000
+nWaveMode=0
+bMaximizeWaveColor=1
+fWaveAlpha=4.400000
+fWaveScale=1.5
+fZoomExponent=1.000000
+zoom=1.000000
+warp=0.000000
+sx=1.000000
+sy=1.000000
+wave_r=0.00000
+wave_g=0.0000
+wave_b=0.00000
+wave_a=0.00000
+wave_x=0.500000
+wave_y=0.5000000
+
+wavecode_0_enabled=1
+wavecode_0_mode=0
+wavecode_0_bDrawThick=0
+wavecode_0_bAdditive=1
+wavecode_0_scaling=1.000000
+wavecode_0_smoothing=0.500000
+wavecode_0_r=0.000000
+wavecode_0_g=1.000000
+wavecode_0_b=1.000000
+wavecode_0_a=1.000000
+wave_0_per_point41=x=x+value1/2
+wave_0_per_point42=y=y+value2/2;
+
+per_frame_1=zoom=1[preset00]
+per_frame_1000=// spectrum vs pcm
+
+fDecay=0
+warp=0.000000
+wave_a=0
+
+// spectrum=0
+wavecode_0_enabled=1
+wavecode_0_bspectrum=0
+wavecode_0_scaling=0.1
+wavecode_0_r=0.000000
+wavecode_0_g=1.000000
+wavecode_0_b=1.000000
+wavecode_0_a=1.000000
+wavecode_0_x=0.5
+wavecode_0_y=0.75
+wave_0_per_point1=x=sample;
+wave_0_per_point2=y=y+value1;
+
+
+// spectrum=1
+wavecode_1_enabled=1
+wavecode_1_bSpectrum=1
+wavecode_1_scaling=1
+wavecode_1_r=1.000000
+wavecode_1_g=1.000000
+wavecode_1_b=1.000000
+wavecode_1_a=1.000000
+wavecode_1_x=0.5
+wavecode_1_y=0.25
+wave_1_per_point1=x=sample;
+wave_1_per_point2=y=0.25+value1;
+
+[preset00]
+per_frame_1000=// spectrum vs pcm
+
+fDecay=0
+warp=0.000000
+wave_a=0
+
+// spectrum=0
+wavecode_0_enabled=1
+wavecode_0_bspectrum=0
+wavecode_0_scaling=0.1
+wavecode_0_r=0.000000
+wavecode_0_g=1.000000
+wavecode_0_b=1.000000
+wavecode_0_a=1.000000
+wavecode_0_x=0.5
+wavecode_0_y=0.75
+wave_0_per_point1=x=sample;
+wave_0_per_point2=y=y+value1;
+
+
+// spectrum=1
+wavecode_1_enabled=1
+wavecode_1_samples=512
+wavecode_1_sep=256
+wavecode_1_bSpectrum=1
+wavecode_1_bUseDots=0
+wavecode_1_bDrawThick=1
+wavecode_1_bAdditive=1
+wavecode_1_scaling=1.00000
+wavecode_1_smoothing=0.80000
+wavecode_1_r=1.000
+wavecode_1_g=1.000
+wavecode_1_b=1.000
+wavecode_1_a=1.000
+wave_1_per_point1=sw = (1-sw)*below(sample,1);
+wave_1_per_point2=
+wave_1_per_point3=osa = sample*above(sample,0);
+wave_1_per_point4=
+wave_1_per_point5=//mod = pow((value1-value2)*2,2)*sign(value1-value2)*.5;
+wave_1_per_point6=
+wave_1_per_point7=mod = value2-value1;
+wave_1_per_point8=mod = mod*sw;
+wave_1_per_point9=
+wave_1_per_point10=y = if(sw,osa,sample);
+wave_1_per_point11=y = (1-sample*1.6)*.4+.42;
+wave_1_per_point12=x = 0 + mod*.5+.5;
+wave_1_per_point13=
+wave_1_per_point14=//osa = sample;
+wave_1_per_point15=
+wave_1_per_point16=mo = 3.7 + mod*6 + q1;
+wave_1_per_point17=
+wave_1_per_point18=r = .5 + sin(mo)*.5;
+wave_1_per_point19=g = .5 + sin(mo + 1.0472)*.5;
+wave_1_per_point20=b = .5 + sin(mo + 2.0944)*.5;
+wave_1_per_point21=
+wave_1_per_point22=a = 1 - abs(mod)*12;
+wave_1_per_point23=a = 1-sw;
+wave_1_per_point24=a = max(0,min(a,1));
+
+[preset00]
+per_frame_1000=// spectrum vs pcm
+
+fDecay=0
+warp=0.000000
+wave_a=0
+
+// Display noise_lq texture.
+// Alpha channel is not used, but present.
+comp_1=`shader_body
+comp_2=`{
+comp_3=`ret = tex2D(sampler_fw_noise_lq, uv).xyz;
+comp_4=`}
+[preset00]
+per_frame_1000=// spectrum vs pcm
+
+fDecay=0
+warp=0.000000
+wave_a=0
+
+// Display noisevol_lq texture and cycle through the cube's slices over time.
+// Alpha channel is not used, but present.
+comp_1=`shader_body
+comp_2=`{
+comp_3=`ret = tex3D(sampler_fw_noisevol_lq, float3(uv, time / 10.0)).xyz;
+comp_4=`}
+[preset00]
+fDecay=0.75
+fWarpScale=2.853000
+fZoomExponent=1.000000
+warp=0.000000
+wave_a=0
+cy=1.0
+cx=0.5
+sx=1
+sy=1
+dx=0
+dy=0.02
+zoom=1.0
+ob_size=0
+ib_size=0.0
+
+per_pixel_1=cx=x
+
+wavecode_0_enabled=1
+wavecode_0_r=1
+wavecode_0_g=0
+wavecode_0_b=0
+wavecode_0_mode=0
+wavecode_0_bDrawThick=0
+wavecode_0_bAdditive=1
+wavecode_0_scaling=1.0
+wavecode_0_smoothing=0.0
+wavecode_0_r=0.000000
+wavecode_0_g=1.000000
+wavecode_0_b=1.000000
+wavecode_0_a=1.000000
+wave_0_per_frame1=t1=if(above(bass,9.5),0.95,bass/10)
+wave_0_per_point1=x=0.01666 + 0.3*sample;
+wave_0_per_point2=y=t1 + value1/20;
+
+
+wavecode_1_enabled=1
+wavecode_1_r=0
+wavecode_1_g=1
+wavecode_1_b=0
+wavecode_1_mode=0
+wavecode_1_bDrawThick=0
+wavecode_1_bAdditive=1
+wavecode_1_scaling=1.0
+wavecode_1_smoothing=0.0
+wavecode_1_r=0.000000
+wavecode_1_g=1.000000
+wavecode_1_b=1.000000
+wavecode_1_a=1.000000
+wave_1_per_frame1=t1=if(above(mid,9.5),0.95,mid/10)
+wave_1_per_point1=x=0.35 + 0.3*sample;
+wave_1_per_point2=y=t1 + value2/20;
+
+
+wavecode_2_enabled=1
+wavecode_2_r=0
+wavecode_2_g=0
+wavecode_2_b=1
+wavecode_2_mode=0
+wavecode_2_bDrawThick=0
+wavecode_2_bAdditive=1
+wavecode_2_scaling=1.0
+wavecode_2_smoothing=0.0
+wavecode_2_r=0.000000
+wavecode_2_g=1.000000
+wavecode_2_b=1.000000
+wavecode_2_a=1.000000
+wave_2_per_frame1=t1=if(above(treb,9.5),0.95,treb/10)
+wave_2_per_point1=x=0.6833 + 0.3*sample;
+wave_2_per_point2=y=t1 + value1/20;
+These presets are designed to test very specific functionality to help with regression testing when code changes are made.

@@ -1,198 +1,223 @@
 # FLAC Player Architecture
 
-## System Architecture
+Last updated: July 2026
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        User Interface                        │
-│                      (React Components)                      │
-├─────────────────────────────────────────────────────────────┤
-│                                                              │
-│  ┌──────────────────┐         ┌─────────────────────────┐   │
-│  │   Player.tsx     │         │   WebGPU Visualizer     │   │
-│  │                  │◄────────┤   (Shader Interface)    │   │
-│  │  - URL Input     │         │                         │   │
-│  │  - Play/Pause    │         │  - Audio-reactive       │   │
-│  │  - Seek Bar      │         │  - Animated waves       │   │
-│  │  - Time Display  │         │  - Gradient effects     │   │
-│  └────────┬─────────┘         └──────────▲──────────────┘   │
-│           │                              │                   │
-└───────────┼──────────────────────────────┼───────────────────┘
-            │                              │
-            ▼                              │
-┌─────────────────────────────────────────┼───────────────────┐
-│                   Audio System           │                   │
-├──────────────────────────────────────────┴───────────────────┤
-│                                                               │
-│  ┌──────────────┐      ┌──────────────┐    ┌──────────────┐ │
-│  │ AudioLoader  │─────▶│ FlacDecoder  │───▶│ AudioPlayer  │ │
-│  │              │      │              │    │              │ │
-│  │ - Google     │      │ Web Audio    │    │ - Play/Pause │ │
-│  │   Bucket     │      │   API        │    │ - Seek       │ │
-│  │ - FTP        │      │ - Decode     │    │ - Volume     │ │
-│  │ - HTTP/HTTPS │      │   FLAC/WAV   │    │ - Analyser   │ │
-│  └──────────────┘      └──────────────┘    └──────┬───────┘ │
-│                                                    │         │
-│                                                    │         │
-│  ┌─────────────────────────────────────────────────┘         │
-│  │                                                           │
-│  │   ┌─────────────┐      ┌──────────────┐                 │
-│  └──▶│  Analyser   │─────▶│  Destination │                 │
-│      │    Node     │      │   (Speakers) │                 │
-│      └─────────────┘      └──────────────┘                 │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+## System overview
 
-## Data Flow
+The app is a React/TypeScript single-page player with a **five-backend audio engine**, **three-tier GPU visualizer fallback**, optional **projectM Milkdrop host**, and a **FastAPI library backend** (production default: `storage.noahcohn.com`).
 
-### 1. Loading Audio
-```
-User enters URL
-     │
-     ▼
-AudioLoader fetches file (CORS-enabled)
-     │
-     ▼
-FlacDecoder decodes using Web Audio API
-     │
-     ▼
-AudioPlayer stores AudioBuffer
-```
+```mermaid
+flowchart TB
+  subgraph UI["React UI"]
+    Player["Player.tsx"]
+    Library["LibraryView"]
+    Queue["QueuePanel"]
+    Shell["VisualizerShell"]
+    ShaderGUI["ShaderGUI (WebGPU/WebGL2)"]
+    ProjectM["ProjectMHost (optional WASM)"]
+  end
 
-### 2. Playing Audio
-```
-User clicks Play
-     │
-     ▼
-AudioPlayer creates BufferSourceNode
-     │
-     ├─▶ GainNode (volume control)
-     │       │
-     │       ▼
-     ├─▶ AnalyserNode (frequency data)
-     │       │
-     │       ├─▶ WebGPU Visualizer (shader rendering)
-     │       │
-     │       ▼
-     └─▶ Destination (speakers)
+  subgraph Audio["Audio engine (pick one)"]
+    Streaming["StreamingAudioPlayer<br/>default — HTMLAudio + range requests"]
+    WebAudio["AudioPlayer<br/>buffered Web Audio API"]
+    Worklet["AudioWorkletPlayer<br/>worklet + libflac decode"]
+    SDL3["SdlAudioPlayer<br/>SDL3 WASM"]
+    SDL2["Sdl2AudioPlayer<br/>SDL2 WASM"]
+  end
+
+  subgraph Load["Loading & library"]
+    Loader["audioLoader.ts"]
+    SongApi["api/songApi.ts"]
+    TrackCache["storage/trackCache.ts"]
+    LibCache["storage/libraryCache.ts"]
+  end
+
+  subgraph FX["Shared audio graph"]
+    ACM["AudioContextManager"]
+    EQ["EQChain (10-band)"]
+    Analyser["AnalyserNode"]
+  end
+
+  subgraph Viz["Visualizer fallback chain"]
+    WebGPU["WebGPUVisualizer"]
+    WebGL2["WebGL2Visualizer"]
+    Canvas2D["Canvas2D bars"]
+  end
+
+  Player --> Audio
+  Player --> Shell
+  Shell --> ShaderGUI
+  Shell --> ProjectM
+  Player --> Loader
+  Loader --> SongApi
+  Loader --> TrackCache
+  SongApi --> LibCache
+
+  Streaming --> ACM
+  WebAudio --> ACM
+  Worklet --> ACM
+  SDL3 --> ACM
+  SDL2 --> ACM
+  ACM --> EQ --> Analyser
+  Analyser --> Viz
+  Worklet -->|PCM tap| ProjectM
+  SDL3 -->|PCM ring bridge| Analyser
+  SDL2 -->|PCM ring bridge| Analyser
 ```
 
-### 3. Seeking
+## Audio data flow
+
+### Library track (typical path)
+
 ```
-User drags seek slider
-     │
-     ▼
-Calculate new position
-     │
-     ▼
-Stop current playback
-     │
-     ▼
-Start new playback at position
+User selects track in LibraryView / QueuePanel
+    ↓
+Player.tsx → audioLoader.fetchLibrary() / playTrack()
+    ↓
+GET https://storage.noahcohn.com/api/songs  (or REACT_APP_API_URL)
+    ↓
+Each song.url is an absolute https:// URL to the audio file
+    ↓
+createAudioBackend(outputMode) → one of five players
+    ↓
+AudioContextManager (shared context, EQ chain, analyser, volume)
+    ↓
+AnalyserNode → VisualizerShell → WebGPU / WebGL2 / Canvas2D / projectM
+    ↓
+Destination → speakers
 ```
 
-## Component Responsibilities
+### Buffered decode path (Web Audio, Worklet, SDL)
 
-### Player Component (React)
-- **UI State Management**: Controls, progress, loading states
-- **User Interaction**: Button clicks, slider changes, URL input
-- **Coordination**: Connects AudioPlayer with WebGPU Visualizer
-- **Error Handling**: Displays error messages to user
+```
+fetch(url) → ArrayBuffer
+    ↓
+flacDecoder.ts / audioDecoder.ts / flacDecoderWorker.ts
+    ↓
+AudioBuffer (or streaming chunks into worklet ring buffer)
+    ↓
+Backend-specific playback nodes
+```
 
-### AudioLoader
-- **HTTP Fetching**: Downloads audio files via fetch API
-- **Source Handling**: Supports Google Bucket, FTP, direct URLs
-- **CORS Management**: Handles cross-origin requests
-- **Error Handling**: Network and loading errors
+### Streaming path (default)
 
-### FlacDecoder
-- **Audio Decoding**: Uses Web Audio API's decodeAudioData
-- **Format Support**: FLAC, WAV (browser-native support)
-- **Buffer Creation**: Prepares AudioBuffer for playback
-- **Channel Management**: Handles mono/stereo audio
+```
+loadFromURL(url) → HTMLAudioElement.src = url
+    ↓
+Browser HTTP range requests (Accept-Ranges on CDN/nginx)
+    ↓
+MediaElementAudioSourceNode → GainNode → AudioContextManager
+    ↓
+Optional 3s crossfade via second <audio> element
+```
 
-### AudioPlayer
-- **Playback Control**: Play, pause, stop, seek
-- **State Management**: Current time, duration, playing state
-- **Audio Graph**: Manages Web Audio API nodes
-- **Callbacks**: Notifies UI of state changes
+No full-file download before playback starts. Requires CORS + `Accept-Ranges` on the audio host.
 
-### WebGPU Visualizer
-- **GPU Initialization**: Sets up WebGPU device and context
-- **Shader Compilation**: WGSL shader code for visualization
-- **Uniform Management**: Passes audio data to shaders
-- **Animation Loop**: Continuous rendering at 60fps
-- **Audio Reactivity**: Visualizes frequency data
+## Five audio backends
 
-## Technology Stack Details
+| Mode | Module | Load model | Best for |
+|------|--------|------------|----------|
+| `streaming` (default) | `streamingAudioPlayer.ts` | URL → `<audio>` | Large library, instant start, crossfade |
+| `web-audio` | `audioPlayer.ts` | Full fetch + decode | Simple buffered playback, debugging |
+| `worklet` | `audioWorkletPlayer.ts` | Fetch/decode → worklet ring | Low latency, projectM PCM tap, EQ |
+| `sdl` | `sdlAudioPlayer.ts` | Full fetch → WASM SDL3 | Experimental WASM output path |
+| `sdl2` | `sdl2AudioPlayer.ts` | Full fetch → WASM SDL2 | Same, SDL2 + AudioWorklet glue |
 
-### Frontend
-- **React 18**: Component-based UI
-- **TypeScript**: Type safety and IDE support
-- **CSS3**: Modern styling with gradients
+Backend factory: `src/audio/createAudioBackend.ts` (dynamic `import()` — WASM chunks load lazily).
 
-### Audio Processing
-- **Web Audio API**: Browser-native audio processing
-- **AnalyserNode**: Real-time frequency analysis
-- **AudioBuffer**: In-memory audio storage
-- **BufferSourceNode**: Audio playback
+See [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) for selection guidance.
 
-### Visualization
-- **WebGPU**: Modern GPU API
-- **WGSL**: WebGPU Shading Language
-- **Uniform Buffers**: Data transfer to GPU
-- **Canvas API**: Rendering surface
+## Visualizer stack
 
-### Build System
-- **Webpack 5**: Module bundling
-- **Babel**: JavaScript transpilation
-- **TypeScript Compiler**: Type checking
-- **ESLint**: Code quality
+### Aesthetic modes (`VisualizerShell`)
 
-## Performance Considerations
+| Mode | URL / storage | GPU use |
+|------|---------------|---------|
+| ShaderGUI | `?aesthetic=shadergui` (default) | WebGPU or WebGL2 |
+| projectM | `?aesthetic=projectm` | projectM WASM only; ShaderGUI controls-only |
+| Split | `?aesthetic=split` | ShaderGUI lite (WebGL2) + projectM |
 
-### Audio
-- Decoding happens once when loading
-- Playback uses optimized Web Audio API
-- Minimal CPU usage during playback
+### Renderer fallback (`src/visuals/rendererSelection.ts`)
 
-### Visualization
-- GPU-accelerated rendering via WebGPU
-- 60fps animation loop
-- Efficient uniform buffer updates
-- Fallback for non-WebGPU browsers
+```
+WebGPU → WebGL2 → Canvas2D
+```
 
-### Build
-- Code splitting for optimal loading
-- Minification and tree-shaking
-- Total bundle size: ~157 KB
-- Fast initial load time
+Override: `?visualizer=webgl2`, `localStorage`, or `window.DEBUG_VISUALIZER`.
 
-## Browser Compatibility
+### PCM to projectM
 
-### Required
-- Modern browser (Chrome 90+, Firefox 88+, Safari 14+)
-- Web Audio API support (all modern browsers)
-- ES2020 JavaScript support
+```
+AudioWorkletPlayer.setPCMCallback()
+    ↓
+createProjectMPCMFeed() in projectMBridge.ts
+    ↓
+In-app ProjectMHost OR postMessage / BroadcastChannel('projectm-audio')
+```
 
-### Optional
-- WebGPU support (Chrome 113+, Edge 113+)
-- Application works without WebGPU, just no visualization
+## Shared audio infrastructure
 
-## Security
+### AudioContextManager (`src/audio/AudioContextManager.ts`)
 
-### CORS
-- All audio fetching uses CORS mode
-- Requires properly configured audio sources
-- No credentials sent with requests
+- Single shared `AudioContext`
+- 10-band EQ via `EQChain.ts`
+- `connectInput()` / `connectVisualizerFeed()` routing
+- SDL backends mute Web Audio destination while WASM owns speakers; PCM is tapped back for the analyser
 
-### Content Security
-- No eval() or unsafe code execution
-- No inline scripts in HTML
-- Strict type checking via TypeScript
+### SDL PCM bridge (`src/audio/SdlPcmBridge.ts`)
 
-### Data Privacy
-- No data collection
-- No external analytics
-- Purely client-side application
+Lock-free ring in C++ (`src/sdl/pcm_ring.h`) → AudioWorklet tap → real `AnalyserNode` data for SDL3/SDL2.
+
+## Library & storage (client)
+
+| Module | Role |
+|--------|------|
+| `api/songApi.ts` | REST client for songs, tags, share, upload, MusicBrainz |
+| `storage/libraryCache.ts` | TTL cache for `/api/songs` responses |
+| `storage/trackCache.ts` | Cache API offline track storage (LRU, 500 MB default) |
+| `storage/queueStorage.ts` | Persisted queue + repeat/shuffle |
+| `components/OfflineCache.tsx` | Per-track download / evict UI |
+
+Production API: **`https://storage.noahcohn.com`** (`REACT_APP_API_URL`).
+
+## Backend API (FastAPI)
+
+Local/dev: `app.py` on port 7860. Production library and static audio files are served from `storage.noahcohn.com`.
+
+Key endpoints: `GET /api/songs`, `POST /api/songs/{id}/play`, `POST /api/share`, `GET /api/share/{id}`. Full contract: [API.md](./API.md).
+
+## Build & WASM artifacts
+
+| Artifact | Build command | Committed in `public/` |
+|----------|---------------|------------------------|
+| SDL3 | `npm run build:wasm:sdl3` or `bash src/sdl/build.sh` | `sdl-audio.js`, `sdl-audio.wasm` |
+| SDL2 | `npm run build:wasm:sdl2` or `bash src/sdl/build_sdl2.sh` | `sdl2-audio.js`, `sdl2-audio.wasm` |
+| projectM | `npm run build:projectm` | `projectm/projectm-host.*` (optional) |
+
+CI runs `npm run verify:wasm` against `public/wasm-source.sha256`. Production webpack uses `--env skipWasm=true` and copies prebuilt binaries.
+
+## Cross-origin isolation
+
+Required for AudioWorklet, SharedArrayBuffer, SDL pthread builds, and projectM WASM:
+
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+Configured in `webpack.config.js` (dev), `netlify.toml`, and `vercel.json`.
+
+## Testing
+
+```bash
+npm run test:decoder   # libflac decode unit test
+npm run test:e2e       # Playwright smoke tests (tests/smoke.spec.ts)
+npm run typecheck && npm run lint
+```
+
+## Related docs
+
+- [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) — backend selection guide
+- [API.md](./API.md) — REST + projectM embed contract
+- [DEVELOPER_CONTEXT.md](./DEVELOPER_CONTEXT.md) — complexity hotspots for agents
+- [ROADMAP.md](./ROADMAP.md) — open GitHub issues #166–#174

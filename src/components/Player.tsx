@@ -5,6 +5,8 @@ import {
   AudioLoader,
   PlaylistTrack,
   loadQueueFromStorage,
+  selectDecodeStrategy,
+  type PlaybackPathInfo,
 } from '../audioLoader';
 
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -12,15 +14,19 @@ import { usePlayerState } from '../hooks/usePlayerState';
 import { useToastNotifications } from '../hooks/useToastNotifications';
 import { useAudioSettings } from '../hooks/useAudioSettings';
 import { usePlayerData } from '../hooks/usePlayerData';
-import { ShaderGUI } from './ShaderGUI/ShaderGUI';
+import { VisualizerShell } from './VisualizerShell';
 import { ToastContainer } from './Toast';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { PlayerFallbackView } from './PlayerFallbackView';
 import { EmbedPlayerView } from './EmbedPlayerView';
 import { handleQueueAutoAdvance, getNextQueueIndex, getPreviousQueueIndex } from '../utils/queueUtils';
 import { shuffleArray, getPreferredStorageUrls, isFastStorageUrl } from '../utils/audioUtils';
-import { startProjectMBridge, sendProjectMPCM, closeProjectMBridgeChannel } from '../utils/projectMBridge';
+import { createProjectMPCMFeed, notifyInAppProjectMTrackChange } from '../utils/projectMBridge';
 import { IS_PROJECTM_EMBED } from '../utils/embedMode';
+import {
+  getInitialVisualizerAesthetic,
+  VisualizerAesthetic,
+} from '../utils/visualizerMode';
 import { clearTrackCache, getOrFetchTrack } from '../storage/trackCache';
 import './Player.css';
 
@@ -63,6 +69,10 @@ export const Player: React.FC = () => {
   const [currentFile, setCurrentFile] = useState<File | undefined>(undefined);
   const [showHelp, setShowHelp] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
+  const [visualizerAesthetic, setVisualizerAesthetic] = useState<VisualizerAesthetic>(
+    () => getInitialVisualizerAesthetic()
+  );
+  const [playbackPath, setPlaybackPath] = useState<PlaybackPathInfo | null>(null);
 
   const playerRef = useRef<ConfigurableAudioBackend | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -200,41 +210,47 @@ export const Player: React.FC = () => {
   // =============================================================================
 
   useEffect(() => {
-    const player = createAudioBackend(outputMode);
     let cancelled = false;
+    let stopProjectMBridge: (() => void) | null = null;
+    let activePlayer: ConfigurableAudioBackend | null = null;
 
-    player.setStateChangeCallback(setPlayerState);
-    player.setOnEndedCallback(() => handleAutoAdvanceRef.current());
-    playerRef.current = player;
-    player.setVolume(muted ? 0 : volume);
-    player.setEQGains(eqGains);
-    player.setPlaybackRate(playbackRate);
-    player.setCrossfadeEnabled?.(crossfadeEnabled);
+    void createAudioBackend(outputMode).then((player) => {
+      if (cancelled) {
+        player.destroy();
+        return;
+      }
 
-    let stopProjectMBridge: () => void;
-    const setPCMCallback = player.setPCMCallback?.bind(player);
-    if (setPCMCallback) {
-      setPCMCallback((buffer, channels) => sendProjectMPCM(buffer, channels));
-      stopProjectMBridge = () => { setPCMCallback(undefined); closeProjectMBridgeChannel(); };
-    } else {
-      const analyser = player.getAnalyser();
-      stopProjectMBridge = analyser ? startProjectMBridge(analyser) : () => {};
-    }
+      activePlayer = player;
+      player.setStateChangeCallback(setPlayerState);
+      player.setOnEndedCallback(() => handleAutoAdvanceRef.current());
+      playerRef.current = player;
+      player.setVolume(muted ? 0 : volume);
+      player.setEQGains(eqGains);
+      player.setPlaybackRate(playbackRate);
+      player.setCrossfadeEnabled?.(crossfadeEnabled);
 
-    void player.initialize().then(() => {
-      if (cancelled || pendingFilesRef.current.length === 0) return;
-      const files = pendingFilesRef.current;
-      pendingFilesRef.current = [];
-      setTimeout(() => files.forEach((file, i) => setTimeout(() => loadLocalFile(file), i * 100)), 0);
+      stopProjectMBridge = createProjectMPCMFeed(player);
+
+      void player.initialize().then(() => {
+        if (cancelled || pendingFilesRef.current.length === 0) return;
+        const files = pendingFilesRef.current;
+        pendingFilesRef.current = [];
+        setTimeout(() => files.forEach((file, i) => setTimeout(() => loadLocalFile(file), i * 100)), 0);
+      }).catch((err: unknown) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : `${outputMode} initialization failed`);
+      });
     }).catch((err: unknown) => {
       if (!cancelled) setError(err instanceof Error ? err.message : `${outputMode} initialization failed`);
     });
 
     return () => {
       cancelled = true;
-      stopProjectMBridge();
-      player.setOnEndedCallback(undefined);
-      player.destroy();
+      stopProjectMBridge?.();
+      activePlayer?.setOnEndedCallback(undefined);
+      activePlayer?.destroy();
+      if (playerRef.current === activePlayer) {
+        playerRef.current = null;
+      }
     };
   }, [outputMode, loadLocalFile]);
 
@@ -279,14 +295,40 @@ export const Player: React.FC = () => {
     if (!url.trim() || !playerRef.current) return;
     setPlayerState(prev => ({ ...prev, isLoading: true }));
     setError('');
+    const expectedDuration = track?.duration && track.duration > 0 ? track.duration : undefined;
+
     try {
       const candidateUrls = getPreferredStorageUrls(url);
       let loaded = false;
       let lastError: unknown;
       for (const candidateUrl of candidateUrls) {
         try {
-          if (outputMode === 'streaming' && playerRef.current.loadFromURL) {
-            await playerRef.current.loadFromURL(candidateUrl);
+          const player = playerRef.current;
+
+          if (outputMode === 'streaming' && player.loadFromURL) {
+            await player.loadFromURL(candidateUrl, { expectedDuration });
+            setPlaybackPath(player.getPlaybackPath?.() ?? null);
+          } else if (outputMode === 'worklet') {
+            const probe = await loader.probeAudioUrl(candidateUrl);
+            const strategy = selectDecodeStrategy(probe.contentLength, {
+              outputMode: 'worklet',
+              url: candidateUrl,
+            });
+            if (strategy === 'hifi-stream' && player.loadFromURLStreaming) {
+              await player.loadFromURLStreaming(candidateUrl, { expectedDuration });
+              setPlaybackPath(player.getPlaybackPath?.() ?? null);
+            } else {
+              let arrayBuffer: ArrayBuffer;
+              try {
+                const response = await getOrFetchTrack(candidateUrl);
+                arrayBuffer = await response.arrayBuffer();
+              } catch (cacheErr) {
+                console.warn('Offline cache miss or error, falling back to network fetch:', cacheErr);
+                arrayBuffer = await loader.loadFromURL(candidateUrl);
+              }
+              await player.loadFromArrayBuffer(arrayBuffer);
+              setPlaybackPath(player.getPlaybackPath?.() ?? null);
+            }
           } else {
             let arrayBuffer: ArrayBuffer;
             try {
@@ -296,7 +338,8 @@ export const Player: React.FC = () => {
               console.warn('Offline cache miss or error, falling back to network fetch:', cacheErr);
               arrayBuffer = await loader.loadFromURL(candidateUrl);
             }
-            await playerRef.current.loadFromArrayBuffer(arrayBuffer);
+            await player.loadFromArrayBuffer(arrayBuffer);
+            setPlaybackPath(null);
           }
           loaded = true;
           break;
@@ -326,6 +369,7 @@ export const Player: React.FC = () => {
     setLoadingTrackId(track.id);
     if (index !== undefined) setQueueCurrentIndex(index);
     setError('');
+    notifyInAppProjectMTrackChange();
     try {
       await loadAudioFromUrl(track.url, track);
       const maybePromise = playerRef.current?.play();
@@ -574,7 +618,9 @@ export const Player: React.FC = () => {
             </div>
           </div>
         )}
-        <ShaderGUI
+        <VisualizerShell
+          aesthetic={visualizerAesthetic}
+          onAestheticChange={setVisualizerAesthetic}
           analyser={playerRef.current?.getAnalyser() || null}
           currentTrack={currentTrack} queue={queue} queueCurrentIndex={queueCurrentIndex}
           isPlaying={playerState.isPlaying} isLoading={playerState.isLoading}
@@ -627,6 +673,7 @@ export const Player: React.FC = () => {
       eqGains={eqGains} setEQBandGain={setEQBandGain} resetEQ={resetEQ}
       playbackRate={playbackRate} setPlaybackRate={setPlaybackRate}
       crossfadeEnabled={crossfadeEnabled} setCrossfadeEnabled={setCrossfadeEnabled}
+      playbackPath={playbackPath}
       isSharedPlaylist={isSharedPlaylist} sharedPlaylistTitle={sharedPlaylistTitle}
       analyser={playerRef.current?.getAnalyser() || null}
       onTrackClick={(track) => { addToQueue(track); playTrack(track, queue.length); }}

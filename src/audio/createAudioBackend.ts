@@ -1,21 +1,31 @@
-import { AudioPlayer } from '../audioPlayer';
-import { AudioWorkletPlayer } from '../audioWorkletPlayer';
-import { Sdl2AudioPlayer } from '../sdl2AudioPlayer';
-import { SdlAudioPlayer } from '../sdlAudioPlayer';
-import { StreamingAudioPlayer } from '../streamingAudioPlayer';
 import type { AudioOutputMode } from '../hooks/usePlayerState';
 import { AudioContextManager, sharedAudioContextManager } from './AudioContextManager';
 import type { ConfigurableAudioBackend } from '../types/audio';
 
-export function createAudioBackend(
+export async function createAudioBackend(
   mode: AudioOutputMode,
   contextManager: AudioContextManager = sharedAudioContextManager
-): ConfigurableAudioBackend {
+): Promise<ConfigurableAudioBackend> {
   switch (mode) {
-    case 'streaming': return new StreamingAudioPlayer(contextManager);
-    case 'worklet': return new AudioWorkletPlayer(contextManager);
-    case 'sdl': return new SdlAudioPlayer(contextManager);
-    case 'sdl2': return new Sdl2AudioPlayer(contextManager);
-    case 'web-audio': return new AudioPlayer(contextManager);
+    case 'streaming': {
+      const { StreamingAudioPlayer } = await import('../streamingAudioPlayer');
+      return new StreamingAudioPlayer(contextManager);
+    }
+    case 'worklet': {
+      const { AudioWorkletPlayer } = await import('../audioWorkletPlayer');
+      return new AudioWorkletPlayer(contextManager);
+    }
+    case 'sdl': {
+      const { SdlAudioPlayer } = await import('../sdlAudioPlayer');
+      return new SdlAudioPlayer(contextManager);
+    }
+    case 'sdl2': {
+      const { Sdl2AudioPlayer } = await import('../sdl2AudioPlayer');
+      return new Sdl2AudioPlayer(contextManager);
+    }
+    case 'web-audio': {
+      const { AudioPlayer } = await import('../audioPlayer');
+      return new AudioPlayer(contextManager);
+    }
   }
 }

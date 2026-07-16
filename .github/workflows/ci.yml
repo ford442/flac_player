@@ -18,7 +18,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm run build -- --env skipWasm=true 2>/dev/null || npx webpack --mode=production
+      - run: npm run verify:wasm
+      - run: npm run build -- --env skipWasm=true
 
   unit-tests:
     runs-on: ubuntu-latest
@@ -29,6 +30,7 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: npm ci
+      - run: npm run test:unit
       - run: npm run test:decoder
 
   e2e-smoke:
@@ -40,8 +42,50 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: npm ci
-      # Remove stale third-party APT entries that can cause apt-get update to 403 in this runner.
       - name: Clean APT sources to fix Microsoft repo 403 errors
         run: sudo rm -f /etc/apt/sources.list.d/azure-cli.list /etc/apt/sources.list.d/microsoft-prod.list && sudo apt-get update
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
+  # Compile WASM when SDL sources change on PRs (validates emsdk build + committed artifacts).
+  wasm-build:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: wasm_changes
+        with:
+          filters: |
+            wasm:
+              - 'src/sdl/**'
+              - 'scripts/build-wasm.sh'
+              - 'scripts/wasm-source-hash.sh'
+              - 'scripts/emsdk-env.sh'
+      - name: Install Emscripten
+        if: steps.wasm_changes.outputs.wasm == 'true'
+        run: |
+          git clone https://github.com/emscripten-core/emsdk.git --depth 1
+          cd emsdk
+          ./emsdk install latest
+          ./emsdk activate latest
+      - name: Build WASM targets
+        if: steps.wasm_changes.outputs.wasm == 'true'
+        run: |
+          source emsdk/emsdk_env.sh
+          npm run build:wasm
+      - name: Check for uncommitted WASM output
+        if: steps.wasm_changes.outputs.wasm == 'true'
+        run: |
+          git diff --exit-code public/sdl-audio.js public/sdl-audio.wasm \
+            public/sdl2-audio.js public/sdl2-audio.wasm public/wasm-source.sha256 \
+            || (echo "::error::WASM build produced diffs. Run npm run build:wasm locally and commit public/ artifacts." && exit 1)

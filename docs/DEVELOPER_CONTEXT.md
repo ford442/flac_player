@@ -1,77 +1,85 @@
 # DEVELOPER CONTEXT
 
+Last updated: July 2026
+
 ## 1. High-Level Architecture & Intent
 
-*   **Core Purpose:** This application is a high-performance audio player designed to play high-fidelity formats (FLAC, WAV) directly in the browser. It features a dual-backend audio engine (switching between native Web Audio API and a C++ SDL3-based WASM module) and a real-time, hardware-accelerated audio visualizer using WebGPU.
+*   **Core Purpose:** High-performance in-browser audio player for FLAC/WAV and library-backed streaming. Features a **five-backend audio engine** (streaming, Web Audio, AudioWorklet, SDL3 WASM, SDL2 WASM) and multi-tier visualization (WebGPU ShaderGUI, WebGL2/Canvas2D fallbacks, optional projectM Milkdrop host).
 *   **Tech Stack:**
     *   **Frontend:** React 18, TypeScript, CSS3.
-    *   **Build System:** Webpack 5 (custom config), Babel.
-    *   **Audio Engines:**
-        *   *Native:* Web Audio API (`AudioContext`, `AudioBufferSourceNode`, `AnalyserNode`).
-        *   *WASM:* SDL3 (Simple DirectMedia Layer) compiled via Emscripten to WebAssembly, utilizing AudioWorklets and Pthreads.
-    *   **Visualization:** WebGPU (WGSL shaders) primary; WebGL2 (GLSL reference) and Canvas2D fallbacks via `src/visuals/rendererSelection.ts`.
-    *   **Deployment:** Python script (`deploy.py`) using Paramiko for SFTP.
+    *   **Build:** Webpack 5, Babel, lazy dynamic imports for WASM backends.
+    *   **Audio Engines:** See [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md). Default is `StreamingAudioPlayer` (HTMLAudio + range requests).
+    *   **Visualization:** WebGPU primary; WebGL2 + Canvas2D via `src/visuals/rendererSelection.ts`; projectM WASM optional.
+    *   **Backend API:** FastAPI (`app.py`); production at `storage.noahcohn.com`.
 *   **Design Patterns:**
-    *   **Strategy Pattern (Audio Backend):** The `Player` component switches between `AudioPlayer` (native) and `SdlAudioPlayer` (WASM) implementations based on user selection. Both adhere to a similar implicit interface (load, play, pause, seek).
-    *   **Observer Pattern:** The players accept a `setStateChangeCallback` to notify the UI of playback progress and status updates.
-    *   **Singleton/Global Factory:** The SDL WASM module is loaded once globally (`window.createSdlAudioModule`).
+    *   **Strategy Pattern:** `createAudioBackend(mode)` returns a `ConfigurableAudioBackend` implementation.
+    *   **Observer Pattern:** Players call `setStateChangeCallback` for UI updates.
+    *   **Shared context:** `AudioContextManager` owns one `AudioContext`, EQ chain, and analyser routing.
 
 ## 2. Feature Map
 
-*   **Audio Playback Orchestration:**
-    *   **Entry Point:** `src/components/Player.tsx`
-    *   **Description:** Manages UI state, handles user input (URL, play/pause, seek), and instantiates the selected audio backend.
-*   **Native Audio Engine:**
-    *   **Entry Point:** `src/audioPlayer.ts`
-    *   **Description:** Standard Web Audio API implementation. Handles decoding (`flacDecoder.ts`) and playback nodes.
-*   **SDL3 WASM Audio Engine:**
-    *   **Entry Point:** `src/sdlAudioPlayer.ts` (TypeScript wrapper) & `src/sdl/audio_engine.cpp` (C++ source).
-    *   **Description:** A more complex engine providing an alternative playback path. Compiles C++ SDL3 code to WASM. Requires specific memory management interactions between JS and WASM.
-*   **WebGPU Visualizer:**
-    *   **Entry Point:** `src/webgpuVisualizer.ts`
-    *   **Description:** Renders audio-reactive graphics (flat waveform or 3D cube) using raw WebGPU commands and WGSL shaders. Connects to the audio `AnalyserNode`.
-*   **WebGL2 Fallback Visualizer:**
-    *   **Entry Point:** `src/visuals/webgl2/WebGL2Visualizer.ts`
-    *   **Description:** GLSL port of the ShaderGUI waveform shader for visual debugging when WebGPU is unavailable or hard to inspect. Shares uniform/audio packing via `src/visuals/visualSync.ts`. Toggle with `?visualizer=webgl2` or the ShaderGUI debug panel.
-*   **Audio Loading & Playlist:**
-    *   **Entry Point:** `src/audioLoader.ts`
-    *   **Description:** Handles fetching files from HTTP, Google Cloud Storage (`gs://` protocol conversion), and FTP proxies. Fetches playlist metadata from `ford442-storage-manager.hf.space`.
+| Feature | Entry point |
+|---------|-------------|
+| Player orchestration | `src/components/Player.tsx` |
+| Backend factory | `src/audio/createAudioBackend.ts` |
+| Streaming (default) | `src/streamingAudioPlayer.ts` |
+| Buffered Web Audio | `src/audioPlayer.ts` |
+| AudioWorklet + PCM tap | `src/audioWorkletPlayer.ts` |
+| SDL3 / SDL2 WASM | `src/sdlAudioPlayer.ts`, `src/sdl2AudioPlayer.ts` |
+| SDL → analyser bridge | `src/audio/SdlPcmBridge.ts`, `src/sdl/pcm_ring.h` |
+| Library / API client | `src/api/songApi.ts`, `src/audioLoader.ts` |
+| Offline cache | `src/storage/trackCache.ts`, `src/components/OfflineCache.tsx` |
+| EQ / crossfade settings | `src/audio/EQChain.ts`, `src/hooks/useAudioSettings.ts` |
+| Visualizer shell | `src/components/VisualizerShell.tsx` |
+| ShaderGUI | `src/components/ShaderGUI/ShaderGUI.tsx` |
+| projectM host | `src/components/ProjectMHost.tsx`, `src/projectm/ProjectMEngine.ts` |
+| Renderer selection | `src/visuals/rendererSelection.ts` |
 
 ## 3. Complexity Hotspots
 
-*   **WASM Memory Management & Interop (`src/sdlAudioPlayer.ts`):**
-    *   **Why it's complex:** Passing audio data from JavaScript (Float32Array) to the C++ WASM heap is dangerous. The code must manually allocate memory (`_malloc`), locate the correct buffer view (`wasmMemory.buffer`, `HEAPU8`, etc.), and copy data.
-    *   **Agent Note:** **CRITICAL WARNING.** Emscripten builds with `PTHREADS` and `AUDIO_WORKLET` change how the WASM memory buffer is exposed (`wasmMemory.buffer` vs `HEAPU8.buffer`). The current implementation attempts multiple fallbacks. *Always* verify that `malloc` succeeds and that you are writing to a valid view of the WASM memory. Incorrect access here causes silent failures or browser crashes.
-*   **SharedArrayBuffer & Security Headers (`webpack.config.js`):**
-    *   **Why it's complex:** The SDL3 WASM build uses `SharedArrayBuffer` for threading. Browsers require specific security headers (`Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Embedder-Policy: require-corp`) to enable this.
-    *   **Agent Note:** If the WASM player fails to load or `SharedArrayBuffer` is undefined, check these headers first. This requirement complicates loading resources from cross-origin domains (CDNs, storage buckets) unless they also serve CORP headers.
-*   **WebGPU Resource Lifecycle (`src/webgpuVisualizer.ts`):**
-    *   **Why it's complex:** WebGPU requires manual management of buffers, pipelines, and textures. The `render` loop runs at 60fps.
-    *   **Agent Note:** Ensure that `destroy()` is called and correctly releases all GPU resources when the component unmounts to prevent memory leaks. Watch out for race conditions where the visualizer might try to render after the device has been destroyed.
+*   **WASM memory interop (`sdlAudioPlayer.ts`, `sdl2AudioPlayer.ts`):**
+    *   Manual `malloc`, HEAP views, channel interleaving. PTHREADS builds expose memory differently (`wasmMemory.buffer` vs `HEAPU8.buffer`).
+*   **SDL PCM ring → AudioWorklet (`SdlPcmBridge.ts`):**
+    *   C++ ring buffer written in the SDL audio callback; JS worklet reads and feeds `AnalyserNode`. Required for visualization when SDL owns speaker output.
+*   **Cross-origin isolation (`webpack.config.js`, hosting headers):**
+    *   COOP/COEP required for AudioWorklet, SharedArrayBuffer, SDL pthreads, projectM WASM.
+*   **WebGPU lifecycle (`webgpuVisualizer.ts`):**
+    *   Manual resource cleanup in `destroy()`; 60 fps rAF loop.
+*   **ShaderGUI ↔ WGSL alignment (`waveform.ts`, `ShaderGUI.css`):**
+    *   Knob/LED glow UVs are hardcoded to CSS layout — recalibrate both when changing layout.
 
 ## 4. Inherent Limitations & "Here be Dragons"
 
-*   **Known Issues:**
-    *   **Test Suite:** There is no configured test runner (`npm test` fails). Tests must be run manually or added.
-    *   **SDL Analyser:** The SDL audio player does not currently expose a real Web Audio `AnalyserNode` to the visualizer. It returns a dummy/empty analyser, meaning the visualizer may flatline or show static data when using the SDL backend.
-*   **Technical Debt:**
-    *   **Hardcoded Deploy Credentials:** `deploy.py` contains logic for specific servers (`1ink.us`). Credentials or paths might need configuration for other environments.
-    *   **Build Artifacts in Source Control:** The `dist` folder logic relies on `copy-webpack-plugin` to move pre-built or public artifacts. `src/sdl/build.sh` manually places outputs in `public/`.
-*   **Hard Constraints:**
-    *   **HTTPS Requirement:** Due to `SharedArrayBuffer`, the app *must* be served over HTTPS (or `localhost`) with the correct isolation headers. It will not work on standard HTTP or insecure contexts.
+*   **Streaming vs buffered:** Streaming cannot load raw ArrayBuffers; buffered backends cannot crossfade. Mode switch resets playback.
+*   **Test coverage:** Playwright smoke tests exist; no full audio pipeline integration suite yet ([#172](https://github.com/ford442/flac_player/issues/172)).
+*   **Deploy credentials:** `deploy.py` contains environment-specific SFTP config.
+*   **HTTPS + isolation:** App requires secure context with COOP/COEP for worklet/SDL/projectM paths.
 
-## 5. Dependency Graph & Key Flows
+## 5. Key Flows
 
-**Critical Flow: Load and Play Audio**
+**Load and play (streaming — default)**
 
-1.  **User Action:** Enters URL or selects Playlist item -> `Player.tsx`.
-2.  **Fetch:** `AudioLoader.loadFromURL(url)` performs `fetch()`.
-    *   *Normalization:* Converts `gs://` -> `https://storage.googleapis.com`.
-3.  **Decode:**
-    *   Returns `ArrayBuffer`.
-    *   `FlacDecoder.decode()` uses `AudioContext.decodeAudioData()`.
-4.  **Backend Dispatch:**
-    *   *If Web Audio:* `AudioPlayer` creates `AudioBuffer` -> `BufferSource` -> `Destination`.
-    *   *If SDL:* `SdlAudioPlayer` interleaves channels -> `malloc` WASM memory -> `_set_audio_data` -> C++ Engine Playback.
-5.  **Visualization:**
-    *   `requestAnimationFrame` -> `WebGPUVisualizer.render()` -> Reads `AnalyserNode` data -> Updates GPU Uniforms -> Draws.
+1. User selects track → `Player.tsx` → `audioLoader` resolves URL from API.
+2. `createAudioBackend('streaming')` → `StreamingAudioPlayer.loadFromURL(url)`.
+3. `<audio src>` + `MediaElementAudioSourceNode` → `AudioContextManager` → EQ → analyser → visualizer.
+4. Optional: `preloadNextTrack` + crossfade 3 s before track end.
+
+**Load and play (worklet — projectM PCM)**
+
+1. `fetch` → decode → `AudioWorkletPlayer` ring buffer.
+2. `createProjectMPCMFeed(player)` wires `setPCMCallback` → `projectMBridge` → in-app `ProjectMHost` or external embed.
+
+**Library fetch**
+
+1. `songApi.fetchSongs()` → `GET /api/songs` on `REACT_APP_API_URL` (default `storage.noahcohn.com`).
+2. Response cached in `libraryCache.ts` (TTL). Each item includes absolute `https://` `url`.
+
+## 6. Debug logging
+
+Set `REACT_APP_DEBUG=true` in `.env`. Central helper: `src/utils/debug.ts` (used by `audioLoader.ts`, `api/songApi.ts`). **Off by default** in production builds.
+
+## 7. Related docs
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md)
+- [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md)
+- [ROADMAP.md](./ROADMAP.md)

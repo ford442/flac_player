@@ -1,9 +1,11 @@
 import { decodeAudio } from './audioDecoder';
 import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
+import { SdlPcmModule, sharedSdlPcmBridge } from './audio/SdlPcmBridge';
+import { WASM_ASSETS, loadWasmScript } from './audio/wasmLoader';
 import type { AudioBackend, AudioPlaybackState } from './types/audio';
 
 // Define the Emscripten module interface for SDL2
-interface Sdl2Module {
+interface Sdl2Module extends SdlPcmModule {
   _init_audio(): number;
   _set_audio_data(dataPtr: number, length: number, channels: number, sampleRate: number): void;
   _play(): void;
@@ -13,6 +15,8 @@ interface Sdl2Module {
   _seek(time: number): void;
   _get_current_time(): number;
   _set_volume(volume: number): void;
+  _get_pcm_ring_state(): number;
+  _get_pcm_ring_data(): number;
   _cleanup(): void;
   _malloc(size: number): number;
   _free(ptr: number): void;
@@ -49,21 +53,10 @@ export class Sdl2AudioPlayer implements AudioBackend {
   private async initializeModule() {
     console.log('[Sdl2AudioPlayer] Initializing module...');
 
-    // Load sdl2-audio.js
     if (!window.createSdl2AudioModule) {
       console.log('[Sdl2AudioPlayer] Loading sdl2-audio.js...');
-      const script = document.createElement('script');
-      script.src = '/sdl2-audio.js';
-      script.async = true;
-      document.body.appendChild(script);
-
-      await new Promise<void>((resolve, reject) => {
-        script.onload = () => {
-          console.log('[Sdl2AudioPlayer] sdl2-audio.js loaded.');
-          resolve();
-        };
-        script.onerror = () => reject(new Error('Failed to load sdl2-audio.js'));
-      });
+      await loadWasmScript(WASM_ASSETS.sdl2);
+      console.log('[Sdl2AudioPlayer] sdl2-audio.js loaded.');
     }
 
     try {
@@ -164,6 +157,10 @@ export class Sdl2AudioPlayer implements AudioBackend {
       this.module._set_audio_data(ptr, interleaved.length, channels, result.sampleRate);
 
       this.module._free(ptr);
+
+      await this.contextManager.resume();
+      await sharedSdlPcmBridge.connect(this.contextManager, this.module, channels);
+
       this.notifyStateChange();
 
     } catch (error) {
@@ -193,6 +190,7 @@ export class Sdl2AudioPlayer implements AudioBackend {
   stop(): void {
     if (!this.module) return;
     this.module._stop();
+    sharedSdlPcmBridge.resetRing(this.module);
     this.isPlaying = false;
     this.notifyStateChange();
   }
@@ -241,6 +239,7 @@ export class Sdl2AudioPlayer implements AudioBackend {
   destroy(): void {
     this.destroyed = true;
     this.stop();
+    sharedSdlPcmBridge.disconnect(this.contextManager);
     if (this.pollInterval) clearInterval(this.pollInterval);
     if (this.module) {
       this.module._cleanup();

@@ -45,6 +45,10 @@ export interface ShaderGUIProps {
   onToggleFallback?: () => void;
   showFallbackToggle?: boolean;
   onFileSelect?: (files: File[]) => void;
+  /** Skip WebGPU (split view / GPU budget). Uses WebGL2 → Canvas2D. */
+  forceLiteGpu?: boolean;
+  /** Hide GPU visualizer; keep transport/queue controls (projectM-only mode). */
+  controlsOnly?: boolean;
 }
 
 const BACKEND_LABELS: Record<VisualizerBackend, string> = {
@@ -75,6 +79,8 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   onToggleFallback,
   showFallbackToggle = false,
   onFileSelect,
+  forceLiteGpu = false,
+  controlsOnly = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -211,10 +217,12 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     const isCancelled = () => cancelled;
 
     const init = async () => {
-      if (!canvasRef.current || !analyser) return;
+      if (!canvasRef.current || !analyser || controlsOnly) return;
 
       destroyAllVisualizers();
-      const backend = await resolveVisualizerBackendAsync();
+      const backend = forceLiteGpu
+        ? 'webgl2'
+        : await resolveVisualizerBackendAsync();
 
       if (backend === 'canvas2d') {
         initCanvasFallback(canvasRef.current, analyser);
@@ -236,7 +244,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       isUnmountedRef.current = true;
       destroyAllVisualizers();
     };
-  }, [analyser, destroyAllVisualizers, initCanvasFallback, initWebGL2, initWebGPU]);
+  }, [analyser, controlsOnly, destroyAllVisualizers, forceLiteGpu, initCanvasFallback, initWebGL2, initWebGPU]);
 
   const swapBackend = useCallback((backend: VisualizerBackend) => {
     if (!canvasRef.current || !analyser) return;
@@ -462,7 +470,9 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       )}
 
       <Chassis>
-      <div className="shader-gui-layout">
+      <div className={`shader-gui-layout${controlsOnly ? ' shader-gui-layout--controls-only' : ''}`}>
+        {!controlsOnly && (
+        <>
         <div className="shader-gui-top-left">
           <TopScreen
             canvasRef={canvasRef}
@@ -536,6 +546,8 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             </button>
           )}
         </div>
+        </>
+        )}
 
         <div className="shader-gui-bottom-left">
           <BottomScreen

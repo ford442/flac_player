@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo, CloudPlaylist } from '../audioLoader';
+import { PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo, CloudPlaylist, type PlaybackPathInfo } from '../audioLoader';
 import { AudioOutputMode } from '../hooks/usePlayerState';
 import { LibraryView } from './LibraryView';
 import { QueuePanel } from './QueuePanel';
@@ -78,6 +78,7 @@ export interface PlayerFallbackViewProps {
   setPlaybackRate: (r: number) => void;
   crossfadeEnabled: boolean;
   setCrossfadeEnabled: (e: boolean) => void;
+  playbackPath: PlaybackPathInfo | null;
   isSharedPlaylist: boolean;
   sharedPlaylistTitle: string;
   analyser: AnalyserNode | null;
@@ -124,6 +125,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     sortBy, setSortBy, storageSourceFilter, setStorageSourceFilter,
     volume, muted, outputMode, setOutputMode,
     eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate, crossfadeEnabled, setCrossfadeEnabled,
+    playbackPath,
     isSharedPlaylist, sharedPlaylistTitle, analyser,
     onTrackClick, onTrackDoubleClick, onQueueTrackClick,
     onPlay, onStop, onSeek, onVolumeChange, onMute, onNext, onPrevious, onFileSelect,
@@ -443,6 +445,17 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
                     <option value="worklet">AudioWorklet (buffered)</option>
                     <option value="web-audio">Web Audio (buffered)</option>
                   </select>
+                  {playbackPath && (
+                    <div className="text-xs text-cyan-300/90 bg-cyan-950/30 border border-cyan-500/20 rounded-lg px-3 py-2" role="status">
+                      <span className="font-semibold">{playbackPath.label}</span>
+                      <span className="text-gray-400"> — {playbackPath.detail}</span>
+                    </div>
+                  )}
+                  <p className="text-xs text-gray-500">
+                    FLAC files ≥32 MB auto-stream via WASM decoder (bounded memory).
+                    Smaller FLAC uses buffered decode. Non-FLAC URLs use native browser streaming.
+                    Crossfade works in native streaming only.
+                  </p>
                 </div>
                 <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
                   <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Offline Cache</span>

@@ -1,9 +1,11 @@
 import { decodeAudio } from './audioDecoder';
 import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
+import { SdlPcmModule, sharedSdlPcmBridge } from './audio/SdlPcmBridge';
+import { WASM_ASSETS, loadWasmScript } from './audio/wasmLoader';
 import type { AudioBackend, AudioPlaybackState } from './types/audio';
 
 // Define the Emscripten module interface
-interface SdlModule {
+interface SdlModule extends SdlPcmModule {
   _init_audio(): number;
   _create_audio_buffer(length: number): number;
   _set_audio_data(length: number, channels: number, sampleRate: number): void;
@@ -14,6 +16,8 @@ interface SdlModule {
   _seek(time: number): void;
   _get_current_time(): number;
   _set_volume(volume: number): void;
+  _get_pcm_ring_state(): number;
+  _get_pcm_ring_data(): number;
   _cleanup(): void;
   _malloc(size: number): number;
   _free(ptr: number): void;
@@ -58,39 +62,19 @@ export class SdlAudioPlayer implements AudioBackend {
     // where ScriptProcessorNode is missing/deprecated to still work via AudioWorkletNode.
     if (!window.__sdl_script_processor_shim_loaded) {
       console.log('[SdlAudioPlayer] Loading script-processor-shim.js...');
-      const shim = document.createElement('script');
-      shim.src = '/script-processor-shim.js';
-      shim.async = true;
-      document.head.appendChild(shim);
-
-      await new Promise<void>((resolve) => {
-        shim.onload = () => {
-          console.log('[SdlAudioPlayer] script-processor-shim.js loaded.');
-          window.__sdl_script_processor_shim_loaded = true;
-          resolve();
-        };
-        shim.onerror = () => {
-          console.warn('[SdlAudioPlayer] Script processor shim failed to load; continuing without shim.');
-          resolve();
-        };
-      });
+      try {
+        await loadWasmScript(WASM_ASSETS.scriptProcessorShim);
+        window.__sdl_script_processor_shim_loaded = true;
+        console.log('[SdlAudioPlayer] script-processor-shim.js loaded.');
+      } catch {
+        console.warn('[SdlAudioPlayer] Script processor shim failed to load; continuing without shim.');
+      }
     }
 
-    // Dynamically load the WASM/SDL script if not already present
     if (!window.createSdlAudioModule) {
       console.log('[SdlAudioPlayer] Loading sdl-audio.js...');
-      const script = document.createElement('script');
-      script.src = '/sdl-audio.js';
-      script.async = true;
-      document.body.appendChild(script);
-
-      await new Promise<void>((resolve, reject) => {
-        script.onload = () => {
-          console.log('[SdlAudioPlayer] sdl-audio.js loaded.');
-          resolve();
-        };
-        script.onerror = () => reject(new Error('Failed to load sdl-audio.js'));
-      });
+      await loadWasmScript(WASM_ASSETS.sdl3);
+      console.log('[SdlAudioPlayer] sdl-audio.js loaded.');
     }
 
     try {
@@ -215,6 +199,9 @@ export class SdlAudioPlayer implements AudioBackend {
         this.module._set_audio_data(interleavedLength, channels, result.sampleRate);
         console.log('[SdlAudioPlayer] _set_audio_data returned.');
 
+        await this.contextManager.resume();
+        await sharedSdlPcmBridge.connect(this.contextManager, this.module, channels);
+
       } catch (err) {
         console.error('[SdlAudioPlayer] Failed to write audio data into WASM heap:', err, {
           ptr,
@@ -255,6 +242,7 @@ export class SdlAudioPlayer implements AudioBackend {
   stop(): void {
     if (!this.module) return;
     this.module._stop();
+    sharedSdlPcmBridge.resetRing(this.module);
     this.isPlaying = false;
     this.notifyStateChange();
   }
@@ -306,6 +294,7 @@ export class SdlAudioPlayer implements AudioBackend {
   destroy(): void {
     this.destroyed = true;
     this.stop();
+    sharedSdlPcmBridge.disconnect(this.contextManager);
     if (this.pollInterval) clearInterval(this.pollInterval);
     if (this.module) {
       this.module._cleanup();

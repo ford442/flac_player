@@ -20,11 +20,34 @@
  *   await clearTrackCache();
  */
 
-const CACHE_NAME = 'flac-player-tracks-v1';
+export const TRACK_CACHE_NAME = 'flac-player-tracks-v1';
+const CACHE_NAME = TRACK_CACHE_NAME;
 const LRU_KEY    = 'flac_track_cache_lru';
 
 /** Maximum total cache size in bytes (default 500 MB). */
-const MAX_CACHE_BYTES = 500 * 1024 * 1024;
+export const MAX_CACHE_BYTES = 500 * 1024 * 1024;
+
+export interface EvictionEvent {
+  evictedUrls: string[];
+  freedBytes: number;
+  remainingBytes: number;
+}
+
+type EvictionListener = (event: EvictionEvent) => void;
+const evictionListeners = new Set<EvictionListener>();
+
+/** Subscribe to LRU eviction events (oldest tracks removed when over quota). */
+export function onCacheEviction(listener: EvictionListener): () => void {
+  evictionListeners.add(listener);
+  return () => evictionListeners.delete(listener);
+}
+
+function notifyEviction(evictedUrls: string[], freedBytes: number): void {
+  if (evictedUrls.length === 0) return;
+  const remainingBytes = getCacheSizeBytes();
+  const event: EvictionEvent = { evictedUrls, freedBytes, remainingBytes };
+  evictionListeners.forEach(listener => listener(event));
+}
 
 interface LRUEntry {
   url: string;
@@ -95,6 +118,7 @@ async function runEviction(): Promise<void> {
   const cache = await caches.open(CACHE_NAME);
   await Promise.all(toEvict.map(url => cache.delete(url)));
   toEvict.forEach(url => removeLRU(url));
+  notifyEviction(toEvict, freed);
 }
 
 // ─── Public API ──────────────────────────────────────────────────────────────
@@ -234,4 +258,23 @@ export function getCachedTrackList(): LRUEntry[] {
  */
 export function getCacheSizeBytes(): number {
   return readLRU().reduce((s, e) => s + e.size, 0);
+}
+
+/**
+ * Record a track stored in the Cache API (e.g. after a service worker background download).
+ */
+export function recordCachedTrack(url: string, size: number): void {
+  touchLRU(url, size);
+  void runEviction();
+}
+
+/** Wire service worker download-complete messages into the LRU manifest. */
+export function initTrackCacheServiceWorkerBridge(): void {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+
+  navigator.serviceWorker.addEventListener('message', (event: MessageEvent) => {
+    const data = event.data as { type?: string; url?: string; size?: number } | null;
+    if (!data || data.type !== 'DOWNLOAD_COMPLETE' || typeof data.url !== 'string') return;
+    recordCachedTrack(data.url, typeof data.size === 'number' ? data.size : 0);
+  });
 }

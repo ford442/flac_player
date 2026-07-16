@@ -1,4 +1,5 @@
-import { PlaylistTrack, RepeatMode } from '../audioLoader';
+import type { PlaylistTrack } from '../types/library';
+import type { RepeatMode } from '../storage/queueStorage';
 
 export const getNextQueueIndex = (
   queueLength: number,
