@@ -391,3 +391,16 @@ Key module dependencies:
 - **WebGPU**: Chrome 113+, Edge 113+ (optional - visualization falls back gracefully)
 - **Web Audio API**: All modern browsers
 - **SharedArrayBuffer**: Requires cross-origin isolation headers
+
+## Cursor Cloud specific instructions
+
+Dependencies (npm + pip) are installed automatically by the startup update script. Standard commands live in the **Build Commands** / **Testing Instructions** sections above; the notes below are the non-obvious cloud caveats only.
+
+- **The frontend talks to the REMOTE backend by default.** The committed `.env` / `.env.production` set `REACT_APP_API_URL=https://storage.noahcohn.com`, so `npm start` alone yields a fully working library (~351 tracks) and streaming playback with no local backend. This requires network egress to `storage.noahcohn.com`.
+- **The local backend serves an EMPTY library.** `python3 app.py` (port 7860) starts healthy but `data/` is empty, so `/api/health` reports `songs_count: 0`. Running it is optional — only needed for offline/self-hosted testing, and then you must set `REACT_APP_API_URL=http://localhost:7860` and seed `data/music/` + `data/songs/index.json`.
+- **The webpack `/api → localhost:7860` proxy is bypassed** whenever `REACT_APP_API_URL` is non-empty (the committed default), so the local backend is not reached even if running.
+- **Python console scripts install to `~/.local/bin`** (not on PATH). Run the backend with `python3 app.py` or `python3 -m uvicorn app:app --host 0.0.0.0 --port 7860`.
+- **Playwright browsers are not part of `npm install`.** For `npm run test:e2e`, first run `npx playwright install chromium` (add `--with-deps` for system libs).
+- **WebGPU is unavailable in headless Chrome**, so the visualizer falls back to Canvas2D ("Using Canvas2D fallback — limited shader parity"). This is expected and not an error; audio playback and visualization still work.
+- **WASM builds need Emscripten/emsdk, which is NOT installed.** Prebuilt `public/sdl-audio.*` / `sdl2-audio.*` are committed, so `npm start`, `npm run build`, and all default (streaming) playback work without emsdk. Only `npm run build:wasm*` requires the toolchain.
+- `npm start` uses `--open`; there is no desktop browser auto-launch in the VM, but the dev server still serves on `http://localhost:3000`.
