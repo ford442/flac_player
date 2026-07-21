@@ -24,7 +24,7 @@ interface UseAudioBackendLifecycleParams {
   /** Called when a track ends. Held in a ref so the backend is not rebuilt per render. */
   onTrackEndedRef: React.MutableRefObject<() => void>;
   /** Runs after initialize() resolves — used to flush files dropped before the backend existed. */
-  onInitialized?: () => void;
+  onInitializedRef: React.MutableRefObject<() => void>;
   setPlayerState: (state: PlayerUIState | ((prev: PlayerUIState) => PlayerUIState)) => void;
   setError: (error: string) => void;
   // Crossfade pre-buffering needs to know what plays next.
@@ -47,7 +47,7 @@ export function useAudioBackendLifecycle({
   playbackRate,
   crossfadeEnabled,
   onTrackEndedRef,
-  onInitialized,
+  onInitializedRef,
   setPlayerState,
   setError,
   queue,
@@ -60,8 +60,6 @@ export function useAudioBackendLifecycle({
   // Read at creation time only — these must not retrigger backend construction.
   const initialSettingsRef = useRef(initialSettings);
   initialSettingsRef.current = initialSettings;
-  const onInitializedRef = useRef(onInitialized);
-  onInitializedRef.current = onInitialized;
 
   useEffect(() => {
     let cancelled = false;
@@ -88,7 +86,7 @@ export function useAudioBackendLifecycle({
 
       void player.initialize().then(() => {
         if (cancelled) return;
-        onInitializedRef.current?.();
+        onInitializedRef.current();
       }).catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : `${outputMode} initialization failed`);
       });
@@ -105,7 +103,7 @@ export function useAudioBackendLifecycle({
         playerRef.current = null;
       }
     };
-  }, [outputMode, onTrackEndedRef, setPlayerState, setError]);
+  }, [outputMode, onTrackEndedRef, onInitializedRef, setPlayerState, setError]);
 
   // Apply live settings to the existing backend.
   useEffect(() => {

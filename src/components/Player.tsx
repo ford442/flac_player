@@ -13,11 +13,14 @@ import { usePlayerData } from '../hooks/usePlayerData';
 import { useAudioBackendLifecycle } from '../hooks/useAudioBackendLifecycle';
 import { useTrackLoader } from '../hooks/useTrackLoader';
 import { useQueuePlayback } from '../hooks/useQueuePlayback';
-import { VisualizerShell } from './VisualizerShell';
+import { useLocalFileLoader } from '../hooks/useLocalFileLoader';
+import { usePlaylistActions } from '../hooks/usePlaylistActions';
 import { PlayerShell } from './PlayerShell';
+import { PlayerProvider, type PlayerContextValue } from '../contexts/PlayerContext';
 import { PlayerFallbackView } from './PlayerFallbackView';
+import { ShaderGuiLayout } from './ShaderGuiLayout';
 import { EmbedPlayerView } from './EmbedPlayerView';
-import { shuffleArray, isFastStorageUrl } from '../utils/audioUtils';
+import { isFastStorageUrl } from '../utils/audioUtils';
 import { IS_PROJECTM_EMBED } from '../utils/embedMode';
 import {
   getInitialVisualizerAesthetic,
@@ -62,15 +65,16 @@ export const Player: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'settings'>('library');
   const [libraryViewMode, setLibraryViewMode] = useState<'grid' | 'list'>('grid');
   const [showHtmlFallback, setShowHtmlFallback] = useState(false);
-  const [currentFile, setCurrentFile] = useState<File | undefined>(undefined);
   const [showHelp, setShowHelp] = useState(false);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [visualizerAesthetic, setVisualizerAesthetic] = useState<VisualizerAesthetic>(
     () => getInitialVisualizerAesthetic()
   );
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const pendingFilesRef = useRef<File[]>([]);
+  // Assigned by the hooks below; held here to break the cycle between the audio
+  // backend (which invokes them) and the hooks that need the backend ref.
   const handleAutoAdvanceRef = useRef<() => void>(() => {});
+  const flushPendingFilesRef = useRef<() => void>(() => {});
 
   // =============================================================================
   // Initialization: shared playlist / URL params / saved queue
@@ -127,84 +131,12 @@ export const Player: React.FC = () => {
     initializeApp();
   }, [loader, addToast]);
 
-  // =============================================================================
-  // Local file loading
-  // =============================================================================
-
-  const loadLocalFile = useCallback(async (file: File) => {
-    if (!playerRef.current) return;
-    setPlayerState(prev => ({ ...prev, isLoading: true }));
-    setError('');
-    setCurrentFile(file);
-
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      let track: PlaylistTrack;
-      try {
-        const { parseBlob } = await import('music-metadata-browser');
-        const meta = await parseBlob(file);
-        track = {
-          id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          name: file.name,
-          title: (meta.common.title as string) || file.name.replace(/\.[^/.]+$/, ''),
-          author: (meta.common.artist as string) || 'Unknown Artist',
-          url: URL.createObjectURL(file),
-          duration: (meta.format.duration as number) || 0,
-        };
-      } catch {
-        track = {
-          id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          name: file.name,
-          title: file.name.replace(/\.[^/.]+$/, ''),
-          author: 'Unknown Artist',
-          url: URL.createObjectURL(file),
-          duration: 0,
-        };
-      }
-
-      setCurrentTrack(track);
-
-      if (outputMode === 'streaming') {
-        setError('Streaming mode does not support local files. Switch to a buffered audio mode.');
-        return;
-      }
-
-      await playerRef.current.loadFromArrayBuffer(arrayBuffer, file.name);
-      playerRef.current.play();
-      addToast(`Playing: ${track.title || track.name}`, 'info');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load file';
-      setError(message);
-      addToast(`Failed to load file: ${message}`, 'error');
-    } finally {
-      setPlayerState(prev => ({ ...prev, isLoading: false }));
-    }
-  }, [addToast, outputMode, setCurrentTrack, setError, setPlayerState]);
-
-  const handleLocalFiles = useCallback((files: File[]) => {
-    if (outputMode === 'streaming') {
-      pendingFilesRef.current = files;
-      setOutputMode('worklet');
-      addToast('Switched to buffered mode for local files', 'info');
-      return;
-    }
-    files.forEach((file, i) => setTimeout(() => loadLocalFile(file), i * 100));
-  }, [outputMode, loadLocalFile, addToast, setOutputMode]);
-
-  // Flush any files dropped before the backend finished initializing.
-  const flushPendingFiles = useCallback(() => {
-    if (pendingFilesRef.current.length === 0) return;
-    const files = pendingFilesRef.current;
-    pendingFilesRef.current = [];
-    setTimeout(() => files.forEach((file, i) => setTimeout(() => loadLocalFile(file), i * 100)), 0);
-  }, [loadLocalFile]);
-
   const playerRef = useAudioBackendLifecycle({
     outputMode,
     initialSettings: { volume, muted, eqGains, playbackRate, crossfadeEnabled },
     eqGains, playbackRate, crossfadeEnabled,
     onTrackEndedRef: handleAutoAdvanceRef,
-    onInitialized: flushPendingFiles,
+    onInitializedRef: flushPendingFilesRef,
     setPlayerState, setError,
     queue, queueCurrentIndex, shuffle, repeatMode,
   });
@@ -223,6 +155,17 @@ export const Player: React.FC = () => {
     onPlayRecorded: loadStats,
   });
 
+  const { currentFile, handleLocalFiles } = useLocalFileLoader({
+    playerRef, outputMode, setOutputMode,
+    onInitializedRef: flushPendingFilesRef,
+    setPlayerState, setError, setCurrentTrack, addToast,
+  });
+
+  const { playAll, playNow, loadCloudPlaylist, handleSmartMix, generateShareLink } = usePlaylistActions({
+    loader, library, queue, setQueue, setQueueCurrentIndex,
+    playTrack, currentTrack, addToast,
+  });
+
   useEffect(() => {
     if (isSharedPlaylist) return;
     const interval = setInterval(() => {
@@ -238,70 +181,6 @@ export const Player: React.FC = () => {
   // =============================================================================
   // Playback controls
   // =============================================================================
-
-  const loadCloudPlaylist = useCallback(async (playlistId: string) => {
-    try {
-      const trackIds = await loader.fetchPlaylistTracks(playlistId);
-      if (trackIds.length === 0) { addToast('Playlist is empty or unavailable', 'info'); return; }
-      const matchedTracks = trackIds.map(id => library.find(t => t.id === id)).filter(Boolean) as PlaylistTrack[];
-      if (matchedTracks.length === 0) { addToast('No matching tracks found in local library', 'error'); return; }
-      setQueue(matchedTracks);
-      setQueueCurrentIndex(0);
-      playTrack(matchedTracks[0], 0);
-      addToast(`Loaded ${matchedTracks.length}/${trackIds.length} tracks from playlist`, 'success');
-    } catch {
-      addToast('Failed to load playlist tracks', 'error');
-    }
-  }, [loader, library, addToast]);
-
-  const playAll = (tracks: PlaylistTrack[], shuffled = false) => {
-    if (tracks.length === 0) return;
-    const ordered = shuffled ? shuffleArray(tracks) : tracks;
-    setQueue(ordered);
-    setQueueCurrentIndex(0);
-    playTrack(ordered[0], 0);
-    addToast(shuffled ? `Shuffling ${ordered.length} tracks` : `Playing ${ordered.length} tracks`, 'success');
-  };
-
-  const playNow = (track: PlaylistTrack) => {
-    setQueue([track]); setQueueCurrentIndex(0); playTrack(track, 0);
-    addToast('Playing now: ' + (track.title || track.name), 'info');
-  };
-
-  const handleSmartMix = async () => {
-    if (!currentTrack?.tags) { addToast('No tags to base mix on', 'error'); return; }
-    try {
-      const similar = await loader.findSimilarTracks(currentTrack.id, currentTrack.tags, 4, 20);
-      if (similar.length > 0) {
-        setQueue(prev => [...prev, ...similar.filter(t => !prev.some(p => p.id === t.id))]);
-        addToast(`Added ${similar.length} tracks to queue`, 'success');
-      } else {
-        addToast('No similar tracks found', 'info');
-      }
-    } catch {
-      addToast('Failed to create smart mix', 'error');
-    }
-  };
-
-  const generateShareLink = async () => {
-    if (queue.length === 0) { addToast('Add tracks to the queue first.', 'info'); return; }
-    const trackIds = queue.map(t => t.id).filter(Boolean);
-    if (trackIds.length === 0) { addToast('No valid tracks to share.', 'info'); return; }
-    try {
-      const shareResponse = await loader.createShare(trackIds, 'Shared Playlist', 30);
-      await navigator.clipboard.writeText(shareResponse.short_url || shareResponse.full_url);
-      addToast('Shareable playlist link copied to clipboard!', 'success');
-      return;
-    } catch {
-      addToast('Could not create shared playlist. Falling back to URL playlist.', 'error');
-    }
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?tracks=${trackIds.join(',')}`);
-      addToast('Legacy playlist link copied to clipboard.', 'success');
-    } catch {
-      addToast('Error copying link.', 'error');
-    }
-  };
 
   const toggleMute = useCallback(() => {
     setMuted(prev => {
@@ -387,140 +266,101 @@ export const Player: React.FC = () => {
     isDraggingFile,
   };
 
-  // =============================================================================
-  // Render — Project-M embed / audio-only mode
-  // =============================================================================
-  // When opened as a Project-M PCM feeder (?projectm=1 / window.name), skip
-  // ShaderGUI and PlayerFallbackView entirely so the WebGPU visualizer never
-  // initializes. The audio engine + PCM bridge are wired in the effects above
-  // (which run regardless of this branch), so audio keeps flowing to the host.
-  if (IS_PROJECTM_EMBED) {
-    return (
-      <PlayerShell {...shellProps}>
-        <EmbedPlayerView
-          currentTrack={currentTrack}
-          isPlaying={playerState.isPlaying}
-          isLoading={playerState.isLoading}
-          currentTime={playerState.currentTime}
-          duration={playerState.duration}
-          onPlay={togglePlayback}
-          onStop={() => playerRef.current?.stop()}
-          onSeek={(t) => playerRef.current?.seek(t)}
-          onNext={playNextInQueue}
-          onPrevious={playPreviousInQueue}
-          onFileSelect={handleLocalFiles}
-        />
-      </PlayerShell>
-    );
-  }
+  const contextValue: PlayerContextValue = {
+    data: {
+      library, displayedLibrary, allTags, stats, isLoadingLibrary, fastMirrorCount,
+      playlists, isLoadingPlaylists, onLoadPlaylists: loadPlaylists,
+      isResyncingLibrary, onTriggerResync: triggerLibraryResync,
+      onUpdateTrack: updateTrack, onTrashTrack: trashTrack,
+      onLoadCloudPlaylist: loadCloudPlaylist,
+    },
+    filters: {
+      searchQuery, setSearchQuery, searchInputRef,
+      minRating, setMinRating, selectedTags, setSelectedTags,
+      untaggedOnly, setUntaggedOnly, sortBy, setSortBy,
+      storageSourceFilter, setStorageSourceFilter,
+    },
+    queueState: {
+      queue, queueCurrentIndex, showQueue, setShowQueue,
+      shuffle, setShuffle, repeatMode, setRepeatMode,
+      onAddToQueue: addToQueue, onAddAllToQueue: addAllToQueue, onPlayNext: enqueueNext,
+      onRemoveFromQueue: removeFromQueue, onClearQueue: clearQueue,
+      onReorderQueue: reorderQueue, onSmartMix: handleSmartMix,
+      onShareQueue: generateShareLink,
+    },
+    playback: {
+      currentTrack, currentFile, loadingTrackId,
+      isPlaying: playerState.isPlaying, isLoading: playerState.isLoading,
+      currentTime: playerState.currentTime, duration: playerState.duration,
+      volume, muted,
+      analyser: playerRef.current?.getAnalyser() || null,
+      playbackPath,
+      onPlay: togglePlayback,
+      onStop: () => playerRef.current?.stop(),
+      onSeek: (t) => playerRef.current?.seek(t),
+      onNext: playNextInQueue, onPrevious: playPreviousInQueue,
+      onVolumeChange: handleVolumeChange, onMute: toggleMute,
+      onFileSelect: handleLocalFiles,
+      onTrackClick: (track) => { addToQueue(track); playTrack(track, queue.length); },
+      onTrackDoubleClick: playNow,
+      onQueueTrackClick: (index) => playTrack(queue[index], index),
+      onPlayNow: playNow, onPlayAll: playAll,
+    },
+    settings: {
+      outputMode, setOutputMode,
+      eqGains, setEQBandGain, resetEQ,
+      playbackRate, setPlaybackRate,
+      crossfadeEnabled, setCrossfadeEnabled,
+      onClearCache: () => clearTrackCache().then(() => addToast('Offline cache cleared', 'success')),
+    },
+    session: {
+      backendStatus,
+      onRetry: () => checkBackend().then(h => { setBackendStatus(h ? 'up' : 'down'); if (h) loadLibrary(); }),
+      isSharedPlaylist, sharedPlaylistTitle,
+    },
+    ui: {
+      activeTab, setActiveTab, libraryViewMode, setLibraryViewMode,
+      onSetShowHtmlFallback: setShowHtmlFallback,
+      visualizerAesthetic, setVisualizerAesthetic,
+      onShowHelp: () => setShowHelp(true),
+      onGenerationCompleted: handleGenerationCompleted,
+    },
+  };
 
   // =============================================================================
-  // Render — ShaderGUI mode
+  // Render
   // =============================================================================
-
-  if (!showHtmlFallback) {
-    return (
-      <PlayerShell {...shellProps}>
-        {!isSharedPlaylist && (
-          <div className="fixed top-4 right-4 z-40 flex gap-2">
-            <button onClick={() => { setActiveTab('generate'); setShowHtmlFallback(true); }}
-              className="px-4 py-2 rounded-lg bg-fuchsia-600/90 text-white text-sm font-semibold hover:bg-fuchsia-500 transition-colors shadow-lg">
-              ✨ Generate
-            </button>
-            <button onClick={triggerLibraryResync} disabled={isResyncingLibrary}
-              className="px-4 py-2 rounded-lg bg-blue-600/90 text-white text-sm font-semibold hover:bg-blue-500 transition-colors shadow-lg disabled:opacity-60">
-              {isResyncingLibrary ? '⏳ Rescanning...' : '🔄 Rescan Library'}
-            </button>
-            <a href="https://storage.noahcohn.com/admin" target="_blank" rel="noopener noreferrer"
-              className="px-4 py-2 rounded-lg bg-purple-600/90 text-white text-sm font-semibold hover:bg-purple-500 transition-colors shadow-lg">
-              ⬆️ Add Music
-            </a>
-          </div>
-        )}
-        {isSharedPlaylist && sharedPlaylistTitle && (
-          <div className="fixed top-0 left-0 right-0 z-40 flex items-center justify-center pt-4 pointer-events-none">
-            <h1 className="text-xl md:text-2xl font-bold text-white/90 bg-black/50 backdrop-blur px-6 py-2 rounded-full border border-white/10 pointer-events-auto">
-              {sharedPlaylistTitle}
-            </h1>
-          </div>
-        )}
-        <VisualizerShell
-          aesthetic={visualizerAesthetic}
-          onAestheticChange={setVisualizerAesthetic}
-          analyser={playerRef.current?.getAnalyser() || null}
-          currentTrack={currentTrack} queue={queue} queueCurrentIndex={queueCurrentIndex}
-          isPlaying={playerState.isPlaying} isLoading={playerState.isLoading}
-          currentTime={playerState.currentTime} duration={playerState.duration}
-          volume={volume} muted={muted}
-          onPlay={togglePlayback} onStop={() => playerRef.current?.stop()}
-          onSeek={(t) => playerRef.current?.seek(t)}
-          onTrackClick={(index) => playTrack(queue[index], index)}
-          onVolumeChange={handleVolumeChange} onMute={toggleMute}
-          onNext={playNextInQueue} onPrevious={playPreviousInQueue}
-          onToggleFallback={() => setShowHtmlFallback(true)}
-          showFallbackToggle={!isSharedPlaylist}
-          onFileSelect={handleLocalFiles}
-        />
-      </PlayerShell>
-    );
-  }
-
-  // =============================================================================
-  // Render — HTML fallback mode
-  // =============================================================================
+  // Every layout reads from PlayerContext; only the layout component differs.
+  //
+  // The projectM embed (?projectm=1 / window.name) deliberately renders neither
+  // ShaderGuiLayout nor PlayerFallbackView, so the WebGPU visualizer never
+  // initializes. The audio engine and PCM bridge are wired in the hooks above,
+  // which run regardless of which branch renders, so audio keeps flowing.
+  const layout = IS_PROJECTM_EMBED
+    ? (
+      <EmbedPlayerView
+        currentTrack={currentTrack}
+        isPlaying={playerState.isPlaying}
+        isLoading={playerState.isLoading}
+        currentTime={playerState.currentTime}
+        duration={playerState.duration}
+        onPlay={togglePlayback}
+        onStop={() => playerRef.current?.stop()}
+        onSeek={(t) => playerRef.current?.seek(t)}
+        onNext={playNextInQueue}
+        onPrevious={playPreviousInQueue}
+        onFileSelect={handleLocalFiles}
+      />
+    )
+    : showHtmlFallback
+      ? <PlayerFallbackView />
+      : <ShaderGuiLayout />;
 
   return (
     <PlayerShell {...shellProps}>
-      <PlayerFallbackView
-      onShowHelp={() => setShowHelp(true)}
-      backendStatus={backendStatus}
-      onRetry={() => checkBackend().then(h => { setBackendStatus(h ? 'up' : 'down'); if (h) loadLibrary(); })}
-      queue={queue} queueCurrentIndex={queueCurrentIndex}
-      showQueue={showQueue} setShowQueue={setShowQueue}
-      shuffle={shuffle} setShuffle={setShuffle}
-      repeatMode={repeatMode} setRepeatMode={setRepeatMode}
-      isResyncingLibrary={isResyncingLibrary} onTriggerResync={triggerLibraryResync}
-      currentTrack={currentTrack} currentFile={currentFile} loadingTrackId={loadingTrackId}
-      isPlaying={playerState.isPlaying} isLoading={playerState.isLoading}
-      currentTime={playerState.currentTime} duration={playerState.duration}
-      library={library} displayedLibrary={displayedLibrary}
-      allTags={allTags} stats={stats} isLoadingLibrary={isLoadingLibrary}
-      fastMirrorCount={fastMirrorCount}
-      playlists={playlists} isLoadingPlaylists={isLoadingPlaylists} onLoadPlaylists={loadPlaylists}
-      activeTab={activeTab} setActiveTab={setActiveTab}
-      libraryViewMode={libraryViewMode} setLibraryViewMode={setLibraryViewMode}
-      searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchInputRef={searchInputRef}
-      minRating={minRating} setMinRating={setMinRating}
-      selectedTags={selectedTags} setSelectedTags={setSelectedTags}
-      untaggedOnly={untaggedOnly} setUntaggedOnly={setUntaggedOnly}
-      sortBy={sortBy} setSortBy={setSortBy}
-      storageSourceFilter={storageSourceFilter} setStorageSourceFilter={setStorageSourceFilter}
-      volume={volume} muted={muted} outputMode={outputMode} setOutputMode={setOutputMode}
-      eqGains={eqGains} setEQBandGain={setEQBandGain} resetEQ={resetEQ}
-      playbackRate={playbackRate} setPlaybackRate={setPlaybackRate}
-      crossfadeEnabled={crossfadeEnabled} setCrossfadeEnabled={setCrossfadeEnabled}
-      playbackPath={playbackPath}
-      isSharedPlaylist={isSharedPlaylist} sharedPlaylistTitle={sharedPlaylistTitle}
-      analyser={playerRef.current?.getAnalyser() || null}
-      onTrackClick={(track) => { addToQueue(track); playTrack(track, queue.length); }}
-      onTrackDoubleClick={playNow}
-      onQueueTrackClick={(index) => playTrack(queue[index], index)}
-      onPlay={togglePlayback} onStop={() => playerRef.current?.stop()}
-      onSeek={(t) => playerRef.current?.seek(t)}
-      onVolumeChange={handleVolumeChange} onMute={toggleMute}
-      onNext={playNextInQueue} onPrevious={playPreviousInQueue}
-      onFileSelect={handleLocalFiles}
-      onPlayAll={playAll} onAddAllToQueue={addAllToQueue}
-      onPlayNow={playNow} onPlayNext={enqueueNext} onAddToQueue={addToQueue}
-      onRemoveFromQueue={removeFromQueue} onClearQueue={clearQueue}
-      onReorderQueue={reorderQueue} onSmartMix={handleSmartMix}
-      onShareQueue={generateShareLink}
-      onUpdateTrack={updateTrack} onTrashTrack={trashTrack}
-      onLoadCloudPlaylist={loadCloudPlaylist}
-      onSetShowHtmlFallback={setShowHtmlFallback}
-      onClearCache={() => clearTrackCache().then(() => addToast('Offline cache cleared', 'success'))}
-      onGenerationCompleted={handleGenerationCompleted}
-      />
+      <PlayerProvider value={contextValue}>
+        {layout}
+      </PlayerProvider>
     </PlayerShell>
   );
 };
