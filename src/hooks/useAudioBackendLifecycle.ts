@@ -156,5 +156,7 @@ export function useAudioBackendLifecycle({
     if (nextTrack) playerRef.current?.preloadNext?.(nextTrack.url);
   }, [crossfadeEnabled, outputMode, queue, queueCurrentIndex, shuffle, repeatMode]);
 
-  return playerRef;
+  // contextGeneration lets callers reload the current track: a rebuild destroys
+  // whatever was loaded, since it belonged to the closed context.
+  return { playerRef, contextGeneration };
 }

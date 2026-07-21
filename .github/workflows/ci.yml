@@ -56,6 +56,55 @@ jobs:
             playwright-report/
           retention-days: 7
 
+  # Real FLAC decode -> playback -> analyser. Only on PRs touching audio paths,
+  # since it boots a browser and plays a fixture end to end.
+  integration:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: audio_changes
+        with:
+          filters: |
+            audio:
+              - 'src/audio/**'
+              - 'src/**/*Player*'
+              - 'src/utils/streamingDecoder.ts'
+              - 'src/utils/playbackPath.ts'
+              - 'src/utils/rangeFetch.ts'
+              - 'src/hooks/useTrackLoader.ts'
+              - 'src/hooks/useAudioBackendLifecycle.ts'
+              - 'tests/integration.spec.ts'
+              - 'tests/fixtures/**'
+      - uses: actions/setup-node@v4
+        if: steps.audio_changes.outputs.audio == 'true'
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - run: npm ci
+        if: steps.audio_changes.outputs.audio == 'true'
+      - name: Clean APT sources to fix Microsoft repo 403 errors
+        if: steps.audio_changes.outputs.audio == 'true'
+        run: sudo rm -f /etc/apt/sources.list.d/azure-cli.list /etc/apt/sources.list.d/microsoft-prod.list && sudo apt-get update
+      - run: npx playwright install --with-deps chromium
+        if: steps.audio_changes.outputs.audio == 'true'
+      - name: Chunk-boundary decode tests
+        if: steps.audio_changes.outputs.audio == 'true'
+        run: npx vitest run --config vitest.decoder.config.ts tests/decoderChunks.test.ts
+      - name: Browser integration tests
+        if: steps.audio_changes.outputs.audio == 'true'
+        run: npm run test:integration
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-traces
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+
   # Compile WASM when SDL sources change on PRs (validates emsdk build + committed artifacts).
   wasm-build:
     runs-on: ubuntu-latest

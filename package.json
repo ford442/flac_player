@@ -14,13 +14,14 @@
     "build:all": "npm run build:wasm && npm run build",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
     "typecheck": "tsc --noEmit",
-    "test": "npm run test:unit && npm run test:decoder && npm run test:e2e",
+    "test": "npm run test:unit && npm run test:decoder && npm run test:e2e && npm run test:integration",
     "test:unit": "vitest run",
     "test:decoder": "vitest run --config vitest.decoder.config.ts",
-    "test:e2e": "npx playwright test",
-    "test:streaming": "echo 'Test large file streaming after Phase 2'",
+    "test:e2e": "npx playwright test tests/smoke.spec.ts",
+    "test:streaming": "vitest run --config vitest.decoder.config.ts tests/decoderChunks.test.ts && npx playwright test tests/integration.spec.ts",
     "test:visualizer": "vitest run tests/rendererSelection.test.ts",
-    "profile:chrome": "lighthouse http://localhost:3000 --view --preset=desktop"
+    "profile:chrome": "lighthouse http://localhost:3000 --view --preset=desktop",
+    "test:integration": "npx playwright test tests/integration.spec.ts"
   },
   "dependencies": {
     "@wasm-audio-decoders/flac": "^0.2.10",

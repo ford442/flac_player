@@ -478,6 +478,9 @@ export class AudioWorkletPlayer extends BaseAudioBackend implements AudioBackend
         this.notifyEnded();
       } else if (e.data.type === 'position') {
         this.currentTime = e.data.position;
+        // Without this the UI never sees playback advance: the worklet's
+        // position updates stay internal to the backend.
+        this.notifyStateChange();
       } else if (e.data.type === 'projectm-pcm') {
         if (this.onPCMBlock) {
           this.onPCMBlock(e.data.buffer, e.data.channels, e.data.sampleRate);
@@ -566,6 +569,9 @@ export class AudioWorkletPlayer extends BaseAudioBackend implements AudioBackend
         this.notifyEnded();
       } else if (e.data.type === 'position') {
         this.currentTime = e.data.position;
+        // Without this the UI never sees playback advance: the worklet's
+        // position updates stay internal to the backend.
+        this.notifyStateChange();
       } else if (e.data.type === 'projectm-pcm') {
         if (this.onPCMBlock) {
           this.onPCMBlock(e.data.buffer, e.data.channels, e.data.sampleRate);
