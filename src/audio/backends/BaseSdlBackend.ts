@@ -155,6 +155,9 @@ export abstract class BaseSdlBackend<TModule extends SdlCommonModule> extends Ba
 
       this.duration = result.duration;
 
+      // Let the shared graph match the source rate before we wire anything up.
+      this.contextManager.configure({ sampleRate: result.sampleRate });
+
       // Use pre-interleaved buffer from decoder
       const channels = result.channels;
       this.writeAudioData(this.module, result.interleavedBuffer, channels, result.sampleRate);
@@ -319,6 +322,7 @@ export abstract class BaseSdlBackend<TModule extends SdlCommonModule> extends Ba
         onMetadata: ({ channels, sampleRate }) => {
           if (started) return;
           started = true;
+          this.contextManager.configure({ sampleRate });
           if (!module._start_stream(channels, sampleRate, 8)) {
             reject(new Error(`${this.label}: start_stream failed`));
             return;

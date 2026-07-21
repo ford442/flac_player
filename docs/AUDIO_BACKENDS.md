@@ -104,6 +104,51 @@ Same as SDL3 but uses SDL2 + AudioWorklet glue. Build: `npm run build:wasm:sdl2`
 
 ---
 
+## Sample rate and latency
+
+`AudioContextManager` no longer hardcodes 44100. The context is created lazily,
+on first use, with:
+
+- **sampleRate** — the track's rate once a backend has discovered it, otherwise
+  the device native rate (by omitting the option).
+- **latencyHint** — `'interactive'` for the worklet backend (it drives the
+  projectM PCM tap), `'playback'` for streaming, web-audio and both SDL modes.
+
+Backends report the decoded rate via `contextManager.configure({ sampleRate })`
+after decode, or from `onMetadata` on the streaming path.
+
+### Why this matters
+
+The browser renders the graph at `context.sampleRate`, then the OS resamples to
+the hardware rate. Pinning the context to 44100 meant a 96 kHz file was
+resampled **twice** — down to 44.1 kHz, then back up to the device's 48 kHz —
+with the intermediate step below the device rate, which is lossy. Matching the
+source (or at least the device) removes that second conversion.
+
+Requesting a rate the hardware rejects throws `NotSupportedError`, so
+unsupported and exotic rates fall back to device native.
+
+### Cost: context rebuilds
+
+`sampleRate` and `latencyHint` are **construction-time only**. Changing either
+means building a new `AudioContext` and rebuilding the graph, because nodes
+belonging to a closed context cannot be reconnected. `configure()` therefore:
+
+1. compares against the *live* context and no-ops when nothing changed,
+2. closes the old context and rebuilds the master → EQ → analyser → destination
+   chain, carrying volume and EQ settings across,
+3. notifies `onContextChange` subscribers so backends recreate their nodes.
+
+`useAudioBackendLifecycle` subscribes and recreates the backend. **Playback stops
+and the analyser is replaced when this happens**, so the visualiser blanks
+briefly. Two situations trigger it:
+
+- switching to or from the worklet backend (latency hint changes)
+- playing a track whose sample rate differs from the current context
+
+Backends sharing a hint (streaming ↔ web-audio ↔ SDL) still share one context,
+which is what `tests/smoke.spec.ts` asserts.
+
 ## SDL streaming mode
 
 Both SDL backends support two playback modes, chosen by `selectDecodeStrategy()`:

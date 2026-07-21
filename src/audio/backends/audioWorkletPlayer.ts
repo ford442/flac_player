@@ -61,7 +61,8 @@ class FlacProcessor extends AudioWorkletProcessor {
     this.buffer = null;
     this.position = 0;
     this.channels = 0;
-    this.sampleRate = options?.processorOptions?.sampleRate || 44100;
+    // globalThis.sampleRate is the context render rate inside an AudioWorklet.
+    this.sampleRate = options?.processorOptions?.sampleRate || sampleRate;
     this.isStreaming = false;
     this.hasEnded = false;
     this.totalRead = 0;
@@ -73,7 +74,7 @@ class FlacProcessor extends AudioWorkletProcessor {
 
     const ringSeconds = options?.processorOptions?.ringBufferSeconds || 30;
     const ringChannels = options?.processorOptions?.channels || 2;
-    const ringSampleRate = options?.processorOptions?.sampleRate || 44100;
+    const ringSampleRate = options?.processorOptions?.sampleRate || sampleRate;
     const ringCapacity = Math.floor(ringSeconds * ringSampleRate * ringChannels);
     this.ringBuffer = new RingBuffer(ringCapacity);
 
@@ -89,7 +90,7 @@ class FlacProcessor extends AudioWorkletProcessor {
       } else if (e.data.type === 'startStreaming') {
         this.isStreaming = true;
         this.channels = e.data.channels || 2;
-        this.sampleRate = e.data.sampleRate || 44100;
+        this.sampleRate = e.data.sampleRate || sampleRate;
         this.hasEnded = false;
         this.totalRead = 0;
         this.ringBuffer.clear();
@@ -177,7 +178,9 @@ class FlacProcessor extends AudioWorkletProcessor {
 
     this._tapPCM(output, frames);
 
-    if (frames > 0 && this.position % (this.channels * 44100) < this.channels * 128) {
+    // Post roughly once per second of audio. Must use the real rate, or the
+    // cadence drifts at anything other than 44.1 kHz.
+    if (frames > 0 && this.position % (this.channels * sampleRate) < this.channels * 128) {
       this.port.postMessage({ type: 'position', position: this.position / (this.channels * sampleRate) });
     }
 
@@ -203,7 +206,7 @@ class FlacProcessor extends AudioWorkletProcessor {
       this.port.postMessage({ type: 'ended' });
     }
 
-    if (frames > 0 && this.totalRead % (this.channels * 44100) < this.channels * 128) {
+    if (frames > 0 && this.totalRead % (this.channels * this.sampleRate) < this.channels * 128) {
       this.port.postMessage({ type: 'position', position: this.totalRead / (this.channels * this.sampleRate) });
     }
 
@@ -302,6 +305,7 @@ export class AudioWorkletPlayer extends BaseAudioBackend implements AudioBackend
 
       this.channels = decodedData.channels;
       this.sampleRate = decodedData.sampleRate;
+      this.contextManager.configure({ sampleRate: decodedData.sampleRate });
       this.duration = decodedData.duration;
       this.currentTime = 0;
       this.isStreaming = false;
@@ -388,6 +392,7 @@ export class AudioWorkletPlayer extends BaseAudioBackend implements AudioBackend
       onMetadata: ({ channels, sampleRate }) => {
         this.channels = channels;
         this.sampleRate = sampleRate;
+        this.contextManager.configure({ sampleRate });
         streamReady = this.startStreaming(channels, sampleRate).then(() => {
           if (options.expectedDuration) {
             this.duration = options.expectedDuration;
