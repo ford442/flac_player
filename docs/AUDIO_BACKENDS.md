@@ -24,7 +24,7 @@ Experimenting with C++ SDL WASM output?
 
 ### 1. Streaming (`streaming`) — **default**
 
-**File:** `src/streamingAudioPlayer.ts`
+**File:** `src/audio/backends/streamingAudioPlayer.ts`
 
 **How it works:** Sets `HTMLAudioElement.src` to the track URL. The browser performs HTTP range requests; playback can start before the full file downloads.
 
@@ -46,7 +46,7 @@ Experimenting with C++ SDL WASM output?
 
 ### 2. Web Audio buffered (`web-audio`)
 
-**File:** `src/audioPlayer.ts`
+**File:** `src/audio/backends/audioPlayer.ts`
 
 **How it works:** `fetch(url)` → decode to `AudioBuffer` → `BufferSourceNode` playback.
 
@@ -63,7 +63,7 @@ Experimenting with C++ SDL WASM output?
 
 ### 3. AudioWorklet (`worklet`)
 
-**File:** `src/audioWorkletPlayer.ts`
+**File:** `src/audio/backends/audioWorkletPlayer.ts`
 
 **How it works:** Decodes via `flacDecoder` / worker, feeds an inline `FlacProcessor` AudioWorklet (ScriptProcessor shim fallback). Supports buffered and chunked streaming into a ring buffer.
 
@@ -82,7 +82,7 @@ Experimenting with C++ SDL WASM output?
 
 ### 4. SDL3 WASM (`sdl`)
 
-**Files:** `src/sdlAudioPlayer.ts`, `src/sdl/audio_engine.cpp`, `public/sdl-audio.*`
+**Files:** `src/audio/backends/sdlAudioPlayer.ts`, `src/sdl/audio_engine.cpp`, `public/sdl-audio.*`
 
 **How it works:** Full file fetch → interleaved float → WASM heap → SDL3 audio callback. PCM copied to a lock-free ring; `SdlPcmBridge` AudioWorklet feeds the shared analyser.
 
@@ -98,7 +98,7 @@ Experimenting with C++ SDL WASM output?
 
 ### 5. SDL2 WASM (`sdl2`)
 
-**Files:** `src/sdl2AudioPlayer.ts`, `src/sdl/audio_engine_sdl2.cpp`, `public/sdl2-audio.*`
+**Files:** `src/audio/backends/sdl2AudioPlayer.ts`, `src/sdl/audio_engine_sdl2.cpp`, `public/sdl2-audio.*`
 
 Same as SDL3 but uses SDL2 + AudioWorklet glue. Build: `npm run build:wasm:sdl2` or `bash src/sdl/build_sdl2.sh`.
 

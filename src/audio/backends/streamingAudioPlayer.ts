@@ -5,24 +5,25 @@
 //
 // Prerequisites for native path: CORS + Accept-Ranges on the audio host.
 
-import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
+import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
 import { AudioWorkletPlayer } from './audioWorkletPlayer';
-import { probeRemoteAudio } from './utils/rangeFetch';
+import { probeRemoteAudio } from '../../utils/rangeFetch';
 import {
   describePlaybackPath,
   isFlacUrl,
   selectDecodeStrategy,
   type PlaybackPathInfo,
-} from './utils/playbackPath';
-import { isTrackCached, getOrFetchTrack } from './storage/trackCache';
-import type { AudioBackend, AudioPlaybackState } from './types/audio';
+} from '../../utils/playbackPath';
+import { isTrackCached, getOrFetchTrack } from '../../storage/trackCache';
+import type { AudioBackend, AudioPlaybackState } from '../../types/audio';
+import { BaseAudioBackend } from './BaseAudioBackend';
 
 const CROSSFADE_DURATION = 3.0;
 const PRELOAD_AHEAD_S = 8.0;
 
 type ActivePath = 'native' | 'hifi' | 'buffered';
 
-export class StreamingAudioPlayer implements AudioBackend {
+export class StreamingAudioPlayer extends BaseAudioBackend implements AudioBackend {
   private audioContext: AudioContext;
   private gainNode: GainNode;
   private workletPlayer: AudioWorkletPlayer | null = null;
@@ -39,11 +40,10 @@ export class StreamingAudioPlayer implements AudioBackend {
   private crossfadeEnabled = false;
   private nextTrackUrl: string | null = null;
 
-  private onStateChange?: (state: AudioPlaybackState) => void;
-  private onEndedCallback?: () => void;
   private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
 
-  constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
+  constructor(contextManager: AudioContextManager = sharedAudioContextManager) {
+    super(contextManager);
     this.audioContext = contextManager.getContext();
     this.gainNode = this.audioContext.createGain();
     contextManager.connectInput(this.gainNode);
@@ -98,22 +98,20 @@ export class StreamingAudioPlayer implements AudioBackend {
     el.addEventListener('ended', () => {
       this.notifyStateChange();
       if (!this.crossfadeActive) {
-        try { this.onEndedCallback?.(); } catch { /* noop */ }
+        this.notifyEnded();
       }
     });
     return el;
   }
 
-  setStateChangeCallback(callback: (state: AudioPlaybackState) => void): void {
-    this.onStateChange = callback;
-  }
-
-  setOnEndedCallback(callback?: () => void): void {
-    this.onEndedCallback = callback;
+  // Fans out to the nested worklet player, which drives the non-native paths.
+  override setOnEndedCallback(callback?: () => void): void {
+    super.setOnEndedCallback(callback);
     this.workletPlayer?.setOnEndedCallback(callback);
   }
 
-  private notifyStateChange(override?: AudioPlaybackState): void {
+  // Widened to accept a pre-built state, so <audio> events can report without a re-read.
+  protected override notifyStateChange(override?: AudioPlaybackState): void {
     this.onStateChange?.(override ?? this.getState());
   }
 
@@ -286,7 +284,7 @@ export class StreamingAudioPlayer implements AudioBackend {
     this.crossfadeActive = false;
 
     this.notifyStateChange();
-    try { this.onEndedCallback?.(); } catch { /* noop */ }
+    this.notifyEnded();
   }
 
   private _cancelCrossfade(): void {
@@ -370,14 +368,6 @@ export class StreamingAudioPlayer implements AudioBackend {
 
   getEQGains(): number[] {
     return this.contextManager.getEQGains();
-  }
-
-  setEQGains(gains: number[]): void {
-    this.contextManager.setEQGains(gains);
-  }
-
-  getAnalyser(): AnalyserNode {
-    return this.contextManager.getAnalyser();
   }
 
   getState(): AudioPlaybackState {

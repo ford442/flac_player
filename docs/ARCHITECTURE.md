@@ -117,11 +117,11 @@ No full-file download before playback starts. Requires CORS + `Accept-Ranges` on
 
 | Mode | Module | Load model | Best for |
 |------|--------|------------|----------|
-| `streaming` (default) | `streamingAudioPlayer.ts` | URL → `<audio>` | Large library, instant start, crossfade |
-| `web-audio` | `audioPlayer.ts` | Full fetch + decode | Simple buffered playback, debugging |
-| `worklet` | `audioWorkletPlayer.ts` | Fetch/decode → worklet ring | Low latency, projectM PCM tap, EQ |
-| `sdl` | `sdlAudioPlayer.ts` | Full fetch → WASM SDL3 | Experimental WASM output path |
-| `sdl2` | `sdl2AudioPlayer.ts` | Full fetch → WASM SDL2 | Same, SDL2 + AudioWorklet glue |
+| `streaming` (default) | `audio/backends/streamingAudioPlayer.ts` | URL → `<audio>` | Large library, instant start, crossfade |
+| `web-audio` | `audio/backends/audioPlayer.ts` | Full fetch + decode | Simple buffered playback, debugging |
+| `worklet` | `audio/backends/audioWorkletPlayer.ts` | Fetch/decode → worklet ring | Low latency, projectM PCM tap, EQ |
+| `sdl` | `audio/backends/sdlAudioPlayer.ts` | Full fetch → WASM SDL3 | Experimental WASM output path |
+| `sdl2` | `audio/backends/sdl2AudioPlayer.ts` | Full fetch → WASM SDL2 | Same, SDL2 + AudioWorklet glue |
 
 Backend factory: `src/audio/createAudioBackend.ts` (dynamic `import()` — WASM chunks load lazily).
 

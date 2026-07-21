@@ -41,14 +41,11 @@ flac_player/
 ├── src/
 │   ├── components/       Player, LibraryView, QueuePanel, ShaderGUI, VisualizerShell, ProjectMHost
 │   ├── audio/            createAudioBackend, AudioContextManager, EQChain, SdlPcmBridge
+│   │   └── backends/     the five players + BaseAudioBackend, BaseSdlBackend
 │   ├── api/              songApi.ts
 │   ├── storage/          libraryCache, trackCache, queueStorage
 │   ├── visuals/          rendererSelection, WebGL2 fallback
 │   ├── projectm/         ProjectMEngine, projectm_host.cpp
-│   ├── streamingAudioPlayer.ts   # default backend
-│   ├── audioPlayer.ts
-│   ├── audioWorkletPlayer.ts
-│   ├── sdlAudioPlayer.ts / sdl2AudioPlayer.ts
 │   └── audioLoader.ts
 ├── public/               SDL + projectM WASM artifacts
 ├── scripts/              build-wasm.sh, build-projectm-wasm.sh, verify-wasm-artifacts.sh
