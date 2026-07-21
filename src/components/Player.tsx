@@ -148,7 +148,7 @@ export const Player: React.FC = () => {
       const arrayBuffer = await file.arrayBuffer();
       let track: PlaylistTrack;
       try {
-        const { parseBlob } = await import('music-metadata-browser');
+        const { parseBlob } = await import('music-metadata');
         const meta = await parseBlob(file);
         track = {
           id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

@@ -303,6 +303,7 @@ Buffered backends: `fetch(url) → decode → AudioBuffer`. Streaming: `<audio s
 npm run test:decoder   # libflac decode unit test
 npm run test:e2e       # Playwright smoke tests
 npm run typecheck && npm run lint
+npm audit --audit-level=high   # CI also runs this (warn-only); see Dependency audit
 ```
 
 Manual testing checklist:
@@ -323,6 +324,25 @@ Manual testing checklist:
 15. Test queue drag-to-reorder functionality
 16. Test keyboard shortcuts: Space (play/pause), Arrows (seek/volume), N/P (next/prev), Q (queue), S (pile), Ctrl+K (search)
 17. **projectM** (if WASM built): toggle Milkdrop / Split aesthetic; verify fallback when WASM missing
+18. **Local drag-drop**: Drop a FLAC/WAV onto the player (buffered mode) and confirm MetadataPanel shows title/artist/format
+
+## Dependency audit
+
+CI (`lint-and-build` job) runs `npm audit --audit-level=high` with **`continue-on-error: true`** (warn-only). Flip to enforcing once remaining moderate findings are cleared or explicitly waived.
+
+**Do not** run `npm audit fix --force` without verifying compatibility — force upgrades can jump `webpack-dev-server` 4→5 and `copy-webpack-plugin` 11→14.
+
+Local metadata parsing uses **`music-metadata` only** (`parseBlob` / `parseBuffer`). The deprecated `music-metadata-browser` package must not be reintroduced.
+
+### Accepted risks (moderate / tooling-only)
+
+| Area | Why accepted |
+|------|----------------|
+| `lighthouse` → `@sentry/node` → OpenTelemetry | Optional profiling dep (`optionalDependencies`); not shipped in the production bundle |
+| `webpack-dev-server@4` → `sockjs` → `uuid` | Dev-server only; fixing requires webpack-dev-server 5 (major). Stay on 4.x until a dedicated upgrade |
+| `npm overrides` for `serialize-javascript` / `minimatch` | Patches high CVEs in webpack/eslint transitive trees without major parent bumps |
+
+Re-check after tooling major upgrades: `npm audit --audit-level=high`.
 
 ## Security Considerations
 
