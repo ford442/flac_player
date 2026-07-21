@@ -1,12 +1,13 @@
 // Audio player using AudioWorkletNode for better performance
 // Falls back to ScriptProcessorNode if AudioWorklet is not available
 // Phase 2: Added streaming mode with ring buffer for chunked/low-memory playback.
-import { decodeAudio } from './audioDecoder';
-import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
-import { runHifiStreamPipeline } from './audio/hifiStreamPipeline';
-import type { PlaybackPathInfo } from './utils/playbackPath';
-import { describePlaybackPath } from './utils/playbackPath';
-import type { AudioBackend, AudioPlaybackState } from './types/audio';
+import { decodeAudio } from '../../audioDecoder';
+import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
+import { runHifiStreamPipeline } from '../hifiStreamPipeline';
+import type { PlaybackPathInfo } from '../../utils/playbackPath';
+import { describePlaybackPath } from '../../utils/playbackPath';
+import type { AudioBackend, AudioPlaybackState } from '../../types/audio';
+import { BaseAudioBackend } from './BaseAudioBackend';
 
 // AudioWorklet processor code as a string (will be loaded as a blob URL)
 const WORKLET_PROCESSOR_CODE = `
@@ -213,7 +214,7 @@ class FlacProcessor extends AudioWorkletProcessor {
 registerProcessor('flac-processor', FlacProcessor);
 `;
 
-export class AudioWorkletPlayer implements AudioBackend {
+export class AudioWorkletPlayer extends BaseAudioBackend implements AudioBackend {
   private audioContext: AudioContext | null = null;
   private workletNode: AudioWorkletNode | ScriptProcessorNode | null = null;
   private gainNode: GainNode | null = null;
@@ -225,8 +226,6 @@ export class AudioWorkletPlayer implements AudioBackend {
   private duration: number = 0;
   private currentTime: number = 0;
   private playbackRate: number = 1.0;
-  private onStateChange?: (state: AudioPlaybackState) => void;
-  private onEndedCallback?: () => void;
   private useScriptProcessor: boolean = false;
   private workletUrl: string | null = null;
   private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
@@ -234,7 +233,8 @@ export class AudioWorkletPlayer implements AudioBackend {
   private playbackPath: PlaybackPathInfo | null = null;
   private pipelineTask: Promise<void> | null = null;
 
-  constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
+  constructor(contextManager: AudioContextManager = sharedAudioContextManager) {
+    super(contextManager);
     this.setupWorkletUrl();
   }
 
@@ -272,14 +272,6 @@ export class AudioWorkletPlayer implements AudioBackend {
     }
   }
 
-  setStateChangeCallback(callback: (state: AudioPlaybackState) => void): void {
-    this.onStateChange = callback;
-  }
-
-  setOnEndedCallback(callback?: () => void): void {
-    this.onEndedCallback = callback;
-  }
-
   /**
    * Register a callback that receives interleaved PCM blocks (512 samples/ch)
    * directly from the audio worklet thread.  Use this to feed a projectM
@@ -293,11 +285,6 @@ export class AudioWorkletPlayer implements AudioBackend {
     this.onPCMBlock = callback;
   }
 
-  private notifyStateChange(): void {
-    if (this.onStateChange) {
-      this.onStateChange(this.getState());
-    }
-  }
 
   async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
     if (!this.audioContext) {
@@ -483,9 +470,7 @@ export class AudioWorkletPlayer implements AudioBackend {
         this.isStreaming = false;
         this.currentTime = 0;
         this.notifyStateChange();
-        if (this.onEndedCallback) {
-          try { this.onEndedCallback(); } catch (err) { console.warn('onEnded threw', err); }
-        }
+        this.notifyEnded();
       } else if (e.data.type === 'position') {
         this.currentTime = e.data.position;
       } else if (e.data.type === 'projectm-pcm') {
@@ -573,9 +558,7 @@ export class AudioWorkletPlayer implements AudioBackend {
         this.isPlaying = false;
         this.currentTime = 0;
         this.notifyStateChange();
-        if (this.onEndedCallback) {
-          try { this.onEndedCallback(); } catch (err) { console.warn('onEnded threw', err); }
-        }
+        this.notifyEnded();
       } else if (e.data.type === 'position') {
         this.currentTime = e.data.position;
       } else if (e.data.type === 'projectm-pcm') {
@@ -618,9 +601,7 @@ export class AudioWorkletPlayer implements AudioBackend {
             this.isPlaying = false;
             this.currentTime = 0;
             this.notifyStateChange();
-            if (this.onEndedCallback) {
-              try { this.onEndedCallback(); } catch (err) { console.warn('onEnded threw', err); }
-            }
+            this.notifyEnded();
           }
         } else {
           for (let ch = 0; ch < Math.min(output.numberOfChannels, this.channels); ch++) {
@@ -738,14 +719,6 @@ export class AudioWorkletPlayer implements AudioBackend {
 
   getEQGains(): number[] {
     return this.contextManager.getEQGains();
-  }
-
-  setEQGains(gains: number[]): void {
-    this.contextManager.setEQGains(gains);
-  }
-
-  getAnalyser(): AnalyserNode {
-    return this.contextManager.getAnalyser();
   }
 
   destroy(): void {

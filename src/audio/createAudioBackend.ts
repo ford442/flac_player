@@ -8,23 +8,23 @@ export async function createAudioBackend(
 ): Promise<ConfigurableAudioBackend> {
   switch (mode) {
     case 'streaming': {
-      const { StreamingAudioPlayer } = await import('../streamingAudioPlayer');
+      const { StreamingAudioPlayer } = await import('./backends/streamingAudioPlayer');
       return new StreamingAudioPlayer(contextManager);
     }
     case 'worklet': {
-      const { AudioWorkletPlayer } = await import('../audioWorkletPlayer');
+      const { AudioWorkletPlayer } = await import('./backends/audioWorkletPlayer');
       return new AudioWorkletPlayer(contextManager);
     }
     case 'sdl': {
-      const { SdlAudioPlayer } = await import('../sdlAudioPlayer');
+      const { SdlAudioPlayer } = await import('./backends/sdlAudioPlayer');
       return new SdlAudioPlayer(contextManager);
     }
     case 'sdl2': {
-      const { Sdl2AudioPlayer } = await import('../sdl2AudioPlayer');
+      const { Sdl2AudioPlayer } = await import('./backends/sdl2AudioPlayer');
       return new Sdl2AudioPlayer(contextManager);
     }
     case 'web-audio': {
-      const { AudioPlayer } = await import('../audioPlayer');
+      const { AudioPlayer } = await import('./backends/audioPlayer');
       return new AudioPlayer(contextManager);
     }
   }

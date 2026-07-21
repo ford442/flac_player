@@ -1,11 +1,12 @@
 // Audio player with load/play/pause/seek functionality
-import { decodeAudioWithBuffer } from './audioDecoder';
-import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
-import type { AudioBackend, AudioPlaybackState } from './types/audio';
+import { decodeAudioWithBuffer } from '../../audioDecoder';
+import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
+import type { AudioBackend, AudioPlaybackState } from '../../types/audio';
+import { BaseAudioBackend } from './BaseAudioBackend';
 
-export type { AudioPlaybackState } from './types/audio';
+export type { AudioPlaybackState } from '../../types/audio';
 
-export class AudioPlayer implements AudioBackend {
+export class AudioPlayer extends BaseAudioBackend implements AudioBackend {
   private audioContext: AudioContext;
   private sourceNode: AudioBufferSourceNode | null = null;
   private gainNode: GainNode;
@@ -15,31 +16,15 @@ export class AudioPlayer implements AudioBackend {
   private rateAtPause: number = 1.0;
   private isPlaying: boolean = false;
   private playbackRate: number = 1.0;
-  private onStateChange?: (state: AudioPlaybackState) => void;
 
-  constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
+  constructor(contextManager: AudioContextManager = sharedAudioContextManager) {
+    super(contextManager);
     this.audioContext = contextManager.getContext();
     this.gainNode = this.audioContext.createGain();
     contextManager.connectInput(this.gainNode);
   }
 
   async initialize(): Promise<void> { /* graph is initialized by the manager */ }
-
-  private onEndedCallback?: () => void;
-
-  setStateChangeCallback(callback: (state: AudioPlaybackState) => void): void {
-    this.onStateChange = callback;
-  }
-
-  setOnEndedCallback(callback?: () => void): void {
-    this.onEndedCallback = callback;
-  }
-
-  private notifyStateChange(): void {
-    if (this.onStateChange) {
-      this.onStateChange(this.getState());
-    }
-  }
 
   async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
     this.notifyStateChange();
@@ -116,9 +101,7 @@ export class AudioPlayer implements AudioBackend {
         this.isPlaying = false;
         this.pausedAt = 0;
         this.notifyStateChange();
-        if (this.onEndedCallback) {
-          try { this.onEndedCallback(); } catch (err) { console.warn('onEnded callback threw', err); }
-        }
+        this.notifyEnded();
       }
     };
 
@@ -238,14 +221,6 @@ export class AudioPlayer implements AudioBackend {
 
   getEQGains(): number[] {
     return this.contextManager.getEQGains();
-  }
-
-  setEQGains(gains: number[]): void {
-    this.contextManager.setEQGains(gains);
-  }
-
-  getAnalyser(): AnalyserNode {
-    return this.contextManager.getAnalyser();
   }
 
   destroy(): void {
