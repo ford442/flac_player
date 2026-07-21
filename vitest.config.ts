@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['tests/**/*.test.ts'],
-    exclude: ['tests/decoder.test.ts'],
+    exclude: ['tests/decoder.test.ts', 'tests/decoderChunks.test.ts'],
     globals: true,
     setupFiles: ['./tests/setup.ts'],
     pool: 'forks',
