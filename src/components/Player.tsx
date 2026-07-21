@@ -131,7 +131,7 @@ export const Player: React.FC = () => {
     initializeApp();
   }, [loader, addToast]);
 
-  const playerRef = useAudioBackendLifecycle({
+  const { playerRef, contextGeneration } = useAudioBackendLifecycle({
     outputMode,
     initialSettings: { volume, muted, eqGains, playbackRate, crossfadeEnabled },
     eqGains, playbackRate, crossfadeEnabled,
@@ -154,6 +154,17 @@ export const Player: React.FC = () => {
     playerState, setCurrentTrack, setLoadingTrackId, setError, addToast,
     onPlayRecorded: loadStats,
   });
+
+  // An AudioContext rebuild (sample-rate or latency-hint change) tears down the
+  // backend mid-flight, so whatever was loaded is gone. Reload it once the new
+  // backend exists; without this the track silently never plays.
+  const reloadedForGeneration = useRef(0);
+  useEffect(() => {
+    if (contextGeneration === 0) return;
+    if (reloadedForGeneration.current === contextGeneration) return;
+    reloadedForGeneration.current = contextGeneration;
+    if (currentTrack) void playTrack(currentTrack, queueCurrentIndex);
+  }, [contextGeneration, currentTrack, queueCurrentIndex, playTrack]);
 
   const { currentFile, handleLocalFiles } = useLocalFileLoader({
     playerRef, outputMode, setOutputMode,

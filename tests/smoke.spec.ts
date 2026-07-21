@@ -61,7 +61,10 @@ test.describe('FLAC Player Smoke Tests', () => {
     await expect(page.getByText('Nocturnal ambient synthwave with rain on glass.')).toBeVisible();
   });
 
-  test('backend switches reuse one context and one shared output graph', async ({ page }) => {
+  // Backends that share a latencyHint share the AudioContext. Switching to a
+  // backend with a different hint necessarily rebuilds it, because latencyHint
+  // is construction-time only — see docs/AUDIO_BACKENDS.md.
+  test('backend switches reuse one context per latency hint', async ({ page }) => {
     await stubWasmBackendImports(page);
     await page.addInitScript(() => {
       const OriginalAudioContext = window.AudioContext;
@@ -105,26 +108,52 @@ test.describe('FLAC Player Smoke Tests', () => {
 
     await page.getByRole('button', { name: '⚙️ Settings' }).click();
     const backendSelect = page.locator('select').filter({ has: page.locator('option[value="worklet"]') }).first();
-    await backendSelect.selectOption('worklet');
-    await backendSelect.selectOption('web-audio');
-    await backendSelect.selectOption('streaming');
 
-    await expect.poll(() => page.evaluate(() => {
+    const readGraph = () => page.evaluate(() => {
       const testState = (window as unknown as {
         __audioGraphTest: { counters: { contexts: number; destinationConnections: number; disconnects: number }; analysers: AnalyserNode[] };
       }).__audioGraphTest;
-      return {
-        ...testState.counters,
-        analyserCount: testState.analysers.length,
-        analyserIsStable: testState.analysers.every(node => node === testState.analysers[0]),
-      };
-    })).toEqual({
+      return { ...testState.counters, analyserCount: testState.analysers.length };
+    });
+
+    // streaming -> web-audio: both 'playback', so the context is reused.
+    await backendSelect.selectOption('web-audio');
+    await expect.poll(readGraph).toEqual({
       contexts: 1,
       destinationConnections: 1,
       disconnects: expect.any(Number),
       analyserCount: 1,
-      analyserIsStable: true,
     });
+
+    // web-audio -> worklet: 'playback' -> 'interactive' rebuilds the context.
+    await backendSelect.selectOption('worklet');
+    await expect.poll(readGraph).toEqual({
+      contexts: 2,
+      destinationConnections: 2,
+      disconnects: expect.any(Number),
+      analyserCount: 2,
+    });
+
+    // worklet -> streaming: back to 'playback', one more rebuild.
+    await backendSelect.selectOption('streaming');
+    await expect.poll(readGraph).toEqual({
+      contexts: 3,
+      destinationConnections: 3,
+      disconnects: expect.any(Number),
+      analyserCount: 3,
+    });
+
+    // Each context still wires exactly one analyser to exactly one destination.
+    const perContext = await page.evaluate(() => {
+      const testState = (window as unknown as {
+        __audioGraphTest: { counters: { contexts: number; destinationConnections: number }; analysers: AnalyserNode[] };
+      }).__audioGraphTest;
+      return {
+        analysersPerContext: testState.analysers.length / testState.counters.contexts,
+        destinationsPerContext: testState.counters.destinationConnections / testState.counters.contexts,
+      };
+    });
+    expect(perContext).toEqual({ analysersPerContext: 1, destinationsPerContext: 1 });
 
     const disconnects = await page.evaluate(() => (window as unknown as {
       __audioGraphTest: { counters: { disconnects: number } };

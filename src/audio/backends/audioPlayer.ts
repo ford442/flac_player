@@ -43,6 +43,7 @@ export class AudioPlayer extends BaseAudioBackend implements AudioBackend {
       // If we have the original native AudioBuffer, use it directly (more efficient)
       if (nativeBuffer) {
         this.audioBuffer = nativeBuffer;
+        this.contextManager.configure({ sampleRate: nativeBuffer.sampleRate });
       } else {
         // Otherwise, reconstruct from interleaved buffer (for FLAC)
         const frameCount = decoderResult.interleavedBuffer.length / decoderResult.channels;
