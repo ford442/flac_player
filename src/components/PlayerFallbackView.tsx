@@ -6,8 +6,6 @@ import { QueuePanel } from './QueuePanel';
 import { ShaderGUI } from './ShaderGUI/ShaderGUI';
 import { MetadataPanel } from './MetadataPanel';
 import { FileDropZone } from './FileDropZone';
-import { ToastContainer, Toast } from './Toast';
-import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { EQPanel } from './EQPanel';
 import { CacheStatsPanel } from './OfflineCache';
 import { GenerationPanel } from './GenerationPanel';
@@ -18,10 +16,8 @@ type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 
 type LibraryViewMode = 'grid' | 'list';
 
 export interface PlayerFallbackViewProps {
-  toasts: Toast[];
-  removeToast: (id: string) => void;
-  showHelp: boolean;
-  setShowHelp: (v: boolean) => void;
+  /** Opens the keyboard help modal owned by PlayerShell. */
+  onShowHelp: () => void;
   backendStatus: 'checking' | 'up' | 'down';
   onRetry: () => void;
   queue: PlaylistTrack[];
@@ -113,7 +109,7 @@ export interface PlayerFallbackViewProps {
 
 export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => {
   const {
-    toasts, removeToast, showHelp, setShowHelp, backendStatus, onRetry,
+    onShowHelp, backendStatus, onRetry,
     queue, queueCurrentIndex, showQueue, setShowQueue, shuffle, setShuffle, repeatMode, setRepeatMode,
     isResyncingLibrary, onTriggerResync, currentTrack, currentFile, loadingTrackId,
     isPlaying, isLoading, currentTime, duration,
@@ -155,9 +151,6 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
 
   return (
     <div className="player min-h-screen bg-[#0f0f1e] text-white flex flex-col">
-      <ToastContainer toasts={toasts} onRemove={removeToast} />
-      {showHelp && <KeyboardHelpModal onClose={() => setShowHelp(false)} />}
-
       {backendStatus === 'down' && (
         <div className="bg-red-500/20 border-b border-red-500/30 px-6 py-3 text-center">
           <p className="text-red-300 text-sm">
@@ -212,7 +205,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
               </a>
             </>
           )}
-          <button onClick={() => setShowHelp(true)} className="px-3 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm" title="Keyboard shortcuts (?)">⌨️ ?</button>
+          <button onClick={onShowHelp} className="px-3 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm" title="Keyboard shortcuts (?)">⌨️ ?</button>
           <button onClick={() => setShowQueue(true)} className="relative px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm">
             📋 Queue
             {queue.length > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-purple-500 rounded-full text-xs flex items-center justify-center">{queue.length}</span>}

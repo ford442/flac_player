@@ -14,8 +14,7 @@ import { useAudioBackendLifecycle } from '../hooks/useAudioBackendLifecycle';
 import { useTrackLoader } from '../hooks/useTrackLoader';
 import { useQueuePlayback } from '../hooks/useQueuePlayback';
 import { VisualizerShell } from './VisualizerShell';
-import { ToastContainer } from './Toast';
-import { KeyboardHelpModal } from './KeyboardHelpModal';
+import { PlayerShell } from './PlayerShell';
 import { PlayerFallbackView } from './PlayerFallbackView';
 import { EmbedPlayerView } from './EmbedPlayerView';
 import { shuffleArray, isFastStorageUrl } from '../utils/audioUtils';
@@ -379,6 +378,15 @@ export const Player: React.FC = () => {
     addToast(`Generated track ready: ${generatedTrack.title || generatedTrack.name}`, 'success');
   };
 
+  // Chrome shared by every layout below.
+  const shellProps = {
+    toasts,
+    onRemoveToast: removeToast,
+    showHelp,
+    onCloseHelp: () => setShowHelp(false),
+    isDraggingFile,
+  };
+
   // =============================================================================
   // Render — Project-M embed / audio-only mode
   // =============================================================================
@@ -388,8 +396,7 @@ export const Player: React.FC = () => {
   // (which run regardless of this branch), so audio keeps flowing to the host.
   if (IS_PROJECTM_EMBED) {
     return (
-      <>
-        <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <PlayerShell {...shellProps}>
         <EmbedPlayerView
           currentTrack={currentTrack}
           isPlaying={playerState.isPlaying}
@@ -403,7 +410,7 @@ export const Player: React.FC = () => {
           onPrevious={playPreviousInQueue}
           onFileSelect={handleLocalFiles}
         />
-      </>
+      </PlayerShell>
     );
   }
 
@@ -413,8 +420,7 @@ export const Player: React.FC = () => {
 
   if (!showHtmlFallback) {
     return (
-      <>
-        <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <PlayerShell {...shellProps}>
         {!isSharedPlaylist && (
           <div className="fixed top-4 right-4 z-40 flex gap-2">
             <button onClick={() => { setActiveTab('generate'); setShowHtmlFallback(true); }}
@@ -431,19 +437,11 @@ export const Player: React.FC = () => {
             </a>
           </div>
         )}
-        {showHelp && <KeyboardHelpModal onClose={() => setShowHelp(false)} />}
         {isSharedPlaylist && sharedPlaylistTitle && (
           <div className="fixed top-0 left-0 right-0 z-40 flex items-center justify-center pt-4 pointer-events-none">
             <h1 className="text-xl md:text-2xl font-bold text-white/90 bg-black/50 backdrop-blur px-6 py-2 rounded-full border border-white/10 pointer-events-auto">
               {sharedPlaylistTitle}
             </h1>
-          </div>
-        )}
-        {isDraggingFile && (
-          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-            <div className="border-4 border-dashed border-purple-400 rounded-2xl p-12 text-center">
-              <p className="text-2xl text-purple-300 font-bold">Drop FLAC/WAV files to play</p>
-            </div>
           </div>
         )}
         <VisualizerShell
@@ -463,7 +461,7 @@ export const Player: React.FC = () => {
           showFallbackToggle={!isSharedPlaylist}
           onFileSelect={handleLocalFiles}
         />
-      </>
+      </PlayerShell>
     );
   }
 
@@ -472,9 +470,9 @@ export const Player: React.FC = () => {
   // =============================================================================
 
   return (
-    <PlayerFallbackView
-      toasts={toasts} removeToast={removeToast}
-      showHelp={showHelp} setShowHelp={setShowHelp}
+    <PlayerShell {...shellProps}>
+      <PlayerFallbackView
+      onShowHelp={() => setShowHelp(true)}
       backendStatus={backendStatus}
       onRetry={() => checkBackend().then(h => { setBackendStatus(h ? 'up' : 'down'); if (h) loadLibrary(); })}
       queue={queue} queueCurrentIndex={queueCurrentIndex}
@@ -522,6 +520,7 @@ export const Player: React.FC = () => {
       onSetShowHtmlFallback={setShowHtmlFallback}
       onClearCache={() => clearTrackCache().then(() => addToast('Offline cache cleared', 'success'))}
       onGenerationCompleted={handleGenerationCompleted}
-    />
+      />
+    </PlayerShell>
   );
 };
