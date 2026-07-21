@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
-import { PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo, CloudPlaylist, type PlaybackPathInfo } from '../audioLoader';
+import { PlaylistTrack, SortBy } from '../audioLoader';
 import { AudioOutputMode } from '../hooks/usePlayerState';
+import { usePlayerContext, type ViewTab } from '../contexts/PlayerContext';
 import { LibraryView } from './LibraryView';
 import { QueuePanel } from './QueuePanel';
 import { ShaderGUI } from './ShaderGUI/ShaderGUI';
@@ -12,124 +13,47 @@ import { GenerationPanel } from './GenerationPanel';
 import { formatTime, FAST_STORAGE_HOST } from '../utils/audioUtils';
 import { getNextQueueIndex, getPreviousQueueIndex } from '../utils/queueUtils';
 
-type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'settings';
-type LibraryViewMode = 'grid' | 'list';
+/**
+ * The full HTML player layout: library, queue, playlists, generation and
+ * settings tabs, plus the transport footer.
+ *
+ * All state arrives through PlayerContext rather than props — see
+ * src/contexts/PlayerContext.tsx.
+ */
+export const PlayerFallbackView: React.FC = () => {
+  const { data, filters, queueState, playback, settings, session, ui } = usePlayerContext();
 
-export interface PlayerFallbackViewProps {
-  /** Opens the keyboard help modal owned by PlayerShell. */
-  onShowHelp: () => void;
-  backendStatus: 'checking' | 'up' | 'down';
-  onRetry: () => void;
-  queue: PlaylistTrack[];
-  queueCurrentIndex: number;
-  showQueue: boolean;
-  setShowQueue: (v: boolean) => void;
-  shuffle: boolean;
-  setShuffle: React.Dispatch<React.SetStateAction<boolean>>;
-  repeatMode: RepeatMode;
-  setRepeatMode: React.Dispatch<React.SetStateAction<RepeatMode>>;
-  isResyncingLibrary: boolean;
-  onTriggerResync: () => void;
-  currentTrack: PlaylistTrack | null;
-  currentFile: File | undefined;
-  loadingTrackId: string | undefined;
-  isPlaying: boolean;
-  isLoading: boolean;
-  currentTime: number;
-  duration: number;
-  library: PlaylistTrack[];
-  displayedLibrary: PlaylistTrack[];
-  allTags: TagInfo[];
-  stats: LibraryStats;
-  isLoadingLibrary: boolean;
-  fastMirrorCount: number;
-  playlists: CloudPlaylist[];
-  isLoadingPlaylists: boolean;
-  onLoadPlaylists: () => void;
-  activeTab: ViewTab;
-  setActiveTab: (t: ViewTab) => void;
-  libraryViewMode: LibraryViewMode;
-  setLibraryViewMode: (m: LibraryViewMode) => void;
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
-  searchInputRef: React.RefObject<HTMLInputElement>;
-  minRating: number;
-  setMinRating: (r: number) => void;
-  selectedTags: string[];
-  setSelectedTags: React.Dispatch<React.SetStateAction<string[]>>;
-  untaggedOnly: boolean;
-  setUntaggedOnly: (v: boolean) => void;
-  sortBy: SortBy;
-  setSortBy: (s: SortBy) => void;
-  storageSourceFilter: 'all' | 'fast';
-  setStorageSourceFilter: (f: 'all' | 'fast') => void;
-  volume: number;
-  muted: boolean;
-  outputMode: AudioOutputMode;
-  setOutputMode: (m: AudioOutputMode) => void;
-  eqGains: number[];
-  setEQBandGain: (i: number, g: number) => void;
-  resetEQ: () => void;
-  playbackRate: number;
-  setPlaybackRate: (r: number) => void;
-  crossfadeEnabled: boolean;
-  setCrossfadeEnabled: (e: boolean) => void;
-  playbackPath: PlaybackPathInfo | null;
-  isSharedPlaylist: boolean;
-  sharedPlaylistTitle: string;
-  analyser: AnalyserNode | null;
-  onTrackClick: (track: PlaylistTrack, queueIndex: number) => void;
-  onTrackDoubleClick: (track: PlaylistTrack) => void;
-  onQueueTrackClick: (index: number) => void;
-  onPlay: () => void;
-  onStop: () => void;
-  onSeek: (t: number) => void;
-  onVolumeChange: (v: number) => void;
-  onMute: () => void;
-  onNext: () => void;
-  onPrevious: () => void;
-  onFileSelect: (files: File[]) => void;
-  onPlayAll: (tracks: PlaylistTrack[], shuffled?: boolean) => void;
-  onAddAllToQueue: (tracks: PlaylistTrack[]) => void;
-  onPlayNow: (track: PlaylistTrack) => void;
-  onPlayNext: (track: PlaylistTrack) => void;
-  onAddToQueue: (track: PlaylistTrack) => void;
-  onRemoveFromQueue: (index: number) => void;
-  onClearQueue: () => void;
-  onReorderQueue: (start: number, end: number) => void;
-  onSmartMix: () => void;
-  onShareQueue: () => void;
-  onUpdateTrack: (id: string, updates: Partial<PlaylistTrack>) => Promise<void>;
-  onTrashTrack: (id: string) => Promise<void>;
-  onLoadCloudPlaylist: (id: string) => void;
-  onSetShowHtmlFallback: (v: boolean) => void;
-  onClearCache: () => void;
-  onGenerationCompleted: (songId: string) => Promise<void>;
-}
-
-export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => {
   const {
-    onShowHelp, backendStatus, onRetry,
-    queue, queueCurrentIndex, showQueue, setShowQueue, shuffle, setShuffle, repeatMode, setRepeatMode,
-    isResyncingLibrary, onTriggerResync, currentTrack, currentFile, loadingTrackId,
-    isPlaying, isLoading, currentTime, duration,
     library, displayedLibrary, allTags, stats, isLoadingLibrary, fastMirrorCount,
-    playlists, isLoadingPlaylists, onLoadPlaylists,
-    activeTab, setActiveTab, libraryViewMode, setLibraryViewMode,
-    searchQuery, setSearchQuery, searchInputRef,
-    minRating, setMinRating, selectedTags, setSelectedTags, untaggedOnly, setUntaggedOnly,
+    playlists, isLoadingPlaylists, onLoadPlaylists, isResyncingLibrary, onTriggerResync,
+    onUpdateTrack, onTrashTrack, onLoadCloudPlaylist,
+  } = data;
+  const {
+    searchQuery, setSearchQuery, searchInputRef, minRating, setMinRating,
+    selectedTags, setSelectedTags, untaggedOnly, setUntaggedOnly,
     sortBy, setSortBy, storageSourceFilter, setStorageSourceFilter,
-    volume, muted, outputMode, setOutputMode,
-    eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate, crossfadeEnabled, setCrossfadeEnabled,
-    playbackPath,
-    isSharedPlaylist, sharedPlaylistTitle, analyser,
-    onTrackClick, onTrackDoubleClick, onQueueTrackClick,
-    onPlay, onStop, onSeek, onVolumeChange, onMute, onNext, onPrevious, onFileSelect,
-    onPlayAll, onAddAllToQueue, onPlayNow, onPlayNext, onAddToQueue,
+  } = filters;
+  const {
+    queue, queueCurrentIndex, showQueue, setShowQueue, shuffle, setShuffle,
+    repeatMode, setRepeatMode, onAddToQueue, onAddAllToQueue, onPlayNext,
     onRemoveFromQueue, onClearQueue, onReorderQueue, onSmartMix, onShareQueue,
-    onUpdateTrack, onTrashTrack, onLoadCloudPlaylist, onSetShowHtmlFallback, onClearCache,
-    onGenerationCompleted,
-  } = props;
+  } = queueState;
+  const {
+    currentTrack, currentFile, loadingTrackId, isPlaying, isLoading,
+    currentTime, duration, volume, muted, analyser, playbackPath,
+    onPlay, onStop, onSeek, onNext, onPrevious, onVolumeChange, onMute,
+    onFileSelect, onTrackClick, onTrackDoubleClick, onQueueTrackClick,
+    onPlayNow, onPlayAll,
+  } = playback;
+  const {
+    outputMode, setOutputMode, eqGains, setEQBandGain, resetEQ,
+    playbackRate, setPlaybackRate, crossfadeEnabled, setCrossfadeEnabled, onClearCache,
+  } = settings;
+  const { backendStatus, onRetry, isSharedPlaylist, sharedPlaylistTitle } = session;
+  const {
+    activeTab, setActiveTab, libraryViewMode, setLibraryViewMode,
+    onSetShowHtmlFallback, onShowHelp, onGenerationCompleted,
+  } = ui;
 
   const [generationModelFilter, setGenerationModelFilter] = useState('all');
   const [variationTrack, setVariationTrack] = useState<PlaylistTrack | null>(null);
