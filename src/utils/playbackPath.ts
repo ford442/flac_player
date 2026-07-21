@@ -40,7 +40,9 @@ export function selectDecodeStrategy(
     return 'native-stream';
   }
 
-  if (outputMode === 'worklet') {
+  // Worklet and both SDL backends feed a bounded ring, so large files stream.
+  // Smaller ones stay buffered, which keeps arbitrary seek working.
+  if (outputMode === 'worklet' || outputMode === 'sdl' || outputMode === 'sdl2') {
     return large || forceStream ? 'hifi-stream' : 'buffered';
   }
 

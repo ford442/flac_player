@@ -104,6 +104,46 @@ Same as SDL3 but uses SDL2 + AudioWorklet glue. Build: `npm run build:wasm:sdl2`
 
 ---
 
+## SDL streaming mode
+
+Both SDL backends support two playback modes, chosen by `selectDecodeStrategy()`:
+
+| File size | Mode | Memory | Seek |
+|---|---|---|---|
+| < 32 MB | buffered (`_set_audio_data`) | whole decoded track resident | arbitrary |
+| >= 32 MB FLAC | streaming (`_start_stream` + `_feed_pcm_chunk`) | bounded (~8 s of audio) | **not supported** |
+
+Streaming reuses `runHifiStreamPipeline()` — the same Range-fetch + WASM FLAC
+decoder the AudioWorklet backend uses — and feeds decoded PCM into a bounded
+ring inside the WASM module:
+
+```
+HTTP Range → StreamingDecoder → onPcmChunk → _feed_pcm_chunk → feed ring
+                                                                   ↓
+                                              SDL callback → pcm_ring → analyser
+```
+
+`_feed_pcm_chunk` returns the number of samples actually accepted. A short
+return means the ring is full, and the backend retries the remainder after
+waiting for `_get_buffer_fill_level()` to fall below 75%. That threshold also
+gates `waitForCapacity`, which the pipeline awaits between fetched chunks, so
+back-pressure reaches all the way up to the network read rather than letting
+decoded PCM pile up in JS.
+
+Seek is unsupported while streaming, matching `AudioWorkletPlayer`'s hi-fi
+stream path — only a few seconds of audio are resident, so seeking would mean
+restarting the decode pipeline at a new byte offset. Files below the threshold
+stay buffered and keep arbitrary seek.
+
+New exported symbols (see `scripts/build-wasm.sh`):
+
+| Symbol | Purpose |
+|---|---|
+| `_start_stream(channels, sampleRate, bufferSeconds)` | Enter streaming mode, size the ring |
+| `_feed_pcm_chunk(ptr, samples)` | Push PCM; returns samples accepted |
+| `_get_buffer_fill_level()` | Ring fill 0-100, for back-pressure |
+| `_set_stream_ended(ended)` | Mark end of decode so underrun ends playback |
+
 ## Shared features (all backends)
 
 | Feature | Streaming | Web Audio | Worklet | SDL3/2 |

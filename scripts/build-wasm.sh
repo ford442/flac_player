@@ -41,7 +41,7 @@ build_sdl3() {
     -s USE_SDL=3 \
     -s USE_PTHREADS=1 \
     -s WASM=1 \
-    -s EXPORTED_FUNCTIONS='["_init_audio","_create_audio_buffer","_set_audio_data","_play","_pause_audio","_resume_audio","_stop","_seek","_get_current_time","_set_volume","_get_pcm_ring_state","_get_pcm_ring_data","_cleanup","_malloc","_free"]' \
+    -s EXPORTED_FUNCTIONS='["_init_audio","_create_audio_buffer","_set_audio_data","_start_stream","_feed_pcm_chunk","_get_buffer_fill_level","_set_stream_ended","_play","_pause_audio","_resume_audio","_stop","_seek","_get_current_time","_set_volume","_get_pcm_ring_state","_get_pcm_ring_data","_cleanup","_malloc","_free"]' \
     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPF32","HEAPU8","wasmMemory","getValue","setValue"]' \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s INITIAL_MEMORY=268435456 \
@@ -62,7 +62,7 @@ build_sdl2() {
     -s AUDIO_WORKLET=1 \
     -s WASM_WORKERS=1 \
     -s WASM=1 \
-    -s EXPORTED_FUNCTIONS='["_init_audio","_set_audio_data","_play","_pause_audio","_resume_audio","_stop","_seek","_get_current_time","_set_volume","_get_pcm_ring_state","_get_pcm_ring_data","_cleanup","_malloc","_free"]' \
+    -s EXPORTED_FUNCTIONS='["_init_audio","_set_audio_data","_start_stream","_feed_pcm_chunk","_get_buffer_fill_level","_set_stream_ended","_play","_pause_audio","_resume_audio","_stop","_seek","_get_current_time","_set_volume","_get_pcm_ring_state","_get_pcm_ring_data","_cleanup","_malloc","_free"]' \
     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPF32","HEAPU8","wasmMemory","getValue","setValue"]' \
     -s ALLOW_MEMORY_GROWTH=1 \
     -s INITIAL_MEMORY=268435456 \

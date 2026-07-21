@@ -15,6 +15,12 @@ export interface HifiStreamPipelineOptions {
   onProgress?: (progress: RangeFetchProgress) => void;
   onMetadata?: (meta: { channels: number; sampleRate: number }) => void;
   onPcmChunk: (interleaved: Float32Array) => void;
+  /**
+   * Awaited before each fetched chunk is decoded. Lets a bounded consumer
+   * (e.g. the SDL WASM feed ring) throttle the fetch loop instead of letting
+   * decoded PCM pile up in JS.
+   */
+  waitForCapacity?: () => Promise<void>;
   onEnded: () => void;
   onError: (error: Error) => void;
 }
@@ -50,12 +56,16 @@ export async function runHifiStreamPipeline(options: HifiStreamPipelineOptions):
     if (options.cachedResponse) {
       for await (const raw of streamResponseBody(options.cachedResponse, streamOptions)) {
         if (options.signal?.aborted) return;
+        await options.waitForCapacity?.();
+        if (options.signal?.aborted) return;
         await decoder.appendChunk(raw);
       }
     } else {
       // Validate range support early for clearer errors
       await probeRemoteAudio(options.url, options.signal);
       for await (const raw of streamRemoteAudio(options.url, streamOptions)) {
+        if (options.signal?.aborted) return;
+        await options.waitForCapacity?.();
         if (options.signal?.aborted) return;
         await decoder.appendChunk(raw);
       }

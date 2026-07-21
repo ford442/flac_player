@@ -1,4 +1,5 @@
 import { decodeAudio } from '../../audioDecoder';
+import { runHifiStreamPipeline } from '../hifiStreamPipeline';
 import { SdlPcmModule, sharedSdlPcmBridge } from '../SdlPcmBridge';
 import type { AudioPlaybackState } from '../../types/audio';
 import { BaseAudioBackend } from './BaseAudioBackend';
@@ -12,6 +13,12 @@ import { BaseAudioBackend } from './BaseAudioBackend';
  */
 export interface SdlCommonModule extends SdlPcmModule {
   _init_audio(): number;
+  // Streaming mode: bounded feed instead of one-shot _set_audio_data.
+  _start_stream(channels: number, sampleRate: number, bufferSeconds: number): number;
+  /** Returns samples accepted; a short return means "ring full, retry". */
+  _feed_pcm_chunk(dataPtr: number, samples: number): number;
+  _get_buffer_fill_level(): number;
+  _set_stream_ended(ended: number): void;
   _play(): void;
   _pause_audio(): void;
   _resume_audio(): void;
@@ -44,12 +51,18 @@ export abstract class BaseSdlBackend<TModule extends SdlCommonModule> extends Ba
   private isReady = false;
   private isPlaying = false;
   private duration = 0;
+
   private pollInterval: number | null = null;
   private lastVolume = 1.0;
   // Assigned by startInitialization(), which subclasses call from their constructor
   // (it cannot run in this constructor: the abstract `label`/`loadModule` members
   // are not initialized until the subclass constructor body runs).
   private initialization!: Promise<void>;
+  private streaming = false;
+  private streamAbort: AbortController | null = null;
+  /** Reused staging buffer in WASM heap for handing PCM to _feed_pcm_chunk. */
+  private feedPtr = 0;
+  private feedCapacity = 0;
   private destroyed = false;
 
   /** Log prefix and error label, e.g. "SdlAudioPlayer" / "SDL". */
@@ -126,6 +139,8 @@ export abstract class BaseSdlBackend<TModule extends SdlCommonModule> extends Ba
       throw new Error(`${this.label} module not initialized`);
     }
 
+    this.streamAbort?.abort();
+    this.streaming = false;
     this.stop();
     this.notifyStateChange();
 
@@ -182,6 +197,12 @@ export abstract class BaseSdlBackend<TModule extends SdlCommonModule> extends Ba
 
   seek(time: number): void {
     if (!this.module) return;
+    if (this.streaming) {
+      // Only a few seconds of audio are resident; seeking would mean restarting
+      // the decode pipeline at a new byte offset. Matches AudioWorkletPlayer.
+      console.warn(`[${this.label}] Seek not supported in streaming mode`);
+      return;
+    }
     this.module._seek(time);
     this.notifyStateChange();
   }
@@ -216,8 +237,125 @@ export abstract class BaseSdlBackend<TModule extends SdlCommonModule> extends Ba
   // BaseAudioBackend.setEQGains) so it survives switching back to a Web Audio backend.
   setPlaybackRate(rate: number): void { void rate; /* unsupported by SDL */ }
 
+  /** Back-pressure threshold: stop feeding above this fill percentage. */
+  private static readonly HIGH_WATER_PERCENT = 75;
+
+  /** Grow the WASM-side staging buffer to hold at least `samples` floats. */
+  private ensureFeedBuffer(module: TModule, samples: number): number {
+    if (this.feedCapacity >= samples && this.feedPtr) return this.feedPtr;
+    if (this.feedPtr) module._free(this.feedPtr);
+    this.feedPtr = module._malloc(samples * 4);
+    this.feedCapacity = this.feedPtr ? samples : 0;
+    if (!this.feedPtr) throw new Error(`${this.label}: failed to allocate feed buffer`);
+    return this.feedPtr;
+  }
+
+  private heapFloats(module: TModule): Float32Array | null {
+    if (module.HEAPF32) return module.HEAPF32;
+    if (module.wasmMemory?.buffer) return new Float32Array(module.wasmMemory.buffer);
+    return null;
+  }
+
+  /** Resolves once the ring has drained below the high-water mark. */
+  private async waitForCapacity(module: TModule): Promise<void> {
+    while (module._get_buffer_fill_level() >= BaseSdlBackend.HIGH_WATER_PERCENT) {
+      if (this.streamAbort?.signal.aborted) return;
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  }
+
+  /**
+   * Push one decoded chunk into the WASM ring, retrying the remainder when the
+   * ring reports a short write. Copies through a reusable staging buffer, so
+   * peak memory stays bounded regardless of track length.
+   */
+  private async feedChunk(module: TModule, interleaved: Float32Array): Promise<void> {
+    let offset = 0;
+    while (offset < interleaved.length) {
+      if (this.streamAbort?.signal.aborted) return;
+
+      const remaining = interleaved.subarray(offset);
+      const ptr = this.ensureFeedBuffer(module, remaining.length);
+      const heap = this.heapFloats(module);
+      if (!heap) throw new Error(`${this.label}: cannot access WASM heap`);
+      heap.set(remaining, ptr / 4);
+
+      const accepted = module._feed_pcm_chunk(ptr, remaining.length);
+      if (accepted <= 0) {
+        await this.waitForCapacity(module);
+        continue;
+      }
+      offset += accepted;
+    }
+  }
+
+  /**
+   * Stream a FLAC URL straight into the SDL device without ever holding the
+   * whole decoded track in memory.
+   */
+  async loadFromURLStreaming(
+    url: string,
+    options: { expectedDuration?: number; cachedResponse?: Response } = {}
+  ): Promise<void> {
+    await this.initialize();
+    const module = this.module;
+    if (!module) throw new Error(`${this.label} module not initialized`);
+
+    this.stop();
+    this.streamAbort?.abort();
+    const abort = new AbortController();
+    this.streamAbort = abort;
+    this.streaming = true;
+    this.duration = options.expectedDuration ?? 0;
+
+    let started = false;
+
+    await new Promise<void>((resolve, reject) => {
+      void runHifiStreamPipeline({
+        url,
+        cachedResponse: options.cachedResponse,
+        expectedDuration: options.expectedDuration,
+        signal: abort.signal,
+        onMetadata: ({ channels, sampleRate }) => {
+          if (started) return;
+          started = true;
+          if (!module._start_stream(channels, sampleRate, 8)) {
+            reject(new Error(`${this.label}: start_stream failed`));
+            return;
+          }
+          void this.contextManager.resume();
+          void sharedSdlPcmBridge.connect(this.contextManager, module, channels);
+          // Enough audio is buffered to begin; the ring keeps filling behind us.
+          resolve();
+        },
+        onPcmChunk: (interleaved) => {
+          // Copy immediately: the pipeline reuses its decode buffer.
+          void this.feedChunk(module, new Float32Array(interleaved));
+        },
+        waitForCapacity: () => this.waitForCapacity(module),
+        onEnded: () => {
+          module._set_stream_ended(1);
+          if (!started) resolve();
+        },
+        onError: (err) => {
+          module._set_stream_ended(1);
+          if (!started) reject(err);
+          else console.error(`[${this.label}] stream error:`, err);
+        },
+      });
+    });
+
+    this.notifyStateChange();
+  }
+
   destroy(): void {
     this.destroyed = true;
+    this.streamAbort?.abort();
+    if (this.feedPtr && this.module) {
+      this.module._free(this.feedPtr);
+      this.feedPtr = 0;
+      this.feedCapacity = 0;
+    }
     this.stop();
     sharedSdlPcmBridge.disconnect(this.contextManager);
     if (this.pollInterval) clearInterval(this.pollInterval);
