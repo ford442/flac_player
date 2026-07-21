@@ -1,30 +1,18 @@
 import { Mat4, Vec3 } from './math';
 import { waveformWGSL } from './shaders/waveform';
+import {
+  DEFAULT_WAVEFORM_UNIFORMS,
+  packWaveformUniforms,
+  type WaveformUniforms,
+} from './visuals/waveformContract';
+import type { WebGL2DebugMode } from './visuals/types';
+import { createDebugConfig, debugModeToUniform } from './visuals/webgl2/debugModes';
+import type { WebGL2DebugConfig } from './visuals/types';
 
 export type VisualizerMode = 'flat' | '3D';
 
-export interface ShaderGUIUniforms {
-  resolution: [number, number];
-  time: number;
-  beatPhase: number;
-  rsycrb: number;
-  fractal: number;
-  pulse: number;
-  audioLevel: number;
-  audioLevelL: number;
-  audioLevelR: number;
-  spectrum0: number;
-  spectrum1: number;
-  spectrum2: number;
-  spectrum3: number;
-  spectrum4: number;
-  modeNone: number;
-  modeIR: number;
-  isPlaying: number;
-  playbackProgress: number;
-  volume: number;
-  colorShift: number;
-}
+/** @deprecated Prefer WaveformUniforms from visuals/waveformContract — kept as alias. */
+export type ShaderGUIUniforms = WaveformUniforms;
 
 // WebGPU shader interface for audio visualization
 export class WebGPUVisualizer {
@@ -47,15 +35,9 @@ export class WebGPUVisualizer {
   private guiAudioBuffer: GPUBuffer | null = null;
   private guiBindGroup: GPUBindGroup | null = null;
   private guiPipeline: GPURenderPipeline | null = null;
-  private guiUniforms: ShaderGUIUniforms = {
-    resolution: [1, 1], time: 0, beatPhase: 0,
-    rsycrb: 0, fractal: 0, pulse: 0,
-    audioLevel: 0, audioLevelL: 0, audioLevelR: 0,
-    spectrum0: 0, spectrum1: 0, spectrum2: 0, spectrum3: 0, spectrum4: 0,
-    modeNone: 0, modeIR: 0, isPlaying: 0, playbackProgress: 0,
-    volume: 1, colorShift: 0
-  };
+  private guiUniforms: ShaderGUIUniforms = { ...DEFAULT_WAVEFORM_UNIFORMS };
   private guiAudioData: Float32Array = new Float32Array(64);
+  private debug: WebGL2DebugConfig = createDebugConfig();
 
   // --- 3D Mode Resources ---
   private cubeVertexBuffer: GPUBuffer | null = null;
@@ -627,6 +609,14 @@ struct Uniforms {
     this.guiUniforms = data;
   }
 
+  setDebugMode(mode: WebGL2DebugMode): void {
+    this.debug = { ...this.debug, mode };
+  }
+
+  getDebugMode(): WebGL2DebugMode {
+    return this.debug.mode;
+  }
+
   setAudioData(data: Uint8Array | Float32Array): void {
     const targetBins = 64;
     const sourceBins = data.length;
@@ -655,16 +645,11 @@ struct Uniforms {
   renderGUI(): void {
     if (!this.device || !this.context || !this.guiPipeline || !this.guiBindGroup || !this.guiUniformBuffer || !this.guiAudioBuffer) return;
 
-    const u = this.guiUniforms;
-    this.device.queue.writeBuffer(this.guiUniformBuffer, 0, new Float32Array([
-      u.resolution[0], u.resolution[1], u.time, u.beatPhase,
-      u.rsycrb, u.fractal, u.pulse,
-      u.audioLevel, u.audioLevelL, u.audioLevelR,
-      u.spectrum0, u.spectrum1, u.spectrum2, u.spectrum3, u.spectrum4,
-      u.modeNone, u.modeIR, u.isPlaying, u.playbackProgress,
-      u.volume, u.colorShift,
-      0.0
-    ]));
+    this.device.queue.writeBuffer(
+      this.guiUniformBuffer,
+      0,
+      new Float32Array(packWaveformUniforms(this.guiUniforms, debugModeToUniform(this.debug.mode))),
+    );
 
     this.device.queue.writeBuffer(this.guiAudioBuffer, 0, this.guiAudioData.buffer as ArrayBuffer);
 

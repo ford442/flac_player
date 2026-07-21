@@ -190,8 +190,8 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         backend: 'webgpu',
         readPixels: () => null,
         getCanvas: () => node,
-        setDebugMode: () => {},
-        getDebugMode: () => 'normal',
+        setDebugMode: (mode) => visualizer.setDebugMode(mode),
+        getDebugMode: () => visualizer.getDebugMode(),
         resize: () => visualizer.resize(),
       });
     } catch (err: unknown) {
@@ -267,16 +267,22 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     });
   }, [swapBackend]);
 
-  // Alt+D cycles WebGL2 debug visualization modes (dev-friendly shader inspection)
+  // Alt+D cycles debug visualization modes on WebGPU and WebGL2 (parity)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!e.altKey || e.key.toLowerCase() !== 'd') return;
-      const gl2 = webgl2Ref.current;
-      if (!gl2 || activeBackend !== 'webgl2') return;
+      if (activeBackend !== 'webgpu' && activeBackend !== 'webgl2') return;
+
+      const handle =
+        activeBackend === 'webgpu'
+          ? webgpuRef.current
+          : webgl2Ref.current;
+      if (!handle) return;
+
       e.preventDefault();
-      const next = cycleDebugMode(gl2.getDebugMode());
-      gl2.setDebugMode(next);
-      console.log(`[WebGL2 debug] mode: ${next}`);
+      const next = cycleDebugMode(handle.getDebugMode());
+      handle.setDebugMode(next);
+      console.log(`[${activeBackend} debug] mode: ${next}`);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -450,7 +456,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
           <div className="mt-2 text-[10px] text-gray-400">
             Active: {BACKEND_LABELS[activeBackend]}
             {activeBackend === 'webgl2' && (
-              <span className="mt-1 block text-yellow-300">Alt+D cycles debug modes</span>
+              <span className="mt-1 block text-yellow-300">Alt+D cycles debug modes (WebGPU + WebGL2)</span>
             )}
           </div>
           <div className="mt-2 text-[10px] text-gray-500">

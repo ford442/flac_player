@@ -1,6 +1,8 @@
 // src/visuals/visualSync.ts
 // Helpers to bridge AnalyserNode data into visualizers (WebGPU + WebGL2 + Canvas2D).
 
+import type { WaveformUniforms } from './waveformContract';
+import { packWaveformUniforms } from './waveformContract';
 import type { ShaderGUIUniforms } from '../webgpuVisualizer';
 
 /**
@@ -58,16 +60,11 @@ export function downsampleAudioData(
  * Pack ShaderGUI uniforms into the Float32Array layout used by WebGPU.
  * WebGL2 sets individual uniforms but shares the same source object.
  */
-export function buildShaderGUIUniformPayload(u: ShaderGUIUniforms): Float32Array {
-  return new Float32Array([
-    u.resolution[0], u.resolution[1], u.time, u.beatPhase,
-    u.rsycrb, u.fractal, u.pulse,
-    u.audioLevel, u.audioLevelL, u.audioLevelR,
-    u.spectrum0, u.spectrum1, u.spectrum2, u.spectrum3, u.spectrum4,
-    u.modeNone, u.modeIR, u.isPlaying, u.playbackProgress,
-    u.volume, u.colorShift,
-    0.0,
-  ]);
+export function buildShaderGUIUniformPayload(
+  u: ShaderGUIUniforms | WaveformUniforms,
+  debugMode = 0,
+): Float32Array {
+  return packWaveformUniforms(u, debugMode);
 }
 
 /**

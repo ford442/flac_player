@@ -1,3 +1,8 @@
+// REFERENCE ONLY — not loaded at runtime.
+// Authoritative WGSL is src/shaders/waveform.ts, which injects layout from
+// src/visuals/waveformContract.ts (WAVEFORM_LAYOUT). Edit the contract for
+// knob/LED UV changes; keep this file in sync only if you use it as a WGSL sandbox.
+
 struct ShaderGUIUniforms {
   resolution: vec2<f32>,
   time: f32,
@@ -23,6 +28,7 @@ struct ShaderGUIUniforms {
 
   volume: f32,
   colorShift: f32,
+  debugMode: f32,
 };
 
 @group(0) @binding(0) var<uniform> uniforms: ShaderGUIUniforms;

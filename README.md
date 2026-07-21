@@ -136,7 +136,8 @@ The ShaderGUI visualizer resolves backends automatically: **WebGPU → WebGL2 �
 | Backend | When used | Debug |
 |---------|-----------|-------|
 | `webgpu` | Default when adapter available | — |
-| `webgl2` | Manual override or WebGPU failure | Alt+D cycles debug modes |
+| `webgl2` | Manual override or WebGPU failure | Alt+D cycles debug modes (same as WebGPU) |
+| `webgpu` | Default when available | Alt+D cycles debug modes; layout from `waveformContract.ts` |
 | `canvas2d` | Last resort when GPU shaders unavailable | Basic bars + waveform |
 
 **Force a backend:**

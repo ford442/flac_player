@@ -249,7 +249,8 @@ Without these headers:
 - **Renderer selection**: `src/visuals/rendererSelection.ts` — `webgpu → webgl2 → canvas2d` with `?visualizer=` URL param, `localStorage`, and `window.DEBUG_VISUALIZER`
 - **WebGL2 reference renderer**: `src/visuals/webgl2/WebGL2Visualizer.ts` — GLSL port of `src/shaders/waveform.ts` with shared uniform/audio data via `src/visuals/visualSync.ts`
 - **Canvas2D last resort**: `src/visuals/webglFallback.ts` — basic frequency bars when both GPU backends fail
-- **Debug helpers**: `window.currentVisualizer`, Alt+D debug mode cycling (uv, waveform-only, audio-bins, spectrum), debug panel in ShaderGUI (🎛 button)
+- **Debug helpers**: `window.currentVisualizer`, Alt+D debug mode cycling on WebGPU + WebGL2 (uv, waveform-only, audio-bins, spectrum), debug panel in ShaderGUI (🎛 button)
+- **Layout contract**: `src/visuals/waveformContract.ts` — single source of truth for knob/LED UVs shared by WGSL and GLSL
 - **3D mode on WebGL2**: Renders GUI shader (3D cube is WebGPU-only)
 
 ### ShaderGUI Component
@@ -262,7 +263,7 @@ The `ShaderGUI` component (`src/components/ShaderGUI/ShaderGUI.tsx`) is a hardwa
 - **Hidden 3D Mode**: Double-click the top screen to toggle between the GUI shader and the 3D rotating cube visualizer
 
 **Critical Note — Shader-to-CSS Alignment:**
-The WGSL shader in `src/shaders/waveform.ts` hardcodes UV coordinates for knob glows and LED glows to match the CSS grid layout. If you modify `.shader-gui-layout`, `.shader-gui-top-right`, knob positions, or button positions in `ShaderGUI.css`, you **must** recalibrate the UV coordinates in the WGSL shader's `drawKnobGlow` and `drawLedGlow` calls. The alignment map is documented in comments inside `waveform.ts`.
+Knob/LED glow UV coordinates and palette colors live in **`src/visuals/waveformContract.ts`** (`WAVEFORM_LAYOUT`). Both the WGSL and GLSL waveform shaders inject these values at build time. If you modify `.shader-gui-layout`, `.shader-gui-top-right`, knob positions, or button positions in `ShaderGUI.css`, update `WAVEFORM_LAYOUT` once — do not hardcode UVs in either shader file.
 
 ### Backend API (`app.py`)
 The FastAPI backend provides the following endpoints (verified from `app.py`):
@@ -302,6 +303,7 @@ Buffered backends: `fetch(url) → decode → AudioBuffer`. Streaming: `<audio s
 ```bash
 npm run test:decoder   # libflac decode unit test
 npm run test:e2e       # Playwright smoke tests
+npm run test:visualizer # renderer selection + WAVEFORM_LAYOUT parity + debug modes
 npm run typecheck && npm run lint
 ```
 
@@ -353,7 +355,7 @@ Due to SharedArrayBuffer usage, the app must be served over HTTPS (except localh
 3. **WASM Build**: `scripts/build-wasm.sh` builds both SDL3 and SDL2; SDL3 also via `bash src/sdl/build.sh`; `npm run verify:wasm` checks artifact freshness in CI
 4. **Hardcoded Deploy Credentials**: `deploy.py` contains server-specific configuration
 5. **Memory Constraints**: Large audio files may require WASM memory growth (`ALLOW_MEMORY_GROWTH=1` is enabled in build scripts)
-6. **Shader-to-CSS Fragility**: WGSL knob/LED glow positions are hardcoded to match CSS layout. Changing the layout requires updating `waveform.ts`
+6. **Shader-to-CSS layout**: Knob/LED UVs live in `src/visuals/waveformContract.ts`. Changing CSS layout requires updating that contract once (both GPU shaders inject it).
 
 ## Development Workflow
 
