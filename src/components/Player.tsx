@@ -1,12 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { createAudioBackend } from '../audio/createAudioBackend';
-import type { ConfigurableAudioBackend } from '../types/audio';
 import {
   AudioLoader,
   PlaylistTrack,
   loadQueueFromStorage,
-  selectDecodeStrategy,
-  type PlaybackPathInfo,
 } from '../audioLoader';
 
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -14,20 +10,21 @@ import { usePlayerState } from '../hooks/usePlayerState';
 import { useToastNotifications } from '../hooks/useToastNotifications';
 import { useAudioSettings } from '../hooks/useAudioSettings';
 import { usePlayerData } from '../hooks/usePlayerData';
+import { useAudioBackendLifecycle } from '../hooks/useAudioBackendLifecycle';
+import { useTrackLoader } from '../hooks/useTrackLoader';
+import { useQueuePlayback } from '../hooks/useQueuePlayback';
 import { VisualizerShell } from './VisualizerShell';
 import { ToastContainer } from './Toast';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { PlayerFallbackView } from './PlayerFallbackView';
 import { EmbedPlayerView } from './EmbedPlayerView';
-import { handleQueueAutoAdvance, getNextQueueIndex, getPreviousQueueIndex } from '../utils/queueUtils';
-import { shuffleArray, getPreferredStorageUrls, isFastStorageUrl } from '../utils/audioUtils';
-import { createProjectMPCMFeed, notifyInAppProjectMTrackChange } from '../utils/projectMBridge';
+import { shuffleArray, isFastStorageUrl } from '../utils/audioUtils';
 import { IS_PROJECTM_EMBED } from '../utils/embedMode';
 import {
   getInitialVisualizerAesthetic,
   VisualizerAesthetic,
 } from '../utils/visualizerMode';
-import { clearTrackCache, getOrFetchTrack } from '../storage/trackCache';
+import { clearTrackCache } from '../storage/trackCache';
 import './Player.css';
 
 const getSharedPlaylistId = (): string | null => {
@@ -72,9 +69,6 @@ export const Player: React.FC = () => {
   const [visualizerAesthetic, setVisualizerAesthetic] = useState<VisualizerAesthetic>(
     () => getInitialVisualizerAesthetic()
   );
-  const [playbackPath, setPlaybackPath] = useState<PlaybackPathInfo | null>(null);
-
-  const playerRef = useRef<ConfigurableAudioBackend | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const pendingFilesRef = useRef<File[]>([]);
   const handleAutoAdvanceRef = useRef<() => void>(() => {});
@@ -198,82 +192,37 @@ export const Player: React.FC = () => {
     files.forEach((file, i) => setTimeout(() => loadLocalFile(file), i * 100));
   }, [outputMode, loadLocalFile, addToast, setOutputMode]);
 
-  handleAutoAdvanceRef.current = () =>
-    handleQueueAutoAdvance(
-      queue, queueCurrentIndex, shuffle, repeatMode,
-      (track, index) => playTrack(track, index),
-      () => playerRef.current?.play()
-    );
+  // Flush any files dropped before the backend finished initializing.
+  const flushPendingFiles = useCallback(() => {
+    if (pendingFilesRef.current.length === 0) return;
+    const files = pendingFilesRef.current;
+    pendingFilesRef.current = [];
+    setTimeout(() => files.forEach((file, i) => setTimeout(() => loadLocalFile(file), i * 100)), 0);
+  }, [loadLocalFile]);
 
-  // =============================================================================
-  // Player initialization
-  // =============================================================================
+  const playerRef = useAudioBackendLifecycle({
+    outputMode,
+    initialSettings: { volume, muted, eqGains, playbackRate, crossfadeEnabled },
+    eqGains, playbackRate, crossfadeEnabled,
+    onTrackEndedRef: handleAutoAdvanceRef,
+    onInitialized: flushPendingFiles,
+    setPlayerState, setError,
+    queue, queueCurrentIndex, shuffle, repeatMode,
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    let stopProjectMBridge: (() => void) | null = null;
-    let activePlayer: ConfigurableAudioBackend | null = null;
+  const { loadAudioFromUrl, playbackPath } = useTrackLoader({
+    playerRef, loader, outputMode,
+    setPlayerState, setError, setCurrentTrack, addToast,
+  });
 
-    void createAudioBackend(outputMode).then((player) => {
-      if (cancelled) {
-        player.destroy();
-        return;
-      }
-
-      activePlayer = player;
-      player.setStateChangeCallback(setPlayerState);
-      player.setOnEndedCallback(() => handleAutoAdvanceRef.current());
-      playerRef.current = player;
-      player.setVolume(muted ? 0 : volume);
-      player.setEQGains(eqGains);
-      player.setPlaybackRate(playbackRate);
-      player.setCrossfadeEnabled?.(crossfadeEnabled);
-
-      stopProjectMBridge = createProjectMPCMFeed(player);
-
-      void player.initialize().then(() => {
-        if (cancelled || pendingFilesRef.current.length === 0) return;
-        const files = pendingFilesRef.current;
-        pendingFilesRef.current = [];
-        setTimeout(() => files.forEach((file, i) => setTimeout(() => loadLocalFile(file), i * 100)), 0);
-      }).catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : `${outputMode} initialization failed`);
-      });
-    }).catch((err: unknown) => {
-      if (!cancelled) setError(err instanceof Error ? err.message : `${outputMode} initialization failed`);
-    });
-
-    return () => {
-      cancelled = true;
-      stopProjectMBridge?.();
-      activePlayer?.setOnEndedCallback(undefined);
-      activePlayer?.destroy();
-      if (playerRef.current === activePlayer) {
-        playerRef.current = null;
-      }
-    };
-  }, [outputMode, loadLocalFile]);
-
-  // Apply live settings to player
-  useEffect(() => {
-    playerRef.current?.setEQGains(eqGains);
-  }, [eqGains]);
-
-  useEffect(() => {
-    playerRef.current?.setPlaybackRate(playbackRate);
-  }, [playbackRate]);
-
-  useEffect(() => {
-    playerRef.current?.setCrossfadeEnabled?.(crossfadeEnabled);
-  }, [crossfadeEnabled]);
-
-  useEffect(() => {
-    if (!crossfadeEnabled || outputMode !== 'streaming') return;
-    const nextIndex = getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode);
-    if (nextIndex === -1) return;
-    const nextTrack = queue[nextIndex];
-    if (nextTrack) playerRef.current?.preloadNext?.(nextTrack.url);
-  }, [crossfadeEnabled, outputMode, queue, queueCurrentIndex, shuffle, repeatMode]);
+  const { playTrack, playNextInQueue, playPreviousInQueue, togglePlayback } = useQueuePlayback({
+    playerRef,
+    onTrackEndedRef: handleAutoAdvanceRef,
+    loadAudioFromUrl,
+    queue, queueCurrentIndex, setQueueCurrentIndex, shuffle, repeatMode,
+    playerState, setCurrentTrack, setLoadingTrackId, setError, addToast,
+    onPlayRecorded: loadStats,
+  });
 
   useEffect(() => {
     if (isSharedPlaylist) return;
@@ -290,127 +239,6 @@ export const Player: React.FC = () => {
   // =============================================================================
   // Playback controls
   // =============================================================================
-
-  const loadAudioFromUrl = async (url: string, track?: PlaylistTrack) => {
-    if (!url.trim() || !playerRef.current) return;
-    setPlayerState(prev => ({ ...prev, isLoading: true }));
-    setError('');
-    const expectedDuration = track?.duration && track.duration > 0 ? track.duration : undefined;
-
-    try {
-      const candidateUrls = getPreferredStorageUrls(url);
-      let loaded = false;
-      let lastError: unknown;
-      for (const candidateUrl of candidateUrls) {
-        try {
-          const player = playerRef.current;
-
-          if (outputMode === 'streaming' && player.loadFromURL) {
-            await player.loadFromURL(candidateUrl, { expectedDuration });
-            setPlaybackPath(player.getPlaybackPath?.() ?? null);
-          } else if (outputMode === 'worklet') {
-            const probe = await loader.probeAudioUrl(candidateUrl);
-            const strategy = selectDecodeStrategy(probe.contentLength, {
-              outputMode: 'worklet',
-              url: candidateUrl,
-            });
-            if (strategy === 'hifi-stream' && player.loadFromURLStreaming) {
-              await player.loadFromURLStreaming(candidateUrl, { expectedDuration });
-              setPlaybackPath(player.getPlaybackPath?.() ?? null);
-            } else {
-              let arrayBuffer: ArrayBuffer;
-              try {
-                const response = await getOrFetchTrack(candidateUrl);
-                arrayBuffer = await response.arrayBuffer();
-              } catch (cacheErr) {
-                console.warn('Offline cache miss or error, falling back to network fetch:', cacheErr);
-                arrayBuffer = await loader.loadFromURL(candidateUrl);
-              }
-              await player.loadFromArrayBuffer(arrayBuffer);
-              setPlaybackPath(player.getPlaybackPath?.() ?? null);
-            }
-          } else {
-            let arrayBuffer: ArrayBuffer;
-            try {
-              const response = await getOrFetchTrack(candidateUrl);
-              arrayBuffer = await response.arrayBuffer();
-            } catch (cacheErr) {
-              console.warn('Offline cache miss or error, falling back to network fetch:', cacheErr);
-              arrayBuffer = await loader.loadFromURL(candidateUrl);
-            }
-            await player.loadFromArrayBuffer(arrayBuffer);
-            setPlaybackPath(null);
-          }
-          loaded = true;
-          break;
-        } catch (err) { lastError = err; }
-      }
-      if (!loaded) {
-        const msg = `Failed to load audio from any source: ${candidateUrls.join(', ')}`;
-        throw new Error(lastError instanceof Error && lastError.message ? `${msg} (${lastError.message})` : msg);
-      }
-      if (track) {
-        setCurrentTrack(track);
-        if (track.id) {
-          await loader.recordPlay(track.id);
-          addToast('Playing: ' + (track.title || track.name), 'info');
-        }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load audio');
-      throw err;
-    } finally {
-      setPlayerState(prev => ({ ...prev, isLoading: false }));
-    }
-  };
-
-  const playTrack = async (track: PlaylistTrack, index?: number) => {
-    setCurrentTrack(track);
-    setLoadingTrackId(track.id);
-    if (index !== undefined) setQueueCurrentIndex(index);
-    setError('');
-    notifyInAppProjectMTrackChange();
-    try {
-      await loadAudioFromUrl(track.url, track);
-      const maybePromise = playerRef.current?.play();
-      if (maybePromise instanceof Promise) await maybePromise;
-      try {
-        const saved = JSON.parse(localStorage.getItem('flac_position') || 'null');
-        if (saved && saved.trackId === track.id && saved.time > 0) playerRef.current?.seek(saved.time);
-      } catch { /* no-op */ }
-      setTimeout(loadStats, 500);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to play track';
-      setError(message);
-      addToast(`Playback failed: ${message}`, 'error');
-      console.error('Failed to play track:', err);
-    } finally {
-      setLoadingTrackId(undefined);
-    }
-  };
-
-  const playNextInQueue = useCallback(() => {
-    const nextIndex = getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode);
-    if (nextIndex === -1) return;
-    const nextTrack = queue[nextIndex];
-    if (nextTrack) playTrack(nextTrack, nextIndex);
-  }, [queue, queueCurrentIndex, shuffle, repeatMode]);
-
-  const playPreviousInQueue = useCallback(() => {
-    const previousIndex = getPreviousQueueIndex(queue.length, queueCurrentIndex, repeatMode);
-    if (previousIndex === -1) return;
-    const previousTrack = queue[previousIndex];
-    if (previousTrack) playTrack(previousTrack, previousIndex);
-  }, [queue, queueCurrentIndex, repeatMode]);
-
-  const togglePlayback = useCallback(() => {
-    if (playerState.isPlaying) { playerRef.current?.pause(); return; }
-    if (queue.length === 0) { playerRef.current?.play(); return; }
-    const initialIndex = queueCurrentIndex >= 0 ? queueCurrentIndex : 0;
-    const initialTrack = queue[initialIndex];
-    if (playerState.duration === 0 && initialTrack) { playTrack(initialTrack, initialIndex); return; }
-    playerRef.current?.play();
-  }, [playerState.isPlaying, playerState.duration, queue, queueCurrentIndex]);
 
   const loadCloudPlaylist = useCallback(async (playlistId: string) => {
     try {
