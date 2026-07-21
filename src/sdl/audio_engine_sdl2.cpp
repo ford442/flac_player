@@ -21,7 +21,40 @@ struct PlayerState {
     SDL_AudioDeviceID deviceId = 0;
     int deviceFreq = 44100;
     int deviceChannels = 2;
+    // Streaming: PCM is queued to the device incrementally instead of all at
+    // once, so only the device queue is resident. Seek is unsupported here.
+    bool streaming = false;
+    bool streamEnded = false;
+    double streamFedSeconds = 0.0; // total audio handed to the device
 } g_state;
+
+// Target depth of the device queue in streaming mode. Back-pressure kicks in
+// above this; ~8 s stereo @48k is a few MB, versus the whole track buffered.
+static const double kTargetQueueSeconds = 8.0;
+
+static Uint32 target_queue_bytes() {
+    return (Uint32)(kTargetQueueSeconds * sizeof(float)
+                    * g_state.deviceChannels * g_state.deviceFreq);
+}
+
+/** Convert interleaved float PCM through the resampler and queue it. */
+static int queue_samples(const float* samples, int count) {
+    if (!g_state.stream || !g_state.deviceId || count <= 0) return 0;
+
+    const float* scaled = scale_samples(samples, count, g_state.volume);
+    pcm_ring_write(scaled, count);
+    SDL_AudioStreamPut(g_state.stream, scaled, count * sizeof(float));
+
+    int available = SDL_AudioStreamAvailable(g_state.stream);
+    if (available > 0) {
+        std::vector<Uint8> converted(available);
+        int got = SDL_AudioStreamGet(g_state.stream, converted.data(), available);
+        if (got > 0) {
+            SDL_QueueAudio(g_state.deviceId, converted.data(), got);
+        }
+    }
+    return count;
+}
 
 static void queue_remaining_audio() {
     if (!g_state.stream || !g_state.deviceId || g_state.audioBuffer.empty()) return;
@@ -77,6 +110,9 @@ int init_audio() {
 
 EMSCRIPTEN_KEEPALIVE
 void set_audio_data(float* data, int length, int channels, int sampleRate) {
+    g_state.streaming = false;
+    g_state.streamEnded = false;
+    g_state.streamFedSeconds = 0.0;
     printf("[C++ SDL2] set_audio_data called. Length: %d, Channels: %d, Rate: %d\n", length, channels, sampleRate);
 
     if (g_state.stream) {
@@ -132,6 +168,69 @@ void set_audio_data(float* data, int length, int channels, int sampleRate) {
 }
 
 EMSCRIPTEN_KEEPALIVE
+int start_stream(int channels, int sampleRate, int bufferSeconds) {
+    (void)bufferSeconds; // SDL2 bounds by device queue depth, not a ring
+    g_state.channels = channels > 0 ? channels : 2;
+    g_state.sampleRate = sampleRate > 0 ? sampleRate : 44100;
+    g_state.streaming = true;
+    g_state.streamEnded = false;
+    g_state.streamFedSeconds = 0.0;
+    g_state.playHead = 0;
+    g_state.isPlaying = false;
+    g_state.audioBuffer.clear();
+    g_state.audioBuffer.shrink_to_fit();
+
+    if (g_state.deviceId) SDL_ClearQueuedAudio(g_state.deviceId);
+    pcm_ring_reset();
+
+    if (g_state.stream) {
+        SDL_FreeAudioStream(g_state.stream);
+        g_state.stream = nullptr;
+    }
+    g_state.stream = SDL_NewAudioStream(
+        AUDIO_F32, g_state.channels, g_state.sampleRate,
+        AUDIO_F32, g_state.deviceChannels, g_state.deviceFreq);
+    if (!g_state.stream) {
+        std::cerr << "[C++ SDL2] SDL_NewAudioStream failed: " << SDL_GetError() << std::endl;
+        return 0;
+    }
+    printf("[C++ SDL2] start_stream ch=%d sr=%d\n", g_state.channels, g_state.sampleRate);
+    return 1;
+}
+
+/**
+ * Queues a chunk unless the device already holds enough audio. Returns the
+ * samples accepted; 0 means "full, retry later" — the back-pressure signal.
+ */
+EMSCRIPTEN_KEEPALIVE
+int feed_pcm_chunk(float* data, int samples) {
+    if (!data || samples <= 0 || !g_state.streaming || !g_state.deviceId) return 0;
+    if (SDL_GetQueuedAudioSize(g_state.deviceId) >= target_queue_bytes()) return 0;
+
+    int accepted = queue_samples(data, samples);
+    if (accepted > 0) {
+        g_state.streamFedSeconds +=
+            (double)accepted / (g_state.channels * g_state.sampleRate);
+    }
+    return accepted;
+}
+
+EMSCRIPTEN_KEEPALIVE
+int get_buffer_fill_level() {
+    if (!g_state.deviceId) return 0;
+    const Uint32 target = target_queue_bytes();
+    if (target == 0) return 0;
+    Uint32 queued = SDL_GetQueuedAudioSize(g_state.deviceId);
+    int pct = (int)((queued * 100ull) / target);
+    return pct > 100 ? 100 : pct;
+}
+
+EMSCRIPTEN_KEEPALIVE
+void set_stream_ended(int ended) {
+    g_state.streamEnded = ended != 0;
+}
+
+EMSCRIPTEN_KEEPALIVE
 void play() {
     if (!g_state.deviceId || g_state.audioBuffer.empty()) return;
 
@@ -171,6 +270,10 @@ void stop() {
 
 EMSCRIPTEN_KEEPALIVE
 void seek(float time) {
+    if (g_state.streaming) {
+        std::cerr << "[C++ SDL2] seek ignored: unsupported in streaming mode" << std::endl;
+        return;
+    }
     if (!g_state.deviceId || g_state.audioBuffer.empty()) return;
 
     size_t sampleIndex = (size_t)(time * g_state.sampleRate) * g_state.channels;
@@ -190,11 +293,19 @@ void seek(float time) {
 
 EMSCRIPTEN_KEEPALIVE
 float get_current_time() {
-    if (!g_state.deviceId || g_state.audioBuffer.empty()) return 0.0f;
+    if (!g_state.deviceId) return 0.0f;
+    if (!g_state.streaming && g_state.audioBuffer.empty()) return 0.0f;
 
     Uint32 queuedBytes = SDL_GetQueuedAudioSize(g_state.deviceId);
 
     double queuedSeconds = (double)queuedBytes / (sizeof(float) * g_state.deviceChannels * g_state.deviceFreq);
+
+    // Streaming has no full buffer to measure against, so position is what has
+    // been fed minus what is still sitting in the device queue.
+    if (g_state.streaming) {
+        double t = g_state.streamFedSeconds - queuedSeconds;
+        return (float)(t < 0 ? 0 : t);
+    }
 
     double totalDuration = (double)g_state.audioBuffer.size() / (g_state.channels * g_state.sampleRate);
 

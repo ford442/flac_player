@@ -73,10 +73,10 @@ export function useTrackLoader({
           if (mode === 'streaming' && player.loadFromURL) {
             await player.loadFromURL(candidateUrl, { expectedDuration });
             setPlaybackPath(player.getPlaybackPath?.() ?? null);
-          } else if (mode === 'worklet') {
+          } else if (mode === 'worklet' || mode === 'sdl' || mode === 'sdl2') {
             const probe = await loader.probeAudioUrl(candidateUrl);
             const strategy = selectDecodeStrategy(probe.contentLength, {
-              outputMode: 'worklet',
+              outputMode: mode,
               url: candidateUrl,
             });
             if (strategy === 'hifi-stream' && player.loadFromURLStreaming) {
