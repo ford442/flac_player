@@ -29,6 +29,9 @@ Last updated: July 2026
 | SDL → analyser bridge | `src/audio/SdlPcmBridge.ts`, `src/sdl/pcm_ring.h` |
 | Library / API client | `src/api/songApi.ts`, `src/audioLoader.ts` |
 | Offline cache | `src/storage/trackCache.ts`, `src/components/OfflineCache.tsx` |
+| Queue persistence | `src/storage/queueStorage.ts` |
+| Playlist share (static) | `src/api/songApi.ts` (`createShare`, `fetchSharedPlaylist`) |
+| Listening rooms (planned) | [LISTENING_ROOMS.md](./LISTENING_ROOMS.md) — `useListeningRoom`, `/room/{id}` |
 | EQ / crossfade settings | `src/audio/EQChain.ts`, `src/hooks/useAudioSettings.ts` |
 | Visualizer shell | `src/components/VisualizerShell.tsx` |
 | ShaderGUI | `src/components/ShaderGUI/ShaderGUI.tsx` |

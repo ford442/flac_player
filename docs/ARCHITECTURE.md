@@ -217,9 +217,24 @@ npm run test:e2e       # Playwright smoke tests (tests/smoke.spec.ts)
 npm run typecheck && npm run lint
 ```
 
+## Listening rooms (planned — #185)
+
+Static playlist share (`POST /api/share`, `/playlist/{id}`) loads a track list once per client. **Synced listening rooms** add a host-authoritative WebSocket layer so guests follow the same track and playhead.
+
+```
+Host Player                    Signaling (WS)                 Guest Player(s)
+    │  POST /api/rooms                                              │
+    ├─ JOIN (host) ───────────────────────────────────────────────►│
+    ├─ PLAY / PAUSE / SEEK / QUEUE_UPDATE ─────────────────────────►│ apply + drift-correct
+    └─ HEARTBEAT (5s) ───────────────────────────────────────────►│
+```
+
+MVP: **streaming backend only**, `HTMLAudioElement.currentTime` as clock, target ≤ 500 ms drift. Full protocol, API contract, and foundation refactor hooks: [LISTENING_ROOMS.md](./LISTENING_ROOMS.md).
+
 ## Related docs
 
 - [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) — backend selection guide
 - [API.md](./API.md) — REST + projectM embed contract
+- [LISTENING_ROOMS.md](./LISTENING_ROOMS.md) — synced listening rooms design (#185)
 - [DEVELOPER_CONTEXT.md](./DEVELOPER_CONTEXT.md) — complexity hotspots for agents
 - [ROADMAP.md](./ROADMAP.md) — open GitHub issues #166–#174

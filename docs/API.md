@@ -146,6 +146,28 @@ Get a shared playlist by ID.
 #### GET `/playlist/{share_id}`
 Redirect to the main app with the shared playlist loaded.
 
+### Listening rooms (planned — #185)
+
+> **Not implemented yet.** Static share endpoints above remain the only sharing API in production. See [LISTENING_ROOMS.md](./LISTENING_ROOMS.md) for the full design.
+
+Synced “listen together” sessions: host creates a room; guests join via `/room/{room_id}` and follow live playback over WebSocket.
+
+#### `POST /api/rooms` (planned)
+
+Create a room. Response includes `room_id`, `host_token` (host-only), `join_url`, and `ws_url`.
+
+#### `GET /api/rooms/{room_id}` (planned)
+
+Room metadata for the join page (title, guest count, host connected).
+
+#### `DELETE /api/rooms/{room_id}` (planned)
+
+Host teardown (`host_token` required).
+
+#### `WS /ws/rooms/{room_id}` (planned)
+
+JSON messages: `JOIN`, `STATE_SNAPSHOT`, `PLAY`, `PAUSE`, `SEEK`, `TRACK_CHANGE`, `QUEUE_UPDATE`, `HEARTBEAT`, `RESYNC_REQUEST`, `ROOM_CLOSED`.
+
 ### MusicBrainz Integration
 
 #### GET `/api/musicbrainz/search`
