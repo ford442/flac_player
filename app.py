@@ -32,7 +32,7 @@ from models import (
 )
 from storage import StorageManager, parse_ai_metadata_from_filename, suggest_tags_from_prompt
 from musicbrainz import MusicBrainzClient, enrich_metadata_from_musicbrainz
-from url_shortener import URLShortener
+from replaygain import extract_replaygain_from_file
 
 # =============================================================================
 # Configuration
@@ -444,8 +444,27 @@ async def upload_song(
             'generation_model': song.generation_model,
             'version': song.version,
             'prompt': song.prompt,
+            'replaygain_track_db': song.replaygain_track_db,
+            'replaygain_album_db': song.replaygain_album_db,
+            'replaygain_track_peak': song.replaygain_track_peak,
+            'replaygain_album_peak': song.replaygain_album_peak,
             'type': 'audio'
         }
+
+        # Client-supplied ReplayGain tags take precedence; otherwise scan local file.
+        filename = song_data.get('filename') or song.name
+        local_path = os.path.join(MUSIC_DIR, filename)
+        if not any(song_data.get(k) for k in (
+            'replaygain_track_db', 'replaygain_album_db',
+            'replaygain_track_peak', 'replaygain_album_peak',
+        )):
+            try:
+                rg_tags = extract_replaygain_from_file(local_path)
+                for key, value in rg_tags.items():
+                    if song_data.get(key) is None:
+                        song_data[key] = value
+            except Exception as e:
+                print(f"ReplayGain extraction failed: {e}")
         
         # Auto-parse AI metadata from filename
         if song.auto_parse_ai:

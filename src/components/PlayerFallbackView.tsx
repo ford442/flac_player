@@ -13,6 +13,7 @@ import { CacheStatsPanel } from './OfflineCache';
 import { GenerationPanel } from './GenerationPanel';
 import { formatTime, FAST_STORAGE_HOST } from '../utils/audioUtils';
 import type { GaplessMode } from '../types/gapless';
+import type { ReplayGainMode } from '../utils/replayGain';
 import { getNextQueueIndex, getPreviousQueueIndex } from '../utils/queueUtils';
 
 type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'settings';
@@ -83,6 +84,10 @@ export interface PlayerFallbackViewProps {
   setCrossfadeMs: (ms: number) => void;
   crossfadeEnabled: boolean;
   setCrossfadeEnabled: (e: boolean) => void;
+  replayGainMode: ReplayGainMode;
+  setReplayGainMode: (mode: ReplayGainMode) => void;
+  replayGainLimiter: boolean;
+  setReplayGainLimiter: (enabled: boolean) => void;
   prebufferingNext: boolean;
   playbackPath: PlaybackPathInfo | null;
   isSharedPlaylist: boolean;
@@ -132,6 +137,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     volume, muted, outputMode, setOutputMode,
     eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate,
     gaplessMode, setGaplessMode, crossfadeMs, setCrossfadeMs,
+    replayGainMode, setReplayGainMode, replayGainLimiter, setReplayGainLimiter,
     prebufferingNext,
     playbackPath,
     isSharedPlaylist, sharedPlaylistTitle, analyser,
@@ -446,7 +452,9 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
                   <EQPanel eqGains={eqGains} onBandChange={setEQBandGain} onReset={resetEQ}
                     playbackRate={playbackRate} onPlaybackRateChange={setPlaybackRate}
                     gaplessMode={gaplessMode} onGaplessModeChange={setGaplessMode}
-                    crossfadeMs={crossfadeMs} onCrossfadeMsChange={setCrossfadeMs} />
+                    crossfadeMs={crossfadeMs} onCrossfadeMsChange={setCrossfadeMs}
+                    replayGainMode={replayGainMode} onReplayGainModeChange={setReplayGainMode}
+                    replayGainLimiter={replayGainLimiter} onReplayGainLimiterChange={setReplayGainLimiter} />
                 </div>
                 <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
                   <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Audio Engine</span>

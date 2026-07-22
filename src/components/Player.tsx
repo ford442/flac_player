@@ -13,6 +13,8 @@ import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { usePlayerState } from '../hooks/usePlayerState';
 import { useToastNotifications } from '../hooks/useToastNotifications';
 import { useAudioSettings } from '../hooks/useAudioSettings';
+import { useReplayGainApplication } from '../hooks/useReplayGainApplication';
+import { parseReplayGainFromCommon, replayGainTagsToTrackFields } from '../utils/replayGain';
 import { usePlayerData } from '../hooks/usePlayerData';
 import { VisualizerShell } from './VisualizerShell';
 import { ToastContainer } from './Toast';
@@ -45,7 +47,14 @@ export const Player: React.FC = () => {
 
   const { playerState, setPlayerState, outputMode, setOutputMode, setError, currentTrack, setCurrentTrack, loadingTrackId, setLoadingTrackId, backendStatus, setBackendStatus } = usePlayerState();
   const { toasts, addToast, removeToast } = useToastNotifications();
-  const { eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate, gaplessSettings, setGaplessMode, crossfadeMs, setCrossfadeMs, crossfadeEnabled, setCrossfadeEnabled } = useAudioSettings();
+  const {
+    eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate,
+    gaplessSettings, setGaplessMode, crossfadeMs, setCrossfadeMs,
+    crossfadeEnabled, setCrossfadeEnabled,
+    replayGainMode, setReplayGainMode, replayGainLimiter, setReplayGainLimiter,
+    replayGainSettings,
+  } = useAudioSettings();
+  const { applyReplayGain } = useReplayGainApplication();
 
   const loader = useMemo(() => new AudioLoader(), []);
   const data = usePlayerData({ loader, addToast, setError, setCurrentTrack, isSharedPlaylist });
@@ -152,6 +161,7 @@ export const Player: React.FC = () => {
       try {
         const { parseBlob } = await import('music-metadata');
         const meta = await parseBlob(file);
+        const rgFields = replayGainTagsToTrackFields(parseReplayGainFromCommon(meta.common));
         track = {
           id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           name: file.name,
@@ -159,6 +169,7 @@ export const Player: React.FC = () => {
           author: (meta.common.artist as string) || 'Unknown Artist',
           url: URL.createObjectURL(file),
           duration: (meta.format.duration as number) || 0,
+          ...rgFields,
         };
       } catch {
         track = {
@@ -179,6 +190,8 @@ export const Player: React.FC = () => {
       }
 
       await playerRef.current.loadFromArrayBuffer(arrayBuffer, file.name);
+      const enriched = await applyReplayGain(playerRef.current, track, queue, replayGainSettings);
+      setCurrentTrack(enriched);
       playerRef.current.play();
       addToast(`Playing: ${track.title || track.name}`, 'info');
     } catch (err) {
@@ -188,7 +201,7 @@ export const Player: React.FC = () => {
     } finally {
       setPlayerState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [addToast, outputMode, setCurrentTrack, setError, setPlayerState]);
+  }, [addToast, outputMode, setCurrentTrack, setError, setPlayerState, applyReplayGain, queue, replayGainSettings]);
 
   const handleLocalFiles = useCallback((files: File[]) => {
     if (outputMode === 'streaming') {
@@ -221,10 +234,11 @@ export const Player: React.FC = () => {
     if (!next) return;
     setQueueCurrentIndex(next.index);
     setCurrentTrack(next.track);
+    void applyReplayGain(playerRef.current, next.track, queue, replayGainSettings);
     notifyInAppProjectMTrackChange();
     preloadNextInQueue(next.index);
     setTimeout(loadStats, 500);
-  }, [queue, queueCurrentIndex, shuffle, repeatMode, preloadNextInQueue, setQueueCurrentIndex, setCurrentTrack, loadStats]);
+  }, [queue, queueCurrentIndex, shuffle, repeatMode, preloadNextInQueue, setQueueCurrentIndex, setCurrentTrack, loadStats, applyReplayGain, replayGainSettings]);
 
   handleAutoAdvanceRef.current = () =>
     handleQueueAutoAdvance(
@@ -305,6 +319,11 @@ export const Player: React.FC = () => {
     playerRef.current?.setGaplessSettings?.(gaplessSettings);
     playerRef.current?.setCrossfadeEnabled?.(crossfadeEnabled);
   }, [gaplessSettings, crossfadeEnabled]);
+
+  useEffect(() => {
+    if (!currentTrack) return;
+    void applyReplayGain(playerRef.current, currentTrack, queue, replayGainSettings);
+  }, [replayGainSettings, currentTrack, queue, applyReplayGain]);
 
   useEffect(() => {
     preloadNextInQueue(queueCurrentIndex);
@@ -406,7 +425,9 @@ export const Player: React.FC = () => {
     setError('');
     notifyInAppProjectMTrackChange();
     try {
-      await loadAudioFromUrl(track.url, track);
+      const enriched = await applyReplayGain(playerRef.current, track, queue, replayGainSettings);
+      if (enriched !== track) setCurrentTrack(enriched);
+      await loadAudioFromUrl(enriched.url, enriched);
       const maybePromise = playerRef.current?.play();
       if (maybePromise instanceof Promise) await maybePromise;
       try {
@@ -710,6 +731,8 @@ export const Player: React.FC = () => {
       crossfadeEnabled={crossfadeEnabled} setCrossfadeEnabled={setCrossfadeEnabled}
       gaplessMode={gaplessSettings.mode} setGaplessMode={setGaplessMode}
       crossfadeMs={crossfadeMs} setCrossfadeMs={setCrossfadeMs}
+      replayGainMode={replayGainMode} setReplayGainMode={setReplayGainMode}
+      replayGainLimiter={replayGainLimiter} setReplayGainLimiter={setReplayGainLimiter}
       prebufferingNext={prebufferingNext}
       playbackPath={playbackPath}
       isSharedPlaylist={isSharedPlaylist} sharedPlaylistTitle={sharedPlaylistTitle}

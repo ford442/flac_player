@@ -2,6 +2,7 @@ import React from 'react';
 import { DEFAULT_EQ_BANDS } from '../audio/EQChain';
 import type { GaplessMode } from '../types/gapless';
 import { MAX_CROSSFADE_MS, MIN_CROSSFADE_MS } from '../types/gapless';
+import type { ReplayGainMode } from '../utils/replayGain';
 
 interface EQPanelProps {
   eqGains: number[];
@@ -13,6 +14,10 @@ interface EQPanelProps {
   onGaplessModeChange: (mode: GaplessMode) => void;
   crossfadeMs: number;
   onCrossfadeMsChange: (ms: number) => void;
+  replayGainMode: ReplayGainMode;
+  onReplayGainModeChange: (mode: ReplayGainMode) => void;
+  replayGainLimiter: boolean;
+  onReplayGainLimiterChange: (enabled: boolean) => void;
   /** @deprecated kept for callers still passing the legacy toggle */
   crossfadeEnabled?: boolean;
   onCrossfadeChange?: (enabled: boolean) => void;
@@ -26,6 +31,12 @@ const GAPLESS_OPTIONS: { mode: GaplessMode; label: string; hint: string }[] = [
   { mode: 'off', label: 'Off', hint: 'Stop at track end, then load next' },
 ];
 
+const REPLAYGAIN_OPTIONS: { mode: ReplayGainMode; label: string; hint: string }[] = [
+  { mode: 'off', label: 'Off', hint: 'Play files at their original level' },
+  { mode: 'track', label: 'Track', hint: 'Normalize each track to reference loudness' },
+  { mode: 'album', label: 'Album', hint: 'Use album gain from the first queued track' },
+];
+
 export const EQPanel: React.FC<EQPanelProps> = ({
   eqGains,
   onBandChange,
@@ -36,6 +47,10 @@ export const EQPanel: React.FC<EQPanelProps> = ({
   onGaplessModeChange,
   crossfadeMs,
   onCrossfadeMsChange,
+  replayGainMode,
+  onReplayGainModeChange,
+  replayGainLimiter,
+  onReplayGainLimiterChange,
 }) => {
   return (
     <div className="eq-panel space-y-4 text-sm text-white">
@@ -132,6 +147,44 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             </button>
           ))}
         </div>
+      </div>
+
+      {/* ReplayGain / Loudness */}
+      <div>
+        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+          Loudness (ReplayGain)
+        </span>
+        <div className="flex gap-1 mt-2 flex-wrap">
+          {REPLAYGAIN_OPTIONS.map(({ mode, label, hint }) => (
+            <button
+              key={mode}
+              onClick={() => onReplayGainModeChange(mode)}
+              className={`px-2 py-1 rounded text-xs transition-colors ${
+                replayGainMode === mode
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
+              }`}
+              title={hint}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {replayGainMode !== 'off' && (
+          <label className="flex items-center gap-2 mt-3 text-xs text-gray-400 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={replayGainLimiter}
+              onChange={(e) => onReplayGainLimiterChange(e.target.checked)}
+              className="accent-purple-500"
+            />
+            Prevent clipping (peak-aware limiter)
+          </label>
+        )}
+        <p className="text-xs text-gray-500 mt-2">
+          Applies before the master volume fader. Gain is clamped to ±12 dB.
+          SDL backends apply gain in WASM volume; crossfade overlap may briefly mismatch levels.
+        </p>
       </div>
 
       {/* Gapless / Crossfade */}

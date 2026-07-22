@@ -34,6 +34,10 @@ class SongMetadata(BaseModel):
     generation_model: Optional[str] = None  # e.g., "Suno v3", "Udio", "Stable Audio"
     version: Optional[str] = None  # Version of the generation
     prompt: Optional[str] = None  # Original AI prompt used
+    replaygain_track_db: Optional[float] = None
+    replaygain_album_db: Optional[float] = None
+    replaygain_track_peak: Optional[float] = None
+    replaygain_album_peak: Optional[float] = None
 
 
 class SongCreate(BaseModel):
@@ -54,6 +58,10 @@ class SongCreate(BaseModel):
     generation_model: Optional[str] = None
     version: Optional[str] = None
     prompt: Optional[str] = None
+    replaygain_track_db: Optional[float] = None
+    replaygain_album_db: Optional[float] = None
+    replaygain_track_peak: Optional[float] = None
+    replaygain_album_peak: Optional[float] = None
     auto_enrich: bool = Field(True, description="Auto-fetch metadata from MusicBrainz")
     auto_parse_ai: bool = Field(True, description="Auto-parse AI metadata from filename")
 
@@ -76,6 +84,10 @@ class SongUpdate(BaseModel):
     generation_model: Optional[str] = None
     version: Optional[str] = None
     prompt: Optional[str] = None
+    replaygain_track_db: Optional[float] = None
+    replaygain_album_db: Optional[float] = None
+    replaygain_track_peak: Optional[float] = None
+    replaygain_album_peak: Optional[float] = None
     auto_enrich: bool = Field(False, description="Auto-fetch metadata from MusicBrainz if fields are empty")
 
 
@@ -95,6 +107,10 @@ class SongPatch(BaseModel):
     generation_model: Optional[str] = None
     version: Optional[str] = None
     prompt: Optional[str] = None
+    replaygain_track_db: Optional[float] = None
+    replaygain_album_db: Optional[float] = None
+    replaygain_track_peak: Optional[float] = None
+    replaygain_album_peak: Optional[float] = None
     auto_enrich: bool = Field(False, description="Auto-fetch metadata from MusicBrainz if fields are empty")
 
 

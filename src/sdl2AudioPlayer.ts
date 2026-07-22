@@ -38,6 +38,7 @@ export class Sdl2AudioPlayer implements AudioBackend {
   private onStateChange?: (state: AudioPlaybackState) => void;
   private pollInterval: number | null = null;
   private lastVolume: number = 1.0;
+  private replayGainLinear = 1;
   private initialization: Promise<void>;
   private destroyed = false;
 
@@ -76,7 +77,7 @@ export class Sdl2AudioPlayer implements AudioBackend {
       } else {
         console.log('[Sdl2AudioPlayer] SDL Audio initialized successfully.');
         this.isReady = true;
-        this.module._set_volume(this.lastVolume);
+        this.setVolume(this.lastVolume);
         this.startPolling();
       }
     } catch (err) {
@@ -222,7 +223,7 @@ export class Sdl2AudioPlayer implements AudioBackend {
   setVolume(volume: number): void {
     this.lastVolume = volume;
     if (this.module) {
-      this.module._set_volume(volume);
+      this.module._set_volume(volume * this.replayGainLinear);
     }
   }
 
@@ -230,6 +231,16 @@ export class Sdl2AudioPlayer implements AudioBackend {
 
   setEQGains(gains: number[]): void {
     this.contextManager.setEQGains(gains);
+  }
+
+  setReplayGainLinear(linear: number): void {
+    this.replayGainLinear = Math.max(0, linear);
+    this.setVolume(this.lastVolume);
+    this.contextManager.setReplayGainLinear(this.replayGainLinear);
+  }
+
+  setReplayGainLimiter(enabled: boolean): void {
+    this.contextManager.setReplayGainLimiter(enabled);
   }
 
   getAnalyser(): AnalyserNode {

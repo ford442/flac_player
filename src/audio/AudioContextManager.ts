@@ -1,26 +1,31 @@
 import { EQChain } from './EQChain';
+import { ReplayGainNode } from './ReplayGainNode';
 
 /**
  * Owns the application-lifetime Web Audio graph.
  *
  * Web Audio backends connect disposable source/input nodes to `input`; the
- * master Gain -> EQ -> Analyser -> destination chain is connected exactly once.
+ * ReplayGain -> master Gain -> EQ -> Analyser -> destination chain is connected exactly once.
  * SDL backends tap PCM into the analyser via {@link connectVisualizerFeed} while
  * {@link setExternalPlaybackActive} mutes Web Audio speakers (SDL owns output).
  */
 export class AudioContextManager {
   private context: AudioContext | null = null;
+  private replayGain: ReplayGainNode | null = null;
   private masterGain: GainNode | null = null;
   private eqChain: EQChain | null = null;
   private analyser: AnalyserNode | null = null;
   private speakerGain: GainNode | null = null;
   private visualizerFeedGain: GainNode | null = null;
   private externalPlaybackActive = false;
+  private replayGainLinear = 1;
+  private limiterEnabled = false;
 
   initialize(): AudioContext {
     if (this.context) return this.context;
 
     this.context = new AudioContext({ latencyHint: 'playback', sampleRate: 44100 });
+    this.replayGain = new ReplayGainNode(this.context);
     this.masterGain = this.context.createGain();
     this.eqChain = new EQChain(this.context);
     this.analyser = this.context.createAnalyser();
@@ -29,6 +34,7 @@ export class AudioContextManager {
     this.visualizerFeedGain = this.context.createGain();
     this.visualizerFeedGain.gain.value = 1;
 
+    this.replayGain.output.connect(this.masterGain);
     this.masterGain.connect(this.eqChain.input);
     this.eqChain.output.connect(this.analyser);
     this.visualizerFeedGain.connect(this.analyser);
@@ -48,7 +54,7 @@ export class AudioContextManager {
 
   connectInput(node: AudioNode): void {
     this.initialize();
-    node.connect(this.masterGain!);
+    node.connect(this.replayGain!.input);
   }
 
   /** Feed SDL PCM tap worklet into the analyser (parallel to masterGain path). */
@@ -76,6 +82,22 @@ export class AudioContextManager {
   setVolume(volume: number): void {
     this.initialize();
     this.masterGain!.gain.value = Math.max(0, Math.min(1, volume));
+  }
+
+  setReplayGainLinear(linear: number): void {
+    this.initialize();
+    this.replayGainLinear = Math.max(0, linear);
+    this.replayGain!.setGainLinear(this.replayGainLinear);
+  }
+
+  getReplayGainLinear(): number {
+    return this.replayGainLinear;
+  }
+
+  setReplayGainLimiter(enabled: boolean): void {
+    this.initialize();
+    this.limiterEnabled = enabled;
+    this.replayGain!.setLimiterEnabled(enabled);
   }
 
   setEQGains(gains: number[]): void {

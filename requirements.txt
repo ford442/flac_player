@@ -14,5 +14,8 @@ aiocache>=0.12.0
 # Data Validation
 pydantic>=2.5.0
 
+# Audio metadata (ReplayGain tag extraction on upload/rescan)
+mutagen>=1.47.0
+
 # Optional: For production deployments
 gunicorn>=21.2.0
