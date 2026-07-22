@@ -9,6 +9,7 @@ import {
   addTrackToQueue,
   playNextTrack,
   removeFromQueue,
+  getNextQueueTrack,
 } from '../src/utils/queueUtils';
 
 const track = (id: string): PlaylistTrack => ({
@@ -148,5 +149,13 @@ describe('removeFromQueue', () => {
   it('removes by index', () => {
     const q = [track('a'), track('b')];
     expect(removeFromQueue(q, 0).map(t => t.id)).toEqual(['b']);
+  });
+});
+
+describe('getNextQueueTrack', () => {
+  it('returns the next queue track for preload', () => {
+    const q = [track('a'), track('b')];
+    expect(getNextQueueTrack(q, 0, false, 'off')).toEqual({ track: q[1], index: 1 });
+    expect(getNextQueueTrack(q, 1, false, 'off')).toBeNull();
   });
 });

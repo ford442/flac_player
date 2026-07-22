@@ -3,11 +3,12 @@
 // Hi-Fi path:  HTTP Range → StreamingDecoder → AudioWorklet ring buffer → Analyser
 // Native path: <audio> element (WAV/MP3 or when WASM/worklet unavailable)
 //
-// Prerequisites for native path: CORS + Accept-Ranges on the audio host.
+// Gapless / crossfade is implemented on the native <audio> path (dual elements).
 
 import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
 import { AudioWorkletPlayer } from './audioWorkletPlayer';
 import { probeRemoteAudio } from './utils/rangeFetch';
+import { probeRemoteAudioDuration } from './utils/audioHeader';
 import {
   describePlaybackPath,
   isFlacUrl,
@@ -16,11 +17,25 @@ import {
 } from './utils/playbackPath';
 import { isTrackCached, getOrFetchTrack } from './storage/trackCache';
 import type { AudioBackend, AudioPlaybackState } from './types/audio';
+import {
+  DEFAULT_GAPLESS_MODE,
+  DEFAULT_CROSSFADE_MS,
+  PRELOAD_AHEAD_S,
+  isGaplessActive,
+  overlapSeconds,
+  type GaplessSettings,
+  type PreloadNextOptions,
+  type TrackTransitionEvent,
+} from './types/gapless';
 
-const CROSSFADE_DURATION = 3.0;
-const PRELOAD_AHEAD_S = 8.0;
+/** Lead time (seconds) to start the next native element before the measured end. */
+const GAPLESS_SCHEDULE_LEAD_S = 0.05;
 
 type ActivePath = 'native' | 'hifi' | 'buffered';
+
+function normalizePreloadOptions(options: PreloadNextOptions | string): PreloadNextOptions {
+  return typeof options === 'string' ? { url: options } : options;
+}
 
 export class StreamingAudioPlayer implements AudioBackend {
   private audioContext: AudioContext;
@@ -34,13 +49,20 @@ export class StreamingAudioPlayer implements AudioBackend {
   private nextAudioElement: HTMLAudioElement | null = null;
   private nextSourceNode: MediaElementAudioSourceNode | null = null;
   private nextGainNode: GainNode | null = null;
-  private crossfadeTimer: ReturnType<typeof setInterval> | null = null;
-  private crossfadeActive = false;
-  private crossfadeEnabled = false;
+  private transitionTimer: ReturnType<typeof setTimeout> | null = null;
+  private transitionActive = false;
+  private gaplessSettings: GaplessSettings = {
+    mode: DEFAULT_GAPLESS_MODE,
+    crossfadeMs: DEFAULT_CROSSFADE_MS,
+  };
   private nextTrackUrl: string | null = null;
+  private nextTrackDuration: number | null = null;
+  private currentTrackDuration: number | null = null;
+  private prebufferingNext = false;
+  private headerProbeAbort: AbortController | null = null;
 
   private onStateChange?: (state: AudioPlaybackState) => void;
-  private onEndedCallback?: () => void;
+  private onEndedCallback?: (event?: TrackTransitionEvent) => void;
   private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
@@ -54,7 +76,7 @@ export class StreamingAudioPlayer implements AudioBackend {
     if (!this.workletPlayer) {
       this.workletPlayer = new AudioWorkletPlayer(this.contextManager);
       this.workletPlayer.setStateChangeCallback((state) => this.notifyStateChange(state));
-      this.workletPlayer.setOnEndedCallback(() => this.onEndedCallback?.());
+      this.workletPlayer.setOnEndedCallback((event) => this.onEndedCallback?.(event));
       if (this.onPCMBlock) {
         this.workletPlayer.setPCMCallback(this.onPCMBlock);
       }
@@ -89,7 +111,7 @@ export class StreamingAudioPlayer implements AudioBackend {
 
     el.addEventListener('timeupdate', () => {
       this.notifyStateChange();
-      this._maybeTriggerCrossfade();
+      this._maybeTriggerTransition();
     });
     el.addEventListener('play', () => this.notifyStateChange());
     el.addEventListener('pause', () => this.notifyStateChange());
@@ -97,7 +119,7 @@ export class StreamingAudioPlayer implements AudioBackend {
     el.addEventListener('loadedmetadata', () => this.notifyStateChange());
     el.addEventListener('ended', () => {
       this.notifyStateChange();
-      if (!this.crossfadeActive) {
+      if (!this.transitionActive) {
         try { this.onEndedCallback?.(); } catch { /* noop */ }
       }
     });
@@ -108,13 +130,30 @@ export class StreamingAudioPlayer implements AudioBackend {
     this.onStateChange = callback;
   }
 
-  setOnEndedCallback(callback?: () => void): void {
+  setOnEndedCallback(callback?: (event?: TrackTransitionEvent) => void): void {
     this.onEndedCallback = callback;
     this.workletPlayer?.setOnEndedCallback(callback);
   }
 
+  private setPrebuffering(active: boolean): void {
+    if (this.prebufferingNext === active) return;
+    this.prebufferingNext = active;
+    this.notifyStateChange();
+  }
+
   private notifyStateChange(override?: AudioPlaybackState): void {
-    this.onStateChange?.(override ?? this.getState());
+    const base = override ?? this.getState();
+    this.onStateChange?.({
+      ...base,
+      prebufferingNext: this.prebufferingNext,
+    });
+  }
+
+  private effectiveDuration(el: HTMLAudioElement): number {
+    if (this.currentTrackDuration && this.currentTrackDuration > 0) {
+      return this.currentTrackDuration;
+    }
+    return isFinite(el.duration) ? el.duration : 0;
   }
 
   async loadFromURL(
@@ -122,7 +161,14 @@ export class StreamingAudioPlayer implements AudioBackend {
     options: { expectedDuration?: number } = {}
   ): Promise<void> {
     await this.initialize();
-    this._cancelCrossfade();
+    this._cancelTransition();
+    this.currentTrackDuration = options.expectedDuration && options.expectedDuration > 0
+      ? options.expectedDuration
+      : null;
+
+    if (isGaplessActive(this.gaplessSettings)) {
+      void this._refineDurationFromHeader(url);
+    }
 
     let probe;
     try {
@@ -147,6 +193,18 @@ export class StreamingAudioPlayer implements AudioBackend {
     return this._loadHifi(url, options.expectedDuration);
   }
 
+  private async _refineDurationFromHeader(url: string): Promise<void> {
+    this.headerProbeAbort?.abort();
+    const controller = new AbortController();
+    this.headerProbeAbort = controller;
+    const parsed = await probeRemoteAudioDuration(url, controller.signal);
+    if (controller.signal.aborted) return;
+    if (parsed && parsed.durationSeconds > 0) {
+      this.currentTrackDuration = parsed.durationSeconds;
+      this.notifyStateChange();
+    }
+  }
+
   private async _loadHifi(url: string, expectedDuration?: number): Promise<void> {
     const cached = await isTrackCached(url);
     let cachedResponse: Response | undefined;
@@ -159,6 +217,7 @@ export class StreamingAudioPlayer implements AudioBackend {
       expectedDuration,
       cachedResponse,
     });
+    this.workletPlayer?.setGaplessSettings(this.gaplessSettings);
     this.notifyStateChange();
   }
 
@@ -166,6 +225,7 @@ export class StreamingAudioPlayer implements AudioBackend {
     const response = await getOrFetchTrack(url);
     const buffer = await response.arrayBuffer();
     await this.workletPlayer!.loadFromArrayBuffer(buffer);
+    this.workletPlayer?.setGaplessSettings(this.gaplessSettings);
     if (expectedDuration && expectedDuration > 0) {
       // Duration is set by decoder; metadata from library is informational only
     }
@@ -193,9 +253,20 @@ export class StreamingAudioPlayer implements AudioBackend {
     });
   }
 
-  preloadNext(url: string): void {
-    if (this.activePath !== 'native') return;
+  preloadNext(options: PreloadNextOptions | string): void {
+    const { url, duration } = normalizePreloadOptions(options);
+    if (this.activePath === 'native') {
+      this._preloadNativeNext(url, duration);
+      return;
+    }
+    this.workletPlayer?.preloadNext({ url, duration });
+  }
+
+  private _preloadNativeNext(url: string, duration?: number): void {
     this.nextTrackUrl = url;
+    this.nextTrackDuration = duration && duration > 0 ? duration : null;
+    this.setPrebuffering(true);
+
     if (!this.nextAudioElement) {
       this.nextAudioElement = this._makeAudioElement();
     }
@@ -203,62 +274,135 @@ export class StreamingAudioPlayer implements AudioBackend {
       this.nextAudioElement.src = url;
       this.nextAudioElement.load();
     }
+
+    void probeRemoteAudioDuration(url).then((parsed) => {
+      if (this.nextTrackUrl !== url) return;
+      if (parsed && parsed.durationSeconds > 0) {
+        this.nextTrackDuration = parsed.durationSeconds;
+      }
+      this.setPrebuffering(false);
+    }).catch(() => {
+      if (this.nextTrackUrl === url) this.setPrebuffering(false);
+    });
+  }
+
+  clearPreload(): void {
+    this.nextTrackUrl = null;
+    this.nextTrackDuration = null;
+    this.setPrebuffering(false);
+    if (this.nextAudioElement) {
+      this.nextAudioElement.pause();
+      this.nextAudioElement.src = '';
+      this.nextAudioElement = null;
+    }
+    if (this.nextSourceNode) {
+      try { this.nextSourceNode.disconnect(); } catch { /**/ }
+      this.nextSourceNode = null;
+    }
+    if (this.nextGainNode) {
+      try { this.nextGainNode.disconnect(); } catch { /**/ }
+      this.nextGainNode = null;
+    }
+    this.workletPlayer?.clearPreload?.();
+  }
+
+  setGaplessSettings(settings: GaplessSettings): void {
+    this.gaplessSettings = settings;
+    this.workletPlayer?.setGaplessSettings(settings);
+    if (!isGaplessActive(settings)) this._cancelTransition();
   }
 
   setCrossfadeEnabled(enabled: boolean): void {
-    this.crossfadeEnabled = enabled;
-    if (!enabled) this._cancelCrossfade();
+    this.setGaplessSettings({
+      mode: enabled ? 'crossfade' : 'off',
+      crossfadeMs: this.gaplessSettings.crossfadeMs,
+    });
   }
 
-  private _maybeTriggerCrossfade(): void {
+  private _maybeTriggerTransition(): void {
     if (this.activePath !== 'native') return;
-    if (!this.crossfadeEnabled || this.crossfadeActive || !this.nextTrackUrl) return;
+    if (!isGaplessActive(this.gaplessSettings) || this.transitionActive || !this.nextTrackUrl) return;
 
     const el = this.audioElement;
-    const remaining = el.duration - el.currentTime;
+    const duration = this.effectiveDuration(el);
+    if (duration <= 0) return;
+
+    const overlap = overlapSeconds(this.gaplessSettings);
+    const scheduleLead = overlap > 0 ? overlap : GAPLESS_SCHEDULE_LEAD_S;
+    const remaining = duration - el.currentTime;
+
     if (!isFinite(remaining) || remaining > PRELOAD_AHEAD_S) return;
-    if (remaining <= CROSSFADE_DURATION && remaining > 0) {
-      this._startCrossfade();
+    if (remaining <= scheduleLead && remaining > 0) {
+      if (overlap > 0) {
+        this._startCrossfade(overlap);
+      } else {
+        this._startGaplessHandoff();
+      }
     }
   }
 
-  private _startCrossfade(): void {
-    if (this.crossfadeActive || !this.nextTrackUrl) return;
-    this.crossfadeActive = true;
-
-    const ctx = this.audioContext;
-    const fadeDuration = Math.min(CROSSFADE_DURATION, this.audioElement.duration - this.audioElement.currentTime);
-
-    if (!this.nextAudioElement) {
-      this.nextAudioElement = this._makeAudioElement();
-      this.nextAudioElement.src = this.nextTrackUrl;
-    }
+  private _ensureNextGraph(): void {
+    if (!this.nextAudioElement || !this.nextTrackUrl) return;
 
     if (!this.nextSourceNode) {
-      this.nextGainNode = ctx.createGain();
+      this.nextGainNode = this.audioContext.createGain();
       this.nextGainNode.gain.value = 0;
       this.contextManager.connectInput(this.nextGainNode);
-      this.nextSourceNode = ctx.createMediaElementSource(this.nextAudioElement);
+      this.nextSourceNode = this.audioContext.createMediaElementSource(this.nextAudioElement);
       this.nextSourceNode.connect(this.nextGainNode);
     }
 
-    const playPromise = this.nextAudioElement.play();
+    if (this.nextAudioElement.src !== this.nextTrackUrl) {
+      this.nextAudioElement.src = this.nextTrackUrl;
+    }
+  }
+
+  private _startGaplessHandoff(): void {
+    if (this.transitionActive || !this.nextTrackUrl) return;
+    this.transitionActive = true;
+    this._ensureNextGraph();
+
+    const nextGain = this.nextGainNode!;
+    const now = this.audioContext.currentTime;
+    nextGain.gain.setValueAtTime(1, now);
+
+    const playPromise = this.nextAudioElement!.play();
+    if (playPromise) playPromise.catch(() => { /* autoplay policy */ });
+
+    const duration = this.effectiveDuration(this.audioElement);
+    const remainingMs = Math.max(0, (duration - this.audioElement.currentTime) * 1000);
+    this.transitionTimer = setTimeout(() => this._completeTransition('gapless'), remainingMs + 20);
+  }
+
+  private _startCrossfade(fadeDuration: number): void {
+    if (this.transitionActive || !this.nextTrackUrl) return;
+    this.transitionActive = true;
+    this._ensureNextGraph();
+
+    const ctx = this.audioContext;
+    const fade = Math.min(fadeDuration, this.effectiveDuration(this.audioElement) - this.audioElement.currentTime);
+    if (fade <= 0) {
+      this._startGaplessHandoff();
+      return;
+    }
+
+    const playPromise = this.nextAudioElement!.play();
     if (playPromise) playPromise.catch(() => { /* autoplay policy */ });
 
     const startTime = ctx.currentTime;
-    const endTime = startTime + fadeDuration;
+    const endTime = startTime + fade;
 
     this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, startTime);
     this.gainNode.gain.linearRampToValueAtTime(0, endTime);
     this.nextGainNode!.gain.setValueAtTime(0, startTime);
     this.nextGainNode!.gain.linearRampToValueAtTime(1, endTime);
 
-    this.crossfadeTimer = setTimeout(() => this._completeCrossfade(), fadeDuration * 1000 + 100);
+    this.transitionTimer = setTimeout(() => this._completeTransition('crossfade'), fade * 1000 + 100);
   }
 
-  private _completeCrossfade(): void {
+  private _completeTransition(kind: 'gapless' | 'crossfade'): void {
     if (!this.nextAudioElement || !this.nextGainNode || !this.nextSourceNode) {
-      this.crossfadeActive = false;
+      this.transitionActive = false;
       return;
     }
 
@@ -279,30 +423,29 @@ export class StreamingAudioPlayer implements AudioBackend {
     this.gainNode.gain.cancelScheduledValues(now);
     this.gainNode.gain.setValueAtTime(1, now);
 
+    this.currentTrackDuration = this.nextTrackDuration;
     this.nextAudioElement = null;
     this.nextSourceNode = null;
     this.nextGainNode = null;
     this.nextTrackUrl = null;
-    this.crossfadeActive = false;
+    this.nextTrackDuration = null;
+    this.transitionActive = false;
+    this.setPrebuffering(false);
 
     this.notifyStateChange();
-    try { this.onEndedCallback?.(); } catch { /* noop */ }
+    try {
+      this.onEndedCallback?.({ alreadyPlayingNext: true });
+    } catch { /* noop */ }
+    void kind;
   }
 
-  private _cancelCrossfade(): void {
-    if (this.crossfadeTimer !== null) {
-      clearTimeout(this.crossfadeTimer);
-      this.crossfadeTimer = null;
+  private _cancelTransition(): void {
+    if (this.transitionTimer !== null) {
+      clearTimeout(this.transitionTimer);
+      this.transitionTimer = null;
     }
-    this.crossfadeActive = false;
-    if (this.nextAudioElement) {
-      this.nextAudioElement.pause();
-      this.nextAudioElement.src = '';
-      this.nextAudioElement = null;
-    }
-    if (this.nextSourceNode) { try { this.nextSourceNode.disconnect(); } catch { /**/ } this.nextSourceNode = null; }
-    if (this.nextGainNode) { try { this.nextGainNode.disconnect(); } catch { /**/ } this.nextGainNode = null; }
-    this.nextTrackUrl = null;
+    this.transitionActive = false;
+    this.clearPreload();
     const now = this.audioContext.currentTime;
     this.gainNode.gain.cancelScheduledValues(now);
     this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, now);
@@ -328,7 +471,7 @@ export class StreamingAudioPlayer implements AudioBackend {
   }
 
   stop(): void {
-    this._cancelCrossfade();
+    this._cancelTransition();
     if (this.activePath === 'native') {
       this.audioElement.pause();
       this.audioElement.currentTime = 0;
@@ -340,8 +483,8 @@ export class StreamingAudioPlayer implements AudioBackend {
 
   seek(time: number): void {
     if (this.activePath === 'native') {
-      const duration = this.audioElement.duration;
-      this.audioElement.currentTime = Math.max(0, Math.min(time, isFinite(duration) ? duration : 0));
+      const duration = this.effectiveDuration(this.audioElement);
+      this.audioElement.currentTime = Math.max(0, Math.min(time, duration > 0 ? duration : 0));
       this.notifyStateChange();
       return;
     }
@@ -383,23 +526,28 @@ export class StreamingAudioPlayer implements AudioBackend {
   getState(): AudioPlaybackState {
     if (this.activePath === 'native') {
       const el = this.audioElement;
+      const duration = this.effectiveDuration(el);
       return {
         isPlaying: !el.paused && !el.ended,
         currentTime: el.currentTime,
-        duration: isFinite(el.duration) ? el.duration : 0,
+        duration,
         isLoading: false,
+        prebufferingNext: this.prebufferingNext,
       };
     }
-    return this.workletPlayer?.getState() ?? {
+    const workletState = this.workletPlayer?.getState();
+    return workletState ?? {
       isPlaying: false,
       currentTime: 0,
       duration: 0,
       isLoading: false,
+      prebufferingNext: this.prebufferingNext,
     };
   }
 
   destroy(): void {
-    this._cancelCrossfade();
+    this.headerProbeAbort?.abort();
+    this._cancelTransition();
     this.audioElement.pause();
     this.audioElement.src = '';
     if (this.sourceNode) {

@@ -5,6 +5,7 @@ interface QueuePanelProps {
   queue: PlaylistTrack[];
   currentIndex: number;
   loadingTrackId?: string;
+  prebufferingNext?: boolean;
   isOpen: boolean;
   onClose: () => void;
   onTrackClick: (index: number) => void;
@@ -23,6 +24,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
   queue,
   currentIndex,
   loadingTrackId,
+  prebufferingNext = false,
   isOpen,
   onClose,
   onTrackClick,
@@ -98,6 +100,11 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
           <h3 className="font-semibold text-white">Queue</h3>
           <p className="text-xs text-gray-400">
             {queue.length} tracks • {totalMinutes} min
+            {prebufferingNext && (
+              <span className="ml-2 text-purple-300" title="Pre-buffering next track for gapless playback">
+                • pre-buffering next
+              </span>
+            )}
           </p>
         </div>
         <button
@@ -161,6 +168,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
             {queue.map((track, index) => {
               const isCurrent = index === currentIndex;
               const isLoadingTrack = track.id === loadingTrackId;
+              const isNextPrebuffering = prebufferingNext && index === currentIndex + 1 && currentIndex >= 0;
               const isDragOver = dragOverIndex === index && draggedIndex !== index;
 
               return (
@@ -189,6 +197,8 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
                         <div className="spinner mx-auto" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
                       ) : isCurrent ? (
                         <span className="text-purple-400">▶</span>
+                      ) : isNextPrebuffering ? (
+                        <span className="text-purple-300" title="Pre-buffering">⏳</span>
                       ) : (
                         index + 1
                       )}

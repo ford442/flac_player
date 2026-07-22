@@ -12,6 +12,7 @@ import { EQPanel } from './EQPanel';
 import { CacheStatsPanel } from './OfflineCache';
 import { GenerationPanel } from './GenerationPanel';
 import { formatTime, FAST_STORAGE_HOST } from '../utils/audioUtils';
+import type { GaplessMode } from '../types/gapless';
 import { getNextQueueIndex, getPreviousQueueIndex } from '../utils/queueUtils';
 
 type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'settings';
@@ -76,8 +77,13 @@ export interface PlayerFallbackViewProps {
   resetEQ: () => void;
   playbackRate: number;
   setPlaybackRate: (r: number) => void;
+  gaplessMode: GaplessMode;
+  setGaplessMode: (mode: GaplessMode) => void;
+  crossfadeMs: number;
+  setCrossfadeMs: (ms: number) => void;
   crossfadeEnabled: boolean;
   setCrossfadeEnabled: (e: boolean) => void;
+  prebufferingNext: boolean;
   playbackPath: PlaybackPathInfo | null;
   isSharedPlaylist: boolean;
   sharedPlaylistTitle: string;
@@ -124,7 +130,9 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     minRating, setMinRating, selectedTags, setSelectedTags, untaggedOnly, setUntaggedOnly,
     sortBy, setSortBy, storageSourceFilter, setStorageSourceFilter,
     volume, muted, outputMode, setOutputMode,
-    eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate, crossfadeEnabled, setCrossfadeEnabled,
+    eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate,
+    gaplessMode, setGaplessMode, crossfadeMs, setCrossfadeMs,
+    prebufferingNext,
     playbackPath,
     isSharedPlaylist, sharedPlaylistTitle, analyser,
     onTrackClick, onTrackDoubleClick, onQueueTrackClick,
@@ -169,6 +177,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
 
       <QueuePanel
         queue={queue} currentIndex={queueCurrentIndex} isOpen={showQueue}
+        prebufferingNext={prebufferingNext}
         onClose={() => setShowQueue(false)}
         onTrackClick={onQueueTrackClick}
         onRemoveTrack={onRemoveFromQueue} onClearQueue={onClearQueue}
@@ -361,6 +370,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
             <div className="flex-1 overflow-auto p-6">
               <QueuePanel
                 queue={queue} currentIndex={queueCurrentIndex} loadingTrackId={loadingTrackId}
+                prebufferingNext={prebufferingNext}
                 isOpen={true} onClose={() => {}}
                 onTrackClick={onQueueTrackClick}
                 onRemoveTrack={onRemoveFromQueue} onClearQueue={onClearQueue}
@@ -435,7 +445,8 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
                 <div className="bg-white/5 rounded-xl p-5 border border-white/10">
                   <EQPanel eqGains={eqGains} onBandChange={setEQBandGain} onReset={resetEQ}
                     playbackRate={playbackRate} onPlaybackRateChange={setPlaybackRate}
-                    crossfadeEnabled={crossfadeEnabled} onCrossfadeChange={setCrossfadeEnabled} />
+                    gaplessMode={gaplessMode} onGaplessModeChange={setGaplessMode}
+                    crossfadeMs={crossfadeMs} onCrossfadeMsChange={setCrossfadeMs} />
                 </div>
                 <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
                   <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Audio Engine</span>
