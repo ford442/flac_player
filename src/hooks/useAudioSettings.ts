@@ -1,15 +1,21 @@
 /**
- * useAudioSettings – persisted EQ and playback-speed state.
- *
- * Reads/writes to localStorage on change so settings survive page reloads.
+ * useAudioSettings – persisted EQ, playback-speed, and gapless state.
  */
 
 import { useState, useCallback, useEffect } from 'react';
 import { DEFAULT_EQ_BANDS } from '../audio/EQChain';
+import {
+  DEFAULT_CROSSFADE_MS,
+  DEFAULT_GAPLESS_MODE,
+  type GaplessMode,
+  type GaplessSettings,
+} from '../types/gapless';
 
-const EQ_STORAGE_KEY    = 'flac_player_eq_gains';
+const EQ_STORAGE_KEY = 'flac_player_eq_gains';
 const SPEED_STORAGE_KEY = 'flac_player_playback_rate';
-const CROSSFADE_KEY     = 'flac_player_crossfade';
+const CROSSFADE_KEY = 'flac_player_crossfade';
+const GAPLESS_MODE_KEY = 'flac_player_gapless_mode';
+const CROSSFADE_MS_KEY = 'flac_player_crossfade_ms';
 
 function loadStoredEQ(): number[] {
   try {
@@ -30,48 +36,67 @@ function loadStoredRate(): number {
   }
 }
 
-function loadStoredCrossfade(): boolean {
+function loadStoredGaplessMode(): GaplessMode {
   try {
-    return localStorage.getItem(CROSSFADE_KEY) === 'true';
+    const stored = localStorage.getItem(GAPLESS_MODE_KEY);
+    if (stored === 'off' || stored === 'gapless' || stored === 'crossfade') return stored;
+    const legacy = localStorage.getItem(CROSSFADE_KEY);
+    if (legacy === 'true') return 'crossfade';
+    if (legacy === 'false') return 'off';
+  } catch { /* ignore */ }
+  return DEFAULT_GAPLESS_MODE;
+}
+
+function loadStoredCrossfadeMs(): number {
+  try {
+    const raw = parseInt(localStorage.getItem(CROSSFADE_MS_KEY) || String(DEFAULT_CROSSFADE_MS), 10);
+    if (!Number.isFinite(raw)) return DEFAULT_CROSSFADE_MS;
+    return Math.max(0, Math.min(12000, raw));
   } catch {
-    return false;
+    return DEFAULT_CROSSFADE_MS;
   }
 }
 
 export interface AudioSettingsHook {
-  /** Gain (dB) for each of the 5 EQ bands */
   eqGains: number[];
-  /** Set one band's gain (−12 to +12 dB) */
   setEQBandGain: (index: number, gainDb: number) => void;
-  /** Reset all bands to 0 dB */
   resetEQ: () => void;
-  /** Current playback rate (0.25 – 4.0) */
   playbackRate: number;
   setPlaybackRate: (rate: number) => void;
-  /** Crossfade / gapless enabled */
+  /** @deprecated Use gaplessMode — kept for existing call sites during migration */
   crossfadeEnabled: boolean;
   setCrossfadeEnabled: (enabled: boolean) => void;
+  gaplessMode: GaplessMode;
+  setGaplessMode: (mode: GaplessMode) => void;
+  crossfadeMs: number;
+  setCrossfadeMs: (ms: number) => void;
+  gaplessSettings: GaplessSettings;
 }
 
 export function useAudioSettings(): AudioSettingsHook {
   const [eqGains, setEqGains] = useState<number[]>(loadStoredEQ);
   const [playbackRate, setPlaybackRateState] = useState<number>(loadStoredRate);
-  const [crossfadeEnabled, setCrossfadeEnabledState] = useState<boolean>(loadStoredCrossfade);
+  const [gaplessMode, setGaplessModeState] = useState<GaplessMode>(loadStoredGaplessMode);
+  const [crossfadeMs, setCrossfadeMsState] = useState<number>(loadStoredCrossfadeMs);
 
-  // Persist EQ changes
   useEffect(() => {
     try { localStorage.setItem(EQ_STORAGE_KEY, JSON.stringify(eqGains)); } catch { /* quota */ }
   }, [eqGains]);
 
-  // Persist playback rate
   useEffect(() => {
     try { localStorage.setItem(SPEED_STORAGE_KEY, String(playbackRate)); } catch { /* quota */ }
   }, [playbackRate]);
 
-  // Persist crossfade
   useEffect(() => {
-    try { localStorage.setItem(CROSSFADE_KEY, String(crossfadeEnabled)); } catch { /* quota */ }
-  }, [crossfadeEnabled]);
+    try {
+      localStorage.setItem(GAPLESS_MODE_KEY, gaplessMode);
+      localStorage.setItem(CROSSFADE_KEY, String(gaplessMode === 'crossfade'));
+    } catch { /* quota */ }
+  }, [gaplessMode]);
+
+  useEffect(() => {
+    try { localStorage.setItem(CROSSFADE_MS_KEY, String(crossfadeMs)); } catch { /* quota */ }
+  }, [crossfadeMs]);
 
   const setEQBandGain = useCallback((index: number, gainDb: number) => {
     setEqGains(prev => {
@@ -89,9 +114,19 @@ export function useAudioSettings(): AudioSettingsHook {
     setPlaybackRateState(Math.max(0.25, Math.min(4.0, rate)));
   }, []);
 
-  const setCrossfadeEnabled = useCallback((enabled: boolean) => {
-    setCrossfadeEnabledState(enabled);
+  const setGaplessMode = useCallback((mode: GaplessMode) => {
+    setGaplessModeState(mode);
   }, []);
+
+  const setCrossfadeMs = useCallback((ms: number) => {
+    setCrossfadeMsState(Math.max(0, Math.min(12000, ms)));
+  }, []);
+
+  const setCrossfadeEnabled = useCallback((enabled: boolean) => {
+    setGaplessModeState(enabled ? 'crossfade' : 'off');
+  }, []);
+
+  const gaplessSettings: GaplessSettings = { mode: gaplessMode, crossfadeMs };
 
   return {
     eqGains,
@@ -99,7 +134,12 @@ export function useAudioSettings(): AudioSettingsHook {
     resetEQ,
     playbackRate,
     setPlaybackRate,
-    crossfadeEnabled,
+    crossfadeEnabled: gaplessMode === 'crossfade',
     setCrossfadeEnabled,
+    gaplessMode,
+    setGaplessMode,
+    crossfadeMs,
+    setCrossfadeMs,
+    gaplessSettings,
   };
 }

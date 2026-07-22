@@ -19,7 +19,8 @@ import { ToastContainer } from './Toast';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { PlayerFallbackView } from './PlayerFallbackView';
 import { EmbedPlayerView } from './EmbedPlayerView';
-import { handleQueueAutoAdvance, getNextQueueIndex, getPreviousQueueIndex } from '../utils/queueUtils';
+import { handleQueueAutoAdvance, getNextQueueIndex, getPreviousQueueIndex, getNextQueueTrack } from '../utils/queueUtils';
+import { isGaplessActive } from '../types/gapless';
 import { shuffleArray, getPreferredStorageUrls, isFastStorageUrl } from '../utils/audioUtils';
 import { createProjectMPCMFeed, notifyInAppProjectMTrackChange } from '../utils/projectMBridge';
 import { IS_PROJECTM_EMBED } from '../utils/embedMode';
@@ -44,7 +45,7 @@ export const Player: React.FC = () => {
 
   const { playerState, setPlayerState, outputMode, setOutputMode, setError, currentTrack, setCurrentTrack, loadingTrackId, setLoadingTrackId, backendStatus, setBackendStatus } = usePlayerState();
   const { toasts, addToast, removeToast } = useToastNotifications();
-  const { eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate, crossfadeEnabled, setCrossfadeEnabled } = useAudioSettings();
+  const { eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate, gaplessSettings, setGaplessMode, crossfadeMs, setCrossfadeMs, crossfadeEnabled, setCrossfadeEnabled } = useAudioSettings();
 
   const loader = useMemo(() => new AudioLoader(), []);
   const data = usePlayerData({ loader, addToast, setError, setCurrentTrack, isSharedPlaylist });
@@ -73,6 +74,7 @@ export const Player: React.FC = () => {
     () => getInitialVisualizerAesthetic()
   );
   const [playbackPath, setPlaybackPath] = useState<PlaybackPathInfo | null>(null);
+  const [prebufferingNext, setPrebufferingNext] = useState(false);
 
   const playerRef = useRef<ConfigurableAudioBackend | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -198,6 +200,32 @@ export const Player: React.FC = () => {
     files.forEach((file, i) => setTimeout(() => loadLocalFile(file), i * 100));
   }, [outputMode, loadLocalFile, addToast, setOutputMode]);
 
+  const preloadNextInQueue = useCallback((fromIndex: number) => {
+    if (!isGaplessActive(gaplessSettings)) {
+      playerRef.current?.clearPreload?.();
+      return;
+    }
+    const next = getNextQueueTrack(queue, fromIndex, shuffle, repeatMode);
+    if (!next) {
+      playerRef.current?.clearPreload?.();
+      return;
+    }
+    playerRef.current?.preloadNext?.({
+      url: next.track.url,
+      duration: next.track.duration,
+    });
+  }, [gaplessSettings, queue, shuffle, repeatMode]);
+
+  const advanceQueueIndexOnly = useCallback(() => {
+    const next = getNextQueueTrack(queue, queueCurrentIndex, shuffle, repeatMode);
+    if (!next) return;
+    setQueueCurrentIndex(next.index);
+    setCurrentTrack(next.track);
+    notifyInAppProjectMTrackChange();
+    preloadNextInQueue(next.index);
+    setTimeout(loadStats, 500);
+  }, [queue, queueCurrentIndex, shuffle, repeatMode, preloadNextInQueue, setQueueCurrentIndex, setCurrentTrack, loadStats]);
+
   handleAutoAdvanceRef.current = () =>
     handleQueueAutoAdvance(
       queue, queueCurrentIndex, shuffle, repeatMode,
@@ -221,12 +249,22 @@ export const Player: React.FC = () => {
       }
 
       activePlayer = player;
-      player.setStateChangeCallback(setPlayerState);
-      player.setOnEndedCallback(() => handleAutoAdvanceRef.current());
+      player.setStateChangeCallback((state) => {
+        setPlayerState(state);
+        setPrebufferingNext(Boolean(state.prebufferingNext));
+      });
+      player.setOnEndedCallback((event) => {
+        if (event?.alreadyPlayingNext) {
+          advanceQueueIndexOnly();
+          return;
+        }
+        handleAutoAdvanceRef.current();
+      });
       playerRef.current = player;
       player.setVolume(muted ? 0 : volume);
       player.setEQGains(eqGains);
       player.setPlaybackRate(playbackRate);
+      player.setGaplessSettings?.(gaplessSettings);
       player.setCrossfadeEnabled?.(crossfadeEnabled);
 
       stopProjectMBridge = createProjectMPCMFeed(player);
@@ -252,7 +290,7 @@ export const Player: React.FC = () => {
         playerRef.current = null;
       }
     };
-  }, [outputMode, loadLocalFile]);
+  }, [outputMode, loadLocalFile, advanceQueueIndexOnly]);
 
   // Apply live settings to player
   useEffect(() => {
@@ -264,16 +302,13 @@ export const Player: React.FC = () => {
   }, [playbackRate]);
 
   useEffect(() => {
+    playerRef.current?.setGaplessSettings?.(gaplessSettings);
     playerRef.current?.setCrossfadeEnabled?.(crossfadeEnabled);
-  }, [crossfadeEnabled]);
+  }, [gaplessSettings, crossfadeEnabled]);
 
   useEffect(() => {
-    if (!crossfadeEnabled || outputMode !== 'streaming') return;
-    const nextIndex = getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode);
-    if (nextIndex === -1) return;
-    const nextTrack = queue[nextIndex];
-    if (nextTrack) playerRef.current?.preloadNext?.(nextTrack.url);
-  }, [crossfadeEnabled, outputMode, queue, queueCurrentIndex, shuffle, repeatMode]);
+    preloadNextInQueue(queueCurrentIndex);
+  }, [gaplessSettings, outputMode, queue, queueCurrentIndex, shuffle, repeatMode, preloadNextInQueue]);
 
   useEffect(() => {
     if (isSharedPlaylist) return;
@@ -673,6 +708,9 @@ export const Player: React.FC = () => {
       eqGains={eqGains} setEQBandGain={setEQBandGain} resetEQ={resetEQ}
       playbackRate={playbackRate} setPlaybackRate={setPlaybackRate}
       crossfadeEnabled={crossfadeEnabled} setCrossfadeEnabled={setCrossfadeEnabled}
+      gaplessMode={gaplessSettings.mode} setGaplessMode={setGaplessMode}
+      crossfadeMs={crossfadeMs} setCrossfadeMs={setCrossfadeMs}
+      prebufferingNext={prebufferingNext}
       playbackPath={playbackPath}
       isSharedPlaylist={isSharedPlaylist} sharedPlaylistTitle={sharedPlaylistTitle}
       analyser={playerRef.current?.getAnalyser() || null}

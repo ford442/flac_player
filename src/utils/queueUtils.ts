@@ -65,6 +65,19 @@ export const handleQueueAutoAdvance = (
   }
 };
 
+/** Resolve the next queue track for gapless pre-buffering. */
+export const getNextQueueTrack = (
+  queue: PlaylistTrack[],
+  queueCurrentIndex: number,
+  shuffle: boolean,
+  repeatMode: RepeatMode
+): { track: PlaylistTrack; index: number } | null => {
+  const nextIndex = getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode);
+  if (nextIndex === -1) return null;
+  const track = queue[nextIndex];
+  return track ? { track, index: nextIndex } : null;
+};
+
 export const reorderQueueItem = (
   queue: PlaylistTrack[],
   startIndex: number,

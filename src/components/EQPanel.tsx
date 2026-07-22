@@ -1,5 +1,7 @@
 import React from 'react';
 import { DEFAULT_EQ_BANDS } from '../audio/EQChain';
+import type { GaplessMode } from '../types/gapless';
+import { MAX_CROSSFADE_MS, MIN_CROSSFADE_MS } from '../types/gapless';
 
 interface EQPanelProps {
   eqGains: number[];
@@ -7,11 +9,22 @@ interface EQPanelProps {
   onReset: () => void;
   playbackRate: number;
   onPlaybackRateChange: (rate: number) => void;
-  crossfadeEnabled: boolean;
-  onCrossfadeChange: (enabled: boolean) => void;
+  gaplessMode: GaplessMode;
+  onGaplessModeChange: (mode: GaplessMode) => void;
+  crossfadeMs: number;
+  onCrossfadeMsChange: (ms: number) => void;
+  /** @deprecated kept for callers still passing the legacy toggle */
+  crossfadeEnabled?: boolean;
+  onCrossfadeChange?: (enabled: boolean) => void;
 }
 
 const SPEED_PRESETS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+
+const GAPLESS_OPTIONS: { mode: GaplessMode; label: string; hint: string }[] = [
+  { mode: 'gapless', label: 'Gapless', hint: 'Sample-accurate handoff between tracks' },
+  { mode: 'crossfade', label: 'Crossfade', hint: 'Overlap and fade between tracks' },
+  { mode: 'off', label: 'Off', hint: 'Stop at track end, then load next' },
+];
 
 export const EQPanel: React.FC<EQPanelProps> = ({
   eqGains,
@@ -19,8 +32,10 @@ export const EQPanel: React.FC<EQPanelProps> = ({
   onReset,
   playbackRate,
   onPlaybackRateChange,
-  crossfadeEnabled,
-  onCrossfadeChange,
+  gaplessMode,
+  onGaplessModeChange,
+  crossfadeMs,
+  onCrossfadeMsChange,
 }) => {
   return (
     <div className="eq-panel space-y-4 text-sm text-white">
@@ -44,7 +59,6 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             const gain = eqGains[i] ?? 0;
             return (
               <div key={band.label} className="flex flex-col items-center gap-1 flex-1">
-                {/* Vertical slider */}
                 <div className="relative flex flex-col items-center" style={{ height: 100 }}>
                   <input
                     type="range"
@@ -120,29 +134,53 @@ export const EQPanel: React.FC<EQPanelProps> = ({
         </div>
       </div>
 
-      {/* Crossfade Toggle */}
-      <div className="flex items-center justify-between">
-        <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-            Crossfade / Gapless
-          </span>
-          <p className="text-xs text-gray-500 mt-0.5">Smoothly fade between tracks (streaming mode)</p>
+      {/* Gapless / Crossfade */}
+      <div>
+        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+          Queue transitions
+        </span>
+        <div className="flex gap-1 mt-2 flex-wrap">
+          {GAPLESS_OPTIONS.map(({ mode, label, hint }) => (
+            <button
+              key={mode}
+              onClick={() => onGaplessModeChange(mode)}
+              className={`px-2 py-1 rounded text-xs transition-colors ${
+                gaplessMode === mode
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
+              }`}
+              title={hint}
+            >
+              {label}
+            </button>
+          ))}
         </div>
-        <button
-          role="switch"
-          aria-checked={crossfadeEnabled}
-          onClick={() => onCrossfadeChange(!crossfadeEnabled)}
-          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-            crossfadeEnabled ? 'bg-purple-600' : 'bg-white/20'
-          }`}
-          title={crossfadeEnabled ? 'Crossfade on' : 'Crossfade off'}
-        >
-          <span
-            className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${
-              crossfadeEnabled ? 'translate-x-5' : 'translate-x-1'
-            }`}
-          />
-        </button>
+        {gaplessMode === 'crossfade' && (
+          <div className="mt-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-gray-400">Fade duration</span>
+              <span className="text-xs font-mono text-purple-300">{(crossfadeMs / 1000).toFixed(1)}s</span>
+            </div>
+            <input
+              type="range"
+              min={MIN_CROSSFADE_MS}
+              max={MAX_CROSSFADE_MS}
+              step={250}
+              value={crossfadeMs}
+              onChange={(e) => onCrossfadeMsChange(parseInt(e.target.value, 10))}
+              className="w-full"
+              style={{ accentColor: '#a78bfa' }}
+              aria-label="Crossfade duration in milliseconds"
+            />
+          </div>
+        )}
+        <p className="text-xs text-gray-500 mt-2">
+          {gaplessMode === 'gapless'
+            ? 'Pre-buffers the next track for seamless playback on streaming and buffered backends.'
+            : gaplessMode === 'crossfade'
+              ? 'Crossfade works on native streaming; buffered backends use gapless handoff when overlap is minimal.'
+              : 'Tracks stop at the end before the next loads.'}
+        </p>
       </div>
     </div>
   );

@@ -4,9 +4,18 @@
 import { decodeAudio } from './audioDecoder';
 import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
 import { runHifiStreamPipeline } from './audio/hifiStreamPipeline';
+import { getOrFetchTrack } from './storage/trackCache';
 import type { PlaybackPathInfo } from './utils/playbackPath';
 import { describePlaybackPath } from './utils/playbackPath';
 import type { AudioBackend, AudioPlaybackState } from './types/audio';
+import {
+  DEFAULT_CROSSFADE_MS,
+  DEFAULT_GAPLESS_MODE,
+  isGaplessActive,
+  type GaplessSettings,
+  type PreloadNextOptions,
+  type TrackTransitionEvent,
+} from './types/gapless';
 
 // AudioWorklet processor code as a string (will be loaded as a blob URL)
 const WORKLET_PROCESSOR_CODE = `
@@ -76,6 +85,9 @@ class FlacProcessor extends AudioWorkletProcessor {
     const ringCapacity = Math.floor(ringSeconds * ringSampleRate * ringChannels);
     this.ringBuffer = new RingBuffer(ringCapacity);
 
+    this.nextBuffer = null;
+    this.nextChannels = 0;
+
     this.port.onmessage = (e) => {
       if (e.data.type === 'buffer') {
         this.buffer = e.data.buffer;
@@ -106,11 +118,19 @@ class FlacProcessor extends AudioWorkletProcessor {
         this.pcmAccumPos = 0;
       } else if (e.data.type === 'stop') {
         this.buffer = null;
+        this.nextBuffer = null;
+        this.nextChannels = 0;
         this.position = 0;
         this.isStreaming = false;
         this.ringBuffer.clear();
         this.pcmAccum = null;
         this.pcmAccumPos = 0;
+      } else if (e.data.type === 'queueBuffer') {
+        this.nextBuffer = e.data.buffer;
+        this.nextChannels = e.data.channels || this.channels;
+      } else if (e.data.type === 'clearQueue') {
+        this.nextBuffer = null;
+        this.nextChannels = 0;
       }
     };
   }
@@ -158,20 +178,33 @@ class FlacProcessor extends AudioWorkletProcessor {
     }
 
     const frames = output[0].length;
+    let segmentEndedThisBlock = false;
     for (let i = 0; i < frames; i++) {
       if (this.position >= this.buffer.length) {
-        for (let ch = 0; ch < output.length; ch++) {
-          output[ch][i] = 0;
+        if (this.nextBuffer) {
+          this.buffer = this.nextBuffer;
+          this.channels = this.nextChannels || this.channels;
+          this.nextBuffer = null;
+          this.nextChannels = 0;
+          this.position = 0;
+          if (!segmentEndedThisBlock) {
+            segmentEndedThisBlock = true;
+            this.port.postMessage({ type: 'segmentEnded' });
+          }
+        } else {
+          for (let ch = 0; ch < output.length; ch++) {
+            output[ch][i] = 0;
+          }
+          if (i === 0) {
+            this.port.postMessage({ type: 'ended' });
+          }
+          continue;
         }
-        if (i === 0) {
-          this.port.postMessage({ type: 'ended' });
-        }
-      } else {
-        for (let ch = 0; ch < Math.min(output.length, this.channels); ch++) {
-          output[ch][i] = this.buffer[this.position + ch];
-        }
-        this.position += this.channels;
       }
+      for (let ch = 0; ch < Math.min(output.length, this.channels); ch++) {
+        output[ch][i] = this.buffer[this.position + ch];
+      }
+      this.position += this.channels;
     }
 
     this._tapPCM(output, frames);
@@ -226,13 +259,23 @@ export class AudioWorkletPlayer implements AudioBackend {
   private currentTime: number = 0;
   private playbackRate: number = 1.0;
   private onStateChange?: (state: AudioPlaybackState) => void;
-  private onEndedCallback?: () => void;
+  private onEndedCallback?: (event?: TrackTransitionEvent) => void;
   private useScriptProcessor: boolean = false;
   private workletUrl: string | null = null;
   private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
   private streamAbort: AbortController | null = null;
   private playbackPath: PlaybackPathInfo | null = null;
   private pipelineTask: Promise<void> | null = null;
+  private gaplessSettings: GaplessSettings = {
+    mode: DEFAULT_GAPLESS_MODE,
+    crossfadeMs: DEFAULT_CROSSFADE_MS,
+  };
+  private prebufferingNext = false;
+  private preloadAbort: AbortController | null = null;
+  private pendingNextBuffer: Float32Array | null = null;
+  private pendingNextChannels = 0;
+  private pendingNextDuration = 0;
+  private pendingNextSampleRate = 0;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
     this.setupWorkletUrl();
@@ -276,7 +319,7 @@ export class AudioWorkletPlayer implements AudioBackend {
     this.onStateChange = callback;
   }
 
-  setOnEndedCallback(callback?: () => void): void {
+  setOnEndedCallback(callback?: (event?: TrackTransitionEvent) => void): void {
     this.onEndedCallback = callback;
   }
 
@@ -299,6 +342,128 @@ export class AudioWorkletPlayer implements AudioBackend {
     }
   }
 
+  private setPrebuffering(active: boolean): void {
+    if (this.prebufferingNext === active) return;
+    this.prebufferingNext = active;
+    this.notifyStateChange();
+  }
+
+  setGaplessSettings(settings: GaplessSettings): void {
+    this.gaplessSettings = settings;
+    if (!isGaplessActive(settings)) this.clearPreload();
+  }
+
+  setCrossfadeEnabled(enabled: boolean): void {
+    this.setGaplessSettings({
+      mode: enabled ? 'crossfade' : 'off',
+      crossfadeMs: this.gaplessSettings.crossfadeMs,
+    });
+  }
+
+  preloadNext(options: PreloadNextOptions | string): void {
+    if (!isGaplessActive(this.gaplessSettings) || this.isStreaming) return;
+    const { url } = typeof options === 'string' ? { url: options } : options;
+    this.preloadAbort?.abort();
+    const controller = new AbortController();
+    this.preloadAbort = controller;
+    this.setPrebuffering(true);
+
+    void (async () => {
+      try {
+        const response = await getOrFetchTrack(url);
+        if (controller.signal.aborted) return;
+        const arrayBuffer = await response.arrayBuffer();
+        if (controller.signal.aborted) return;
+        if (!this.audioContext) await this.initialize();
+        const decoded = await decodeAudio(arrayBuffer, this.audioContext!, undefined);
+        if (controller.signal.aborted) return;
+
+        this.pendingNextBuffer = decoded.interleavedBuffer;
+        this.pendingNextChannels = decoded.channels;
+        this.pendingNextDuration = decoded.duration;
+        this.pendingNextSampleRate = decoded.sampleRate;
+        this._sendQueuedBufferToWorklet();
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          console.warn('[AudioWorkletPlayer] preloadNext failed:', err);
+        }
+      } finally {
+        if (!controller.signal.aborted) this.setPrebuffering(false);
+      }
+    })();
+  }
+
+  clearPreload(): void {
+    this.preloadAbort?.abort();
+    this.preloadAbort = null;
+    this.pendingNextBuffer = null;
+    this.pendingNextChannels = 0;
+    this.pendingNextDuration = 0;
+    this.pendingNextSampleRate = 0;
+    this.setPrebuffering(false);
+    if (this.workletNode && !this.useScriptProcessor) {
+      (this.workletNode as AudioWorkletNode).port.postMessage({ type: 'clearQueue' });
+    }
+  }
+
+  private _sendQueuedBufferToWorklet(): void {
+    if (!this.pendingNextBuffer || !this.workletNode || this.useScriptProcessor || this.isStreaming) {
+      return;
+    }
+    (this.workletNode as AudioWorkletNode).port.postMessage({
+      type: 'queueBuffer',
+      buffer: this.pendingNextBuffer,
+      channels: this.pendingNextChannels,
+    });
+    // Keep a reference until segmentEnded swaps track metadata on the main thread.
+  }
+
+  private _handleSegmentEnded(): void {
+    if (this.pendingNextBuffer) {
+      this.audioBuffer = this.pendingNextBuffer;
+      this.channels = this.pendingNextChannels;
+      this.duration = this.pendingNextDuration;
+      this.sampleRate = this.pendingNextSampleRate;
+      this.currentTime = 0;
+      this.pendingNextBuffer = null;
+      this.pendingNextChannels = 0;
+      this.pendingNextDuration = 0;
+      this.notifyStateChange();
+      if (this.onEndedCallback) {
+        try { this.onEndedCallback({ alreadyPlayingNext: true }); } catch (err) { console.warn('onEnded threw', err); }
+      }
+      return;
+    }
+    this.isPlaying = false;
+    this.currentTime = 0;
+    this.notifyStateChange();
+    if (this.onEndedCallback) {
+      try { this.onEndedCallback(); } catch (err) { console.warn('onEnded threw', err); }
+    }
+  }
+
+  private attachWorkletPort(node: AudioWorkletNode): void {
+    node.port.onmessage = (e) => {
+      if (e.data.type === 'ended') {
+        this.isPlaying = false;
+        this.isStreaming = false;
+        this.currentTime = 0;
+        this.notifyStateChange();
+        if (this.onEndedCallback) {
+          try { this.onEndedCallback(); } catch (err) { console.warn('onEnded threw', err); }
+        }
+      } else if (e.data.type === 'segmentEnded') {
+        this._handleSegmentEnded();
+      } else if (e.data.type === 'position') {
+        this.currentTime = e.data.position;
+      } else if (e.data.type === 'projectm-pcm') {
+        if (this.onPCMBlock) {
+          this.onPCMBlock(e.data.buffer, e.data.channels, e.data.sampleRate);
+        }
+      }
+    };
+  }
+
   async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
     if (!this.audioContext) {
       await this.initialize();
@@ -310,6 +475,7 @@ export class AudioWorkletPlayer implements AudioBackend {
 
     try {
       this.stop();
+      this.clearPreload();
 
       const decodedData = await decodeAudio(arrayBuffer, audioContext, filename);
 
@@ -477,23 +643,7 @@ export class AudioWorkletPlayer implements AudioBackend {
       sampleRate
     });
 
-    (this.workletNode as AudioWorkletNode).port.onmessage = (e) => {
-      if (e.data.type === 'ended') {
-        this.isPlaying = false;
-        this.isStreaming = false;
-        this.currentTime = 0;
-        this.notifyStateChange();
-        if (this.onEndedCallback) {
-          try { this.onEndedCallback(); } catch (err) { console.warn('onEnded threw', err); }
-        }
-      } else if (e.data.type === 'position') {
-        this.currentTime = e.data.position;
-      } else if (e.data.type === 'projectm-pcm') {
-        if (this.onPCMBlock) {
-          this.onPCMBlock(e.data.buffer, e.data.channels, e.data.sampleRate);
-        }
-      }
-    };
+    this.attachWorkletPort(this.workletNode as AudioWorkletNode);
 
     this.isPlaying = true;
     this.notifyStateChange();
@@ -568,22 +718,8 @@ export class AudioWorkletPlayer implements AudioBackend {
       channels: this.channels
     });
 
-    (this.workletNode as AudioWorkletNode).port.onmessage = (e) => {
-      if (e.data.type === 'ended') {
-        this.isPlaying = false;
-        this.currentTime = 0;
-        this.notifyStateChange();
-        if (this.onEndedCallback) {
-          try { this.onEndedCallback(); } catch (err) { console.warn('onEnded threw', err); }
-        }
-      } else if (e.data.type === 'position') {
-        this.currentTime = e.data.position;
-      } else if (e.data.type === 'projectm-pcm') {
-        if (this.onPCMBlock) {
-          this.onPCMBlock(e.data.buffer, e.data.channels, e.data.sampleRate);
-        }
-      }
-    };
+    this.attachWorkletPort(this.workletNode as AudioWorkletNode);
+    this._sendQueuedBufferToWorklet();
 
     if (startSample > 0) {
       (this.workletNode as AudioWorkletNode).port.postMessage({
@@ -653,6 +789,7 @@ export class AudioWorkletPlayer implements AudioBackend {
 
   stop(): void {
     this.cancelStream();
+    this.clearPreload();
     if (this.isStreaming) {
       this.isStreaming = false;
     }
@@ -710,7 +847,8 @@ export class AudioWorkletPlayer implements AudioBackend {
       isPlaying: this.isPlaying,
       currentTime: this.currentTime,
       duration: this.duration,
-      isLoading: false
+      isLoading: false,
+      prebufferingNext: this.prebufferingNext,
     };
   }
 
