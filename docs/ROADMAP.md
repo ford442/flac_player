@@ -15,7 +15,7 @@ Previous foundation issues (#166–#175) are **closed**. The items below are the
 | [#182](https://github.com/ford442/flac_player/issues/182) | Visualizer: Unify WGSL and GLSL waveform shaders | P2 |
 | [#183](https://github.com/ford442/flac_player/issues/183) | Feature: Gapless playback and queue continuity | P2 |
 | [#184](https://github.com/ford442/flac_player/issues/184) | Feature: ReplayGain / loudness normalization | P2 |
-| [#185](https://github.com/ford442/flac_player/issues/185) | Feature: Synced listening rooms | P3 — large |
+| [#185](https://github.com/ford442/flac_player/issues/185) | Feature: Synced listening rooms | P3 — large — [design doc](./LISTENING_ROOMS.md) |
 
 ## Foundation before features
 
@@ -26,6 +26,7 @@ Ship **#176, #177, #180** before gapless (#183), ReplayGain (#184), or listening
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — system diagram, five backends, visualizer chain
 - [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) — backend selection guide
 - [API.md](./API.md) — REST + projectM embed contract
+- [LISTENING_ROOMS.md](./LISTENING_ROOMS.md) — synced “listen together” rooms (#185)
 - [DEVELOPER_CONTEXT.md](./DEVELOPER_CONTEXT.md) — WASM memory, PCM bridge, shader/CSS coupling
 
 ## Suggested reading order for new contributors
