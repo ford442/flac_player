@@ -75,7 +75,11 @@ export function normalizeTrackData(item: any, apiBaseUrl: string): PlaylistTrack
     created_at: item.created_at,
     generation_model: item.generation_model,
     version: item.version,
-    prompt: item.prompt
+    prompt: item.prompt,
+    replaygain_track_db: item.replaygain_track_db,
+    replaygain_album_db: item.replaygain_album_db,
+    replaygain_track_peak: item.replaygain_track_peak,
+    replaygain_album_peak: item.replaygain_album_peak,
   };
 }
 

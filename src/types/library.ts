@@ -18,6 +18,14 @@ export interface PlaylistTrack {
   generation_model?: string;
   version?: string;
   prompt?: string;
+  /** ReplayGain track gain in dB (from file tags or API). */
+  replaygain_track_db?: number;
+  /** ReplayGain album gain in dB (from file tags or API). */
+  replaygain_album_db?: number;
+  /** ReplayGain track peak (linear 0–1+, from file tags or API). */
+  replaygain_track_peak?: number;
+  /** ReplayGain album peak (linear 0–1+, from file tags or API). */
+  replaygain_album_peak?: number;
 }
 
 export interface ShareResponse {

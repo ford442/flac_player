@@ -1,5 +1,5 @@
 /**
- * useAudioSettings – persisted EQ, playback-speed, and gapless state.
+ * useAudioSettings – persisted EQ, playback-speed, gapless, and ReplayGain state.
  */
 
 import { useState, useCallback, useEffect } from 'react';
@@ -10,12 +10,19 @@ import {
   type GaplessMode,
   type GaplessSettings,
 } from '../types/gapless';
+import {
+  DEFAULT_REPLAYGAIN_MODE,
+  type ReplayGainMode,
+  type ReplayGainSettings,
+} from '../utils/replayGain';
 
 const EQ_STORAGE_KEY = 'flac_player_eq_gains';
 const SPEED_STORAGE_KEY = 'flac_player_playback_rate';
 const CROSSFADE_KEY = 'flac_player_crossfade';
 const GAPLESS_MODE_KEY = 'flac_player_gapless_mode';
 const CROSSFADE_MS_KEY = 'flac_player_crossfade_ms';
+const REPLAYGAIN_MODE_KEY = 'flac_player_replaygain_mode';
+const REPLAYGAIN_LIMITER_KEY = 'flac_player_replaygain_limiter';
 
 function loadStoredEQ(): number[] {
   try {
@@ -57,6 +64,22 @@ function loadStoredCrossfadeMs(): number {
   }
 }
 
+function loadStoredReplayGainMode(): ReplayGainMode {
+  try {
+    const stored = localStorage.getItem(REPLAYGAIN_MODE_KEY);
+    if (stored === 'off' || stored === 'track' || stored === 'album') return stored;
+  } catch { /* ignore */ }
+  return DEFAULT_REPLAYGAIN_MODE;
+}
+
+function loadStoredReplayGainLimiter(): boolean {
+  try {
+    return localStorage.getItem(REPLAYGAIN_LIMITER_KEY) === 'true';
+  } catch {
+    return true;
+  }
+}
+
 export interface AudioSettingsHook {
   eqGains: number[];
   setEQBandGain: (index: number, gainDb: number) => void;
@@ -71,6 +94,11 @@ export interface AudioSettingsHook {
   crossfadeMs: number;
   setCrossfadeMs: (ms: number) => void;
   gaplessSettings: GaplessSettings;
+  replayGainMode: ReplayGainMode;
+  setReplayGainMode: (mode: ReplayGainMode) => void;
+  replayGainLimiter: boolean;
+  setReplayGainLimiter: (enabled: boolean) => void;
+  replayGainSettings: ReplayGainSettings;
 }
 
 export function useAudioSettings(): AudioSettingsHook {
@@ -78,6 +106,8 @@ export function useAudioSettings(): AudioSettingsHook {
   const [playbackRate, setPlaybackRateState] = useState<number>(loadStoredRate);
   const [gaplessMode, setGaplessModeState] = useState<GaplessMode>(loadStoredGaplessMode);
   const [crossfadeMs, setCrossfadeMsState] = useState<number>(loadStoredCrossfadeMs);
+  const [replayGainMode, setReplayGainModeState] = useState<ReplayGainMode>(loadStoredReplayGainMode);
+  const [replayGainLimiter, setReplayGainLimiterState] = useState<boolean>(loadStoredReplayGainLimiter);
 
   useEffect(() => {
     try { localStorage.setItem(EQ_STORAGE_KEY, JSON.stringify(eqGains)); } catch { /* quota */ }
@@ -97,6 +127,14 @@ export function useAudioSettings(): AudioSettingsHook {
   useEffect(() => {
     try { localStorage.setItem(CROSSFADE_MS_KEY, String(crossfadeMs)); } catch { /* quota */ }
   }, [crossfadeMs]);
+
+  useEffect(() => {
+    try { localStorage.setItem(REPLAYGAIN_MODE_KEY, replayGainMode); } catch { /* quota */ }
+  }, [replayGainMode]);
+
+  useEffect(() => {
+    try { localStorage.setItem(REPLAYGAIN_LIMITER_KEY, String(replayGainLimiter)); } catch { /* quota */ }
+  }, [replayGainLimiter]);
 
   const setEQBandGain = useCallback((index: number, gainDb: number) => {
     setEqGains(prev => {
@@ -126,7 +164,16 @@ export function useAudioSettings(): AudioSettingsHook {
     setGaplessModeState(enabled ? 'crossfade' : 'off');
   }, []);
 
+  const setReplayGainMode = useCallback((mode: ReplayGainMode) => {
+    setReplayGainModeState(mode);
+  }, []);
+
+  const setReplayGainLimiter = useCallback((enabled: boolean) => {
+    setReplayGainLimiterState(enabled);
+  }, []);
+
   const gaplessSettings: GaplessSettings = { mode: gaplessMode, crossfadeMs };
+  const replayGainSettings: ReplayGainSettings = { mode: replayGainMode, limiterEnabled: replayGainLimiter };
 
   return {
     eqGains,
@@ -141,5 +188,10 @@ export function useAudioSettings(): AudioSettingsHook {
     crossfadeMs,
     setCrossfadeMs,
     gaplessSettings,
+    replayGainMode,
+    setReplayGainMode,
+    replayGainLimiter,
+    setReplayGainLimiter,
+    replayGainSettings,
   };
 }

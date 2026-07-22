@@ -882,6 +882,14 @@ export class AudioWorkletPlayer implements AudioBackend {
     this.contextManager.setEQGains(gains);
   }
 
+  setReplayGainLinear(linear: number): void {
+    this.contextManager.setReplayGainLinear(linear);
+  }
+
+  setReplayGainLimiter(enabled: boolean): void {
+    this.contextManager.setReplayGainLimiter(enabled);
+  }
+
   getAnalyser(): AnalyserNode {
     return this.contextManager.getAnalyser();
   }

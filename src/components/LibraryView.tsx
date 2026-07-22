@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { PlaylistTrack, TagInfo, LibraryStats } from '../audioLoader';
+import { hasReplayGainMetadata } from '../utils/replayGain';
 import { StarRating } from './StarRating';
 import { TagInput } from './TagInput';
 
@@ -108,6 +109,13 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return '--';
     return new Date(dateStr).toLocaleDateString();
+  };
+
+  const formatReplayGainBadge = (track: PlaylistTrack) => {
+    const db = track.replaygain_track_db ?? track.replaygain_album_db;
+    if (db === undefined) return null;
+    const sign = db >= 0 ? '+' : '';
+    return `${sign}${db.toFixed(1)} dB`;
   };
 
   // Grid View
@@ -220,7 +228,17 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                 <p className="text-sm text-gray-400 truncate">{track.author || 'Unknown'}</p>
 
                 <div className="mt-2 flex items-center justify-between">
-                  <StarRating rating={track.rating} maxRating={5} size="sm" readonly />
+                  <div className="flex items-center gap-1">
+                    <StarRating rating={track.rating} maxRating={5} size="sm" readonly />
+                    {hasReplayGainMetadata(track) && (
+                      <span
+                        className="text-[10px] px-1 py-0.5 rounded bg-emerald-900/50 text-emerald-300 font-mono"
+                        title={`ReplayGain: ${formatReplayGainBadge(track)}`}
+                      >
+                        RG
+                      </span>
+                    )}
+                  </div>
                   <span className="text-xs text-gray-500">
                     {formatDuration(track.duration)}
                   </span>
@@ -338,6 +356,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
             <th className="p-3">Author</th>
             <th className="p-3">Rating</th>
             <th className="p-3">Tags</th>
+            <th className="p-3">RG</th>
             <th className="p-3">Duration</th>
             <th className="p-3">Plays</th>
             <th className="p-3">Added</th>
@@ -411,6 +430,9 @@ export const LibraryView: React.FC<LibraryViewProps> = ({
                       )}
                     </div>
                   )}
+                </td>
+                <td className="p-3 text-gray-400 font-mono text-xs">
+                  {formatReplayGainBadge(track) ?? '—'}
                 </td>
                 <td className="p-3 text-gray-400">{formatDuration(track.duration)}</td>
                 <td className="p-3 text-gray-400">{track.play_count || 0}</td>

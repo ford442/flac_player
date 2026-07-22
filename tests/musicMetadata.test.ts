@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { describe, it, expect } from 'vitest';
 import { parseBlob, parseBuffer } from 'music-metadata';
+import { parseReplayGainFromCommon } from '../src/utils/replayGain';
 
 const fixturesDir = path.join(process.cwd(), 'tests/fixtures');
 
@@ -25,5 +26,18 @@ describe('music-metadata (browser-compatible parseBlob/parseBuffer)', () => {
     expect(meta.common.title).toBe('Test Track');
     expect(meta.format.duration).toBeCloseTo(0.25, 2);
     expect(meta.format.sampleRate).toBe(44100);
+  });
+
+  it('parses ReplayGain tags from tagged FLAC fixtures', async () => {
+    for (const [file, expectedDb] of [
+      ['replaygain-loud.flac', -6.5],
+      ['replaygain-quiet.flac', 4.2],
+    ] as const) {
+      const data = fs.readFileSync(path.join(fixturesDir, file));
+      const meta = await parseBuffer(new Uint8Array(data), { mimeType: 'audio/flac', path: file });
+      const tags = parseReplayGainFromCommon(meta.common);
+      expect(tags.trackDb).toBeCloseTo(expectedDb, 1);
+      expect(tags.albumDb).toBeDefined();
+    }
   });
 });

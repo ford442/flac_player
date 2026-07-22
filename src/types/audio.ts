@@ -23,6 +23,9 @@ export interface AudioBackend {
   setVolume(volume: number): void;
   setPlaybackRate(rate: number): void;
   setEQGains(gains: number[]): void;
+  /** Apply ReplayGain loudness offset as a linear gain multiplier. */
+  setReplayGainLinear?(linear: number): void;
+  setReplayGainLimiter?(enabled: boolean): void;
   getAnalyser(): AnalyserNode | null;
   setOnEndedCallback(callback?: (event?: TrackTransitionEvent) => void): void;
   setStateChangeCallback(callback: (state: AudioPlaybackState) => void): void;

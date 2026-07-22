@@ -37,7 +37,7 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 - **Internal transitions:** When a backend has already started the next track, `onEnded` receives `{ alreadyPlayingNext: true }` so the UI advances the queue index without reloading audio.
 - **SDL backends:** Gapless is not implemented; tracks still stop at EOF and advance via `onEnded` → `playTrack` (audible gap). Use `worklet` or `streaming` for gapless queues.
 - **Different sample rates:** Adjacent tracks with mismatched sample rates may click; dynamic resampling is tracked in [#179](https://github.com/ford442/flac_player/issues/179).
-- **ReplayGain / loudness matching:** Not implemented in this change ([#184](https://github.com/ford442/flac_player/issues/184)).
+- **ReplayGain / loudness matching:** Settings → **Loudness (ReplayGain)** (`flac_player_replaygain_mode`, `flac_player_replaygain_limiter`). Applies a dedicated gain stage **before** the master volume fader on streaming, web-audio, and worklet backends. SDL backends multiply gain into WASM `_set_volume` (visualizer tap still uses the shared graph). Client-side tag fetch uses a 64 KiB range request when API metadata is missing. Crossfade overlap may briefly mismatch levels when adjacent tracks have very different tags ([#184](https://github.com/ford442/flac_player/issues/184)).
 
 ## Backend reference
 
