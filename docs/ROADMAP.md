@@ -9,7 +9,7 @@ Previous foundation issues (#166–#175) are **closed**. The items below are the
 | [#176](https://github.com/ford442/flac_player/issues/176) | Foundation: Consolidate five audio backends under `src/audio/backends/` | **P0 — do first** |
 | [#177](https://github.com/ford442/flac_player/issues/177) | Architecture: Decompose `Player.tsx` and unify ShaderGUI / Fallback UI | **P0 — do first** |
 | [#180](https://github.com/ford442/flac_player/issues/180) | Testing: Real audio pipeline integration harness | **P0 — do first** |
-| [#181](https://github.com/ford442/flac_player/issues/181) | Dependencies: Replace `music-metadata-browser`, npm audit | P1 |
+| [#181](https://github.com/ford442/flac_player/issues/181) | Dependencies: Replace `music-metadata-browser`, npm audit | P1 — in progress (see PR) |
 | [#179](https://github.com/ford442/flac_player/issues/179) | Audio: Dynamic sample rate and latency hints | P1 |
 | [#178](https://github.com/ford442/flac_player/issues/178) | SDL WASM: Streaming decode without full-file C++ buffer | P1 |
 | [#182](https://github.com/ford442/flac_player/issues/182) | Visualizer: Unify WGSL and GLSL waveform shaders | P2 |

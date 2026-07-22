@@ -16,6 +16,12 @@ jobs:
           node-version: '22'
           cache: 'npm'
       - run: npm ci
+      - name: npm audit (high+, warn-only)
+        # Warn-only until remaining transitive webpack/eslint tooling CVEs have
+        # semver-safe fixes. Do not use `npm audit fix --force` (can jump webpack-dev-server 5 /
+        # copy-webpack-plugin 14). See AGENTS.md "Dependency audit".
+        continue-on-error: true
+        run: npm audit --audit-level=high
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run verify:wasm

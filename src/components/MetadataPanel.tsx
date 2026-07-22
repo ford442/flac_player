@@ -1,7 +1,7 @@
 // src/components/MetadataPanel.tsx
 // Displays rich metadata with dark/light theme toggle.
 import { useEffect, useState } from 'react';
-import { parseBlob } from 'music-metadata-browser';
+import { parseBlob } from 'music-metadata';
 import './MetadataPanel.css';
 
 interface TrackInfo {
