@@ -132,7 +132,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     volume, muted, outputMode, setOutputMode,
     eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate,
     gaplessMode, setGaplessMode, crossfadeMs, setCrossfadeMs,
-    crossfadeEnabled, setCrossfadeEnabled, prebufferingNext,
+    prebufferingNext,
     playbackPath,
     isSharedPlaylist, sharedPlaylistTitle, analyser,
     onTrackClick, onTrackDoubleClick, onQueueTrackClick,
