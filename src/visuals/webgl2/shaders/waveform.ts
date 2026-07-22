@@ -1,3 +1,44 @@
+import {
+  WAVEFORM_LAYOUT,
+  glslVec2,
+  glslVec3,
+} from '../../waveformContract';
+
+const L = WAVEFORM_LAYOUT;
+
+function f(n: number): string {
+  if (Number.isInteger(n)) return `${n}.0`;
+  return String(n);
+}
+
+/** GLSL literals injected from WAVEFORM_LAYOUT (single source of truth). */
+const G = {
+  knobRsycrb: glslVec2(L.knobs.rsycrb.center),
+  knobFractal: glslVec2(L.knobs.fractal.center),
+  knobPulse: glslVec2(L.knobs.pulse.center),
+  knobRadius: f(L.knobs.rsycrb.radius),
+  knobScale: f(L.knobIntensityScale),
+  ledNone: glslVec2(L.leds.none.center),
+  ledIR: glslVec2(L.leds.ir.center),
+  ledStop: glslVec2(L.leds.stop.center),
+  ledPlay: glslVec2(L.leds.play.center),
+  ledNoneColor: glslVec3(L.leds.none.color),
+  ledIRColor: glslVec3(L.leds.ir.color),
+  ledStopColor: glslVec3(L.leds.stop.color),
+  ledPlayColor: glslVec3(L.leds.play.color),
+  ledNoneI: f(L.ledIntensity.none),
+  ledIRI: f(L.ledIntensity.ir),
+  ledStopI: f(L.ledIntensity.stop),
+  ledPlayI: f(L.ledIntensity.play),
+  knobGlow: glslVec3(L.colors.knobGlow),
+  wavePrimary: glslVec3(L.colors.wavePrimary),
+  wavePulse: glslVec3(L.colors.wavePulse),
+  gradTop: glslVec3(L.colors.screenGradTop),
+  gradBottom: glslVec3(L.colors.screenGradBottom),
+  audioBins: L.audioBins,
+  aberration: f(L.aberrationScale),
+};
+
 /** Full-screen triangle vertex shader (shared by GUI + flat passes). */
 export const FULLSCREEN_VERTEX = `#version 300 es
 precision highp float;
@@ -15,7 +56,7 @@ void main() {
 
 /**
  * GLSL port of src/shaders/waveform.ts (ShaderGUI WGSL).
- * Uses the same knob/LED UV coordinates for CSS alignment.
+ * Knob/LED UVs and palette colors come from WAVEFORM_LAYOUT — edit that file only.
  */
 export const GUI_FRAGMENT = `#version 300 es
 precision highp float;
@@ -42,10 +83,10 @@ uniform float u_isPlaying;
 uniform float u_playbackProgress;
 uniform float u_volume;
 uniform float u_colorShift;
-uniform float u_audioData[64];
+uniform float u_audioData[${G.audioBins}];
 uniform int u_debugMode;
 
-const int AUDIO_BINS = 64;
+const int AUDIO_BINS = ${G.audioBins};
 
 float fractalWave(float x, float depth, float audio) {
   float y = 0.0;
@@ -103,7 +144,7 @@ vec3 drawKnobGlow(vec2 uv, vec2 center, float radius, float intensity) {
   float glowRadius = radius + 0.04;
   float glowDist = abs(distance(uv, center) - glowRadius);
   float glow = 0.5 / (glowDist + 1.0) * intensity;
-  return vec3(0.75, 0.52, 0.99) * glow;
+  return ${G.knobGlow} * glow;
 }
 
 vec3 drawLedGlow(vec2 uv, vec2 center, vec3 color, float intensity) {
@@ -136,12 +177,12 @@ void main() {
 
   float audio = u_audioLevel;
   vec3 screenGrad = mix(
-    vec3(0.102, 0.039, 0.180),
-    vec3(0.176, 0.106, 0.306),
+    ${G.gradTop},
+    ${G.gradBottom},
     uv.y
   );
 
-  float aberration = u_rsycrb * 0.015;
+  float aberration = u_rsycrb * ${G.aberration};
   float rVal = sampleWaveform(uv + vec2(-aberration, 0.0), audio);
   float gVal = sampleWaveform(uv, audio);
   float bVal = sampleWaveform(uv + vec2(aberration, 0.0), audio);
@@ -152,8 +193,8 @@ void main() {
   float bWave = bVal * pulseBloom;
 
   vec3 waveColor = mix(
-    vec3(0.75, 0.52, 0.99),
-    vec3(0.96, 0.45, 0.71),
+    ${G.wavePrimary},
+    ${G.wavePulse},
     u_pulse
   );
 
@@ -164,13 +205,13 @@ void main() {
     finalColor -= scanline;
     float vignette = 1.0 - length((uv - 0.5) * 1.2);
     finalColor *= vignette;
-    finalColor += drawKnobGlow(uv, vec2(0.72, 0.22), 0.06, u_rsycrb * 0.5);
-    finalColor += drawKnobGlow(uv, vec2(0.82, 0.22), 0.06, u_fractal * 0.5);
-    finalColor += drawKnobGlow(uv, vec2(0.92, 0.22), 0.06, u_pulse * 0.5);
-    finalColor += drawLedGlow(uv, vec2(0.68, 0.42), vec3(0.3, 0.33, 0.39), u_modeNone * 0.3);
-    finalColor += drawLedGlow(uv, vec2(0.76, 0.42), vec3(0.96, 0.45, 0.71), u_modeIR * 0.6);
-    finalColor += drawLedGlow(uv, vec2(0.84, 0.42), vec3(0.97, 0.44, 0.44), 0.0);
-    finalColor += drawLedGlow(uv, vec2(0.92, 0.42), vec3(0.29, 0.87, 0.50), u_isPlaying * 0.6);
+    finalColor += drawKnobGlow(uv, ${G.knobRsycrb}, ${G.knobRadius}, u_rsycrb * ${G.knobScale});
+    finalColor += drawKnobGlow(uv, ${G.knobFractal}, ${G.knobRadius}, u_fractal * ${G.knobScale});
+    finalColor += drawKnobGlow(uv, ${G.knobPulse}, ${G.knobRadius}, u_pulse * ${G.knobScale});
+    finalColor += drawLedGlow(uv, ${G.ledNone}, ${G.ledNoneColor}, u_modeNone * ${G.ledNoneI});
+    finalColor += drawLedGlow(uv, ${G.ledIR}, ${G.ledIRColor}, u_modeIR * ${G.ledIRI});
+    finalColor += drawLedGlow(uv, ${G.ledStop}, ${G.ledStopColor}, ${G.ledStopI});
+    finalColor += drawLedGlow(uv, ${G.ledPlay}, ${G.ledPlayColor}, u_isPlaying * ${G.ledPlayI});
     finalColor *= (0.7 + u_volume * 0.3);
   }
 

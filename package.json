@@ -19,7 +19,7 @@
     "test:decoder": "vitest run --config vitest.decoder.config.ts",
     "test:e2e": "npx playwright test",
     "test:streaming": "echo 'Test large file streaming after Phase 2'",
-    "test:visualizer": "vitest run tests/rendererSelection.test.ts",
+    "test:visualizer": "vitest run tests/rendererSelection.test.ts tests/waveformContract.test.ts tests/debugModes.test.ts",
     "profile:chrome": "lighthouse http://localhost:3000 --view --preset=desktop"
   },
   "dependencies": {

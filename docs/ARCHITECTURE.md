@@ -145,6 +145,8 @@ WebGPU → WebGL2 → Canvas2D
 
 Override: `?visualizer=webgl2`, `localStorage`, or `window.DEBUG_VISUALIZER`.
 
+Layout + palette constants for both WGSL and GLSL live in `src/visuals/waveformContract.ts`. `Alt+D` debug modes work on WebGPU and WebGL2.
+
 ### PCM to projectM
 
 ```

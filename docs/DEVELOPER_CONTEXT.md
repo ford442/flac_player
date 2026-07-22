@@ -45,8 +45,11 @@ Last updated: July 2026
     *   COOP/COEP required for AudioWorklet, SharedArrayBuffer, SDL pthreads, projectM WASM.
 *   **WebGPU lifecycle (`webgpuVisualizer.ts`):**
     *   Manual resource cleanup in `destroy()`; 60 fps rAF loop.
-*   **ShaderGUI ↔ WGSL alignment (`waveform.ts`, `ShaderGUI.css`):**
-    *   Knob/LED glow UVs are hardcoded to CSS layout — recalibrate both when changing layout.
+*   **ShaderGUI layout contract (`src/visuals/waveformContract.ts`):**
+    *   Knob/LED glow UVs, palette colors, and intensity scales live in `WAVEFORM_LAYOUT`.
+    *   Both WGSL (`src/shaders/waveform.ts`) and GLSL (`src/visuals/webgl2/shaders/waveform.ts`) inject these constants — change positions in **one** place.
+    *   `Alt+D` debug modes (`uv`, `waveform-only`, `audio-bins`, `spectrum`) are implemented in both shaders; cycle via ShaderGUI on WebGPU or WebGL2.
+    *   Guard: `npm run test:visualizer` asserts layout injection parity + debug mode helpers.
 
 ## 4. Inherent Limitations & "Here be Dragons"
 

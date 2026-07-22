@@ -4,6 +4,7 @@ import { compileShader, linkProgram, collectUniforms } from './glUtils';
 import { FULLSCREEN_VERTEX, GUI_FRAGMENT, FLAT_FRAGMENT } from './shaders/waveform';
 import { createDebugConfig, debugModeToUniform } from './debugModes';
 import { downsampleAudioData } from '../visualSync';
+import { DEFAULT_WAVEFORM_UNIFORMS } from '../waveformContract';
 
 type GLPass = {
   program: WebGLProgram;
@@ -31,14 +32,7 @@ export class WebGL2Visualizer {
   private analyser: AnalyserNode | null = null;
   private guiPass: GLPass | null = null;
   private flatPass: GLPass | null = null;
-  private guiUniforms: ShaderGUIUniforms = {
-    resolution: [1, 1], time: 0, beatPhase: 0,
-    rsycrb: 0, fractal: 0, pulse: 0,
-    audioLevel: 0, audioLevelL: 0, audioLevelR: 0,
-    spectrum0: 0, spectrum1: 0, spectrum2: 0, spectrum3: 0, spectrum4: 0,
-    modeNone: 0, modeIR: 0, isPlaying: 0, playbackProgress: 0,
-    volume: 1, colorShift: 0,
-  };
+  private guiUniforms: ShaderGUIUniforms = { ...DEFAULT_WAVEFORM_UNIFORMS };
   private guiAudioData = new Float32Array(64);
   private debug: WebGL2DebugConfig = createDebugConfig();
   private mode: VisualizerMode = 'flat';
