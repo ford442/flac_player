@@ -1,32 +1,38 @@
 # Roadmap
 
-Planning cycle: July 2026 (post #166–#175 closure).
+Planning cycle: July 2026 (post-audit after #166–#185 closure).
 
-Previous foundation issues (#166–#175) are **closed**. The items below are the active backlog.
+Earlier issues (#166–#185) shipped a lot of product surface (unified backend interface, gapless, ReplayGain, waveform contract, PWA scaffolding, listening-rooms **design**). A July 27 audit found several **foundation items still incomplete** despite closed tickets — backends remain at `src/` root, `AudioContext` is still hardcoded to 44.1 kHz, SDL still full-buffers PCM in C++, and `test:streaming` is still an echo stub.
+
+**Do foundation work before large features.** Listening rooms (#197) depends on a stable playback controller and trustworthy tests.
 
 | Issue | Title | Priority |
 |-------|-------|----------|
-| [#176](https://github.com/ford442/flac_player/issues/176) | Foundation: Consolidate five audio backends under `src/audio/backends/` | **P0 — do first** |
-| [#177](https://github.com/ford442/flac_player/issues/177) | Architecture: Decompose `Player.tsx` and unify ShaderGUI / Fallback UI | **P0 — do first** |
-| [#180](https://github.com/ford442/flac_player/issues/180) | Testing: Real audio pipeline integration harness | **P0 — do first** |
-| [#181](https://github.com/ford442/flac_player/issues/181) | Dependencies: Replace `music-metadata-browser`, npm audit | P1 — in progress (see PR) |
-| [#179](https://github.com/ford442/flac_player/issues/179) | Audio: Dynamic sample rate and latency hints | P1 |
-| [#178](https://github.com/ford442/flac_player/issues/178) | SDL WASM: Streaming decode without full-file C++ buffer | P1 |
-| [#182](https://github.com/ford442/flac_player/issues/182) | Visualizer: Unify WGSL and GLSL waveform shaders | P2 |
-| [#183](https://github.com/ford442/flac_player/issues/183) | Feature: Gapless playback and queue continuity | P2 |
-| [#184](https://github.com/ford442/flac_player/issues/184) | Feature: ReplayGain / loudness normalization | P2 |
-| [#185](https://github.com/ford442/flac_player/issues/185) | Feature: Synced listening rooms | P3 — large — [design doc](./LISTENING_ROOMS.md) |
+| [#193](https://github.com/ford442/flac_player/issues/193) | Foundation: Relocate backends under `src/audio/backends/` + extract `PlaybackController` | **P0 — do first** |
+| [#194](https://github.com/ford442/flac_player/issues/194) | Audio: Native sample-rate `AudioContext`, latency modes, recreate policy | **P0 — do first** |
+| [#196](https://github.com/ford442/flac_player/issues/196) | Testing: Real decode → playback → analyser integration harness | **P0 — do first** |
+| [#195](https://github.com/ford442/flac_player/issues/195) | SDL WASM: Ring-fed streaming decode + emcc memory/pthread audit | P1 |
+| [#197](https://github.com/ford442/flac_player/issues/197) | Feature: Synced listening rooms MVP (`LISTENING_ROOMS.md`) | P2 — large |
 
 ## Foundation before features
 
-Ship **#176, #177, #180** before gapless (#183), ReplayGain (#184), or listening rooms (#185). SDL streaming (#178) and sample-rate work (#179) should follow backend consolidation.
+Ship **#193, #194, #196** before implementing listening rooms (#197). SDL streaming (#195) can proceed in parallel once backends live under `src/audio/backends/`, but should not block the PlaybackController extraction.
+
+## Horizon (not yet ticketed)
+
+Ideas validated by the audit for a later cycle:
+
+- **Media Session / lock-screen controls** — no `navigator.mediaSession` usage today; pairs with listening rooms and PWA install
+- **Studio DSP suite** — optional WASM Rubber Band (timestretch), SpeexDSP/soxr resampler, real-time LUFS meter; builds on native-rate context (#194)
+- **SDL2 retirement** — consolidate on SDL3 once ring streaming (#195) is solid
+- **Deploy hygiene** — remove hardcoded tokens from `deploy.py` / delete `deploy_old.py`
 
 ## Documentation index
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — system diagram, five backends, visualizer chain
 - [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) — backend selection guide
 - [API.md](./API.md) — REST + projectM embed contract
-- [LISTENING_ROOMS.md](./LISTENING_ROOMS.md) — synced “listen together” rooms (#185)
+- [LISTENING_ROOMS.md](./LISTENING_ROOMS.md) — synced “listen together” rooms (design; implement via #197)
 - [DEVELOPER_CONTEXT.md](./DEVELOPER_CONTEXT.md) — WASM memory, PCM bridge, shader/CSS coupling
 
 ## Suggested reading order for new contributors

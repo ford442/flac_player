@@ -127,7 +127,7 @@ For manual URL loading: enter a FLAC/WAV URL, click Load, then play.
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System diagram, data flows |
 | [docs/AUDIO_BACKENDS.md](docs/AUDIO_BACKENDS.md) | When to use each backend |
 | [docs/API.md](docs/API.md) | REST + projectM embed |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Open issues #166–#175 |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Active backlog #193–#197 (foundation before listening rooms) |
 
 ### Visualization Backends
 
