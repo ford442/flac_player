@@ -77,7 +77,10 @@ Live against **`https://storage.noahcohn.com`**:
 
 - **Library** — full catalog, CORS, tags, ratings, search, smart mix
 - **Streaming playback** — default backend; range requests against Contabo/static files
+- **Gapless / ReplayGain** — shipped on shared graph; SDL gapless still unsupported
 - **Uploads** — storage admin → FLAC conversion → `songs.json` index
+
+Active backlog after the July 27 foundation audit: [#193](https://github.com/ford442/flac_player/issues/193)–[#197](https://github.com/ford442/flac_player/issues/197) (see [ROADMAP.md](./ROADMAP.md)). Note: backends still live at `src/` root; `AudioContext` is still created at 44.1 kHz.
 - **Shareable playlists** — `?share=<id>` loads from `/api/share/<id>`
 - **Five audio backends** — user-selectable; lazy-loaded WASM chunks
 - **Visualizer** — ShaderGUI + WebGL2 fallback + optional projectM split mode
