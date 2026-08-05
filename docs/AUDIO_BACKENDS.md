@@ -43,7 +43,7 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 
 ### 1. Streaming (`streaming`) — **default**
 
-**File:** `src/streamingAudioPlayer.ts`
+**File:** `src/audio/backends/StreamingAudioPlayer.ts`
 
 **How it works:** Selects one of three paths per URL:
 
@@ -69,7 +69,7 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 
 ### 2. Web Audio buffered (`web-audio`)
 
-**File:** `src/audioPlayer.ts`
+**File:** `src/audio/backends/WebAudioPlayer.ts`
 
 **How it works:** `fetch(url)` → decode to `AudioBuffer` → `BufferSourceNode` playback. Gapless mode schedules the next `BufferSourceNode` at the exact end time of the current buffer.
 
@@ -88,7 +88,7 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 
 ### 3. AudioWorklet (`worklet`)
 
-**File:** `src/audioWorkletPlayer.ts`
+**File:** `src/audio/backends/WorkletAudioPlayer.ts`
 
 **How it works:** Decodes via `flacDecoder` / worker, feeds an inline `FlacProcessor` AudioWorklet (ScriptProcessor shim fallback). Supports buffered and chunked streaming into a ring buffer.
 
@@ -110,7 +110,7 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 
 ### 4. SDL3 WASM (`sdl`)
 
-**Files:** `src/sdlAudioPlayer.ts`, `src/sdl/audio_engine.cpp`, `public/sdl-audio.*`
+**Files:** `src/audio/backends/Sdl3AudioPlayer.ts`, `src/sdl/audio_engine.cpp`, `public/sdl-audio.*`
 
 **How it works:** Full file fetch → interleaved float → WASM heap → SDL3 audio callback. PCM copied to a lock-free ring; `SdlPcmBridge` AudioWorklet feeds the shared analyser.
 
@@ -122,7 +122,7 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 
 ### 5. SDL2 WASM (`sdl2`)
 
-**Files:** `src/sdl2AudioPlayer.ts`, `src/sdl/audio_engine_sdl2.cpp`, `public/sdl2-audio.*`
+**Files:** `src/audio/backends/Sdl2AudioPlayer.ts`, `src/sdl/audio_engine_sdl2.cpp`, `public/sdl2-audio.*`
 
 Same as SDL3 but uses SDL2 + AudioWorklet glue. **Gapless:** not supported.
 

@@ -10,6 +10,7 @@ The app is a React/TypeScript single-page player with a **five-backend audio eng
 flowchart TB
   subgraph UI["React UI"]
     Player["Player.tsx"]
+    Controller["usePlaybackController"]
     Library["LibraryView"]
     Queue["QueuePanel"]
     Shell["VisualizerShell"]
@@ -19,9 +20,9 @@ flowchart TB
 
   subgraph Audio["Audio engine (pick one)"]
     Streaming["StreamingAudioPlayer<br/>default — HTMLAudio + range requests"]
-    WebAudio["AudioPlayer<br/>buffered Web Audio API"]
-    Worklet["AudioWorkletPlayer<br/>worklet + libflac decode"]
-    SDL3["SdlAudioPlayer<br/>SDL3 WASM"]
+    WebAudio["WebAudioPlayer<br/>buffered Web Audio API"]
+    Worklet["WorkletAudioPlayer<br/>worklet + libflac decode"]
+    SDL3["Sdl3AudioPlayer<br/>SDL3 WASM"]
     SDL2["Sdl2AudioPlayer<br/>SDL2 WASM"]
   end
 
@@ -44,7 +45,8 @@ flowchart TB
     Canvas2D["Canvas2D bars"]
   end
 
-  Player --> Audio
+  Player --> Controller
+  Controller --> Audio
   Player --> Shell
   Shell --> ShaderGUI
   Shell --> ProjectM
@@ -72,7 +74,7 @@ flowchart TB
 ```
 User selects track in LibraryView / QueuePanel
     ↓
-Player.tsx → audioLoader.fetchLibrary() / playTrack()
+Player.tsx → usePlaybackController → createAudioBackend()
     ↓
 GET https://storage.noahcohn.com/api/songs  (or REACT_APP_API_URL)
     ↓
@@ -117,11 +119,11 @@ No full-file download before playback starts. Requires CORS + `Accept-Ranges` on
 
 | Mode | Module | Load model | Best for |
 |------|--------|------------|----------|
-| `streaming` (default) | `streamingAudioPlayer.ts` | URL → `<audio>` | Large library, instant start, crossfade |
-| `web-audio` | `audioPlayer.ts` | Full fetch + decode | Simple buffered playback, debugging |
-| `worklet` | `audioWorkletPlayer.ts` | Fetch/decode → worklet ring | Low latency, projectM PCM tap, EQ |
-| `sdl` | `sdlAudioPlayer.ts` | Full fetch → WASM SDL3 | Experimental WASM output path |
-| `sdl2` | `sdl2AudioPlayer.ts` | Full fetch → WASM SDL2 | Same, SDL2 + AudioWorklet glue |
+| `streaming` (default) | `audio/backends/StreamingAudioPlayer.ts` | URL → `<audio>` | Large library, instant start, crossfade |
+| `web-audio` | `audio/backends/WebAudioPlayer.ts` | Full fetch + decode | Simple buffered playback, debugging |
+| `worklet` | `audio/backends/WorkletAudioPlayer.ts` | Fetch/decode → worklet ring | Low latency, projectM PCM tap, EQ |
+| `sdl` | `audio/backends/Sdl3AudioPlayer.ts` | Full fetch → WASM SDL3 | Experimental WASM output path |
+| `sdl2` | `audio/backends/Sdl2AudioPlayer.ts` | Full fetch → WASM SDL2 | Same, SDL2 + AudioWorklet glue |
 
 Backend factory: `src/audio/createAudioBackend.ts` (dynamic `import()` — WASM chunks load lazily).
 

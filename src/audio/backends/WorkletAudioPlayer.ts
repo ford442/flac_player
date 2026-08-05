@@ -1,21 +1,21 @@
 // Audio player using AudioWorkletNode for better performance
 // Falls back to ScriptProcessorNode if AudioWorklet is not available
 // Phase 2: Added streaming mode with ring buffer for chunked/low-memory playback.
-import { decodeAudio } from './audioDecoder';
-import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
-import { runHifiStreamPipeline } from './audio/hifiStreamPipeline';
-import { getOrFetchTrack } from './storage/trackCache';
-import type { PlaybackPathInfo } from './utils/playbackPath';
-import { describePlaybackPath } from './utils/playbackPath';
-import type { AudioBackend, AudioPlaybackState } from './types/audio';
+import { decodeAudio } from '../../audioDecoder';
+import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
+import { runHifiStreamPipeline } from '../hifiStreamPipeline';
+import { getOrFetchTrack } from '../../storage/trackCache';
+import type { PlaybackPathInfo } from '../../utils/playbackPath';
+import { describePlaybackPath } from '../../utils/playbackPath';
+import type { AudioPlaybackState } from '../../types/audio';
 import {
   DEFAULT_CROSSFADE_MS,
   DEFAULT_GAPLESS_MODE,
   isGaplessActive,
   type GaplessSettings,
   type PreloadNextOptions,
-  type TrackTransitionEvent,
-} from './types/gapless';
+} from '../../types/gapless';
+import { BaseAudioBackend } from './BaseAudioBackend';
 
 // AudioWorklet processor code as a string (will be loaded as a blob URL)
 const WORKLET_PROCESSOR_CODE = `
@@ -246,7 +246,7 @@ class FlacProcessor extends AudioWorkletProcessor {
 registerProcessor('flac-processor', FlacProcessor);
 `;
 
-export class AudioWorkletPlayer implements AudioBackend {
+export class WorkletAudioPlayer extends BaseAudioBackend {
   private audioContext: AudioContext | null = null;
   private workletNode: AudioWorkletNode | ScriptProcessorNode | null = null;
   private gainNode: GainNode | null = null;
@@ -258,8 +258,6 @@ export class AudioWorkletPlayer implements AudioBackend {
   private duration: number = 0;
   private currentTime: number = 0;
   private playbackRate: number = 1.0;
-  private onStateChange?: (state: AudioPlaybackState) => void;
-  private onEndedCallback?: (event?: TrackTransitionEvent) => void;
   private useScriptProcessor: boolean = false;
   private workletUrl: string | null = null;
   private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
@@ -278,6 +276,7 @@ export class AudioWorkletPlayer implements AudioBackend {
   private pendingNextSampleRate = 0;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
+    super();
     this.setupWorkletUrl();
   }
 
@@ -315,14 +314,6 @@ export class AudioWorkletPlayer implements AudioBackend {
     }
   }
 
-  setStateChangeCallback(callback: (state: AudioPlaybackState) => void): void {
-    this.onStateChange = callback;
-  }
-
-  setOnEndedCallback(callback?: (event?: TrackTransitionEvent) => void): void {
-    this.onEndedCallback = callback;
-  }
-
   /**
    * Register a callback that receives interleaved PCM blocks (512 samples/ch)
    * directly from the audio worklet thread.  Use this to feed a projectM
@@ -334,12 +325,6 @@ export class AudioWorkletPlayer implements AudioBackend {
     callback: ((buffer: Float32Array, channels: number, sampleRate: number) => void) | undefined
   ): void {
     this.onPCMBlock = callback;
-  }
-
-  private notifyStateChange(): void {
-    if (this.onStateChange) {
-      this.onStateChange(this.getState());
-    }
   }
 
   private setPrebuffering(active: boolean): void {
@@ -895,6 +880,7 @@ export class AudioWorkletPlayer implements AudioBackend {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.cancelStream();
     this.stop();
     if (this.gainNode) this.gainNode.disconnect();
