@@ -82,10 +82,17 @@ flac_player/
 │   ├── App.tsx                 # Root React component (handles shared playlist routes)
 │   ├── App.css                 # App styles
 │   ├── index.tsx               # React entry point (StrictMode)
-│   ├── audioPlayer.ts          # Native Web Audio API player (~200 lines)
-│   ├── audioWorkletPlayer.ts   # AudioWorklet player with ScriptProcessor fallback (~393 lines)
-│   ├── sdlAudioPlayer.ts       # SDL3 WASM wrapper (~297 lines)
-│   ├── sdl2AudioPlayer.ts      # SDL2 WASM wrapper (~233 lines)
+│   ├── audio/                  # Shared graph + backend factory
+│   │   ├── createAudioBackend.ts
+│   │   ├── AudioContextManager.ts, EQChain.ts, ReplayGainNode.ts, SdlPcmBridge.ts
+│   │   └── backends/           # Five selectable implementations
+│   │       ├── StreamingAudioPlayer.ts   # default — HTMLAudio + range requests
+│   │       ├── WebAudioPlayer.ts         # buffered Web Audio API
+│   │       ├── WorkletAudioPlayer.ts     # AudioWorklet + PCM tap
+│   │       ├── Sdl3AudioPlayer.ts        # SDL3 WASM
+│   │       └── Sdl2AudioPlayer.ts        # SDL2 WASM
+│   ├── hooks/
+│   │   ├── usePlaybackController.ts  # Backend lifecycle, load/play, queue advance
 │   ├── audioLoader.ts          # Audio fetching + backend API client (~765 lines)
 │   ├── flacDecoder.ts          # FLAC/WAV decoder (Web Audio API)
 │   ├── webgpuVisualizer.ts     # WebGPU visualization engine (~687 lines)
@@ -196,11 +203,11 @@ Copy `.env.example` to `.env` for local development.
 
 ### Audio Backend Selection
 The `Player.tsx` component selects one of five backends via `createAudioBackend()` (lazy dynamic imports):
-1. **Streaming** (`streamingAudioPlayer.ts`) - Default. HTMLAudioElement + HTTP range requests; crossfade support
-2. **Web Audio** (`audioPlayer.ts`) - Full fetch + decode; buffered `BufferSourceNode`
-3. **AudioWorklet** (`audioWorkletPlayer.ts`) - Low-latency worklet; `setPCMCallback` for projectM PCM tap
-4. **SDL3** (`sdlAudioPlayer.ts`) - C++ SDL3 compiled to WASM; PCM ring → `SdlPcmBridge` → analyser
-5. **SDL2** (`sdl2AudioPlayer.ts`) - C++ SDL2 compiled to WASM with AudioWorklet glue
+1. **Streaming** (`audio/backends/StreamingAudioPlayer.ts`) - Default. HTMLAudioElement + HTTP range requests; crossfade support
+2. **Web Audio** (`audio/backends/WebAudioPlayer.ts`) - Full fetch + decode; buffered `BufferSourceNode`
+3. **AudioWorklet** (`audio/backends/WorkletAudioPlayer.ts`) - Low-latency worklet; `setPCMCallback` for projectM PCM tap
+4. **SDL3** (`audio/backends/Sdl3AudioPlayer.ts`) - C++ SDL3 compiled to WASM; PCM ring → `SdlPcmBridge` → analyser
+5. **SDL2** (`audio/backends/Sdl2AudioPlayer.ts`) - C++ SDL2 compiled to WASM with AudioWorklet glue
 
 See `docs/AUDIO_BACKENDS.md` for selection guidance.
 
@@ -391,12 +398,9 @@ Due to SharedArrayBuffer usage, the app must be served over HTTPS (except localh
 ## File Dependencies
 
 Key module dependencies:
-- `Player.tsx` → `audioPlayer.ts`, `audioWorkletPlayer.ts`, `sdlAudioPlayer.ts`, `sdl2AudioPlayer.ts`, `audioLoader.ts`, `webgpuVisualizer.ts`, `useKeyboardShortcuts.ts`, `LibraryView.tsx`, `QueuePanel.tsx`, `StarRating.tsx`, `ShaderGUI.tsx`
+- `Player.tsx` → `usePlaybackController`, `audio/backends/*`, `audioLoader.ts`, `webgpuVisualizer.ts`, `useKeyboardShortcuts.ts`, `LibraryView.tsx`, `QueuePanel.tsx`, `StarRating.tsx`, `ShaderGUI.tsx`
 - `ShaderGUI.tsx` → `WebGPUVisualizer`, `useBeatDetection`, `TopScreen`, `BottomScreen`, `Knob`, `Button`, `VolumeSlider`, `Chassis`
-- `audioPlayer.ts` → `flacDecoder.ts`
-- `audioWorkletPlayer.ts` → `flacDecoder.ts`
-- `sdlAudioPlayer.ts` → `flacDecoder.ts`
-- `sdl2AudioPlayer.ts` → `flacDecoder.ts`
+- `WebAudioPlayer.ts` / `WorkletAudioPlayer.ts` / `Sdl3AudioPlayer.ts` / `Sdl2AudioPlayer.ts` → `flacDecoder.ts`
 - `webgpuVisualizer.ts` → `math.ts`, `waveform.ts`
 - `app.py` → `data/songs/index.json` (runtime)
 

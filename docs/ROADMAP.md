@@ -2,13 +2,13 @@
 
 Planning cycle: July 2026 (post-audit after #166–#185 closure).
 
-Earlier issues (#166–#185) shipped a lot of product surface (unified backend interface, gapless, ReplayGain, waveform contract, PWA scaffolding, listening-rooms **design**). A July 27 audit found several **foundation items still incomplete** despite closed tickets — backends remain at `src/` root, `AudioContext` is still hardcoded to 44.1 kHz, SDL still full-buffers PCM in C++, and `test:streaming` is still an echo stub.
+Earlier issues (#166–#185) shipped a lot of product surface (unified backend interface, gapless, ReplayGain, waveform contract, PWA scaffolding, listening-rooms **design**). A July 27 audit found several **foundation items still incomplete** — backends were relocated under `src/audio/backends/` and `usePlaybackController` extracted from `Player.tsx` in #193; remaining gaps include hardcoded 44.1 kHz `AudioContext`, SDL full-buffer PCM in C++, and `test:streaming` echo stub.
 
 **Do foundation work before large features.** Listening rooms (#197) depends on a stable playback controller and trustworthy tests.
 
 | Issue | Title | Priority |
 |-------|-------|----------|
-| [#193](https://github.com/ford442/flac_player/issues/193) | Foundation: Relocate backends under `src/audio/backends/` + extract `PlaybackController` | **P0 — do first** |
+| [#193](https://github.com/ford442/flac_player/issues/193) | Foundation: Relocate backends under `src/audio/backends/` + extract `PlaybackController` | **Done** |
 | [#194](https://github.com/ford442/flac_player/issues/194) | Audio: Native sample-rate `AudioContext`, latency modes, recreate policy | **P0 — do first** |
 | [#196](https://github.com/ford442/flac_player/issues/196) | Testing: Real decode → playback → analyser integration harness | **P0 — do first** |
 | [#195](https://github.com/ford442/flac_player/issues/195) | SDL WASM: Ring-fed streaming decode + emcc memory/pthread audit | P1 |
@@ -16,7 +16,7 @@ Earlier issues (#166–#185) shipped a lot of product surface (unified backend i
 
 ## Foundation before features
 
-Ship **#193, #194, #196** before implementing listening rooms (#197). SDL streaming (#195) can proceed in parallel once backends live under `src/audio/backends/`, but should not block the PlaybackController extraction.
+Ship **#194, #196** before implementing listening rooms (#197). SDL streaming (#195) can proceed in parallel now that backends live under `src/audio/backends/`.
 
 ## Horizon (not yet ticketed)
 

@@ -1,8 +1,8 @@
-// Audio player with load/play/pause/seek functionality and gapless queue scheduling.
-import { decodeAudioWithBuffer } from './audioDecoder';
-import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
-import { getOrFetchTrack } from './storage/trackCache';
-import type { AudioBackend, AudioPlaybackState } from './types/audio';
+// Buffered Web Audio API player with gapless queue scheduling.
+import { decodeAudioWithBuffer } from '../../audioDecoder';
+import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
+import { getOrFetchTrack } from '../../storage/trackCache';
+import type { AudioPlaybackState } from '../../types/audio';
 import {
   DEFAULT_CROSSFADE_MS,
   DEFAULT_GAPLESS_MODE,
@@ -10,14 +10,14 @@ import {
   overlapSeconds,
   type GaplessSettings,
   type PreloadNextOptions,
-  type TrackTransitionEvent,
-} from './types/gapless';
+} from '../../types/gapless';
+import { BaseAudioBackend } from './BaseAudioBackend';
 
-export type { AudioPlaybackState } from './types/audio';
+export type { AudioPlaybackState } from '../../types/audio';
 
 const GAPLESS_SCHEDULE_LEAD_S = 0.05;
 
-export class AudioPlayer implements AudioBackend {
+export class WebAudioPlayer extends BaseAudioBackend {
   private audioContext: AudioContext;
   private sourceNode: AudioBufferSourceNode | null = null;
   private nextSourceNode: AudioBufferSourceNode | null = null;
@@ -38,9 +38,9 @@ export class AudioPlayer implements AudioBackend {
   private preloadAbort: AbortController | null = null;
   private nextScheduled = false;
   private segmentTransitionFired = false;
-  private onStateChange?: (state: AudioPlaybackState) => void;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
+    super();
     this.audioContext = contextManager.getContext();
     this.gainNode = this.audioContext.createGain();
     contextManager.connectInput(this.gainNode);
@@ -48,26 +48,10 @@ export class AudioPlayer implements AudioBackend {
 
   async initialize(): Promise<void> { /* graph is initialized by the manager */ }
 
-  private onEndedCallback?: (event?: TrackTransitionEvent) => void;
-
-  setStateChangeCallback(callback: (state: AudioPlaybackState) => void): void {
-    this.onStateChange = callback;
-  }
-
-  setOnEndedCallback(callback?: (event?: TrackTransitionEvent) => void): void {
-    this.onEndedCallback = callback;
-  }
-
   private setPrebuffering(active: boolean): void {
     if (this.prebufferingNext === active) return;
     this.prebufferingNext = active;
     this.notifyStateChange();
-  }
-
-  private notifyStateChange(): void {
-    if (this.onStateChange) {
-      this.onStateChange(this.getState());
-    }
   }
 
   setGaplessSettings(settings: GaplessSettings): void {
@@ -456,6 +440,7 @@ export class AudioPlayer implements AudioBackend {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.clearPreload();
     this.stop();
     this.gainNode.disconnect();

@@ -1,8 +1,9 @@
-import { decodeAudio } from './audioDecoder';
-import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
-import { SdlPcmModule, sharedSdlPcmBridge } from './audio/SdlPcmBridge';
-import { WASM_ASSETS, loadWasmScript } from './audio/wasmLoader';
-import type { AudioBackend, AudioPlaybackState } from './types/audio';
+import { decodeAudio } from '../../audioDecoder';
+import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
+import { SdlPcmModule, sharedSdlPcmBridge } from '../SdlPcmBridge';
+import { WASM_ASSETS, loadWasmScript } from '../wasmLoader';
+import type { AudioPlaybackState } from '../../types/audio';
+import { BaseAudioBackend } from './BaseAudioBackend';
 
 // Define the Emscripten module interface for SDL2
 interface Sdl2Module extends SdlPcmModule {
@@ -30,19 +31,16 @@ declare global {
   function createSdl2AudioModule(): Promise<Sdl2Module>;
 }
 
-export class Sdl2AudioPlayer implements AudioBackend {
+export class Sdl2AudioPlayer extends BaseAudioBackend {
   private module: Sdl2Module | null = null;
   private isReady: boolean = false;
   private isPlaying: boolean = false;
   private duration: number = 0;
-  private onStateChange?: (state: AudioPlaybackState) => void;
   private pollInterval: number | null = null;
-  private lastVolume: number = 1.0;
-  private replayGainLinear = 1;
   private initialization: Promise<void>;
-  private destroyed = false;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
+    super();
     this.initialization = this.initializeModule();
   }
 
@@ -85,22 +83,6 @@ export class Sdl2AudioPlayer implements AudioBackend {
     }
   }
 
-  private onEnded?: () => void;
-
-  setStateChangeCallback(callback: (state: AudioPlaybackState) => void): void {
-    this.onStateChange = callback;
-  }
-
-  setOnEndedCallback(callback?: () => void): void {
-    this.onEnded = callback;
-  }
-
-  private notifyStateChange(): void {
-    if (this.onStateChange) {
-      this.onStateChange(this.getState());
-    }
-  }
-
   private startPolling() {
     if (this.pollInterval) window.clearInterval(this.pollInterval);
     this.pollInterval = window.setInterval(() => {
@@ -111,8 +93,8 @@ export class Sdl2AudioPlayer implements AudioBackend {
         if (this.duration && current >= this.duration - 0.25) {
           this.isPlaying = false;
           this.notifyStateChange();
-          if (this.onEnded) {
-            try { this.onEnded(); } catch (err) { console.warn('onEnded handler threw', err); }
+          if (this.onEndedCallback) {
+            try { this.onEndedCallback(); } catch (err) { console.warn('onEnded handler threw', err); }
           }
         }
       }
@@ -221,10 +203,11 @@ export class Sdl2AudioPlayer implements AudioBackend {
   }
 
   setVolume(volume: number): void {
-    this.lastVolume = volume;
-    if (this.module) {
-      this.module._set_volume(volume * this.replayGainLinear);
-    }
+    this.setVolumeBase(volume, (effective) => {
+      if (this.module) {
+        this.module._set_volume(effective);
+      }
+    });
   }
 
   setPlaybackRate(rate: number): void { void rate; /* unsupported by SDL2 */ }
@@ -234,8 +217,7 @@ export class Sdl2AudioPlayer implements AudioBackend {
   }
 
   setReplayGainLinear(linear: number): void {
-    this.replayGainLinear = Math.max(0, linear);
-    this.setVolume(this.lastVolume);
+    this.applyReplayGainLinear(linear, () => this.setVolume(this.lastVolume));
     this.contextManager.setReplayGainLinear(this.replayGainLinear);
   }
 

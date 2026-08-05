@@ -21,11 +21,12 @@ Last updated: July 2026
 | Feature | Entry point |
 |---------|-------------|
 | Player orchestration | `src/components/Player.tsx` |
+| Playback controller | `src/hooks/usePlaybackController.ts` |
 | Backend factory | `src/audio/createAudioBackend.ts` |
-| Streaming (default) | `src/streamingAudioPlayer.ts` |
-| Buffered Web Audio | `src/audioPlayer.ts` |
-| AudioWorklet + PCM tap | `src/audioWorkletPlayer.ts` |
-| SDL3 / SDL2 WASM | `src/sdlAudioPlayer.ts`, `src/sdl2AudioPlayer.ts` |
+| Streaming (default) | `src/audio/backends/StreamingAudioPlayer.ts` |
+| Buffered Web Audio | `src/audio/backends/WebAudioPlayer.ts` |
+| AudioWorklet + PCM tap | `src/audio/backends/WorkletAudioPlayer.ts` |
+| SDL3 / SDL2 WASM | `src/audio/backends/Sdl3AudioPlayer.ts`, `Sdl2AudioPlayer.ts` |
 | SDL → analyser bridge | `src/audio/SdlPcmBridge.ts`, `src/sdl/pcm_ring.h` |
 | Library / API client | `src/api/songApi.ts`, `src/audioLoader.ts` |
 | Offline cache | `src/storage/trackCache.ts`, `src/components/OfflineCache.tsx` |
@@ -40,7 +41,7 @@ Last updated: July 2026
 
 ## 3. Complexity Hotspots
 
-*   **WASM memory interop (`sdlAudioPlayer.ts`, `sdl2AudioPlayer.ts`):**
+*   **WASM memory interop (`Sdl3AudioPlayer.ts`, `Sdl2AudioPlayer.ts` under `src/audio/backends/`):**
     *   Manual `malloc`, HEAP views, channel interleaving. PTHREADS builds expose memory differently (`wasmMemory.buffer` vs `HEAPU8.buffer`).
 *   **SDL PCM ring → AudioWorklet (`SdlPcmBridge.ts`):**
     *   C++ ring buffer written in the SDL audio callback; JS worklet reads and feeds `AnalyserNode`. Required for visualization when SDL owns speaker output.

@@ -126,12 +126,12 @@ module.exports = (env = {}, argv = {}) => {
       splitChunks: {
         cacheGroups: {
           sdl3: {
-            test: /[\\/]sdlAudioPlayer\.ts$/,
+            test: /[\\/]Sdl3AudioPlayer\.ts$/,
             name: 'sdl3-player',
             chunks: 'async',
           },
           sdl2: {
-            test: /[\\/]sdl2AudioPlayer\.ts$/,
+            test: /[\\/]Sdl2AudioPlayer\.ts$/,
             name: 'sdl2-player',
             chunks: 'async',
           },

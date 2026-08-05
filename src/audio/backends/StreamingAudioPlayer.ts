@@ -5,18 +5,18 @@
 //
 // Gapless / crossfade is implemented on the native <audio> path (dual elements).
 
-import { AudioContextManager, sharedAudioContextManager } from './audio/AudioContextManager';
-import { AudioWorkletPlayer } from './audioWorkletPlayer';
-import { probeRemoteAudio } from './utils/rangeFetch';
-import { probeRemoteAudioDuration } from './utils/audioHeader';
+import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
+import { WorkletAudioPlayer } from './WorkletAudioPlayer';
+import { probeRemoteAudio } from '../../utils/rangeFetch';
+import { probeRemoteAudioDuration } from '../../utils/audioHeader';
 import {
   describePlaybackPath,
   isFlacUrl,
   selectDecodeStrategy,
   type PlaybackPathInfo,
-} from './utils/playbackPath';
-import { isTrackCached, getOrFetchTrack } from './storage/trackCache';
-import type { AudioBackend, AudioPlaybackState } from './types/audio';
+} from '../../utils/playbackPath';
+import { isTrackCached, getOrFetchTrack } from '../../storage/trackCache';
+import type { AudioPlaybackState } from '../../types/audio';
 import {
   DEFAULT_GAPLESS_MODE,
   DEFAULT_CROSSFADE_MS,
@@ -26,7 +26,8 @@ import {
   type GaplessSettings,
   type PreloadNextOptions,
   type TrackTransitionEvent,
-} from './types/gapless';
+} from '../../types/gapless';
+import { BaseAudioBackend } from './BaseAudioBackend';
 
 /** Lead time (seconds) to start the next native element before the measured end. */
 const GAPLESS_SCHEDULE_LEAD_S = 0.05;
@@ -37,10 +38,10 @@ function normalizePreloadOptions(options: PreloadNextOptions | string): PreloadN
   return typeof options === 'string' ? { url: options } : options;
 }
 
-export class StreamingAudioPlayer implements AudioBackend {
+export class StreamingAudioPlayer extends BaseAudioBackend {
   private audioContext: AudioContext;
   private gainNode: GainNode;
-  private workletPlayer: AudioWorkletPlayer | null = null;
+  private workletPlayer: WorkletAudioPlayer | null = null;
   private activePath: ActivePath | null = null;
 
   // Native <audio> path
@@ -61,11 +62,10 @@ export class StreamingAudioPlayer implements AudioBackend {
   private prebufferingNext = false;
   private headerProbeAbort: AbortController | null = null;
 
-  private onStateChange?: (state: AudioPlaybackState) => void;
-  private onEndedCallback?: (event?: TrackTransitionEvent) => void;
   private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
+    super();
     this.audioContext = contextManager.getContext();
     this.gainNode = this.audioContext.createGain();
     contextManager.connectInput(this.gainNode);
@@ -74,7 +74,7 @@ export class StreamingAudioPlayer implements AudioBackend {
 
   async initialize(): Promise<void> {
     if (!this.workletPlayer) {
-      this.workletPlayer = new AudioWorkletPlayer(this.contextManager);
+      this.workletPlayer = new WorkletAudioPlayer(this.contextManager);
       this.workletPlayer.setStateChangeCallback((state) => this.notifyStateChange(state));
       this.workletPlayer.setOnEndedCallback((event) => this.onEndedCallback?.(event));
       if (this.onPCMBlock) {
@@ -126,12 +126,8 @@ export class StreamingAudioPlayer implements AudioBackend {
     return el;
   }
 
-  setStateChangeCallback(callback: (state: AudioPlaybackState) => void): void {
-    this.onStateChange = callback;
-  }
-
-  setOnEndedCallback(callback?: (event?: TrackTransitionEvent) => void): void {
-    this.onEndedCallback = callback;
+  override setOnEndedCallback(callback?: (event?: TrackTransitionEvent) => void): void {
+    super.setOnEndedCallback(callback);
     this.workletPlayer?.setOnEndedCallback(callback);
   }
 
@@ -141,9 +137,10 @@ export class StreamingAudioPlayer implements AudioBackend {
     this.notifyStateChange();
   }
 
-  private notifyStateChange(override?: AudioPlaybackState): void {
+  protected override notifyStateChange(override?: AudioPlaybackState): void {
+    if (this.guardDestroyed() || !this.onStateChange) return;
     const base = override ?? this.getState();
-    this.onStateChange?.({
+    this.onStateChange({
       ...base,
       prebufferingNext: this.prebufferingNext,
     });
@@ -554,6 +551,7 @@ export class StreamingAudioPlayer implements AudioBackend {
   }
 
   destroy(): void {
+    this.destroyed = true;
     this.headerProbeAbort?.abort();
     this._cancelTransition();
     this.audioElement.pause();
