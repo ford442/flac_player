@@ -37,9 +37,9 @@ PROJECT_ROOT="$PROJECT_ROOT" source "$SCRIPT_DIR/emsdk-env.sh"
 build_sdl3() {
   local out_js="$OUT_DIR/sdl-audio.js"
   echo "Compiling audio_engine.cpp -> $out_js (USE_SDL=3)"
-  emcc "$SDL_DIR/audio_engine.cpp" \
+  em++ "$SDL_DIR/audio_engine.cpp" \
     -s USE_SDL=3 \
-    -s USE_PTHREADS=1 \
+    -pthread \
     -s WASM=1 \
     -s EXPORTED_FUNCTIONS='["_init_audio","_create_audio_buffer","_set_audio_data","_play","_pause_audio","_resume_audio","_stop","_seek","_get_current_time","_set_volume","_get_pcm_ring_state","_get_pcm_ring_data","_cleanup","_malloc","_free"]' \
     -s EXPORTED_RUNTIME_METHODS='["ccall","cwrap","HEAPF32","HEAPU8","wasmMemory","getValue","setValue"]' \
@@ -56,9 +56,9 @@ build_sdl3() {
 build_sdl2() {
   local out_js="$OUT_DIR/sdl2-audio.js"
   echo "Compiling audio_engine_sdl2.cpp -> $out_js (USE_SDL=2)"
-  emcc "$SDL_DIR/audio_engine_sdl2.cpp" \
+  em++ "$SDL_DIR/audio_engine_sdl2.cpp" \
     -s USE_SDL=2 \
-    -s USE_PTHREADS=1 \
+    -pthread \
     -s AUDIO_WORKLET=1 \
     -s WASM_WORKERS=1 \
     -s WASM=1 \

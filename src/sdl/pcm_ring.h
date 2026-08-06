@@ -6,7 +6,7 @@
 #include <vector>
 
 // Lock-free ring buffer for interleaved float PCM (SDL callback -> JS AudioWorklet).
-// Requires -sUSE_PTHREADS=1 so writePos/readPos live in shared WASM memory.
+// Requires -pthread so writePos/readPos live in shared WASM memory.
 struct PcmRingState {
     alignas(4) std::atomic<uint32_t> writePos;
     alignas(4) std::atomic<uint32_t> readPos;

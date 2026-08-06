@@ -19,8 +19,8 @@ for _candidate in "${_emsdk_candidates[@]}"; do
   fi
 done
 
-if command -v emcc >/dev/null 2>&1; then
-  echo "Warning: emsdk_env.sh not found; using emcc from PATH" >&2
+if command -v em++ >/dev/null 2>&1 || command -v emcc >/dev/null 2>&1; then
+  echo "Warning: emsdk_env.sh not found; using em++ from PATH" >&2
   return 0 2>/dev/null || exit 0
 fi
 

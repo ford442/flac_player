@@ -59,7 +59,7 @@ if [ ! -d "$PRESETS_DIR" ]; then
 fi
 
 echo "Compiling projectm_host.cpp -> $OUT_DIR/projectm-host.js"
-emcc "$HOST_CPP" \
+em++ "$HOST_CPP" \
   -I"$LIB_BUILD/src/api/include" \
   -I"$LIB_BUILD/src/playlist/include" \
   -I"$BUILD_ROOT/src/src/api/include" \
