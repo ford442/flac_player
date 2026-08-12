@@ -109,13 +109,32 @@ Same as SDL3 but uses SDL2 + AudioWorklet glue. Build: `npm run build:wasm:sdl2`
 `AudioContextManager` no longer hardcodes 44100. The context is created lazily,
 on first use, with:
 
-- **sampleRate** — the track's rate once a backend has discovered it, otherwise
-  the device native rate (by omitting the option).
-- **latencyHint** — `'interactive'` for the worklet backend (it drives the
-  projectM PCM tap), `'playback'` for streaming, web-audio and both SDL modes.
+- **sampleRate** — probed from the track header (`audioHeader.ts`) before load,
+  confirmed after decode/metadata, otherwise the device native rate (option omitted).
+- **latencyHint** — user-selected in Settings: `playback` (default), `balanced`,
+  or `interactive`. Applies to all backends.
 
-Backends report the decoded rate via `contextManager.configure({ sampleRate })`
+Policy helpers live in `src/audio/audioContextPolicy.ts` (`chooseSampleRate`,
+`shouldRecreateContext`, `resolveLatencyHint`).
+
+Backends also report the decoded rate via `contextManager.configure({ sampleRate })`
 after decode, or from `onMetadata` on the streaming path.
+
+### Resampling by backend
+
+| Backend | Output rate | Context rate | Resampling |
+|---------|-------------|--------------|------------|
+| streaming (native) | Source (browser) | Probed from header | `MediaElementSource` → context |
+| streaming (hifi) | Track | Probed / metadata | Worklet ring at track rate |
+| web-audio | Track | Matched via `configure` | None when rates match |
+| worklet | Track | Matched via `configure` | None when rates match |
+| SDL3 | Track (WASM) | Matched via `configure` | SDL3 stream at track rate |
+| SDL2 | Track (WASM) | Matched via `configure` | SDL2 `AudioStream` source→device if needed |
+
+SDL2 defers `SDL_OpenAudioDevice` until `set_audio_data` / `start_stream` so the
+device is not pinned to 44100 at init. The SDL PCM analyser tap renders at
+`context.sampleRate`; configure the context to match the track before connecting
+`SdlPcmBridge`.
 
 ### Why this matters
 
@@ -135,19 +154,32 @@ means building a new `AudioContext` and rebuilding the graph, because nodes
 belonging to a closed context cannot be reconnected. `configure()` therefore:
 
 1. compares against the *live* context and no-ops when nothing changed,
-2. closes the old context and rebuilds the master → EQ → analyser → destination
-   chain, carrying volume and EQ settings across,
+2. closes the old context and rebuilds the master → ReplayGain → EQ → analyser →
+   destination chain, carrying volume, EQ, ReplayGain stub, and external-playback
+   mute across,
 3. notifies `onContextChange` subscribers so backends recreate their nodes.
 
 `useAudioBackendLifecycle` subscribes and recreates the backend. **Playback stops
 and the analyser is replaced when this happens**, so the visualiser blanks
-briefly. Two situations trigger it:
+briefly. Situations that trigger it:
 
-- switching to or from the worklet backend (latency hint changes)
+- changing the user latency mode in Settings
 - playing a track whose sample rate differs from the current context
 
-Backends sharing a hint (streaming ↔ web-audio ↔ SDL) still share one context,
-which is what `tests/smoke.spec.ts` asserts.
+With the default `playback` latency, all five backends share one context until a
+sample-rate change forces a rebuild (`tests/smoke.spec.ts`).
+
+### ReplayGain
+
+A stub `GainNode` between master volume and EQ holds a manual dB offset
+(`setReplayGainDb`). Full loudness normalization is tracked in #184; the node
+and restore-on-rebuild wiring are in place so #184 can drop in tags later.
+
+### Unsupported rates
+
+Requesting a rate the hardware rejects throws `NotSupportedError`, so
+unsupported and exotic rates fall back to device native. `recreateOnSampleRateMismatch`
+is always on for now.
 
 ## SDL streaming mode
 

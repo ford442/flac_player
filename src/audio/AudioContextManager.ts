@@ -1,4 +1,9 @@
 import { EQChain } from './EQChain';
+import {
+  chooseSampleRate,
+  shouldRecreateContext,
+  type AudioContextLatencyCategory,
+} from './audioContextPolicy';
 
 export interface AudioContextConfig {
   /**
@@ -6,11 +11,9 @@ export interface AudioContextConfig {
    * double resample you get when the context rate differs from the hardware.
    */
   sampleRate?: number;
-  latencyHint: NonNullable<AudioContextOptions['latencyHint']>;
+  latencyHint: AudioContextLatencyCategory;
+  recreateOnSampleRateMismatch?: boolean;
 }
-
-/** Rates worth requesting; anything else falls back to device native. */
-const SUPPORTED_SAMPLE_RATES = [44100, 48000, 88200, 96000, 176400, 192000];
 
 /**
  * Owns the application-lifetime Web Audio graph.
@@ -29,16 +32,21 @@ const SUPPORTED_SAMPLE_RATES = [44100, 48000, 88200, 96000, 176400, 192000];
 export class AudioContextManager {
   private context: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private replayGainNode: GainNode | null = null;
   private eqChain: EQChain | null = null;
   private analyser: AnalyserNode | null = null;
   private speakerGain: GainNode | null = null;
   private visualizerFeedGain: GainNode | null = null;
   private externalPlaybackActive = false;
 
-  private config: AudioContextConfig = { latencyHint: 'playback' };
+  private config: AudioContextConfig = {
+    latencyHint: 'playback',
+    recreateOnSampleRateMismatch: true,
+  };
   private listeners = new Set<() => void>();
   private lastVolume = 1;
   private lastEQGains: number[] | null = null;
+  private replayGainDb = 0;
 
   initialize(): AudioContext {
     if (this.context) return this.context;
@@ -46,8 +54,9 @@ export class AudioContextManager {
     // Omitting sampleRate yields the device native rate. Requesting an
     // unsupported rate throws, so fall back rather than break playback.
     const options: AudioContextOptions = { latencyHint: this.config.latencyHint };
-    if (this.config.sampleRate && SUPPORTED_SAMPLE_RATES.includes(this.config.sampleRate)) {
-      options.sampleRate = this.config.sampleRate;
+    const requestedRate = chooseSampleRate(this.config.sampleRate);
+    if (requestedRate !== undefined) {
+      options.sampleRate = requestedRate;
     }
 
     try {
@@ -63,6 +72,7 @@ export class AudioContextManager {
 
   private buildGraph(context: AudioContext): void {
     this.masterGain = context.createGain();
+    this.replayGainNode = context.createGain();
     this.eqChain = new EQChain(context);
     this.analyser = context.createAnalyser();
     this.analyser.fftSize = 2048;
@@ -70,7 +80,8 @@ export class AudioContextManager {
     this.visualizerFeedGain = context.createGain();
     this.visualizerFeedGain.gain.value = 1;
 
-    this.masterGain.connect(this.eqChain.input);
+    this.masterGain.connect(this.replayGainNode);
+    this.replayGainNode.connect(this.eqChain.input);
     this.eqChain.output.connect(this.analyser);
     this.visualizerFeedGain.connect(this.analyser);
     this.analyser.connect(this.speakerGain);
@@ -78,6 +89,7 @@ export class AudioContextManager {
 
     // Carry user settings across a rebuild.
     this.masterGain.gain.value = this.lastVolume;
+    this.replayGainNode.gain.value = replayGainDbToLinear(this.replayGainDb);
     this.speakerGain.gain.value = this.externalPlaybackActive ? 0 : 1;
     if (this.lastEQGains) this.eqChain.setAllGains(this.lastEQGains);
   }
@@ -93,31 +105,32 @@ export class AudioContextManager {
     const merged: AudioContextConfig = { ...this.config, ...next };
 
     const latencyChanged = merged.latencyHint !== this.config.latencyHint;
-    // Compare against the context's real rate: a request for 96000 that the
-    // device rejected must not trigger a rebuild on every subsequent track.
-    const rateChanged = merged.sampleRate !== undefined
-      && this.context !== null
-      && this.isRateWorthSwitching(merged.sampleRate);
-
+    const previousConfig = this.config;
     this.config = merged;
 
     if (!this.context) return false;            // picked up at lazy creation
+
+    const rateChanged = merged.sampleRate !== undefined
+      && shouldRecreateContext(
+        this.context.sampleRate,
+        merged.sampleRate,
+        {
+          recreateOnSampleRateMismatch:
+            merged.recreateOnSampleRateMismatch ?? previousConfig.recreateOnSampleRateMismatch ?? true,
+        },
+      );
+
     if (!latencyChanged && !rateChanged) return false;
 
     this.rebuild();
     return true;
   }
 
-  private isRateWorthSwitching(rate: number): boolean {
-    if (!this.context) return false;
-    if (!SUPPORTED_SAMPLE_RATES.includes(rate)) return false;
-    return this.context.sampleRate !== rate;
-  }
-
   private rebuild(): void {
     const old = this.context;
     this.context = null;
     this.masterGain = null;
+    this.replayGainNode = null;
     this.eqChain = null;
     this.analyser = null;
     this.speakerGain = null;
@@ -144,6 +157,10 @@ export class AudioContextManager {
   /** The rate the graph actually renders at — use this for position math. */
   getSampleRate(): number {
     return this.initialize().sampleRate;
+  }
+
+  getLatencyHint(): AudioContextLatencyCategory {
+    return this.config.latencyHint;
   }
 
   getContext(): AudioContext {
@@ -198,6 +215,22 @@ export class AudioContextManager {
     this.initialize();
     return this.eqChain!.getAllGains();
   }
+
+  /** ReplayGain offset in dB. 0 means unity (stub until #184 loudness analysis). */
+  setReplayGainDb(db: number): void {
+    this.initialize();
+    this.replayGainDb = db;
+    this.replayGainNode!.gain.value = replayGainDbToLinear(db);
+  }
+
+  getReplayGainDb(): number {
+    return this.replayGainDb;
+  }
+}
+
+function replayGainDbToLinear(db: number): number {
+  if (db === 0) return 1;
+  return Math.pow(10, db / 20);
 }
 
 export const sharedAudioContextManager = new AudioContextManager();

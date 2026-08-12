@@ -4,6 +4,7 @@ import type {
   PlaybackPathInfo,
 } from '../audioLoader';
 import type { AudioOutputMode } from '../hooks/usePlayerState';
+import type { LatencyMode } from '../audio/audioContextPolicy';
 import type { VisualizerAesthetic } from '../utils/visualizerMode';
 
 export type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'settings';
@@ -112,6 +113,13 @@ export interface PlayerContextValue {
     setPlaybackRate: (r: number) => void;
     crossfadeEnabled: boolean;
     setCrossfadeEnabled: (e: boolean) => void;
+    latencyMode: LatencyMode;
+    setLatencyMode: (m: LatencyMode) => void;
+    contextSampleRate: number;
+    replayGainEnabled: boolean;
+    setReplayGainEnabled: (e: boolean) => void;
+    replayGainDb: number;
+    setReplayGainDb: (db: number) => void;
     onClearCache: () => void;
   };
 

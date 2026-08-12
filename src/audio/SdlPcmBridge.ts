@@ -64,6 +64,10 @@ function getWorkletUrl(): string {
 /**
  * Bridges SDL WASM playback into the shared Web Audio analyser graph.
  * SDL owns speaker output; this worklet feeds the analyser only (speakers muted).
+ *
+ * The tap renders at {@link AudioContextManager.getSampleRate} (context rate).
+ * SDL outputs at the track's native rate — configure the context to match before
+ * connecting so the analyser clock stays aligned with audible playback.
  */
 export class SdlPcmBridge {
   private workletNode: AudioWorkletNode | null = null;
@@ -72,7 +76,8 @@ export class SdlPcmBridge {
   async connect(
     contextManager: AudioContextManager,
     module: SdlPcmModule,
-    channels: number
+    channels: number,
+    sourceSampleRate?: number,
   ): Promise<void> {
     this.disconnect(contextManager);
 
@@ -120,6 +125,7 @@ export class SdlPcmBridge {
         dataOffset: dataPtr,
         capacity,
         channels,
+        sourceSampleRate: sourceSampleRate ?? contextManager.getSampleRate(),
       },
     });
 

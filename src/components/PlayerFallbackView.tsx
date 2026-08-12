@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { PlaylistTrack, SortBy } from '../audioLoader';
 import { AudioOutputMode } from '../hooks/usePlayerState';
+import type { LatencyMode } from '../audio/audioContextPolicy';
 import { usePlayerContext, type ViewTab } from '../contexts/PlayerContext';
 import { LibraryView } from './LibraryView';
 import { QueuePanel } from './QueuePanel';
@@ -47,7 +48,10 @@ export const PlayerFallbackView: React.FC = () => {
   } = playback;
   const {
     outputMode, setOutputMode, eqGains, setEQBandGain, resetEQ,
-    playbackRate, setPlaybackRate, crossfadeEnabled, setCrossfadeEnabled, onClearCache,
+    playbackRate, setPlaybackRate, crossfadeEnabled, setCrossfadeEnabled,
+    latencyMode, setLatencyMode, contextSampleRate,
+    replayGainEnabled, setReplayGainEnabled, replayGainDb, setReplayGainDb,
+    onClearCache,
   } = settings;
   const { backendStatus, onRetry, isSharedPlaylist, sharedPlaylistTitle } = session;
   const {
@@ -353,6 +357,50 @@ export const PlayerFallbackView: React.FC = () => {
                   <EQPanel eqGains={eqGains} onBandChange={setEQBandGain} onReset={resetEQ}
                     playbackRate={playbackRate} onPlaybackRateChange={setPlaybackRate}
                     crossfadeEnabled={crossfadeEnabled} onCrossfadeChange={setCrossfadeEnabled} />
+                </div>
+                <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Latency &amp; Context</span>
+                  <select
+                    value={latencyMode}
+                    onChange={(e) => setLatencyMode(e.target.value as LatencyMode)}
+                    className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm text-white"
+                  >
+                    <option value="playback">Playback (stable buffers)</option>
+                    <option value="balanced">Balanced</option>
+                    <option value="interactive">Interactive (low latency)</option>
+                  </select>
+                  <p className="text-xs text-gray-500" role="status">
+                    Context: {contextSampleRate > 0 ? `${contextSampleRate.toLocaleString()} Hz` : 'not initialized'}
+                    {' · '}Hint: {latencyMode}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Changing latency rebuilds the audio graph and briefly interrupts playback.
+                  </p>
+                </div>
+                <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">ReplayGain (preview)</span>
+                  <label className="flex items-center gap-2 text-sm text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={replayGainEnabled}
+                      onChange={(e) => setReplayGainEnabled(e.target.checked)}
+                      className="rounded"
+                    />
+                    Enable ReplayGain offset (manual stub — loudness scan in #184)
+                  </label>
+                  <input
+                    type="range"
+                    min={-12}
+                    max={12}
+                    step={0.5}
+                    value={replayGainDb}
+                    disabled={!replayGainEnabled}
+                    onChange={(e) => setReplayGainDb(parseFloat(e.target.value))}
+                    className="w-full disabled:opacity-40"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Offset: {replayGainEnabled ? `${replayGainDb > 0 ? '+' : ''}${replayGainDb} dB` : 'off'}
+                  </p>
                 </div>
                 <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
                   <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Audio Engine</span>

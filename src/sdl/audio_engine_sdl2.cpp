@@ -86,25 +86,8 @@ int init_audio() {
         return 0;
     }
 
-    SDL_AudioSpec want, have;
-    SDL_zero(want);
-    want.freq = 44100;
-    want.format = AUDIO_F32;
-    want.channels = 2;
-    want.samples = 1024;
-    want.callback = NULL;
-
-    g_state.deviceId = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
-    if (g_state.deviceId == 0) {
-        std::cerr << "[C++ SDL2] SDL_OpenAudioDevice failed: " << SDL_GetError() << std::endl;
-        return 0;
-    }
-
-    g_state.deviceFreq = have.freq;
-    g_state.deviceChannels = have.channels;
-
     pcm_ring_init(65536);
-    printf("[C++ SDL2] init_audio success. Device ID: %u, Freq: %d\n", g_state.deviceId, have.freq);
+    printf("[C++ SDL2] init_audio success (device open deferred until track load)\n");
     return 1;
 }
 
@@ -187,6 +170,26 @@ int start_stream(int channels, int sampleRate, int bufferSeconds) {
         SDL_FreeAudioStream(g_state.stream);
         g_state.stream = nullptr;
     }
+
+    if (g_state.deviceId == 0) {
+        SDL_AudioSpec want, have;
+        SDL_zero(want);
+        want.freq = g_state.sampleRate;
+        want.format = AUDIO_F32;
+        want.channels = g_state.channels;
+        want.samples = 1024;
+        want.callback = NULL;
+
+        g_state.deviceId = SDL_OpenAudioDevice(NULL, 0, &want, &have, SDL_AUDIO_ALLOW_ANY_CHANGE);
+        if (g_state.deviceId == 0) {
+            std::cerr << "[C++ SDL2] SDL_OpenAudioDevice failed: " << SDL_GetError() << std::endl;
+            return 0;
+        }
+        g_state.deviceFreq = have.freq;
+        g_state.deviceChannels = have.channels;
+        printf("[C++ SDL2] Device opened for stream. Freq: %d, Channels: %d\n", have.freq, have.channels);
+    }
+
     g_state.stream = SDL_NewAudioStream(
         AUDIO_F32, g_state.channels, g_state.sampleRate,
         AUDIO_F32, g_state.deviceChannels, g_state.deviceFreq);

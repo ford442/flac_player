@@ -27,6 +27,7 @@ import {
   VisualizerAesthetic,
 } from '../utils/visualizerMode';
 import { clearTrackCache } from '../storage/trackCache';
+import { sharedAudioContextManager } from '../audio/AudioContextManager';
 import './Player.css';
 
 const getSharedPlaylistId = (): string | null => {
@@ -43,7 +44,7 @@ export const Player: React.FC = () => {
 
   const { playerState, setPlayerState, outputMode, setOutputMode, setError, currentTrack, setCurrentTrack, loadingTrackId, setLoadingTrackId, backendStatus, setBackendStatus } = usePlayerState();
   const { toasts, addToast, removeToast } = useToastNotifications();
-  const { eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate, crossfadeEnabled, setCrossfadeEnabled } = useAudioSettings();
+  const { eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate, crossfadeEnabled, setCrossfadeEnabled, latencyMode, setLatencyMode, replayGainEnabled, setReplayGainEnabled, replayGainDb, setReplayGainDb } = useAudioSettings();
 
   const loader = useMemo(() => new AudioLoader(), []);
   const data = usePlayerData({ loader, addToast, setError, setCurrentTrack, isSharedPlaylist });
@@ -131,8 +132,18 @@ export const Player: React.FC = () => {
     initializeApp();
   }, [loader, addToast]);
 
+  const [contextSampleRate, setContextSampleRate] = useState(0);
+  useEffect(() => {
+    const update = () => setContextSampleRate(sharedAudioContextManager.getSampleRate());
+    update();
+    return sharedAudioContextManager.onContextChange(update);
+  }, []);
+
   const { playerRef, contextGeneration } = useAudioBackendLifecycle({
     outputMode,
+    latencyMode,
+    replayGainEnabled,
+    replayGainDb,
     initialSettings: { volume, muted, eqGains, playbackRate, crossfadeEnabled },
     eqGains, playbackRate, crossfadeEnabled,
     onTrackEndedRef: handleAutoAdvanceRef,
@@ -322,6 +333,10 @@ export const Player: React.FC = () => {
       eqGains, setEQBandGain, resetEQ,
       playbackRate, setPlaybackRate,
       crossfadeEnabled, setCrossfadeEnabled,
+      latencyMode, setLatencyMode,
+      contextSampleRate,
+      replayGainEnabled, setReplayGainEnabled,
+      replayGainDb, setReplayGainDb,
       onClearCache: () => clearTrackCache().then(() => addToast('Offline cache cleared', 'success')),
     },
     session: {

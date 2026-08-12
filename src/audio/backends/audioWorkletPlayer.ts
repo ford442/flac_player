@@ -103,7 +103,7 @@ class FlacProcessor extends AudioWorkletProcessor {
       } else if (e.data.type === 'endStreaming') {
         this.hasEnded = true;
       } else if (e.data.type === 'seek') {
-        this.position = Math.floor(e.data.position * sampleRate) * this.channels;
+        this.position = Math.floor(e.data.position * this.sampleRate) * this.channels;
         this.pcmAccum = null;
         this.pcmAccumPos = 0;
       } else if (e.data.type === 'stop') {
@@ -180,8 +180,9 @@ class FlacProcessor extends AudioWorkletProcessor {
 
     // Post roughly once per second of audio. Must use the real rate, or the
     // cadence drifts at anything other than 44.1 kHz.
-    if (frames > 0 && this.position % (this.channels * sampleRate) < this.channels * 128) {
-      this.port.postMessage({ type: 'position', position: this.position / (this.channels * sampleRate) });
+    if (frames > 0 && this.sampleRate > 0
+        && this.position % (this.channels * this.sampleRate) < this.channels * 128) {
+      this.port.postMessage({ type: 'position', position: this.position / (this.channels * this.sampleRate) });
     }
 
     return true;
@@ -223,7 +224,7 @@ export class AudioWorkletPlayer extends BaseAudioBackend implements AudioBackend
   private gainNode: GainNode | null = null;
   private audioBuffer: Float32Array | null = null;
   private channels: number = 0;
-  private sampleRate: number = 44100;
+  private sampleRate: number = 0;
   private isPlaying: boolean = false;
   private isStreaming: boolean = false;
   private duration: number = 0;
@@ -427,7 +428,10 @@ export class AudioWorkletPlayer extends BaseAudioBackend implements AudioBackend
   // Streaming mode (Phase 2)
   // ---------------------------------------------------------------------------
 
-  async startStreaming(channels: number = 2, sampleRate: number = 44100): Promise<void> {
+  async startStreaming(channels: number, sampleRate: number): Promise<void> {
+    if (sampleRate <= 0) {
+      throw new Error('startStreaming requires a positive sampleRate');
+    }
     if (!this.audioContext) {
       await this.initialize();
     }

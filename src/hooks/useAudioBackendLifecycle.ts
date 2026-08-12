@@ -7,24 +7,13 @@ import type { PlaylistTrack, RepeatMode } from '../audioLoader';
 import { getNextQueueIndex } from '../utils/queueUtils';
 import { createProjectMPCMFeed } from '../utils/projectMBridge';
 import { sharedAudioContextManager } from '../audio/AudioContextManager';
-
-/**
- * Per-backend latency tuning. The worklet path is latency-sensitive (it drives
- * the projectM PCM tap); the others favour stable buffered playback.
- *
- * Note: latencyHint is construction-time only, so switching between backends
- * with different hints rebuilds the AudioContext.
- */
-const LATENCY_HINT_BY_MODE: Record<AudioOutputMode, NonNullable<AudioContextOptions['latencyHint']>> = {
-  streaming: 'playback',
-  'web-audio': 'playback',
-  worklet: 'interactive',
-  sdl: 'playback',
-  sdl2: 'playback',
-};
+import { resolveLatencyHint, type LatencyMode } from '../audio/audioContextPolicy';
 
 interface UseAudioBackendLifecycleParams {
   outputMode: AudioOutputMode;
+  latencyMode: LatencyMode;
+  replayGainEnabled: boolean;
+  replayGainDb: number;
   /** Applied once to a freshly created backend. Read through a ref, so changes here do not rebuild it. */
   initialSettings: {
     volume: number;
@@ -58,6 +47,9 @@ interface UseAudioBackendLifecycleParams {
  */
 export function useAudioBackendLifecycle({
   outputMode,
+  latencyMode,
+  replayGainEnabled,
+  replayGainDb,
   initialSettings,
   eqGains,
   playbackRate,
@@ -82,6 +74,10 @@ export function useAudioBackendLifecycle({
     });
   }, []);
 
+  useEffect(() => {
+    sharedAudioContextManager.setReplayGainDb(replayGainEnabled ? replayGainDb : 0);
+  }, [replayGainEnabled, replayGainDb]);
+
   // Read at creation time only — these must not retrigger backend construction.
   const initialSettingsRef = useRef(initialSettings);
   initialSettingsRef.current = initialSettings;
@@ -91,9 +87,7 @@ export function useAudioBackendLifecycle({
     let stopProjectMBridge: (() => void) | null = null;
     let activePlayer: ConfigurableAudioBackend | null = null;
 
-    // Apply this backend's latency hint before the graph is touched, so a
-    // lazily-created context is built with the right one from the start.
-    sharedAudioContextManager.configure({ latencyHint: LATENCY_HINT_BY_MODE[outputMode] });
+    sharedAudioContextManager.configure({ latencyHint: resolveLatencyHint(latencyMode) });
 
     void createAudioBackend(outputMode).then((player) => {
       if (cancelled) {
@@ -132,7 +126,7 @@ export function useAudioBackendLifecycle({
         playerRef.current = null;
       }
     };
-  }, [outputMode, contextGeneration, onTrackEndedRef, onInitializedRef, setPlayerState, setError]);
+  }, [outputMode, latencyMode, contextGeneration, onTrackEndedRef, onInitializedRef, setPlayerState, setError]);
 
   // Apply live settings to the existing backend.
   useEffect(() => {

@@ -163,7 +163,7 @@ export abstract class BaseSdlBackend<TModule extends SdlCommonModule> extends Ba
       this.writeAudioData(this.module, result.interleavedBuffer, channels, result.sampleRate);
 
       await this.contextManager.resume();
-      await sharedSdlPcmBridge.connect(this.contextManager, this.module, channels);
+      await sharedSdlPcmBridge.connect(this.contextManager, this.module, channels, result.sampleRate);
 
       this.notifyStateChange();
     } catch (error) {
@@ -328,7 +328,7 @@ export abstract class BaseSdlBackend<TModule extends SdlCommonModule> extends Ba
             return;
           }
           void this.contextManager.resume();
-          void sharedSdlPcmBridge.connect(this.contextManager, module, channels);
+          void sharedSdlPcmBridge.connect(this.contextManager, module, channels, sampleRate);
           // Enough audio is buffered to begin; the ring keeps filling behind us.
           resolve();
         },

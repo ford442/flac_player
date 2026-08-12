@@ -137,6 +137,26 @@ describe('AudioContextManager sample rate', () => {
 
     expect(manager.getEQGains()).toEqual(gains);
   });
+
+  it('carries ReplayGain across a rebuild', () => {
+    const manager = new AudioContextManager();
+    manager.getContext();
+    manager.setReplayGainDb(-6);
+
+    manager.configure({ sampleRate: 96000 });
+
+    expect(manager.getReplayGainDb()).toBe(-6);
+  });
+
+  it('carries external playback mute across a rebuild', () => {
+    const manager = new AudioContextManager();
+    manager.getContext();
+    manager.setExternalPlaybackActive(true);
+
+    manager.configure({ sampleRate: 96000 });
+
+    expect(manager.isExternalPlaybackActive()).toBe(true);
+  });
 });
 
 describe('AudioContextManager latency hint', () => {
@@ -168,5 +188,12 @@ describe('AudioContextManager latency hint', () => {
     manager.getContext();
     expect(manager.configure({ latencyHint: 'playback' })).toBe(false);
     expect(constructed).toHaveLength(1);
+  });
+
+  it('supports balanced latency hint', () => {
+    const manager = new AudioContextManager();
+    manager.getContext();
+    expect(manager.configure({ latencyHint: 'balanced' })).toBe(true);
+    expect(constructed[1].latencyHint).toBe('balanced');
   });
 });

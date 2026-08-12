@@ -10,6 +10,8 @@ import {
 import type { PlayerUIState } from '../types/player';
 import { getPreferredStorageUrls } from '../utils/audioUtils';
 import { getOrFetchTrack } from '../storage/trackCache';
+import { probeRemoteAudioHeader } from '../audio/audioHeader';
+import { sharedAudioContextManager } from '../audio/AudioContextManager';
 
 interface UseTrackLoaderParams {
   playerRef: React.MutableRefObject<ConfigurableAudioBackend | null>;
@@ -69,6 +71,11 @@ export function useTrackLoader({
         try {
           const player = playerRef.current;
           if (!player) break;
+
+          const header = await probeRemoteAudioHeader(candidateUrl);
+          if (header?.sampleRate) {
+            sharedAudioContextManager.configure({ sampleRate: header.sampleRate });
+          }
 
           if (mode === 'streaming' && player.loadFromURL) {
             await player.loadFromURL(candidateUrl, { expectedDuration });

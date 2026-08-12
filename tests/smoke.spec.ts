@@ -61,10 +61,9 @@ test.describe('FLAC Player Smoke Tests', () => {
     await expect(page.getByText('Nocturnal ambient synthwave with rain on glass.')).toBeVisible();
   });
 
-  // Backends that share a latencyHint share the AudioContext. Switching to a
-  // backend with a different hint necessarily rebuilds it, because latencyHint
-  // is construction-time only — see docs/AUDIO_BACKENDS.md.
-  test('backend switches reuse one context per latency hint', async ({ page }) => {
+  // With the default playback latency, backend switches reuse one AudioContext.
+  // Changing the user latency mode rebuilds it (latencyHint is construction-time).
+  test('backend switches share one context until latency mode changes', async ({ page }) => {
     await stubWasmBackendImports(page);
     await page.addInitScript(() => {
       const OriginalAudioContext = window.AudioContext;
@@ -108,6 +107,7 @@ test.describe('FLAC Player Smoke Tests', () => {
 
     await page.getByRole('button', { name: '⚙️ Settings' }).click();
     const backendSelect = page.locator('select').filter({ has: page.locator('option[value="worklet"]') }).first();
+    const latencySelect = page.locator('select').filter({ has: page.locator('option[value="interactive"]') }).first();
 
     const readGraph = () => page.evaluate(() => {
       const testState = (window as unknown as {
@@ -116,7 +116,7 @@ test.describe('FLAC Player Smoke Tests', () => {
       return { ...testState.counters, analyserCount: testState.analysers.length };
     });
 
-    // streaming -> web-audio: both 'playback', so the context is reused.
+    // streaming -> web-audio -> worklet: same user latency (playback), one context.
     await backendSelect.selectOption('web-audio');
     await expect.poll(readGraph).toEqual({
       contexts: 1,
@@ -125,8 +125,16 @@ test.describe('FLAC Player Smoke Tests', () => {
       analyserCount: 1,
     });
 
-    // web-audio -> worklet: 'playback' -> 'interactive' rebuilds the context.
     await backendSelect.selectOption('worklet');
+    await expect.poll(readGraph).toEqual({
+      contexts: 1,
+      destinationConnections: 1,
+      disconnects: expect.any(Number),
+      analyserCount: 1,
+    });
+
+    // User switches latency to interactive — context rebuilds.
+    await latencySelect.selectOption('interactive');
     await expect.poll(readGraph).toEqual({
       contexts: 2,
       destinationConnections: 2,
@@ -134,8 +142,8 @@ test.describe('FLAC Player Smoke Tests', () => {
       analyserCount: 2,
     });
 
-    // worklet -> streaming: back to 'playback', one more rebuild.
-    await backendSelect.selectOption('streaming');
+    // Back to playback — one more rebuild.
+    await latencySelect.selectOption('playback');
     await expect.poll(readGraph).toEqual({
       contexts: 3,
       destinationConnections: 3,
