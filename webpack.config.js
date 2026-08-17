@@ -39,6 +39,8 @@ module.exports = (env = {}, argv = {}) => {
     { from: 'public/script-processor-*.js', to: '[name][ext]' },
     { from: 'public/manifest.json', to: 'manifest.json' },
     { from: 'public/icons', to: 'icons' },
+    // Small UMD wrapper + worker for client-side convert (core WASM loaded from CDN).
+    { from: 'public/ffmpeg', to: 'ffmpeg' },
   ];
 
   if (hasWasm) {
@@ -102,6 +104,13 @@ module.exports = (env = {}, argv = {}) => {
         ]
         : []),
     ],
+    // @ffmpeg/ffmpeg uses dynamic require paths; harmless under webpack 5.
+    ignoreWarnings: [
+      {
+        module: /@ffmpeg\/ffmpeg/,
+        message: /Critical dependency: the request of a dependency is an expression/,
+      },
+    ],
     devServer: {
       static: {
         directory: path.join(__dirname, 'public'),
@@ -109,6 +118,12 @@ module.exports = (env = {}, argv = {}) => {
       compress: true,
       port: 3000,
       hot: true,
+      client: {
+        overlay: {
+          errors: true,
+          warnings: false,
+        },
+      },
       proxy: {
         '/api': {
           target: 'http://localhost:7860',

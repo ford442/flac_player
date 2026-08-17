@@ -73,7 +73,7 @@ export const Player: React.FC = () => {
     getAnalyser, stop, seek,
   } = playback;
 
-  const [activeTab, setActiveTab] = useState<'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'settings'>('library');
+  const [activeTab, setActiveTab] = useState<'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'convert' | 'settings'>('library');
   const [libraryViewMode, setLibraryViewMode] = useState<'grid' | 'list'>('grid');
   const [showHtmlFallback, setShowHtmlFallback] = useState(false);
   const [showHelp, setShowHelp] = useState(false);

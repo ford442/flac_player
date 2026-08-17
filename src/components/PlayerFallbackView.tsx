@@ -11,12 +11,13 @@ import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { EQPanel } from './EQPanel';
 import { CacheStatsPanel } from './OfflineCache';
 import { GenerationPanel } from './GenerationPanel';
+import { ConvertPanel } from './ConvertPanel';
 import { formatTime, FAST_STORAGE_HOST } from '../utils/audioUtils';
 import type { GaplessMode } from '../types/gapless';
 import type { ReplayGainMode } from '../utils/replayGain';
 import { getNextQueueIndex, getPreviousQueueIndex } from '../utils/queueUtils';
 
-type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'settings';
+type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'convert' | 'settings';
 type LibraryViewMode = 'grid' | 'list';
 
 export interface PlayerFallbackViewProps {
@@ -244,6 +245,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
               { id: 'queue',       label: '📋 Queue',      count: queue.length },
               { id: 'playlists',   label: '☁️ Playlists',  count: playlists.length },
               { id: 'generate',    label: '✨ Generate' },
+              { id: 'convert',     label: '🔄 Convert' },
               { id: 'settings',    label: '⚙️ Settings' },
             ].map(tab => (
               <button key={tab.id} onClick={() => setActiveTab(tab.id as ViewTab)}
@@ -441,6 +443,12 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
                 onVariationConsumed={() => setVariationTrack(null)}
                 onCompleted={onGenerationCompleted}
               />
+            </div>
+          )}
+
+          {activeTab === 'convert' && (
+            <div className="flex-1 overflow-auto p-6">
+              <ConvertPanel />
             </div>
           )}
 

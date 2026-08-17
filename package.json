@@ -23,6 +23,7 @@
     "profile:chrome": "lighthouse http://localhost:3000 --view --preset=desktop"
   },
   "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
     "@wasm-audio-decoders/flac": "^0.2.10",
     "music-metadata": "^11.12.3",
     "react": "^18.2.0",
