@@ -127,6 +127,8 @@ No full-file download before playback starts. Requires CORS + `Accept-Ranges` on
 
 Backend factory: `src/audio/createAudioBackend.ts` (dynamic `import()` — WASM chunks load lazily).
 
+Shared lifecycle guards (destroyed checks, volume/ReplayGain, state callbacks) live in `src/audio/backends/BaseAudioBackend.ts`. Playback lifecycle and queue advance are owned by `src/hooks/usePlaybackController.ts`; `Player.tsx` composes hooks + views only.
+
 See [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) for selection guidance.
 
 ## Visualizer stack

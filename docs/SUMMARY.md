@@ -41,7 +41,7 @@ flac_player/
 ├── src/
 │   ├── components/       Player, LibraryView, QueuePanel, ShaderGUI, VisualizerShell, ProjectMHost
 │   ├── audio/            createAudioBackend, AudioContextManager, EQChain, SdlPcmBridge
-│   │   └── backends/     StreamingAudioPlayer, WebAudioPlayer, WorkletAudioPlayer, Sdl3/2
+│   │   └── backends/     BaseAudioBackend + Streaming, WebAudio, Worklet, Sdl3, Sdl2
 │   ├── hooks/            usePlaybackController, usePlayerState, useAudioSettings
 │   ├── api/              songApi.ts
 │   ├── storage/          libraryCache, trackCache, queueStorage
@@ -77,7 +77,7 @@ Live against **`https://storage.noahcohn.com`**:
 - **Gapless / ReplayGain** — shipped on shared graph; SDL gapless still unsupported
 - **Uploads** — storage admin → FLAC conversion → `songs.json` index
 
-Active backlog after the July 27 foundation audit: [#193](https://github.com/ford442/flac_player/issues/193)–[#197](https://github.com/ford442/flac_player/issues/197) (see [ROADMAP.md](./ROADMAP.md)). Note: backends still live at `src/` root; `AudioContext` is still created at 44.1 kHz.
+Foundation refactor ([#193](https://github.com/ford442/flac_player/issues/193)) is **done**: all five backends live under `src/audio/backends/` with shared `BaseAudioBackend`, and playback lifecycle is owned by `usePlaybackController` (~450 lines) while `Player.tsx` is composition-only (~388 lines). Remaining foundation backlog: [#194](https://github.com/ford442/flac_player/issues/194) (native sample-rate `AudioContext`), [#196](https://github.com/ford442/flac_player/issues/196) (integration test harness) — see [ROADMAP.md](./ROADMAP.md).
 - **Shareable playlists** — `?share=<id>` loads from `/api/share/<id>`
 - **Five audio backends** — user-selectable; lazy-loaded WASM chunks
 - **Visualizer** — ShaderGUI + WebGL2 fallback + optional projectM split mode
@@ -99,7 +99,7 @@ Active backlog after the July 27 foundation audit: [#193](https://github.com/for
 | [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) | When to use each backend |
 | [API.md](./API.md) | REST endpoints + projectM embed |
 | [DEVELOPER_CONTEXT.md](./DEVELOPER_CONTEXT.md) | Agent-oriented complexity notes |
-| [ROADMAP.md](./ROADMAP.md) | Open issues #166–#174 |
+| [ROADMAP.md](./ROADMAP.md) | Foundation audit backlog (#194–#197) |
 
 ## Deployment
 

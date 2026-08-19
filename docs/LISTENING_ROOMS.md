@@ -254,7 +254,7 @@ src/
     ListeningRoomPanel.tsx  # host badge, guest count, copy link, resync, leave
 ```
 
-Keep listening logic **out of** `Player.tsx` until [#177](https://github.com/ford442/flac_player/issues/177) decomposition lands; integrate via a thin adapter interface (below).
+Keep listening logic **out of** `Player.tsx`; wire room sync through **`usePlaybackController`** callbacks (foundation landed in [#193](https://github.com/ford442/flac_player/issues/193)) via the thin adapter interface below.
 
 ### `useListeningRoom` hook
 
@@ -295,7 +295,7 @@ interface UseListeningRoomResult {
 }
 ```
 
-**Host wiring:** `Player.tsx` (or post-#177 `usePlaybackController`) calls `publish*` from existing handlers (`playTrack`, pause toggle, seek slider, queue mutations).
+**Host wiring:** `usePlaybackController` (or a thin `useListeningRoomBridge` wrapper) calls `publish*` from existing handlers (`playTrack`, pause toggle, seek slider, queue mutations).
 
 **Guest wiring:** `onApplyState` loads track if `trackId` changed, seeks if `|localPosition - remotePosition| > threshold`, play/pauses to match.
 
@@ -359,9 +359,9 @@ Webpack `DefinePlugin`: add `REACT_APP_WS_URL` alongside existing `REACT_APP_*` 
 
 ## Integration with foundation refactors
 
-Ship **after** [#176](https://github.com/ford442/flac_player/issues/176) (backend consolidation) and [#177](https://github.com/ford442/flac_player/issues/177) (`Player.tsx` decomposition) where possible. Design now so those refactors expose clean extension points.
+Foundation work ([#176](https://github.com/ford442/flac_player/issues/176) / [#177](https://github.com/ford442/flac_player/issues/177), shipped as [#193](https://github.com/ford442/flac_player/issues/193)) is **complete**. Listening rooms ([#197](https://github.com/ford442/flac_player/issues/197)) can build on the extension points below.
 
-### #176 — Backend consolidation (`src/audio/backends/`)
+### Backend consolidation (`src/audio/backends/`) — done
 
 Add optional interface on `ConfigurableAudioBackend`:
 
@@ -379,9 +379,9 @@ interface ConfigurableAudioBackend extends AudioBackend {
 
 MVP: implement only on `StreamingBackend` (native path). Other backends return `null`; UI shows "Listening rooms require streaming mode."
 
-### #177 — Player decomposition
+### Player decomposition — done (`usePlaybackController`)
 
-Extract **`usePlaybackController`** with stable callbacks:
+**`usePlaybackController`** exposes stable callbacks for room sync:
 
 | Callback | Room `publish*` |
 |----------|-----------------|
@@ -441,7 +441,7 @@ Static share remains unchanged. Optional later: **"Share playlist"** vs **"Liste
 ### Phase 0 — This document
 
 - [x] Capture protocol, state shape, sync algorithm
-- [x] Define extension points for #176 / #177 / #180
+- [x] Define extension points for backend consolidation / playback controller / #180
 
 ### Phase 1 — MVP
 
