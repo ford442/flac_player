@@ -224,7 +224,12 @@ test.describe('FLAC Player Smoke Tests', () => {
     await expect(panel).toBeVisible({ timeout: 15_000 });
     await expect(panel).toHaveClass(/dark/);
     await expect(panel.getByText('NOW PLAYING')).toBeVisible();
-    await expect(panel.getByRole('heading', { name: 'Track One' })).toBeVisible();
+    // Library title first; music-metadata then replaces it with the fixture's
+    // embedded TITLE ("Fixture FLAC"). Accept either so this is not a race.
+    await expect(
+      panel.getByRole('heading', { name: 'Track One' })
+        .or(panel.getByRole('heading', { name: 'Fixture FLAC' })),
+    ).toBeVisible({ timeout: 15_000 });
   });
 
   test('theme toggle switches to light mode', async ({ page }) => {
