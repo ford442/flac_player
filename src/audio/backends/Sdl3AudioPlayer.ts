@@ -2,7 +2,7 @@ import { decodeAudio } from '../../audioDecoder';
 import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
 import { SdlPcmModule, sharedSdlPcmBridge } from '../SdlPcmBridge';
 import { WASM_ASSETS, loadWasmScript } from '../wasmLoader';
-import type { AudioPlaybackState } from '../../types/audio';
+import type { AudioPlaybackState, DecodedPcmView } from '../../types/audio';
 import { BaseAudioBackend } from './BaseAudioBackend';
 
 // Define the Emscripten module interface
@@ -44,6 +44,9 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
   private duration: number = 0;
   private pollInterval: number | null = null;
   private initialization: Promise<void>;
+  private decodedPcm: Float32Array | null = null;
+  private decodedChannels = 1;
+  private decodedSampleRate = 44100;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
     super();
@@ -146,6 +149,9 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
       const channels = result.channels;
       const interleaved = result.interleavedBuffer;
       const interleavedLength = interleaved.length;
+      this.decodedPcm = interleaved;
+      this.decodedChannels = channels;
+      this.decodedSampleRate = result.sampleRate;
       console.log('[SdlAudioPlayer] Interleaved samples ready. Total samples:', interleavedLength);
 
       // Allocate memory in WASM (in bytes) and write safely to the current WASM buffer
@@ -283,6 +289,15 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
 
   getAnalyser(): AnalyserNode {
     return this.contextManager.getAnalyser();
+  }
+
+  getDecodedPcm(): DecodedPcmView | null {
+    if (!this.decodedPcm) return null;
+    return {
+      pcm: this.decodedPcm,
+      channels: this.decodedChannels,
+      sampleRate: this.decodedSampleRate,
+    };
   }
 
   destroy(): void {

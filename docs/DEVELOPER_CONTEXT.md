@@ -36,6 +36,7 @@ Last updated: August 2026
 | EQ / crossfade settings | `src/audio/EQChain.ts`, `src/hooks/useAudioSettings.ts` |
 | Visualizer shell | `src/components/VisualizerShell.tsx` |
 | ShaderGUI | `src/components/ShaderGUI/ShaderGUI.tsx` |
+| gpu-chores (peaks / RMS) | `src/gpu-chores/`, `src/hooks/useGpuChoresOverview.ts` |
 | projectM host | `src/components/ProjectMHost.tsx`, `src/projectm/ProjectMEngine.ts` |
 | Renderer selection | `src/visuals/rendererSelection.ts` |
 
@@ -49,6 +50,7 @@ Last updated: August 2026
     *   COOP/COEP required for AudioWorklet, SharedArrayBuffer, SDL pthreads, projectM WASM.
 *   **WebGPU lifecycle (`webgpuVisualizer.ts`):**
     *   `webgpuProbe.ts` acquires the exact adapter/device/context consumed by `WebGPUVisualizer`; the visualizer must not request a second device.
+    *   gpu-chores **adopts** that same device (`adoptVisualizerDevice`) for peak/RMS compute and never calls `requestDevice()`. Kill switch: `?no_gpu_compute`.
     *   Manual resource cleanup in `destroy()`; 60 fps rAF loop. Probe/init/device-loss failures remain local to the GPU surface.
 *   **ShaderGUI layout contract (`src/visuals/waveformContract.ts`):**
     *   Knob/LED glow UVs, palette colors, and intensity scales live in `WAVEFORM_LAYOUT`.

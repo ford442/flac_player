@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createAudioBackend } from '../audio/createAudioBackend';
-import type { ConfigurableAudioBackend } from '../types/audio';
+import type { ConfigurableAudioBackend, AudioPlaybackState, DecodedPcmView } from '../types/audio';
 import type { AudioOutputMode } from './usePlayerState';
-import type { AudioPlaybackState } from '../types/audio';
 import {
   AudioLoader,
   PlaylistTrack,
@@ -430,6 +429,9 @@ export function usePlaybackController({
   }, [setMuted, setVolume, prevVolumeRef]);
 
   const getAnalyser = useCallback(() => playerRef.current?.getAnalyser() ?? null, []);
+  const getDecodedPcm = useCallback((): DecodedPcmView | null => {
+    return playerRef.current?.getDecodedPcm?.() ?? null;
+  }, []);
 
   const stop = useCallback(() => playerRef.current?.stop(), []);
   const seek = useCallback((time: number) => playerRef.current?.seek(time), []);
@@ -447,6 +449,7 @@ export function usePlaybackController({
     handleVolumeChange,
     toggleMute,
     getAnalyser,
+    getDecodedPcm,
     stop,
     seek,
   };

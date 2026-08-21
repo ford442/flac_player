@@ -6,6 +6,7 @@ import { useToastNotifications } from '../hooks/useToastNotifications';
 import { useAudioSettings } from '../hooks/useAudioSettings';
 import { usePlayerData } from '../hooks/usePlayerData';
 import { usePlaybackController } from '../hooks/usePlaybackController';
+import { useGpuChoresOverview } from '../hooks/useGpuChoresOverview';
 import { VisualizerShell } from './VisualizerShell';
 import { ToastContainer } from './Toast';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
@@ -70,8 +71,14 @@ export const Player: React.FC = () => {
     currentFile, playbackPath, prebufferingNext,
     playTrack, playNextInQueue, playPreviousInQueue, togglePlayback,
     handleLocalFiles, handleVolumeChange, toggleMute,
-    getAnalyser, stop, seek,
+    getAnalyser, getDecodedPcm, stop, seek,
   } = playback;
+
+  const gpuOverview = useGpuChoresOverview({
+    trackKey: currentTrack?.id ?? currentTrack?.url ?? null,
+    isLoading: playerState.isLoading,
+    getDecodedPcm,
+  });
 
   const [activeTab, setActiveTab] = useState<'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'convert' | 'settings'>('library');
   const [libraryViewMode, setLibraryViewMode] = useState<'grid' | 'list'>('grid');
@@ -322,6 +329,11 @@ export const Player: React.FC = () => {
           onToggleFallback={() => setShowHtmlFallback(true)}
           showFallbackToggle={!isSharedPlaylist}
           onFileSelect={handleLocalFiles}
+          overviewMinmax={gpuOverview.minmax}
+          overviewRms={gpuOverview.rms}
+          overviewPeak={gpuOverview.peak}
+          overviewBackend={gpuOverview.backend}
+          overviewReason={gpuOverview.reason}
         />
       </>
     );
@@ -365,6 +377,11 @@ export const Player: React.FC = () => {
       playbackPath={playbackPath}
       isSharedPlaylist={isSharedPlaylist} sharedPlaylistTitle={sharedPlaylistTitle}
       analyser={getAnalyser()}
+      overviewMinmax={gpuOverview.minmax}
+      overviewRms={gpuOverview.rms}
+      overviewPeak={gpuOverview.peak}
+      overviewBackend={gpuOverview.backend}
+      overviewReason={gpuOverview.reason}
       onTrackClick={(track) => { addToQueue(track); playTrack(track, queue.length); }}
       onTrackDoubleClick={playNow}
       onQueueTrackClick={(index) => playTrack(queue[index], index)}

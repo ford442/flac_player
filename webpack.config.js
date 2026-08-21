@@ -122,6 +122,11 @@ module.exports = (env = {}, argv = {}) => {
         overlay: {
           errors: true,
           warnings: false,
+          // Chrome delivers this as window.onerror when a ResizeObserver
+          // callback mutates layout in the same frame. Harmless; the overlay
+          // would otherwise intercept Playwright clicks in e2e.
+          runtimeErrors: (error) =>
+            !/ResizeObserver loop/.test(error?.message || String(error)),
         },
       },
       proxy: {

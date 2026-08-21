@@ -40,6 +40,8 @@ export interface CurrentVisualizer {
   setDebugMode(mode: WebGL2DebugMode): void;
   getDebugMode(): WebGL2DebugMode;
   resize(): void;
+  /** Visualizer-owned GPUDevice for gpu-chores to adopt — never request a second device. */
+  getGpuDevice?: () => GPUDevice | null;
 }
 
 declare global {
