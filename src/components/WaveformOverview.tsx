@@ -22,15 +22,30 @@ function dbLabel(linear: number | null | undefined): string {
   return `${(20 * Math.log10(linear)).toFixed(1)}`;
 }
 
-function drawPeaks(
+const CANVAS_CSS_HEIGHT = 36;
+
+function paintOverview(
   ctx: CanvasRenderingContext2D,
-  minmax: Float32Array,
-  width: number,
-  height: number,
-  progress: number,
+  peaks: Float32Array | null,
+  time: number,
+  duration: number,
 ): void {
-  const bins = Math.floor(minmax.length / 2);
-  if (bins <= 0 || width <= 0 || height <= 0) return;
+  const { canvas } = ctx;
+  const width = canvas.width;
+  const height = canvas.height;
+  if (width <= 0 || height <= 0) return;
+  const progress = duration > 0 ? time / duration : 0;
+  if (!peaks) {
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.fillRect(0, height / 2 - 1, width, 2);
+    ctx.fillStyle = 'rgba(34, 211, 238, 0.9)';
+    ctx.fillRect(0, height / 2 - 2, width * progress, 4);
+    return;
+  }
+
+  const bins = Math.floor(peaks.length / 2);
+  if (bins <= 0) return;
   ctx.clearRect(0, 0, width, height);
 
   const mid = height / 2;
@@ -39,8 +54,8 @@ function drawPeaks(
 
   ctx.lineWidth = Math.max(1, step * 0.9);
   for (let i = 0; i < bins; i++) {
-    const min = minmax[i * 2];
-    const max = minmax[i * 2 + 1];
+    const min = peaks[i * 2];
+    const max = peaks[i * 2 + 1];
     const x = (i + 0.5) * step;
     const y0 = mid - max * mid;
     const y1 = mid - min * mid;
@@ -71,42 +86,62 @@ export const WaveformOverview: React.FC<WaveformOverviewProps> = ({
   reason,
   className,
 }) => {
+  const hostRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const liveRmsRef = useRef(0);
   const livePeakRef = useRef(0);
   const meterLabelRef = useRef<HTMLSpanElement>(null);
+  const drawStateRef = useRef({ minmax, currentTime, duration });
+  drawStateRef.current = { minmax, currentTime, duration };
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const host = hostRef.current;
+    if (!canvas || !host) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let frame = 0;
+
+    const draw = () => {
+      frame = 0;
+      const { minmax: peaks, currentTime: time, duration: len } = drawStateRef.current;
+      const dpr = window.devicePixelRatio || 1;
+      const rect = host.getBoundingClientRect();
+      const w = Math.max(1, Math.floor(rect.width * dpr));
+      const h = Math.max(1, Math.floor(CANVAS_CSS_HEIGHT * dpr));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      paintOverview(ctx, peaks, time, len);
+    };
+
+    const scheduleDraw = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(draw);
+    };
+
+    draw();
+    // Observe the host, not the canvas. Mutating canvas.width inside a
+    // ResizeObserver callback on the canvas itself trips Chrome's
+    // "ResizeObserver loop completed with undelivered notifications" error,
+    // which webpack-dev-server treats as a fatal overlay.
+    const observer = new ResizeObserver(scheduleDraw);
+    observer.observe(host);
+    return () => {
+      observer.disconnect();
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
-    const dpr = window.devicePixelRatio || 1;
-    const resize = () => {
-      const rect = canvas.getBoundingClientRect();
-      const w = Math.max(1, Math.floor(rect.width * dpr));
-      const h = Math.max(1, Math.floor(rect.height * dpr));
-      if (canvas.width !== w || canvas.height !== h) {
-        canvas.width = w;
-        canvas.height = h;
-      }
-      if (minmax) {
-        drawPeaks(ctx, minmax, canvas.width, canvas.height, duration > 0 ? currentTime / duration : 0);
-      } else {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const progress = duration > 0 ? currentTime / duration : 0;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
-        ctx.fillRect(0, canvas.height / 2 - 1, canvas.width, 2);
-        ctx.fillStyle = 'rgba(34, 211, 238, 0.9)';
-        ctx.fillRect(0, canvas.height / 2 - 2, canvas.width * progress, 4);
-      }
-    };
-
-    resize();
-    const observer = new ResizeObserver(resize);
-    observer.observe(canvas);
-    return () => observer.disconnect();
+    const { minmax: peaks, currentTime: time, duration: len } = drawStateRef.current;
+    paintOverview(ctx, peaks, time, len);
   }, [minmax, currentTime, duration]);
 
   useEffect(() => {
@@ -138,6 +173,7 @@ export const WaveformOverview: React.FC<WaveformOverviewProps> = ({
 
   return (
     <div
+      ref={hostRef}
       className={`waveform-overview ${className ?? ''}`.trim()}
       onClick={handleClick}
       title={onSeek ? 'Click to seek' : ''}

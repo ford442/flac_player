@@ -8,7 +8,7 @@
 
 .waveform-overview-canvas {
   width: 100%;
-  height: 36px;
+  height: 36px; /* keep in sync with CANVAS_CSS_HEIGHT in WaveformOverview.tsx */
   display: block;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.06);
