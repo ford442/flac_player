@@ -12,7 +12,7 @@ import { ToastContainer } from './Toast';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { PlayerFallbackView } from './PlayerFallbackView';
 import { EmbedPlayerView } from './EmbedPlayerView';
-import { shuffleArray, isFastStorageUrl } from '../utils/audioUtils';
+import { shuffleArray, isFastMirrorEligible } from '../utils/audioUtils';
 import { IS_PROJECTM_EMBED } from '../utils/embedMode';
 import { getInitialVisualizerAesthetic, VisualizerAesthetic } from '../utils/visualizerMode';
 import { clearTrackCache } from '../storage/trackCache';
@@ -243,9 +243,9 @@ export const Player: React.FC = () => {
     };
   }, [handleLocalFiles]);
 
-  const fastMirrorCount = useMemo(() => library.filter(track => isFastStorageUrl(track.url)).length, [library]);
+  const fastMirrorCount = useMemo(() => library.filter(track => isFastMirrorEligible(track.url)).length, [library]);
   const displayedLibrary = useMemo(
-    () => storageSourceFilter === 'fast' ? library.filter(track => isFastStorageUrl(track.url)) : library,
+    () => storageSourceFilter === 'fast' ? library.filter(track => isFastMirrorEligible(track.url)) : library,
     [library, storageSourceFilter]
   );
 

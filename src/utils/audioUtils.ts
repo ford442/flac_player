@@ -32,6 +32,17 @@ export function isFastStorageUrl(url?: string): boolean {
   }
 }
 
+/** True when playback will try the DreamHost fast mirror first. */
+export function isFastMirrorEligible(url?: string): boolean {
+  if (!url) return false;
+  try {
+    const host = new URL(url).hostname;
+    return host === FAST_STORAGE_HOST || host === PRIMARY_STORAGE_HOST;
+  } catch {
+    return false;
+  }
+}
+
 export function getPreferredStorageUrls(url?: string): string[] {
   if (!url) return [];
 
