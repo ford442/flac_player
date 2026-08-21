@@ -1,10 +1,10 @@
 # FLAC Player Architecture
 
-Last updated: July 2026
+Last updated: August 2026
 
 ## System overview
 
-The app is a React/TypeScript single-page player with a **five-backend audio engine**, **three-tier GPU visualizer fallback**, optional **projectM Milkdrop host**, and a **FastAPI library backend** (production default: `storage.noahcohn.com`).
+The app is a React/TypeScript single-page player with a **five-backend audio engine**, a **fail-closed WebGPU visualizer**, optional **projectM Milkdrop host**, and a **FastAPI library backend** (production default: `storage.noahcohn.com`).
 
 ```mermaid
 flowchart TB
@@ -14,7 +14,7 @@ flowchart TB
     Library["LibraryView"]
     Queue["QueuePanel"]
     Shell["VisualizerShell"]
-    ShaderGUI["ShaderGUI (WebGPU/WebGL2)"]
+    ShaderGUI["ShaderGUI (WebGPU required)"]
     ProjectM["ProjectMHost (optional WASM)"]
   end
 
@@ -39,10 +39,10 @@ flowchart TB
     Analyser["AnalyserNode"]
   end
 
-  subgraph Viz["Visualizer fallback chain"]
+  subgraph Viz["ShaderGUI visualizer session"]
+    Probe["WebGPU boot probe"]
     WebGPU["WebGPUVisualizer"]
-    WebGL2["WebGL2Visualizer"]
-    Canvas2D["Canvas2D bars"]
+    Fatal["Fatal visualizer panel"]
   end
 
   Player --> Controller
@@ -61,7 +61,9 @@ flowchart TB
   SDL3 --> ACM
   SDL2 --> ACM
   ACM --> EQ --> Analyser
-  Analyser --> Viz
+  Analyser --> Probe
+  Probe -->|adapter + device + canvas context ready| WebGPU
+  Probe -->|failure; audio unaffected| Fatal
   Worklet -->|PCM tap| ProjectM
   SDL3 -->|PCM ring bridge| Analyser
   SDL2 -->|PCM ring bridge| Analyser
@@ -84,7 +86,7 @@ createAudioBackend(outputMode) → one of five players
     ↓
 AudioContextManager (shared context, EQ chain, analyser, volume)
     ↓
-AnalyserNode → VisualizerShell → WebGPU / WebGL2 / Canvas2D / projectM
+AnalyserNode → VisualizerShell → required WebGPU session or fatal panel / projectM
     ↓
 Destination → speakers
 ```
@@ -137,19 +139,22 @@ See [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) for selection guidance.
 
 | Mode | URL / storage | GPU use |
 |------|---------------|---------|
-| ShaderGUI | `?aesthetic=shadergui` (default) | WebGPU or WebGL2 |
+| ShaderGUI | `?aesthetic=shadergui` (default) | WebGPU required |
 | projectM | `?aesthetic=projectm` | projectM WASM only; ShaderGUI controls-only |
-| Split | `?aesthetic=split` | ShaderGUI lite (WebGL2) + projectM |
+| Split | `?aesthetic=split` | WebGPU ShaderGUI with reduced layout + projectM |
 
-### Renderer fallback (`src/visuals/rendererSelection.ts`)
+### Fail-closed renderer selection (`src/visuals/rendererSelection.ts`)
 
 ```
-WebGPU → WebGL2 → Canvas2D
+WebGPU boot probe → WebGPUVisualizer
+                  ↘ fatal visualizer panel (no GL/2D renderer)
 ```
 
-Override: `?visualizer=webgl2`, `localStorage`, or `window.DEBUG_VISUALIZER`.
+The boot probe acquires the adapter and device, validates `canvas.getContext('webgpu')`, configures it, and passes those exact resources to `WebGPUVisualizer`. A failed probe never creates a device later and never starts WebGL2 or Canvas2D. Playback/decode remain independent.
 
-Layout + palette constants for both WGSL and GLSL live in `src/visuals/waveformContract.ts`. `Alt+D` debug modes work on WebGPU and WebGL2.
+Legacy `?visualizer=webgl2`, local-storage values, and `window.DEBUG_VISUALIZER='webgl2'` / `'canvas2d'` are retained only as breadcrumbs and are ignored for renderer creation. Inspect `window.webgpuProbe` for JSON status, failure reason, browser brand (including Chrome versus Edge), and adapter details. The dormant GL/2D implementations remain in the tree pending a later fallback issue.
+
+Layout + palette constants for both WGSL and GLSL live in `src/visuals/waveformContract.ts`. `Alt+D` cycles the active WebGPU debug modes.
 
 ### PCM to projectM
 

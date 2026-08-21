@@ -1,15 +1,15 @@
 # DEVELOPER CONTEXT
 
-Last updated: July 2026
+Last updated: August 2026
 
 ## 1. High-Level Architecture & Intent
 
-*   **Core Purpose:** High-performance in-browser audio player for FLAC/WAV and library-backed streaming. Features a **five-backend audio engine** (streaming, Web Audio, AudioWorklet, SDL3 WASM, SDL2 WASM) and multi-tier visualization (WebGPU ShaderGUI, WebGL2/Canvas2D fallbacks, optional projectM Milkdrop host).
+*   **Core Purpose:** High-performance in-browser audio player for FLAC/WAV and library-backed streaming. Features a **five-backend audio engine** (streaming, Web Audio, AudioWorklet, SDL3 WASM, SDL2 WASM), a fail-closed WebGPU ShaderGUI, and an optional projectM Milkdrop host.
 *   **Tech Stack:**
     *   **Frontend:** React 18, TypeScript, CSS3.
     *   **Build:** Webpack 5, Babel, lazy dynamic imports for WASM backends.
     *   **Audio Engines:** See [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md). Default is `StreamingAudioPlayer` (HTMLAudio + range requests).
-    *   **Visualization:** WebGPU primary; WebGL2 + Canvas2D via `src/visuals/rendererSelection.ts`; projectM WASM optional.
+    *   **Visualization:** WebGPU is required for ShaderGUI. `src/visuals/webgpuProbe.ts` validates the adapter, device, and canvas context; failure produces a fatal visualizer panel without blocking audio. WebGL2/Canvas2D fallback is disabled pending a later issue; projectM WASM remains optional.
     *   **Backend API:** FastAPI (`app.py`); production at `storage.noahcohn.com`.
 *   **Design Patterns:**
     *   **Strategy Pattern:** `createAudioBackend(mode)` returns a `ConfigurableAudioBackend` implementation.
@@ -48,11 +48,12 @@ Last updated: July 2026
 *   **Cross-origin isolation (`webpack.config.js`, hosting headers):**
     *   COOP/COEP required for AudioWorklet, SharedArrayBuffer, SDL pthreads, projectM WASM.
 *   **WebGPU lifecycle (`webgpuVisualizer.ts`):**
-    *   Manual resource cleanup in `destroy()`; 60 fps rAF loop.
+    *   `webgpuProbe.ts` acquires the exact adapter/device/context consumed by `WebGPUVisualizer`; the visualizer must not request a second device.
+    *   Manual resource cleanup in `destroy()`; 60 fps rAF loop. Probe/init/device-loss failures remain local to the GPU surface.
 *   **ShaderGUI layout contract (`src/visuals/waveformContract.ts`):**
     *   Knob/LED glow UVs, palette colors, and intensity scales live in `WAVEFORM_LAYOUT`.
     *   Both WGSL (`src/shaders/waveform.ts`) and GLSL (`src/visuals/webgl2/shaders/waveform.ts`) inject these constants — change positions in **one** place.
-    *   `Alt+D` debug modes (`uv`, `waveform-only`, `audio-bins`, `spectrum`) are implemented in both shaders; cycle via ShaderGUI on WebGPU or WebGL2.
+    *   `Alt+D` debug modes (`uv`, `waveform-only`, `audio-bins`, `spectrum`) remain available for the active WebGPU shader. GLSL parity code is dormant while fallback is disabled.
     *   Guard: `npm run test:visualizer` asserts layout injection parity + debug mode helpers.
 
 ## 4. Inherent Limitations & "Here be Dragons"
@@ -61,6 +62,7 @@ Last updated: July 2026
 *   **Test coverage:** Playwright smoke tests exist; no full audio pipeline integration suite yet ([#172](https://github.com/ford442/flac_player/issues/172)).
 *   **Deploy credentials:** `deploy.py` contains environment-specific SFTP config.
 *   **HTTPS + isolation:** App requires secure context with COOP/COEP for worklet/SDL/projectM paths.
+*   **WebGPU fail-closed phase:** ShaderGUI never creates WebGL2 or Canvas2D after a failed probe. Legacy `?visualizer=`, local-storage, and `DEBUG_VISUALIZER` GL/2D preferences are diagnostic breadcrumbs only. Inspect `window.webgpuProbe` for reason, browser brand, and adapter data; audio playback is independent.
 
 ## 5. Key Flows
 
@@ -90,3 +92,33 @@ Set `REACT_APP_DEBUG=true` in `.env`. Central helper: `src/utils/debug.ts` (used
 - [ARCHITECTURE.md](./ARCHITECTURE.md)
 - [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md)
 - [ROADMAP.md](./ROADMAP.md)
+
+## 8. Audio pipeline test fixtures and commands
+
+Audio fixtures under `tests/fixtures/` must be synthetic, original, or otherwise
+clearly licensed for repository use. Keep them short and small so pull-request
+tests remain fast. Fixture sample rate and channel layout are part of the test
+contract: prefer 44.1 kHz stereo and do not change either without updating the
+assertions and documenting why a different layout is needed. Analyser fixtures
+must contain intentional, non-silent signal; silence cannot prove graph routing.
+
+ReplayGain fixtures must retain explicit track and album metadata. In particular,
+`replaygain-loud.flac` is expected to expose `REPLAYGAIN_TRACK_GAIN=-6.5 dB` plus
+album gain and peak metadata. The deterministic graph test parses those real tags,
+applies the same application helper used by playback, and records the resulting
+gain and limiter node settings.
+
+Run the audio validation layers with:
+
+```bash
+npm run test:decoder    # committed FLAC bytes through the WASM decoder
+npm run test:unit       # deterministic jsdom graph, scheduling, and helper tests
+npm run test:streaming  # native Web Audio and AudioWorklet in headless Chromium
+```
+
+The browser-audio suite uses Vitest's own local server and imports
+`createAudioBackend()` directly. It does not require the remote API, a local
+FastAPI process, physical speakers, WebGPU, or the React application UI.
+Chromium is authoritative for the native Web Audio graph, AudioWorklet execution,
+and analyser DSP; jsdom is used only for deterministic graph and scheduling
+assertions.

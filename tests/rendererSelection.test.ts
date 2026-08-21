@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   readVisualizerPreference,
   persistVisualizerPreference,
   resolveVisualizerBackend,
+  resolveVisualizerBackendAsync,
   clearVisualizerPreference,
 } from '../src/visuals/rendererSelection';
 
@@ -46,15 +47,12 @@ describe('resolveVisualizerBackend', () => {
     clearVisualizerPreference();
   });
 
-  it('honors an explicit canvas2d preference', () => {
-    expect(resolveVisualizerBackend('canvas2d')).toBe('canvas2d');
+  it('ignores an explicit canvas2d preference while fallback is disabled', () => {
+    expect(resolveVisualizerBackend('canvas2d')).toBe('webgpu');
   });
 
-  it('falls back from webgl2 to canvas2d when WebGL2 is unavailable', () => {
-    const getContext = HTMLCanvasElement.prototype.getContext;
-    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
-    expect(resolveVisualizerBackend('webgl2')).toBe('canvas2d');
-    HTMLCanvasElement.prototype.getContext = getContext;
+  it('ignores an explicit webgl2 preference while fallback is disabled', () => {
+    expect(resolveVisualizerBackend('webgl2')).toBe('webgpu');
   });
 
   it('defaults to webgpu when no preference is set and WebGPU exists', () => {
@@ -66,9 +64,12 @@ describe('resolveVisualizerBackend', () => {
     delete (navigator as Navigator & { gpu?: unknown }).gpu;
   });
 
-  it('falls back when WebGPU is unavailable', () => {
+  it('selects webgpu even when capability probing will fail later', () => {
     delete (navigator as Navigator & { gpu?: unknown }).gpu;
-    const backend = resolveVisualizerBackend(null);
-    expect(['webgl2', 'canvas2d']).toContain(backend);
+    expect(resolveVisualizerBackend(null)).toBe('webgpu');
+  });
+
+  it('keeps async selection fail-closed on webgpu', async () => {
+    expect(await resolveVisualizerBackendAsync('webgl2')).toBe('webgpu');
   });
 });

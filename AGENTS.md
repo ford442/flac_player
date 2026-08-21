@@ -250,15 +250,15 @@ Without these headers:
 - Three modes: `'flat'` (waveform), `'3D'` (rotating cube with screen), `'gui'` (ShaderGUI hardware panel)
 - Requires manual resource cleanup in `destroy()` method
 - Runs at 60fps via `requestAnimationFrame`
-- Falls back gracefully if WebGPU not supported (Chrome 113+, Edge 113+)
+- WebGPU is required for a ShaderGUI visualizer session. `src/visuals/webgpuProbe.ts` acquires the adapter/device and validates the canvas context before `WebGPUVisualizer` starts.
+- Probe or initialization failure hard-fails only the visualizer slot with browser/adapter diagnostics; audio playback and decode remain available.
 
-### WebGL2 Fallback (`src/visuals/`)
-- **Renderer selection**: `src/visuals/rendererSelection.ts` — `webgpu → webgl2 → canvas2d` with `?visualizer=` URL param, `localStorage`, and `window.DEBUG_VISUALIZER`
-- **WebGL2 reference renderer**: `src/visuals/webgl2/WebGL2Visualizer.ts` — GLSL port of `src/shaders/waveform.ts` with shared uniform/audio data via `src/visuals/visualSync.ts`
-- **Canvas2D last resort**: `src/visuals/webglFallback.ts` — basic frequency bars when both GPU backends fail
-- **Debug helpers**: `window.currentVisualizer`, Alt+D debug mode cycling on WebGPU + WebGL2 (uv, waveform-only, audio-bins, spectrum), debug panel in ShaderGUI (🎛 button)
+### Renderer Selection (`src/visuals/`)
+- **Fail-closed selection**: `src/visuals/rendererSelection.ts` resolves to WebGPU only. The former `webgpu → webgl2 → canvas2d` fallback ladder is disabled pending a later issue.
+- **Legacy preferences**: `?visualizer=webgl2`, local storage, and `window.DEBUG_VISUALIZER='webgl2'` / `'canvas2d'` may still be read for diagnostics but are ignored for renderer creation.
+- **Dormant renderers**: `WebGL2Visualizer` and `CanvasFallbackVisualizer` remain in the tree for later work; ShaderGUI must not instantiate them in this phase.
+- **Debug helpers**: `window.webgpuProbe` exposes JSON probe status/reason/browser/adapter data; `window.DEBUG_VISUALIZER`, `window.currentVisualizer`, Alt+D WebGPU debug cycling, and the ShaderGUI debug panel remain available.
 - **Layout contract**: `src/visuals/waveformContract.ts` — single source of truth for knob/LED UVs shared by WGSL and GLSL
-- **3D mode on WebGL2**: Renders GUI shader (3D cube is WebGPU-only)
 
 ### ShaderGUI Component
 The `ShaderGUI` component (`src/components/ShaderGUI/ShaderGUI.tsx`) is a hardware-inspired control panel rendered in the "now-playing" tab. It features:
@@ -298,7 +298,7 @@ createAudioBackend(mode) — streaming (default) | web-audio | worklet | sdl | s
     ↓
 AudioContextManager (EQ, analyser, volume)
     ↓
-AnalyserNode → VisualizerShell (WebGPU / WebGL2 / Canvas2D / projectM)
+AnalyserNode → VisualizerShell (required WebGPU session or fatal panel / projectM)
     ↓
 AudioDestination → Speakers
 ```
@@ -427,6 +427,6 @@ Dependencies (npm + pip) are installed automatically by the startup update scrip
 - **The webpack `/api → localhost:7860` proxy is bypassed** whenever `REACT_APP_API_URL` is non-empty (the committed default), so the local backend is not reached even if running.
 - **Python console scripts install to `~/.local/bin`** (not on PATH). Run the backend with `python3 app.py` or `python3 -m uvicorn app:app --host 0.0.0.0 --port 7860`.
 - **Playwright browsers are not part of `npm install`.** For `npm run test:e2e`, first run `npx playwright install chromium` (add `--with-deps` for system libs).
-- **WebGPU is unavailable in headless Chrome**, so the visualizer falls back to Canvas2D ("Using Canvas2D fallback — limited shader parity"). This is expected and not an error; audio playback and visualization still work.
+- **WebGPU may be unavailable in headless Chrome**, so ShaderGUI shows the expected WebGPU fatal panel and does not start WebGL2/Canvas2D. Audio playback tests still work because the failure is isolated to the visualizer slot.
 - **WASM builds need Emscripten/emsdk, which is NOT installed.** Prebuilt `public/sdl-audio.*` / `sdl2-audio.*` are committed, so `npm start`, `npm run build`, and all default (streaming) playback work without emsdk. Only `npm run build:wasm*` requires the toolchain.
 - `npm start` uses `--open`; there is no desktop browser auto-launch in the VM, but the dev server still serves on `http://localhost:3000`.

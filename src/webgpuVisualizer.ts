@@ -8,6 +8,7 @@ import {
 import type { WebGL2DebugMode } from './visuals/types';
 import { createDebugConfig, debugModeToUniform } from './visuals/webgl2/debugModes';
 import type { WebGL2DebugConfig } from './visuals/types';
+import type { WebGPUProbeSuccess } from './visuals/webgpuProbe';
 
 export type VisualizerMode = 'flat' | '3D';
 
@@ -18,6 +19,7 @@ export type ShaderGUIUniforms = WaveformUniforms;
 export class WebGPUVisualizer {
   private device: GPUDevice | null = null;
   private context: GPUCanvasContext | null = null;
+  private canvasFormat: GPUTextureFormat | null = null;
   private canvas: HTMLCanvasElement;
   private animationFrameId: number | null = null;
   private analyser: AnalyserNode | null = null;
@@ -61,11 +63,6 @@ export class WebGPUVisualizer {
   private onDeviceLostCallback?: (reason: string) => void;
   private destroyed = false;
 
-  /** Notify the app that the visualizer has fallen back (e.g. device lost). */
-  private notifyFallback(message: string): void {
-    window.dispatchEvent(new CustomEvent('visualizer-fallback', { detail: message }));
-  }
-
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.setupInputListeners();
@@ -83,45 +80,33 @@ export class WebGPUVisualizer {
     this.onDeviceLostCallback = cb;
   }
 
-  async initialize(analyser: AnalyserNode): Promise<boolean> {
-    if (!navigator.gpu) {
-      throw new Error('webgpu-unsupported');
-    }
-
+  async initialize(analyser: AnalyserNode, boot: WebGPUProbeSuccess): Promise<boolean> {
     try {
-      const adapter = await navigator.gpu.requestAdapter();
-      if (!adapter) {
-        throw new Error('webgpu-no-adapter');
-      }
-
-      this.device = await adapter.requestDevice();
+      this.device = boot.device;
+      this.context = boot.context;
+      const canvasFormat = boot.format;
+      this.canvasFormat = canvasFormat;
 
       // Device loss handler
       this.device.lost.then((info) => {
         console.warn('WebGPU device lost:', info.message, 'reason:', info.reason);
         this.device = null;
+        if (this.destroyed || info.reason === 'destroyed') return;
         this.onDeviceLostCallback?.(info.reason);
       });
 
-      this.context = this.canvas.getContext('webgpu') as unknown as GPUCanvasContext;
-
-      if (!this.context) {
-        throw new Error('webgpu-no-context');
-      }
-
-      const format = navigator.gpu.getPreferredCanvasFormat();
       this.context.configure({
         device: this.device,
-        format: format,
+        format: canvasFormat,
         alphaMode: 'opaque'
       });
 
       this.analyser = analyser;
       this.audioData = new Uint8Array(analyser.frequencyBinCount);
 
-      await this.initWaveformResources(format);
-      await this.init3DResources(format);
-      await this.initGUIResources(format);
+      await this.initWaveformResources(canvasFormat);
+      await this.init3DResources(canvasFormat);
+      await this.initGUIResources(canvasFormat);
 
       return true;
     } catch (error) {
@@ -146,6 +131,7 @@ export class WebGPUVisualizer {
       this.device = null;
     }
     this.context = null;
+    this.canvasFormat = null;
   }
 
   private async checkShaderCompilation(module: GPUShaderModule, label: string) {
@@ -633,11 +619,10 @@ struct Uniforms {
   }
 
   resize(): void {
-    if (!this.device || !this.context) return;
-    const format = navigator.gpu.getPreferredCanvasFormat();
+    if (!this.device || !this.context || !this.canvasFormat) return;
     this.context.configure({
       device: this.device,
-      format,
+      format: this.canvasFormat,
       alphaMode: 'opaque'
     });
   }
@@ -701,5 +686,7 @@ struct Uniforms {
       this.device.destroy();
       this.device = null;
     }
+    this.context = null;
+    this.canvasFormat = null;
   }
 }

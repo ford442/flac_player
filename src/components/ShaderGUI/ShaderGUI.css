@@ -79,6 +79,65 @@
   border-radius: 6px;
 }
 
+.webgpu-fatal-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 12px 16px;
+  color: #fecaca;
+  background: linear-gradient(180deg, rgba(41, 8, 18, 0.96), rgba(17, 6, 15, 0.98));
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-size: 10px;
+}
+
+.webgpu-fatal-panel__title {
+  color: #f87171;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.webgpu-fatal-panel dl {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.webgpu-fatal-panel dl > div {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 6px;
+}
+
+.webgpu-fatal-panel dt {
+  color: #fca5a5;
+  text-transform: uppercase;
+}
+
+.webgpu-fatal-panel dd {
+  margin: 0;
+  overflow: hidden;
+  color: #fee2e2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.webgpu-fatal-panel__detail {
+  overflow: hidden;
+  color: #fda4af;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.webgpu-fatal-panel__playback {
+  color: #a7f3d0;
+}
+
 /* Seek bar row below top screen */
 .shader-seek-row {
   display: flex;

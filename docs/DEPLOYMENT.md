@@ -170,7 +170,7 @@ After deployment, test with these sample URLs (replace with your actual audio fi
 ### WebGPU Not Working
 - WebGPU requires a modern browser (Chrome 113+, Edge 113+)
 - Must be served over HTTPS (except localhost)
-- The app will fallback gracefully if WebGPU is not supported
+- ShaderGUI will show a fatal visualizer panel if WebGPU is not supported; audio playback remains available and no WebGL2/Canvas2D renderer is started
 
 ### Audio Not Playing
 - Verify the audio file URL is accessible

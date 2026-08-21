@@ -338,7 +338,7 @@ The player supports three visualizer aesthetics (toggle in the UI or via URL):
 
 | Mode | URL param | Description |
 |------|-----------|-------------|
-| Hardware GUI | `?aesthetic=shadergui` (default) | WebGPU/WebGL2 ShaderGUI panel |
+| Hardware GUI | `?aesthetic=shadergui` (default) | WebGPU-required ShaderGUI panel; probe failure is isolated to the visualizer slot |
 | Milkdrop | `?aesthetic=projectm` | In-app projectM WASM host |
 | Split | `?aesthetic=split` | ShaderGUI (lite GPU) + projectM |
 

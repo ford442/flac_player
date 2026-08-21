@@ -42,12 +42,12 @@ export function persistVisualizerAesthetic(mode: VisualizerAesthetic): void {
   }
 }
 
-/** When true, ShaderGUI should avoid WebGPU to reduce GPU contention. */
+/** When true, the ShaderGUI surface is visually reduced in split mode. */
 export function shouldLimitShaderGpu(mode: VisualizerAesthetic): boolean {
   return mode === 'split';
 }
 
-/** When true, ShaderGUI WebGPU path is skipped entirely. */
+/** When true, ShaderGUI keeps controls visible without creating a GPU surface. */
 export function shouldSkipShaderGui(mode: VisualizerAesthetic): boolean {
   return mode === 'projectm';
 }

@@ -1,14 +1,25 @@
+import fs from 'fs';
+import path from 'path';
 import { describe, it, expect } from 'vitest';
+import { parseBuffer } from 'music-metadata';
+import { AudioContextManager } from '../src/audio/AudioContextManager';
+import { createAudioBackend } from '../src/audio/createAudioBackend';
+import { applyReplayGainToPlayer } from '../src/hooks/useReplayGainApplication';
 import {
   applyPeakLimiting,
   clampReplayGainDb,
   computeReplayGainLinear,
   dbToLinear,
   parseReplayGainFromCommon,
+  replayGainTagsToTrackFields,
   resolveAlbumReferenceDb,
   resolveReplayGainDb,
 } from '../src/utils/replayGain';
 import type { PlaylistTrack } from '../src/types/library';
+import {
+  RecordingAudioContext,
+  installRecordingAudioContext,
+} from './helpers/recordingAudioContext';
 
 const loudTrack: PlaylistTrack = {
   id: 'loud',
@@ -84,5 +95,52 @@ describe('replayGain utils', () => {
 
   it('does not limit when limiter is disabled', () => {
     expect(applyPeakLimiting(4.2, quietTrack, 'track', false)).toBe(4.2);
+  });
+
+  it('applies tagged fixture gain and limiter settings to the real audio graph', async () => {
+    const restoreAudioContext = installRecordingAudioContext();
+    let player: Awaited<ReturnType<typeof createAudioBackend>> | undefined;
+
+    try {
+      const fixturePath = path.join(process.cwd(), 'tests/fixtures/replaygain-loud.flac');
+      const fixture = fs.readFileSync(fixturePath);
+      const metadata = await parseBuffer(new Uint8Array(fixture), {
+        mimeType: 'audio/flac',
+        path: fixturePath,
+      });
+      const tags = parseReplayGainFromCommon(metadata.common);
+      const track: PlaylistTrack = {
+        id: 'replaygain-fixture',
+        name: 'replaygain-loud.flac',
+        url: 'https://example.com/replaygain-loud.flac',
+        ...replayGainTagsToTrackFields(tags),
+      };
+      const contextManager = new AudioContextManager();
+      player = await createAudioBackend('web-audio', contextManager);
+
+      applyReplayGainToPlayer({
+        player,
+        track,
+        queue: [track],
+        settings: { mode: 'track', limiterEnabled: true },
+      });
+
+      const context = RecordingAudioContext.instances[0];
+      const replayGainNode = context.gainNodes[0];
+      const limiter = context.compressorNodes[0];
+      const expectedLinear = dbToLinear(-6.5);
+
+      expect(tags.trackDb).toBeCloseTo(-6.5, 1);
+      expect(contextManager.getReplayGainLinear()).toBeCloseTo(expectedLinear, 6);
+      expect(replayGainNode.gain.value).toBeCloseTo(expectedLinear, 6);
+      expect(limiter.threshold.value).toBe(-1);
+      expect(limiter.knee.value).toBe(0);
+      expect(limiter.ratio.value).toBe(20);
+      expect(limiter.attack.value).toBeCloseTo(0.003, 6);
+      expect(limiter.release.value).toBeCloseTo(0.1, 6);
+    } finally {
+      player?.destroy();
+      restoreAudioContext();
+    }
   });
 });

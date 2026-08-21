@@ -1,13 +1,14 @@
 import React, { useRef, useEffect } from 'react';
 import type { VisualizerBackend } from '../../visuals/types';
+import type { WebGPUProbeBreadcrumb } from '../../visuals/webgpuProbe';
 import './ShaderGUI.css';
 
 interface TopScreenProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   artist?: string;
   title?: string;
-  webGPUSupported?: boolean;
   activeBackend?: VisualizerBackend;
+  probeFailure?: WebGPUProbeBreadcrumb | null;
   onCanvasResize?: () => void;
   onCanvasDoubleClick?: () => void;
   isLoading?: boolean;
@@ -18,6 +19,7 @@ export const TopScreen: React.FC<TopScreenProps> = ({
   artist,
   title,
   activeBackend,
+  probeFailure,
   onCanvasResize,
   onCanvasDoubleClick,
   isLoading = false,
@@ -60,7 +62,7 @@ export const TopScreen: React.FC<TopScreenProps> = ({
 
   return (
     <div ref={containerRef} className="shader-screen top-screen">
-      {/* Canvas is always rendered — either WebGPU or Canvas2D fallback draws into it */}
+      {/* The canvas remains mounted so probe failures can be shown in this slot. */}
       <canvas
         ref={canvasRef}
         className="top-screen-canvas"
@@ -68,11 +70,47 @@ export const TopScreen: React.FC<TopScreenProps> = ({
         height={160}
         onDoubleClick={onCanvasDoubleClick}
         data-visualizer={activeBackend ?? 'webgpu'}
+        data-webgpu-status={probeFailure ? 'failed' : 'ready'}
         style={{
           background: 'linear-gradient(180deg, #0A0A1A 0%, #1A1A2E 100%)',
         }}
       />
-      <div className="artist-title-overlay">
+      {probeFailure && (
+        <div
+          className="webgpu-fatal-panel"
+          role="alert"
+          aria-label="WebGPU visualizer unavailable"
+          data-webgpu-failure={probeFailure.reason ?? 'unknown'}
+        >
+          <div className="webgpu-fatal-panel__title">WebGPU visualizer unavailable</div>
+          <dl>
+            <div>
+              <dt>Reason</dt>
+              <dd>{probeFailure.reason ?? 'unknown'}</dd>
+            </div>
+            <div>
+              <dt>Browser</dt>
+              <dd>
+                {probeFailure.browser.brand}
+                {probeFailure.browser.version ? ` ${probeFailure.browser.version}` : ''}
+              </dd>
+            </div>
+            <div>
+              <dt>Adapter</dt>
+              <dd>
+                {probeFailure.adapter
+                  ? `${probeFailure.adapter.description} (${probeFailure.adapter.vendor} / ${probeFailure.adapter.architecture})`
+                  : 'Unavailable'}
+              </dd>
+            </div>
+          </dl>
+          {probeFailure.detail && (
+            <div className="webgpu-fatal-panel__detail">{probeFailure.detail}</div>
+          )}
+          <div className="webgpu-fatal-panel__playback">Audio playback remains available.</div>
+        </div>
+      )}
+      {!probeFailure && <div className="artist-title-overlay">
         {isLoading ? (
           <div className="loading-text">{displayText}</div>
         ) : (
@@ -80,7 +118,7 @@ export const TopScreen: React.FC<TopScreenProps> = ({
             {displayText}&nbsp;&nbsp;&nbsp;&nbsp;{displayText}&nbsp;&nbsp;&nbsp;&nbsp;
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 };

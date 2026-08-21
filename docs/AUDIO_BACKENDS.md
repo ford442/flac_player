@@ -155,7 +155,7 @@ Build: `npm run build:wasm:sdl2` or `bash src/sdl/build_sdl2.sh`.
 | worklet | Analyser + optional PCM | Worklet PCM tap (best) |
 | sdl / sdl2 | Analyser via PCM bridge | Analyser PCM |
 
-In **split** aesthetic mode, ShaderGUI uses `forceLiteGpu` (WebGL2) to reduce GPU contention with projectM.
+In **split** aesthetic mode, ShaderGUI keeps the required WebGPU renderer with a reduced visual layout alongside projectM. If the WebGPU boot probe fails, only the ShaderGUI surface hard-fails; audio and projectM remain independent.
 
 ## Debugging
 

@@ -175,6 +175,44 @@ test.describe('FLAC Player Smoke Tests', () => {
     expect(typeof hasWebGPU).toBe('boolean');
   });
 
+  test('failed WebGPU probe hard-fails only the visualizer slot', async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'gpu', {
+        configurable: true,
+        value: undefined,
+      });
+      window.DEBUG_VISUALIZER = 'webgl2';
+      localStorage.setItem('flac_player_visualizer', 'canvas2d');
+    });
+    await mockLibraryApi(page);
+    await mockAudioFixtures(page);
+
+    await page.goto('/');
+
+    const fatalPanel = page.getByRole('alert', { name: 'WebGPU visualizer unavailable' });
+    await expect(fatalPanel).toBeVisible();
+    await expect(fatalPanel).toContainText('webgpu-unsupported');
+    await expect(fatalPanel).toContainText('Audio playback remains available.');
+
+    const visualizerCanvas = page.locator('canvas[data-visualizer="webgpu"]');
+    await expect(visualizerCanvas).toHaveAttribute('data-webgpu-status', 'failed');
+    expect(await page.evaluate(() => ({
+      probe: window.webgpuProbe,
+      handle: window.currentVisualizer ?? null,
+    }))).toMatchObject({
+      probe: {
+        status: 'failed',
+        reason: 'webgpu-unsupported',
+        requestedVisualizer: 'webgl2',
+      },
+      handle: null,
+    });
+
+    await openAdvancedLibrary(page);
+    await playLibraryTrack(page, 'Track One');
+    await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible({ timeout: 15_000 });
+  });
+
   test('metadata panel renders in dark mode by default', async ({ page }) => {
     await mockLibraryApi(page);
     await mockAudioFixtures(page);

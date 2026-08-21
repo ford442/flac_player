@@ -4,7 +4,7 @@ Last updated: July 2026
 
 ## Project Overview
 
-A React/TypeScript high-fidelity audio player with **five interchangeable audio backends**, **WebGPU/WebGL2/Canvas2D visualization**, optional **projectM Milkdrop host**, and **library management** backed by `storage.noahcohn.com`.
+A React/TypeScript high-fidelity audio player with **five interchangeable audio backends**, a **fail-closed WebGPU visualization session**, optional **projectM Milkdrop host**, and **library management** backed by `storage.noahcohn.com`.
 
 ## Key Features
 
@@ -24,7 +24,7 @@ A React/TypeScript high-fidelity audio player with **five interchangeable audio 
 
 ### Visualization
 - **ShaderGUI** — hardware-panel WebGPU shader (waveform, knobs, queue screen)
-- **Fallback chain:** WebGPU → WebGL2 → Canvas2D
+- **Renderer policy:** WebGPU required; probe failure produces a fatal visualizer panel while audio continues. GL/2D fallback is disabled pending a later issue.
 - **projectM** — optional in-app Milkdrop WASM (`?aesthetic=projectm|split`)
 - Beat-sync preset switching, `.milk` import
 
@@ -45,7 +45,7 @@ flac_player/
 │   ├── hooks/            usePlaybackController, usePlayerState, useAudioSettings
 │   ├── api/              songApi.ts
 │   ├── storage/          libraryCache, trackCache, queueStorage
-│   ├── visuals/          rendererSelection, WebGL2 fallback
+│   ├── visuals/          WebGPU probe/selection; dormant GL/2D renderers
 │   ├── projectm/         ProjectMEngine, projectm_host.cpp
 │   └── audioLoader.ts
 ├── scripts/              build-wasm.sh, build-projectm-wasm.sh, verify-wasm-artifacts.sh
@@ -80,7 +80,7 @@ Live against **`https://storage.noahcohn.com`**:
 Foundation refactor ([#193](https://github.com/ford442/flac_player/issues/193)) is **done**: all five backends live under `src/audio/backends/` with shared `BaseAudioBackend`, and playback lifecycle is owned by `usePlaybackController` (~450 lines) while `Player.tsx` is composition-only (~388 lines). Remaining foundation backlog: [#194](https://github.com/ford442/flac_player/issues/194) (native sample-rate `AudioContext`), [#196](https://github.com/ford442/flac_player/issues/196) (integration test harness) — see [ROADMAP.md](./ROADMAP.md).
 - **Shareable playlists** — `?share=<id>` loads from `/api/share/<id>`
 - **Five audio backends** — user-selectable; lazy-loaded WASM chunks
-- **Visualizer** — ShaderGUI + WebGL2 fallback + optional projectM split mode
+- **Visualizer** — required WebGPU ShaderGUI + optional projectM split mode
 - **Offline cache** — per-track download via Cache API
 - **Tests** — Playwright smoke suite + decoder unit test
 
@@ -88,7 +88,7 @@ Foundation refactor ([#193](https://github.com/ford442/flac_player/issues/193)) 
 
 - Modern browser (Chrome 90+, Firefox 88+, Safari 14+)
 - Web Audio API (required)
-- WebGPU (optional — WebGL2/Canvas2D fallback)
+- WebGPU (required for ShaderGUI; audio remains available on probe failure)
 - HTTPS + COOP/COEP for AudioWorklet / SDL WASM / projectM
 
 ## Documentation Map

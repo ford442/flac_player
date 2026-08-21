@@ -33,7 +33,8 @@ export class FlacDecoder {
 
   constructor() {
     this.worker = new Worker(
-      new URL('./workers/flacDecoderWorker.ts', import.meta.url)
+      new URL('./workers/flacDecoderWorker.ts', import.meta.url),
+      { type: 'module' }
     );
 
     this.worker.onmessage = (e) => {

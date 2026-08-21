@@ -93,7 +93,6 @@ export const VisualizerShell: React.FC<VisualizerShellProps> = ({
           <ShaderGUI
             {...shaderProps}
             analyser={analyser}
-            forceLiteGpu={limitGpu}
             controlsOnly={controlsOnly}
           />
         </div>
