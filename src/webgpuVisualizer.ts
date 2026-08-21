@@ -68,6 +68,10 @@ export class WebGPUVisualizer {
     this.setupInputListeners();
   }
 
+  getDevice(): GPUDevice | null {
+    return this.device;
+  }
+
   setMode(mode: VisualizerMode) {
     this.mode = mode;
   }

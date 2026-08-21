@@ -9,4 +9,5 @@ beforeEach(() => {
     /* jsdom may block in some environments */
   }
   delete (window as unknown as { DEBUG_VISUALIZER?: string }).DEBUG_VISUALIZER;
+  delete (window as unknown as { __gpuChores?: unknown }).__gpuChores;
 });

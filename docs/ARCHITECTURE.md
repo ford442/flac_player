@@ -156,6 +156,10 @@ Legacy `?visualizer=webgl2`, local-storage values, and `window.DEBUG_VISUALIZER=
 
 Layout + palette constants for both WGSL and GLSL live in `src/visuals/waveformContract.ts`. `Alt+D` cycles the active WebGPU debug modes.
 
+### Display chores (`src/gpu-chores/`)
+
+Waveform scrubber peaks and RMS meters are a **gpu-chores** job (`prefer: 'auto'`): adopt the visualizer `GPUDevice` when it exists, otherwise Worker TS, otherwise CPU. Kill switch: `?no_gpu_compute`. See [GPU_CHORES.md](./GPU_CHORES.md).
+
 ### PCM to projectM
 
 ```
@@ -246,4 +250,5 @@ MVP: **streaming backend only**, `HTMLAudioElement.currentTime` as clock, target
 - [API.md](./API.md) — REST + projectM embed contract
 - [LISTENING_ROOMS.md](./LISTENING_ROOMS.md) — synced listening rooms design (#185)
 - [DEVELOPER_CONTEXT.md](./DEVELOPER_CONTEXT.md) — complexity hotspots for agents
+- [GPU_CHORES.md](./GPU_CHORES.md) — display-only peak/RMS reduce (WebGPU / Worker / CPU)
 - [ROADMAP.md](./ROADMAP.md) — open GitHub issues #166–#174

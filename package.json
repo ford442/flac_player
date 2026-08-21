@@ -20,6 +20,7 @@
     "test:e2e": "npx playwright test",
     "test:streaming": "vitest run --config vitest.browser.config.ts",
     "test:visualizer": "vitest run tests/rendererSelection.test.ts tests/waveformContract.test.ts tests/debugModes.test.ts",
+    "test:gpu-chores": "vitest run tests/gpuChores.reduce.test.ts tests/gpuChores.dispatcher.test.ts",
     "profile:chrome": "lighthouse http://localhost:3000 --view --preset=desktop"
   },
   "dependencies": {

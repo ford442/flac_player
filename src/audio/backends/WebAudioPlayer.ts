@@ -2,7 +2,7 @@
 import { decodeAudioWithBuffer } from '../../audioDecoder';
 import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
 import { getOrFetchTrack } from '../../storage/trackCache';
-import type { AudioPlaybackState } from '../../types/audio';
+import type { AudioPlaybackState, DecodedPcmView } from '../../types/audio';
 import {
   DEFAULT_CROSSFADE_MS,
   DEFAULT_GAPLESS_MODE,
@@ -437,6 +437,15 @@ export class WebAudioPlayer extends BaseAudioBackend {
 
   getAnalyser(): AnalyserNode {
     return this.contextManager.getAnalyser();
+  }
+
+  getDecodedPcm(): DecodedPcmView | null {
+    if (!this.audioBuffer) return null;
+    return {
+      pcm: this.audioBuffer.getChannelData(0),
+      channels: 1,
+      sampleRate: this.audioBuffer.sampleRate,
+    };
   }
 
   destroy(): void {

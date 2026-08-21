@@ -12,6 +12,9 @@ import {
   recordWebGPUFailure,
   type WebGPUProbeBreadcrumb,
 } from '../../visuals/webgpuProbe';
+import { adoptVisualizerDevice, releaseVisualizerDevice } from '../../gpu-chores';
+import type { GpuChoreBackend } from '../../gpu-chores';
+import { WaveformOverview } from '../WaveformOverview';
 import { PlaylistTrack } from '../../audioLoader';
 import { Chassis } from './Chassis';
 import { TopScreen } from './TopScreen';
@@ -20,7 +23,6 @@ import { Knob } from './Knob';
 import { Button } from './Button';
 import { VolumeSlider } from './VolumeSlider';
 import { useBeatDetection } from '../../hooks/useBeatDetection';
-import { formatTime } from '../../utils/audioUtils';
 import './ShaderGUI.css';
 
 export interface ShaderGUIProps {
@@ -47,6 +49,12 @@ export interface ShaderGUIProps {
   onFileSelect?: (files: File[]) => void;
   /** Hide GPU visualizer; keep transport/queue controls (projectM-only mode). */
   controlsOnly?: boolean;
+  /** Scrubber peaks from gpu-chores (null while streaming / not yet reduced). */
+  overviewMinmax?: Float32Array | null;
+  overviewRms?: number | null;
+  overviewPeak?: number | null;
+  overviewBackend?: GpuChoreBackend | null;
+  overviewReason?: string | null;
 }
 
 export const ShaderGUI: React.FC<ShaderGUIProps> = ({
@@ -72,6 +80,11 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   showFallbackToggle = false,
   onFileSelect,
   controlsOnly = false,
+  overviewMinmax = null,
+  overviewRms = null,
+  overviewPeak = null,
+  overviewBackend = null,
+  overviewReason = null,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -93,6 +106,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const timeRef = useRef(0);
 
   const destroyAllVisualizers = useCallback(() => {
+    releaseVisualizerDevice(webgpuRef.current?.getDevice() ?? null);
     webgpuRef.current?.destroy();
     webgpuRef.current = null;
     setCurrentVisualizer(null);
@@ -128,6 +142,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         'webgpu-device-lost',
         reason,
       );
+      releaseVisualizerDevice(visualizer.getDevice());
       visualizer.destroy();
       webgpuRef.current = null;
       setCurrentVisualizer(null);
@@ -142,6 +157,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         return;
       }
       setProbeFailure(null);
+      adoptVisualizerDevice(visualizer.getDevice());
       setCurrentVisualizer({
         backend: requiredBackend,
         readPixels: () => null,
@@ -149,6 +165,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         setDebugMode: (mode) => visualizer.setDebugMode(mode),
         getDebugMode: () => visualizer.getDebugMode(),
         resize: () => visualizer.resize(),
+        getGpuDevice: () => visualizer.getDevice(),
       });
     } catch (err: unknown) {
       visualizer.destroy();
@@ -261,13 +278,6 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     onStop();
   }, [onStop]);
 
-  const handleSeekBarClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-    if (!onSeek || duration <= 0) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-    onSeek(ratio * duration);
-  }, [onSeek, duration]);
-
   const handleNone = useCallback(() => {
     setModeNone(prev => {
       const next = prev ? 0 : 1;
@@ -336,9 +346,13 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
           </div>
           <div className="mt-2 text-[10px] text-gray-500">
             Handle: <code>window.currentVisualizer</code>
+            {' · '}Chores: <code>window.__gpuChores</code>
           </div>
           <pre className="mt-2 max-h-52 overflow-auto whitespace-pre-wrap text-[9px] text-cyan-200">
-            {JSON.stringify(probeFailure ?? window.webgpuProbe ?? null, null, 2)}
+            {JSON.stringify({
+              probe: probeFailure ?? window.webgpuProbe ?? null,
+              chores: window.__gpuChores?.last ?? null,
+            }, null, 2)}
           </pre>
         </div>
       )}
@@ -358,23 +372,17 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             onCanvasDoubleClick={handleToggle3D}
             isLoading={isLoading}
           />
-          <div className="shader-seek-row">
-            <span className="shader-time-display">{formatTime(currentTime)}</span>
-            <div
-              className="shader-seek-bar"
-              onClick={handleSeekBarClick}
-              title={onSeek ? 'Click to seek' : ''}
-              style={{ cursor: onSeek && duration > 0 ? 'pointer' : 'default' }}
-            >
-              <div
-                className="shader-seek-progress"
-                style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
-              />
-            </div>
-            <span className="shader-time-display shader-time-right">
-              -{formatTime(Math.max(0, duration - currentTime))}
-            </span>
-          </div>
+          <WaveformOverview
+            minmax={overviewMinmax}
+            currentTime={currentTime}
+            duration={duration}
+            onSeek={onSeek}
+            analyser={analyser}
+            rms={overviewRms}
+            peak={overviewPeak}
+            backend={overviewBackend}
+            reason={overviewReason}
+          />
         </div>
 
         <div className="shader-gui-top-right">

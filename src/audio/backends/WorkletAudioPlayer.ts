@@ -7,7 +7,7 @@ import { runHifiStreamPipeline } from '../hifiStreamPipeline';
 import { getOrFetchTrack } from '../../storage/trackCache';
 import type { PlaybackPathInfo } from '../../utils/playbackPath';
 import { describePlaybackPath } from '../../utils/playbackPath';
-import type { AudioPlaybackState } from '../../types/audio';
+import type { AudioPlaybackState, DecodedPcmView } from '../../types/audio';
 import {
   DEFAULT_CROSSFADE_MS,
   DEFAULT_GAPLESS_MODE,
@@ -877,6 +877,15 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
 
   getAnalyser(): AnalyserNode {
     return this.contextManager.getAnalyser();
+  }
+
+  getDecodedPcm(): DecodedPcmView | null {
+    if (!this.audioBuffer || this.isStreaming) return null;
+    return {
+      pcm: this.audioBuffer,
+      channels: this.channels,
+      sampleRate: this.sampleRate,
+    };
   }
 
   destroy(): void {

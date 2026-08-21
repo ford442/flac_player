@@ -10,6 +10,13 @@ export interface AudioPlaybackState {
   prebufferingNext?: boolean;
 }
 
+/** Zero-copy view of decoded PCM for display chores (not the audio callback). */
+export interface DecodedPcmView {
+  pcm: Float32Array;
+  channels: number;
+  sampleRate: number;
+}
+
 /** Stable contract shared by every selectable audio implementation. */
 export interface AudioBackend {
   initialize(): Promise<void>;
@@ -43,6 +50,11 @@ export interface ConfigurableAudioBackend extends AudioBackend {
     callback: ((buffer: Float32Array, channels: number, sampleRate: number) => void) | undefined
   ): void;
   getPlaybackPath?(): PlaybackPathInfo | null;
+  /**
+   * Full-file decoded PCM for display chores (scrubber peaks / RMS).
+   * Streaming/native paths return null — no second decode.
+   */
+  getDecodedPcm?(): DecodedPcmView | null;
   loadFromURLStreaming?(
     url: string,
     options?: {

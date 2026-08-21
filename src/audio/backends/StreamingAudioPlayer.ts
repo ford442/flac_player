@@ -16,7 +16,7 @@ import {
   type PlaybackPathInfo,
 } from '../../utils/playbackPath';
 import { isTrackCached, getOrFetchTrack } from '../../storage/trackCache';
-import type { AudioPlaybackState } from '../../types/audio';
+import type { AudioPlaybackState, DecodedPcmView } from '../../types/audio';
 import {
   DEFAULT_GAPLESS_MODE,
   DEFAULT_CROSSFADE_MS,
@@ -548,6 +548,11 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
       isLoading: false,
       prebufferingNext: this.prebufferingNext,
     };
+  }
+
+  getDecodedPcm(): DecodedPcmView | null {
+    if (this.activePath === 'native') return null;
+    return this.workletPlayer?.getDecodedPcm() ?? null;
   }
 
   destroy(): void {

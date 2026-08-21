@@ -311,6 +311,7 @@ Buffered backends: `fetch(url) → decode → AudioBuffer`. Streaming: `<audio s
 npm run test:decoder   # libflac decode unit test
 npm run test:e2e       # Playwright smoke tests
 npm run test:visualizer # renderer selection + WAVEFORM_LAYOUT parity + debug modes
+npm run test:gpu-chores # min/max + RMS goldens + dispatcher break-even / kill switch
 npm run typecheck && npm run lint
 npm audit --audit-level=high   # CI also runs this (warn-only); see Dependency audit
 ```

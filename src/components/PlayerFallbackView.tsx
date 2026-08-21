@@ -4,6 +4,8 @@ import { AudioOutputMode } from '../hooks/usePlayerState';
 import { LibraryView } from './LibraryView';
 import { QueuePanel } from './QueuePanel';
 import { ShaderGUI } from './ShaderGUI/ShaderGUI';
+import { WaveformOverview } from './WaveformOverview';
+import type { GpuChoreBackend } from '../gpu-chores';
 import { MetadataPanel } from './MetadataPanel';
 import { FileDropZone } from './FileDropZone';
 import { ToastContainer, Toast } from './Toast';
@@ -12,7 +14,7 @@ import { EQPanel } from './EQPanel';
 import { CacheStatsPanel } from './OfflineCache';
 import { GenerationPanel } from './GenerationPanel';
 import { ConvertPanel } from './ConvertPanel';
-import { formatTime, FAST_STORAGE_HOST } from '../utils/audioUtils';
+import { FAST_STORAGE_HOST } from '../utils/audioUtils';
 import type { GaplessMode } from '../types/gapless';
 import type { ReplayGainMode } from '../utils/replayGain';
 import { getNextQueueIndex, getPreviousQueueIndex } from '../utils/queueUtils';
@@ -94,6 +96,11 @@ export interface PlayerFallbackViewProps {
   isSharedPlaylist: boolean;
   sharedPlaylistTitle: string;
   analyser: AnalyserNode | null;
+  overviewMinmax?: Float32Array | null;
+  overviewRms?: number | null;
+  overviewPeak?: number | null;
+  overviewBackend?: GpuChoreBackend | null;
+  overviewReason?: string | null;
   onTrackClick: (track: PlaylistTrack, queueIndex: number) => void;
   onTrackDoubleClick: (track: PlaylistTrack) => void;
   onQueueTrackClick: (index: number) => void;
@@ -142,6 +149,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     prebufferingNext,
     playbackPath,
     isSharedPlaylist, sharedPlaylistTitle, analyser,
+    overviewMinmax, overviewRms, overviewPeak, overviewBackend, overviewReason,
     onTrackClick, onTrackDoubleClick, onQueueTrackClick,
     onPlay, onStop, onSeek, onVolumeChange, onMute, onNext, onPrevious, onFileSelect,
     onPlayAll, onAddAllToQueue, onPlayNow, onPlayNext, onAddToQueue,
@@ -370,6 +378,11 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
                 onTrackClick={(index) => onQueueTrackClick(index)}
                 onVolumeChange={onVolumeChange} onMute={onMute} onNext={onNext} onPrevious={onPrevious}
                 onFileSelect={onFileSelect}
+                overviewMinmax={overviewMinmax}
+                overviewRms={overviewRms}
+                overviewPeak={overviewPeak}
+                overviewBackend={overviewBackend}
+                overviewReason={overviewReason}
               />
             </div>
           )}
@@ -535,13 +548,18 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
                 disabled={getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode) === -1 && !isLoading}
                 aria-label="Next track">⏭</button>
             </div>
-            <div className="w-full max-w-md flex items-center gap-3">
-              <span className="text-xs text-gray-400 w-10 text-right" aria-label="Elapsed time">{formatTime(currentTime)}</span>
-              <input type="range" min={0} max={duration || 0} value={currentTime}
-                onChange={(e) => onSeek(parseFloat(e.target.value))}
-                className="flex-1 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer"
-                aria-label="Seek position" />
-              <span className="text-xs text-gray-400 w-10" aria-label="Remaining time">-{formatTime(Math.max(0, duration - currentTime))}</span>
+            <div className="w-full max-w-md">
+              <WaveformOverview
+                minmax={overviewMinmax ?? null}
+                currentTime={currentTime}
+                duration={duration}
+                onSeek={onSeek}
+                analyser={analyser}
+                rms={overviewRms}
+                peak={overviewPeak}
+                backend={overviewBackend}
+                reason={overviewReason}
+              />
             </div>
           </div>
 
