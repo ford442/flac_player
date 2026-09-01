@@ -95,6 +95,12 @@ module.exports = (env = {}, argv = {}) => {
             swSrc: './src/sw/service-worker.ts',
             swDest: 'service-worker.js',
             maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+            // icons/ and manifest.json are copied in by CopyPlugin, which makes them
+            // webpack compilation assets that InjectManifest would otherwise also
+            // auto-add to the precache manifest — on top of the fixed-revision
+            // entries below, producing duplicate URLs and an
+            // add-to-cache-list-conflicting-entries throw on SW install.
+            exclude: [/^icons\//, /^manifest\.json$/],
             additionalManifestEntries: [
               { url: '/manifest.json', revision: null },
               { url: '/icons/icon-192.png', revision: null },
