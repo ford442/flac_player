@@ -132,21 +132,22 @@ For manual URL loading: enter a FLAC/WAV URL, click Load, then play.
 
 ### Visualization Backends
 
-The ShaderGUI visualizer resolves backends automatically: **WebGPU → WebGL2 → Canvas2D**.
+ShaderGUI is **fail-closed on WebGPU** by default (fatal visualizer panel; audio still plays). WebGL2 is an **opt-in** compatibility path — not an automatic fallback ladder.
 
 | Backend | When used | Debug |
 |---------|-----------|-------|
-| `webgpu` | Default when adapter available | — |
-| `webgl2` | Manual override or WebGPU failure | Alt+D cycles debug modes (same as WebGPU) |
-| `webgpu` | Default when available | Alt+D cycles debug modes; layout from `waveformContract.ts` |
-| `canvas2d` | Last resort when GPU shaders unavailable | Basic bars + waveform |
+| `webgpu` | Default | Alt+D; `window.webgpuProbe`; `?gpu=low` for low-power adapter |
+| `webgl2` | Opt-in: `?visualizer=webgl2` or Settings → Compatibility visualizer | Alt+D; same `WAVEFORM_LAYOUT` as WGSL |
+| `canvas2d` | Debug only (`window.DEBUG_VISUALIZER='canvas2d'`) | Basic bars + waveform |
 
-**Force a backend:**
+**Force WebGL2:**
 
 ```
 ?visualizer=webgl2
 ?renderer=webgl2          # alias (sibling-project compat)
 ```
+
+Failed WebGPU without that opt-in does **not** start WebGL2 (keeps Chrome vs Edge adapter bugs visible).
 
 **From devtools:**
 

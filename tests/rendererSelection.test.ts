@@ -5,6 +5,8 @@ import {
   resolveVisualizerBackend,
   resolveVisualizerBackendAsync,
   clearVisualizerPreference,
+  setCompatibilityVisualizer,
+  isCompatibilityVisualizerEnabled,
 } from '../src/visuals/rendererSelection';
 
 describe('readVisualizerPreference', () => {
@@ -45,31 +47,41 @@ describe('readVisualizerPreference', () => {
 describe('resolveVisualizerBackend', () => {
   beforeEach(() => {
     clearVisualizerPreference();
+    delete window.DEBUG_VISUALIZER;
+    window.history.replaceState({}, '', '/');
   });
 
-  it('ignores an explicit canvas2d preference while fallback is disabled', () => {
+  it('stays fail-closed on webgpu when no preference is set', () => {
+    delete (navigator as Navigator & { gpu?: unknown }).gpu;
+    expect(resolveVisualizerBackend(null)).toBe('webgpu');
+  });
+
+  it('honors an explicit webgl2 preference without requiring WebGPU', () => {
+    expect(resolveVisualizerBackend('webgl2')).toBe('webgl2');
+    window.history.replaceState({}, '', '/?visualizer=webgl2');
+    expect(resolveVisualizerBackend()).toBe('webgl2');
+  });
+
+  it('ignores canvas2d URL/storage unless DEBUG_VISUALIZER is canvas2d', () => {
     expect(resolveVisualizerBackend('canvas2d')).toBe('webgpu');
+    persistVisualizerPreference('canvas2d');
+    expect(resolveVisualizerBackend()).toBe('webgpu');
+    window.DEBUG_VISUALIZER = 'canvas2d';
+    expect(resolveVisualizerBackend()).toBe('canvas2d');
   });
 
-  it('ignores an explicit webgl2 preference while fallback is disabled', () => {
-    expect(resolveVisualizerBackend('webgl2')).toBe('webgpu');
+  it('keeps async selection aligned with the sync resolver', async () => {
+    expect(await resolveVisualizerBackendAsync('webgl2')).toBe('webgl2');
+    expect(await resolveVisualizerBackendAsync(null)).toBe('webgpu');
   });
 
-  it('defaults to webgpu when no preference is set and WebGPU exists', () => {
-    Object.defineProperty(navigator, 'gpu', {
-      configurable: true,
-      value: {},
-    });
-    expect(resolveVisualizerBackend(null)).toBe('webgpu');
-    delete (navigator as Navigator & { gpu?: unknown }).gpu;
-  });
-
-  it('selects webgpu even when capability probing will fail later', () => {
-    delete (navigator as Navigator & { gpu?: unknown }).gpu;
-    expect(resolveVisualizerBackend(null)).toBe('webgpu');
-  });
-
-  it('keeps async selection fail-closed on webgpu', async () => {
-    expect(await resolveVisualizerBackendAsync('webgl2')).toBe('webgpu');
+  it('toggles compatibility visualizer via Settings helper', () => {
+    expect(isCompatibilityVisualizerEnabled()).toBe(false);
+    setCompatibilityVisualizer(true);
+    expect(isCompatibilityVisualizerEnabled()).toBe(true);
+    expect(resolveVisualizerBackend()).toBe('webgl2');
+    setCompatibilityVisualizer(false);
+    expect(isCompatibilityVisualizerEnabled()).toBe(false);
+    expect(resolveVisualizerBackend()).toBe('webgpu');
   });
 });

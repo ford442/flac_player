@@ -60,12 +60,12 @@ export function closeProjectMBridgeChannel(): void {
 }
 
 /** Send PCM to external projectM hosts (popup / iframe / BroadcastChannel). */
-export function sendProjectMPCM(float32Array: Float32Array, channels = 1): void {
+export function sendProjectMPCM(float32Array: Float32Array, channels = 1, sampleRate?: number): void {
   if (feedInAppProjectMPCM(float32Array, channels)) {
     return;
   }
 
-  const msg = { type: 'pcm', buffer: float32Array, channels };
+  const msg = { type: 'pcm', buffer: float32Array, channels, sampleRate };
 
   try {
     if (window.opener) {
@@ -154,7 +154,7 @@ export function createProjectMPCMFeed(
 ): () => void {
   const setPCMCallback = player.setPCMCallback?.bind(player);
   if (setPCMCallback) {
-    setPCMCallback((buffer, channels) => sendProjectMPCM(buffer, channels));
+    setPCMCallback((buffer, channels, sampleRate) => sendProjectMPCM(buffer, channels, sampleRate));
     return () => {
       setPCMCallback(undefined);
       closeProjectMBridgeChannel();

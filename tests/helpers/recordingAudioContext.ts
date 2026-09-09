@@ -138,7 +138,9 @@ export class RecordingAudioBufferSourceNode extends RecordingAudioNode {
 export class RecordingAudioContext {
   static readonly instances: RecordingAudioContext[] = [];
 
+  readonly constructorOptions: AudioContextOptions;
   readonly sampleRate: number;
+  readonly latencyHint: AudioContextLatencyCategory | number | undefined;
   state: AudioContextState = 'running';
   currentTime = 0;
   readonly destination: AudioDestinationNode;
@@ -147,7 +149,9 @@ export class RecordingAudioContext {
   readonly bufferSources: RecordingAudioBufferSourceNode[] = [];
 
   constructor(options: AudioContextOptions = {}) {
+    this.constructorOptions = options;
     this.sampleRate = options.sampleRate ?? 44100;
+    this.latencyHint = options.latencyHint;
     this.destination = new RecordingAudioNode(this, 'destination') as unknown as AudioDestinationNode;
     RecordingAudioContext.instances.push(this);
   }

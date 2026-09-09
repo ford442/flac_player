@@ -3,6 +3,7 @@ import { DEFAULT_EQ_BANDS } from '../audio/EQChain';
 import type { GaplessMode } from '../types/gapless';
 import { MAX_CROSSFADE_MS, MIN_CROSSFADE_MS } from '../types/gapless';
 import type { ReplayGainMode } from '../utils/replayGain';
+import type { LatencyMode } from '../audio/sampleRatePolicy';
 
 interface EQPanelProps {
   eqGains: number[];
@@ -18,6 +19,8 @@ interface EQPanelProps {
   onReplayGainModeChange: (mode: ReplayGainMode) => void;
   replayGainLimiter: boolean;
   onReplayGainLimiterChange: (enabled: boolean) => void;
+  latencyMode: LatencyMode;
+  onLatencyModeChange: (mode: LatencyMode) => void;
   /** @deprecated kept for callers still passing the legacy toggle */
   crossfadeEnabled?: boolean;
   onCrossfadeChange?: (enabled: boolean) => void;
@@ -37,6 +40,12 @@ const REPLAYGAIN_OPTIONS: { mode: ReplayGainMode; label: string; hint: string }[
   { mode: 'album', label: 'Album', hint: 'Use album gain from the first queued track' },
 ];
 
+const LATENCY_OPTIONS: { mode: LatencyMode; label: string; hint: string }[] = [
+  { mode: 'playback', label: 'Playback', hint: 'Higher buffering — library listening and streaming' },
+  { mode: 'interactive', label: 'Interactive', hint: 'Lower latency — scrubbing, worklet, projectM' },
+  { mode: 'balanced', label: 'Balanced', hint: 'Numeric hint (~30 ms) when the browser supports it' },
+];
+
 export const EQPanel: React.FC<EQPanelProps> = ({
   eqGains,
   onBandChange,
@@ -51,6 +60,8 @@ export const EQPanel: React.FC<EQPanelProps> = ({
   onReplayGainModeChange,
   replayGainLimiter,
   onReplayGainLimiterChange,
+  latencyMode,
+  onLatencyModeChange,
 }) => {
   return (
     <div className="eq-panel space-y-4 text-sm text-white">
@@ -184,6 +195,33 @@ export const EQPanel: React.FC<EQPanelProps> = ({
         <p className="text-xs text-gray-500 mt-2">
           Applies before the master volume fader. Gain is clamped to ±12 dB.
           SDL backends apply gain in WASM volume; crossfade overlap may briefly mismatch levels.
+        </p>
+      </div>
+
+      {/* AudioContext latency */}
+      <div>
+        <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+          Output latency
+        </span>
+        <div className="flex gap-1 mt-2 flex-wrap">
+          {LATENCY_OPTIONS.map(({ mode, label, hint }) => (
+            <button
+              key={mode}
+              onClick={() => onLatencyModeChange(mode)}
+              className={`px-2 py-1 rounded text-xs transition-colors ${
+                latencyMode === mode
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
+              }`}
+              title={hint}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500 mt-2">
+          Recreates the shared AudioContext. Same-rate albums stay gapless; a rate or latency
+          change may produce a brief audible gap.
         </p>
       </div>
 

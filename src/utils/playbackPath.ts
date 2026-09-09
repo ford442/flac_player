@@ -20,7 +20,7 @@ export function isFlacUrl(url: string): boolean {
 
 /**
  * Choose decode strategy from file size and output mode.
- * Small files use full WASM decode (better seek); large files stream through the worklet ring buffer.
+ * Small files use full WASM decode (better seek); large files stream through a bounded PCM ring.
  */
 export function selectDecodeStrategy(
   contentLength: number | null,
@@ -40,7 +40,7 @@ export function selectDecodeStrategy(
     return 'native-stream';
   }
 
-  if (outputMode === 'worklet') {
+  if (outputMode === 'worklet' || outputMode === 'sdl') {
     return large || forceStream ? 'hifi-stream' : 'buffered';
   }
 
@@ -53,7 +53,7 @@ export function describePlaybackPath(strategy: DecodeStrategy): PlaybackPathInfo
       return {
         strategy,
         label: 'Hi-Fi streaming',
-        detail: 'WASM FLAC decoder → AudioWorklet ring buffer (bounded memory)',
+        detail: 'WASM FLAC decoder → bounded PCM ring (worklet or SDL3). Seek is disabled.',
       };
     case 'native-stream':
       return {

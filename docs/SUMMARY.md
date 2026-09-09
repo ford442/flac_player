@@ -45,7 +45,7 @@ flac_player/
 │   ├── hooks/            usePlaybackController, usePlayerState, useAudioSettings
 │   ├── api/              songApi.ts
 │   ├── storage/          libraryCache, trackCache, queueStorage
-│   ├── visuals/          WebGPU probe/selection; dormant GL/2D renderers
+│   ├── visuals/          WebGPU probe + canvas policy; opt-in WebGL2; gpu resource modules
 │   ├── projectm/         ProjectMEngine, projectm_host.cpp
 │   └── audioLoader.ts
 ├── scripts/              build-wasm.sh, build-projectm-wasm.sh, verify-wasm-artifacts.sh
@@ -77,7 +77,7 @@ Live against **`https://storage.noahcohn.com`**:
 - **Gapless / ReplayGain** — shipped on shared graph; SDL gapless still unsupported
 - **Uploads** — storage admin → FLAC conversion → `songs.json` index
 
-Foundation refactor ([#193](https://github.com/ford442/flac_player/issues/193)) is **done**: all five backends live under `src/audio/backends/` with shared `BaseAudioBackend`, and playback lifecycle is owned by `usePlaybackController` (~450 lines) while `Player.tsx` is composition-only (~388 lines). Remaining foundation backlog: [#194](https://github.com/ford442/flac_player/issues/194) (native sample-rate `AudioContext`), [#196](https://github.com/ford442/flac_player/issues/196) (integration test harness) — see [ROADMAP.md](./ROADMAP.md).
+Foundation refactor ([#193](https://github.com/ford442/flac_player/issues/193)) is **done**: all five backends live under `src/audio/backends/` with shared `BaseAudioBackend`, and playback lifecycle is owned by `usePlaybackController` (~450 lines) while `Player.tsx` is composition-only (~388 lines). Native-rate `AudioContext` ([#194](https://github.com/ford442/flac_player/issues/194)) is **done**. Remaining foundation backlog: [#196](https://github.com/ford442/flac_player/issues/196) (integration test harness) — see [ROADMAP.md](./ROADMAP.md).
 - **Shareable playlists** — `?share=<id>` loads from `/api/share/<id>`
 - **Five audio backends** — user-selectable; lazy-loaded WASM chunks
 - **Visualizer** — required WebGPU ShaderGUI + optional projectM split mode

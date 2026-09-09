@@ -50,14 +50,13 @@ export function isWebGPUAvailable(): boolean {
   return typeof navigator !== 'undefined' && Boolean(navigator.gpu);
 }
 
-/**
- * WebGPU is the only supported shader backend in this phase. Legacy explicit
- * WebGL2/Canvas2D preferences remain readable for diagnostics but are ignored.
- */
 export function resolveVisualizerBackend(
-  _preference: VisualizerBackend | null = readVisualizerPreference(),
+  preference: VisualizerBackend | null = readVisualizerPreference(),
 ): VisualizerBackend {
-  void _preference;
+  if (preference === 'webgl2') return 'webgl2';
+  if (preference === 'canvas2d' && typeof window !== 'undefined' && window.DEBUG_VISUALIZER === 'canvas2d') {
+    return 'canvas2d';
+  }
   return 'webgpu';
 }
 
@@ -93,4 +92,22 @@ export function setVisualizerOverride(backend: VisualizerBackend): void {
   window.DEBUG_VISUALIZER = backend;
   persistVisualizerPreference(backend);
   notifyVisualizerPreferenceChanged();
+}
+
+/** Settings “Compatibility visualizer” — WebGL2 ShaderGUI without auto-fallthrough. */
+export function setCompatibilityVisualizer(enabled: boolean): void {
+  if (typeof window === 'undefined') return;
+  if (enabled) {
+    setVisualizerOverride('webgl2');
+    return;
+  }
+  window.DEBUG_VISUALIZER = 'webgpu';
+  persistVisualizerPreference('webgpu');
+  notifyVisualizerPreferenceChanged();
+}
+
+export function isCompatibilityVisualizerEnabled(
+  preference: VisualizerBackend | null = readVisualizerPreference(),
+): boolean {
+  return resolveVisualizerBackend(preference) === 'webgl2';
 }

@@ -27,7 +27,7 @@ Call from UI/overview code only — **never inside an audio callback**. File ove
 2. **Worker TS** reduce (chunked copies so playback PCM is never transferred)
 3. **Main-thread CPU** last (the golden used by unit tests)
 
-WebGL2 compute-via-FBO is **not** used. GLSL remains a render fallback only (when/if #182 restore it). Dual-hot GL + WebGPU on the same PCM working set is avoided by never allocating a second device.
+WebGL2 compute-via-FBO is **not** used. GLSL is an **opt-in** ShaderGUI render path (`?visualizer=webgl2`); it never shares a canvas or `GPUDevice` with WebGPU. Dual-hot GL + WebGPU on the same PCM working set is avoided by never allocating a second device and by skipping the WebGPU probe on the GL canvas.
 
 Chrome vs Edge WebGPU flakes must not take down playback: compute failures fall through to Worker/CPU. Visualizer probe failure already leaves audio running.
 

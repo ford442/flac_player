@@ -1,13 +1,18 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { WebGPUVisualizer } from '../../webgpuVisualizer';
+import { WebGL2Visualizer } from '../../visuals/webgl2/WebGL2Visualizer';
+import { CanvasFallbackVisualizer } from '../../visuals/webglFallback';
 import { buildFrameUniforms } from '../../visuals/visualSync';
 import {
   readVisualizerPreference,
   resolveVisualizerBackend,
+  subscribeVisualizerPreference,
 } from '../../visuals/rendererSelection';
 import { setCurrentVisualizer } from '../../visuals/webgl2/global';
 import { cycleDebugMode } from '../../visuals/webgl2/debugModes';
+import type { VisualizerBackend } from '../../visuals/types';
 import {
+  createVisualizerBootFailure,
   probeWebGPU,
   recordWebGPUFailure,
   type WebGPUProbeBreadcrumb,
@@ -89,9 +94,16 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const webgpuRef = useRef<WebGPUVisualizer | null>(null);
+  const webgl2Ref = useRef<WebGL2Visualizer | null>(null);
+  const canvas2dRef = useRef<CanvasFallbackVisualizer | null>(null);
   const animFrameRef = useRef<number>(0);
   const [probeFailure, setProbeFailure] = useState<WebGPUProbeBreadcrumb | null>(null);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [activeBackend, setActiveBackend] = useState<VisualizerBackend>('webgpu');
+  const [preferenceEpoch, setPreferenceEpoch] = useState(0);
+  const [canvasSessionKey, setCanvasSessionKey] = useState(
+    () => resolveVisualizerBackend(readVisualizerPreference()),
+  );
 
   const rsycrbRef = useRef(0.0);
   const fractalRef = useRef(0.0);
@@ -109,10 +121,14 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     releaseVisualizerDevice(webgpuRef.current?.getDevice() ?? null);
     webgpuRef.current?.destroy();
     webgpuRef.current = null;
+    webgl2Ref.current?.destroy();
+    webgl2Ref.current = null;
+    canvas2dRef.current?.destroy();
+    canvas2dRef.current = null;
     setCurrentVisualizer(null);
   }, []);
 
-  const initWebGPU = useCallback(async (
+  const initVisualizer = useCallback(async (
     node: HTMLCanvasElement,
     audioAnalyser: AnalyserNode,
     cancelled: () => boolean,
@@ -120,6 +136,65 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     setProbeFailure(null);
     const requestedVisualizer = readVisualizerPreference();
     const requiredBackend = resolveVisualizerBackend(requestedVisualizer);
+    setActiveBackend(requiredBackend);
+
+    if (requiredBackend === 'webgl2') {
+      const visualizer = new WebGL2Visualizer(node);
+      if (!visualizer.initialize(audioAnalyser)) {
+        visualizer.destroy();
+        if (cancelled()) return;
+        setCurrentVisualizer(null);
+        setProbeFailure(createVisualizerBootFailure(
+          'webgl2-context-failed',
+          'canvas.getContext("webgl2") returned null or shader compile failed',
+          'webgl2',
+        ));
+        return;
+      }
+      if (cancelled()) {
+        visualizer.destroy();
+        return;
+      }
+      webgl2Ref.current = visualizer;
+      setProbeFailure(null);
+      setCurrentVisualizer({
+        backend: 'webgl2',
+        readPixels: () => visualizer.readPixels(),
+        getCanvas: () => node,
+        setDebugMode: (mode) => visualizer.setDebugMode(mode),
+        getDebugMode: () => visualizer.getDebugMode(),
+        resize: () => visualizer.resize(),
+      });
+      return;
+    }
+
+    if (requiredBackend === 'canvas2d') {
+      try {
+        const visualizer = new CanvasFallbackVisualizer(node);
+        visualizer.initialize(audioAnalyser);
+        if (cancelled()) {
+          visualizer.destroy();
+          return;
+        }
+        canvas2dRef.current = visualizer;
+        setProbeFailure(null);
+        setCurrentVisualizer({
+          backend: 'canvas2d',
+          readPixels: () => null,
+          getCanvas: () => node,
+          setDebugMode: (mode) => visualizer.setDebugMode(mode),
+          getDebugMode: () => visualizer.getDebugMode(),
+          resize: () => visualizer.resize(),
+        });
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (cancelled()) return;
+        setCurrentVisualizer(null);
+        setProbeFailure(createVisualizerBootFailure('canvas2d-context-failed', msg, 'canvas2d'));
+      }
+      return;
+    }
+
     const boot = await probeWebGPU(node, { requestedVisualizer });
     if (cancelled()) {
       if (boot.ok) boot.device.destroy();
@@ -182,7 +257,12 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     }
   }, []);
 
-  // Initialize the required WebGPU visualizer. Failure is fatal for this slot.
+  useEffect(() => subscribeVisualizerPreference(() => {
+    setCanvasSessionKey(resolveVisualizerBackend(readVisualizerPreference()));
+    setPreferenceEpoch((n) => n + 1);
+  }), []);
+
+  // Default is fail-closed WebGPU. WebGL2 / Canvas2D only when the user opted in.
   useEffect(() => {
     let cancelled = false;
     const isCancelled = () => cancelled;
@@ -191,7 +271,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       if (!canvasRef.current || !analyser || controlsOnly) return;
 
       destroyAllVisualizers();
-      await initWebGPU(canvasRef.current, analyser, isCancelled);
+      await initVisualizer(canvasRef.current, analyser, isCancelled);
     };
 
     init();
@@ -200,23 +280,22 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       cancelled = true;
       destroyAllVisualizers();
     };
-  }, [analyser, controlsOnly, destroyAllVisualizers, initWebGPU]);
+  }, [analyser, controlsOnly, destroyAllVisualizers, initVisualizer, preferenceEpoch]);
 
-  // Alt+D cycles WebGPU shader diagnostics.
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (!e.altKey || e.key.toLowerCase() !== 'd') return;
-      const handle = webgpuRef.current;
+      const handle = webgpuRef.current ?? webgl2Ref.current;
       if (!handle) return;
 
       e.preventDefault();
       const next = cycleDebugMode(handle.getDebugMode());
       handle.setDebugMode(next);
-      console.log(`[webgpu debug] mode: ${next}`);
+      console.log(`[${activeBackend} debug] mode: ${next}`);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [activeBackend]);
 
   // Animation loop — shared uniform/audio path for GPU backends
   useEffect(() => {
@@ -247,6 +326,8 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         analyser.getByteFrequencyData(freqData);
 
         const webgpu = webgpuRef.current;
+        const webgl2 = webgl2Ref.current;
+        const canvas2d = canvas2dRef.current;
         if (webgpu) {
           webgpu.setAudioData(freqData);
           if (visualizerMode === '3D') {
@@ -255,6 +336,19 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             webgpu.setUniforms(frameUniforms);
             webgpu.renderGUI();
           }
+        } else if (webgl2) {
+          webgl2.setAudioData(freqData);
+          if (visualizerMode === '3D') {
+            webgl2.setMode('3D');
+            webgl2.render();
+          } else {
+            webgl2.setMode('flat');
+            webgl2.setUniforms(frameUniforms);
+            webgl2.renderGUI();
+          }
+        } else if (canvas2d) {
+          canvas2d.setAudioData(freqData);
+          canvas2d.render();
         }
       }
 
@@ -297,7 +391,9 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const handleToggle3D = useCallback(() => {
     setVisualizerMode(prev => {
       const next = prev === 'gui' ? '3D' : 'gui';
-      webgpuRef.current?.setMode(next === '3D' ? '3D' : 'flat');
+      const mode = next === '3D' ? '3D' : 'flat';
+      webgpuRef.current?.setMode(mode);
+      webgl2Ref.current?.setMode(mode);
       return next;
     });
   }, []);
@@ -340,7 +436,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         <div className="absolute top-12 left-4 z-50 max-w-xs rounded border border-purple-500/40 bg-black/90 p-3 font-mono text-xs text-purple-200">
           <div className="mb-2 font-bold text-purple-400">Visualizer Debug</div>
           <div className="text-[10px] text-gray-400">
-            Required backend: <strong className="text-purple-200">webgpu</strong>
+            Required backend: <strong className="text-purple-200">{activeBackend}</strong>
             <br />
             DEBUG_VISUALIZER: <code>{window.DEBUG_VISUALIZER ?? 'unset'}</code>
           </div>
@@ -364,11 +460,16 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         <div className="shader-gui-top-left">
           <TopScreen
             canvasRef={canvasRef}
+            canvasSessionKey={canvasSessionKey}
             artist={currentTrack?.author}
             title={currentTrack?.title || currentTrack?.name}
-            activeBackend="webgpu"
+            activeBackend={activeBackend}
             probeFailure={probeFailure}
-            onCanvasResize={() => webgpuRef.current?.resize()}
+            onCanvasResize={() => {
+              webgpuRef.current?.resize();
+              webgl2Ref.current?.resize();
+              canvas2dRef.current?.resize();
+            }}
             onCanvasDoubleClick={handleToggle3D}
             isLoading={isLoading}
           />

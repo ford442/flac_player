@@ -40,7 +40,7 @@ export class Sdl2AudioPlayer extends BaseAudioBackend {
   private initialization: Promise<void>;
   private decodedPcm: Float32Array | null = null;
   private decodedChannels = 1;
-  private decodedSampleRate = 44100;
+  private decodedSampleRate = 0;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
     super();
@@ -147,6 +147,10 @@ export class Sdl2AudioPlayer extends BaseAudioBackend {
 
       this.module._free(ptr);
 
+      await this.contextManager.ensureForTrack({
+        sampleRate: result.sampleRate,
+        channels,
+      });
       await this.contextManager.resume();
       await sharedSdlPcmBridge.connect(this.contextManager, this.module, channels);
 

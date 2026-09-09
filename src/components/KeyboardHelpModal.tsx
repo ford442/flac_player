@@ -6,7 +6,7 @@ interface KeyboardHelpModalProps {
 
 const SHORTCUTS = [
   { keys: ['Space'], description: 'Play / Pause' },
-  { keys: ['←', '→'], description: 'Seek backward / forward 10s' },
+  { keys: ['←', '→'], description: 'Seek backward / forward 10s (disabled in Hi-Fi stream mode)' },
   { keys: ['↑', '↓'], description: 'Volume up / down 10%' },
   { keys: ['N'], description: 'Next track' },
   { keys: ['P'], description: 'Previous track' },

@@ -121,4 +121,20 @@ describe('playbackPath', () => {
     });
     expect(strategy).toBe('hifi-stream');
   });
+
+  it('auto-upgrades sdl mode to hifi-stream for large files', () => {
+    const strategy = selectDecodeStrategy(100 * 1024 * 1024, {
+      outputMode: 'sdl',
+      url: 'https://example.com/huge.flac',
+    });
+    expect(strategy).toBe('hifi-stream');
+  });
+
+  it('keeps sdl2 buffered for large files', () => {
+    const strategy = selectDecodeStrategy(100 * 1024 * 1024, {
+      outputMode: 'sdl2',
+      url: 'https://example.com/huge.flac',
+    });
+    expect(strategy).toBe('buffered');
+  });
 });

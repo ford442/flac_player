@@ -13,8 +13,8 @@ export interface HifiStreamPipelineOptions {
   expectedDuration?: number;
   signal?: AbortSignal;
   onProgress?: (progress: RangeFetchProgress) => void;
-  onMetadata?: (meta: { channels: number; sampleRate: number }) => void;
-  onPcmChunk: (interleaved: Float32Array) => void;
+  onMetadata?: (meta: { channels: number; sampleRate: number }) => void | Promise<void>;
+  onPcmChunk: (interleaved: Float32Array) => void | Promise<void>;
   onEnded: () => void;
   onError: (error: Error) => void;
 }
@@ -31,12 +31,12 @@ export async function runHifiStreamPipeline(options: HifiStreamPipelineOptions):
 
     let metadataSent = false;
 
-    decoder.onChunkDecoded((chunk) => {
+    decoder.onChunkDecoded(async (chunk) => {
       if (!metadataSent && chunk.sampleRate > 0 && chunk.channels > 0) {
         metadataSent = true;
-        options.onMetadata?.({ channels: chunk.channels, sampleRate: chunk.sampleRate });
+        await options.onMetadata?.({ channels: chunk.channels, sampleRate: chunk.sampleRate });
       }
-      options.onPcmChunk(chunk.interleavedBuffer);
+      await options.onPcmChunk(chunk.interleavedBuffer);
     });
 
     decoder.onEnded(() => options.onEnded());

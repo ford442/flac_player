@@ -18,6 +18,7 @@ class SdlPcmTapProcessor extends AudioWorkletProcessor {
     this.capacity = o.capacity;
     this.pcmData = new Float32Array(this.memory, o.dataOffset, o.capacity);
     this.channels = o.channels || 2;
+    this.sampleRate = o.sampleRate || sampleRate;
     this.localReadPos = Atomics.load(this.readIdx, 0) >>> 0;
   }
 
@@ -120,6 +121,7 @@ export class SdlPcmBridge {
         dataOffset: dataPtr,
         capacity,
         channels,
+        sampleRate: context.sampleRate,
       },
     });
 

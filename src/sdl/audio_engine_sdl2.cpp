@@ -53,25 +53,8 @@ int init_audio() {
         return 0;
     }
 
-    SDL_AudioSpec want, have;
-    SDL_zero(want);
-    want.freq = 44100;
-    want.format = AUDIO_F32;
-    want.channels = 2;
-    want.samples = 1024;
-    want.callback = NULL;
-
-    g_state.deviceId = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
-    if (g_state.deviceId == 0) {
-        std::cerr << "[C++ SDL2] SDL_OpenAudioDevice failed: " << SDL_GetError() << std::endl;
-        return 0;
-    }
-
-    g_state.deviceFreq = have.freq;
-    g_state.deviceChannels = have.channels;
-
     pcm_ring_init(65536);
-    printf("[C++ SDL2] init_audio success. Device ID: %u, Freq: %d\n", g_state.deviceId, have.freq);
+    printf("[C++ SDL2] init_audio success (device deferred until set_audio_data)\n");
     return 1;
 }
 

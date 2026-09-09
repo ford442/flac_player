@@ -5,6 +5,7 @@ import './ShaderGUI.css';
 
 interface TopScreenProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
+  canvasSessionKey?: string;
   artist?: string;
   title?: string;
   activeBackend?: VisualizerBackend;
@@ -16,6 +17,7 @@ interface TopScreenProps {
 
 export const TopScreen: React.FC<TopScreenProps> = ({
   canvasRef,
+  canvasSessionKey = 'webgpu',
   artist,
   title,
   activeBackend,
@@ -58,12 +60,13 @@ export const TopScreen: React.FC<TopScreenProps> = ({
       observer.disconnect();
       window.removeEventListener('resize', resize);
     };
-  }, [canvasRef, onCanvasResize]);
+  }, [canvasRef, canvasSessionKey, onCanvasResize]);
 
   return (
     <div ref={containerRef} className="shader-screen top-screen">
       {/* The canvas remains mounted so probe failures can be shown in this slot. */}
       <canvas
+        key={canvasSessionKey}
         ref={canvasRef}
         className="top-screen-canvas"
         width={640}
@@ -82,7 +85,13 @@ export const TopScreen: React.FC<TopScreenProps> = ({
           aria-label="WebGPU visualizer unavailable"
           data-webgpu-failure={probeFailure.reason ?? 'unknown'}
         >
-          <div className="webgpu-fatal-panel__title">WebGPU visualizer unavailable</div>
+          <div className="webgpu-fatal-panel__title">
+            {probeFailure.requestedVisualizer === 'webgl2'
+              ? 'Compatibility visualizer unavailable'
+              : probeFailure.requestedVisualizer === 'canvas2d'
+                ? 'Canvas2D visualizer unavailable'
+                : 'WebGPU visualizer unavailable'}
+          </div>
           <dl>
             <div>
               <dt>Reason</dt>

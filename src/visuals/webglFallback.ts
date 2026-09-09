@@ -106,6 +106,30 @@ export class CanvasFallbackVisualizer {
     // Canvas dimensions are managed by the parent component (TopScreen)
   }
 
+  setUniforms(_uniforms?: unknown): void {
+    void _uniforms;
+  }
+
+  setAudioData(_data?: Uint8Array | Float32Array): void {
+    void _data;
+  }
+
+  setDebugMode(_mode?: string): void {
+    void _mode;
+  }
+
+  getDebugMode(): 'normal' {
+    return 'normal';
+  }
+
+  renderGUI(): void {
+    this.render();
+  }
+
+  setMode(_mode?: string): void {
+    void _mode;
+  }
+
   destroy(): void {
     this.stopAnimation();
     this.analyser = null;

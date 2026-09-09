@@ -14,7 +14,7 @@ flowchart TB
     Library["LibraryView"]
     Queue["QueuePanel"]
     Shell["VisualizerShell"]
-    ShaderGUI["ShaderGUI (WebGPU required)"]
+    ShaderGUI["ShaderGUI (WebGPU default, opt-in WebGL2)"]
     ProjectM["ProjectMHost (optional WASM)"]
   end
 
@@ -42,6 +42,7 @@ flowchart TB
   subgraph Viz["ShaderGUI visualizer session"]
     Probe["WebGPU boot probe"]
     WebGPU["WebGPUVisualizer"]
+    WebGL2["WebGL2Visualizer opt-in"]
     Fatal["Fatal visualizer panel"]
   end
 
@@ -63,7 +64,8 @@ flowchart TB
   ACM --> EQ --> Analyser
   Analyser --> Probe
   Probe -->|adapter + device + canvas context ready| WebGPU
-  Probe -->|failure; audio unaffected| Fatal
+  Probe -->|failure without GL opt-in; audio unaffected| Fatal
+  Analyser -->|visualizer=webgl2 or Settings| WebGL2
   Worklet -->|PCM tap| ProjectM
   SDL3 -->|PCM ring bridge| Analyser
   SDL2 -->|PCM ring bridge| Analyser
@@ -124,7 +126,7 @@ No full-file download before playback starts. Requires CORS + `Accept-Ranges` on
 | `streaming` (default) | `audio/backends/StreamingAudioPlayer.ts` | URL → `<audio>` | Large library, instant start, crossfade |
 | `web-audio` | `audio/backends/WebAudioPlayer.ts` | Full fetch + decode | Simple buffered playback, debugging |
 | `worklet` | `audio/backends/WorkletAudioPlayer.ts` | Fetch/decode → worklet ring | Low latency, projectM PCM tap, EQ |
-| `sdl` | `audio/backends/Sdl3AudioPlayer.ts` | Full fetch → WASM SDL3 | Experimental WASM output path |
+| `sdl` | `audio/backends/Sdl3AudioPlayer.ts` | Range + play ring (large) or full fetch (small) | Experimental WASM output; bounded RAM |
 | `sdl2` | `audio/backends/Sdl2AudioPlayer.ts` | Full fetch → WASM SDL2 | Same, SDL2 + AudioWorklet glue |
 
 Backend factory: `src/audio/createAudioBackend.ts` (dynamic `import()` — WASM chunks load lazily).
@@ -143,18 +145,20 @@ See [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) for selection guidance.
 | projectM | `?aesthetic=projectm` | projectM WASM only; ShaderGUI controls-only |
 | Split | `?aesthetic=split` | WebGPU ShaderGUI with reduced layout + projectM |
 
-### Fail-closed renderer selection (`src/visuals/rendererSelection.ts`)
+### Renderer selection (`src/visuals/rendererSelection.ts`)
 
 ```
-WebGPU boot probe → WebGPUVisualizer
-                  ↘ fatal visualizer panel (no GL/2D renderer)
+preference webgpu (default) → WebGPU boot probe → WebGPUVisualizer
+                            ↘ fatal visualizer panel (no auto GL)
+preference webgl2 (opt-in)  → WebGL2Visualizer (WAVEFORM_LAYOUT GLSL)
+DEBUG_VISUALIZER=canvas2d   → CanvasFallbackVisualizer (debug only)
 ```
 
-The boot probe acquires the adapter and device, validates `canvas.getContext('webgpu')`, configures it, and passes those exact resources to `WebGPUVisualizer`. A failed probe never creates a device later and never starts WebGL2 or Canvas2D. Playback/decode remain independent.
+The boot probe is the **only** `requestAdapter` / `requestDevice` call. It uses `powerPreference: 'high-performance'` (`?gpu=low` → `'low-power'`), intersects optional features (`timestamp-query`, `shader-f16`), and configures the canvas via `buildCanvasConfiguration` in `src/visuals/webgpu/canvasConfig.ts` (opaque sRGB, `RENDER_ATTACHMENT` only). `WebGPUVisualizer` adopts that device and reuses the same configure factory on init/resize. Inspect `window.webgpuProbe` for status, reason, browser, adapter (including `isFallbackAdapter`), `powerPreference`, and `requestedFeatures`.
 
-Legacy `?visualizer=webgl2`, local-storage values, and `window.DEBUG_VISUALIZER='webgl2'` / `'canvas2d'` are retained only as breadcrumbs and are ignored for renderer creation. Inspect `window.webgpuProbe` for JSON status, failure reason, browser brand (including Chrome versus Edge), and adapter details. The dormant GL/2D implementations remain in the tree pending a later fallback issue.
+`?visualizer=webgl2` / Settings **Compatibility visualizer** creates WebGL2 ShaderGUI **without** probing WebGPU (no dual-hot GL+WebGPU on one canvas). Failed WebGPU without that opt-in still hard-fails the visualizer; audio continues. Canvas2D is not a product path.
 
-Layout + palette constants for both WGSL and GLSL live in `src/visuals/waveformContract.ts`. `Alt+D` cycles the active WebGPU debug modes.
+Layout + palette constants for both WGSL and GLSL live in `src/visuals/waveformContract.ts`. `Alt+D` cycles debug modes on the active WGSL/GLSL shader.
 
 ### Display chores (`src/gpu-chores/`)
 
@@ -181,7 +185,7 @@ In-app ProjectMHost OR postMessage / BroadcastChannel('projectm-audio')
 
 ### SDL PCM bridge (`src/audio/SdlPcmBridge.ts`)
 
-Lock-free ring in C++ (`src/sdl/pcm_ring.h`) → AudioWorklet tap → real `AnalyserNode` data for SDL3/SDL2.
+Visualizer tap only: lock-free ring in C++ (`src/sdl/pcm_ring.h`, 65536 floats) → AudioWorklet → `AnalyserNode` for SDL3/SDL2. SDL3 **playback** uses a separate play ring (`src/sdl/play_ring.h`, 384000 floats) fed by `_push_pcm`.
 
 ## Library & storage (client)
 
@@ -205,7 +209,7 @@ Key endpoints: `GET /api/songs`, `POST /api/songs/{id}/play`, `POST /api/share`,
 
 | Artifact | Build command | Committed in `public/` |
 |----------|---------------|------------------------|
-| SDL3 | `npm run build:wasm:sdl3` or `bash src/sdl/build.sh` | `sdl-audio.js`, `sdl-audio.wasm` |
+| SDL3 | `npm run build:wasm:sdl3` or `bash src/sdl/build.sh` (`--debug` via `scripts/build-wasm.sh --debug --sdl3`) | `sdl-audio.js`, `sdl-audio.wasm` |
 | SDL2 | `npm run build:wasm:sdl2` or `bash src/sdl/build_sdl2.sh` | `sdl2-audio.js`, `sdl2-audio.wasm` |
 | projectM | `npm run build:projectm` | `projectm/projectm-host.*` (optional) |
 

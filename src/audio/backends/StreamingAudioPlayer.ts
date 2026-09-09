@@ -6,6 +6,7 @@
 // Gapless / crossfade is implemented on the native <audio> path (dual elements).
 
 import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
+import { ensureContextForUrl } from '../ensureContextForSource';
 import { WorkletAudioPlayer } from './WorkletAudioPlayer';
 import { probeRemoteAudio } from '../../utils/rangeFetch';
 import { probeRemoteAudioDuration } from '../../utils/audioHeader';
@@ -39,8 +40,8 @@ function normalizePreloadOptions(options: PreloadNextOptions | string): PreloadN
 }
 
 export class StreamingAudioPlayer extends BaseAudioBackend {
-  private audioContext: AudioContext;
-  private gainNode: GainNode;
+  private audioContext: AudioContext | null = null;
+  private gainNode: GainNode | null = null;
   private workletPlayer: WorkletAudioPlayer | null = null;
   private activePath: ActivePath | null = null;
 
@@ -61,15 +62,32 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
   private currentTrackDuration: number | null = null;
   private prebufferingNext = false;
   private headerProbeAbort: AbortController | null = null;
+  private readonly unsubscribeGraph: () => void;
 
   private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
     super();
-    this.audioContext = contextManager.getContext();
-    this.gainNode = this.audioContext.createGain();
-    contextManager.connectInput(this.gainNode);
     this.audioElement = this._makeAudioElement();
+    this.unsubscribeGraph = contextManager.subscribeGraphRecreated(() => {
+      this.sourceNode = null;
+      this.nextSourceNode = null;
+      this.nextGainNode = null;
+      this.gainNode = null;
+      this.audioContext = null;
+      this.audioElement = this._makeAudioElement();
+      this.nextAudioElement = null;
+    });
+  }
+
+  private attachNativeGraph(): { context: AudioContext; gain: GainNode } {
+    const ctx = this.contextManager.getContext();
+    if (this.audioContext !== ctx || !this.gainNode) {
+      this.audioContext = ctx;
+      this.gainNode = ctx.createGain();
+      this.contextManager.connectInput(this.gainNode);
+    }
+    return { context: this.audioContext, gain: this.gainNode };
   }
 
   async initialize(): Promise<void> {
@@ -80,7 +98,6 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
       if (this.onPCMBlock) {
         this.workletPlayer.setPCMCallback(this.onPCMBlock);
       }
-      await this.workletPlayer.initialize();
     }
   }
 
@@ -158,6 +175,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     options: { expectedDuration?: number } = {}
   ): Promise<void> {
     await this.initialize();
+    await ensureContextForUrl(this.contextManager, url);
     this._cancelTransition();
     this.currentTrackDuration = options.expectedDuration && options.expectedDuration > 0
       ? options.expectedDuration
@@ -230,9 +248,10 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
   }
 
   private async _loadNative(url: string): Promise<void> {
+    const { gain } = this.attachNativeGraph();
     if (!this.sourceNode) {
-      this.sourceNode = this.audioContext.createMediaElementSource(this.audioElement);
-      this.sourceNode.connect(this.gainNode);
+      this.sourceNode = this.audioContext!.createMediaElementSource(this.audioElement);
+      this.sourceNode.connect(gain);
     }
 
     this.audioElement.src = url;
@@ -341,11 +360,12 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
   private _ensureNextGraph(): void {
     if (!this.nextAudioElement || !this.nextTrackUrl) return;
 
+    const { context, gain } = this.attachNativeGraph();
     if (!this.nextSourceNode) {
-      this.nextGainNode = this.audioContext.createGain();
+      this.nextGainNode = context.createGain();
       this.nextGainNode.gain.value = 0;
       this.contextManager.connectInput(this.nextGainNode);
-      this.nextSourceNode = this.audioContext.createMediaElementSource(this.nextAudioElement);
+      this.nextSourceNode = context.createMediaElementSource(this.nextAudioElement);
       this.nextSourceNode.connect(this.nextGainNode);
     }
 
@@ -360,7 +380,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     this._ensureNextGraph();
 
     const nextGain = this.nextGainNode!;
-    const now = this.audioContext.currentTime;
+    const now = this.attachNativeGraph().context.currentTime;
     nextGain.gain.setValueAtTime(1, now);
 
     const playPromise = this.nextAudioElement!.play();
@@ -376,7 +396,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     this.transitionActive = true;
     this._ensureNextGraph();
 
-    const ctx = this.audioContext;
+    const ctx = this.attachNativeGraph().context;
     const fade = Math.min(fadeDuration, this.effectiveDuration(this.audioElement) - this.audioElement.currentTime);
     if (fade <= 0) {
       this._startGaplessHandoff();
@@ -389,8 +409,8 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     const startTime = ctx.currentTime;
     const endTime = startTime + fade;
 
-    this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, startTime);
-    this.gainNode.gain.linearRampToValueAtTime(0, endTime);
+    this.gainNode!.gain.setValueAtTime(this.gainNode!.gain.value, startTime);
+    this.gainNode!.gain.linearRampToValueAtTime(0, endTime);
     this.nextGainNode!.gain.setValueAtTime(0, startTime);
     this.nextGainNode!.gain.linearRampToValueAtTime(1, endTime);
 
@@ -413,12 +433,12 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     this.audioElement = this.nextAudioElement;
     this.sourceNode = this.nextSourceNode;
     this.nextSourceNode.disconnect();
-    this.nextSourceNode.connect(this.gainNode);
+    this.nextSourceNode.connect(this.gainNode!);
 
     this.nextGainNode.disconnect();
-    const now = this.audioContext.currentTime;
-    this.gainNode.gain.cancelScheduledValues(now);
-    this.gainNode.gain.setValueAtTime(1, now);
+    const now = this.attachNativeGraph().context.currentTime;
+    this.gainNode!.gain.cancelScheduledValues(now);
+    this.gainNode!.gain.setValueAtTime(1, now);
 
     this.currentTrackDuration = this.nextTrackDuration;
     this.nextAudioElement = null;
@@ -443,14 +463,16 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     }
     this.transitionActive = false;
     this.clearPreload();
-    const now = this.audioContext.currentTime;
-    this.gainNode.gain.cancelScheduledValues(now);
-    this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, now);
+    if (this.gainNode && this.audioContext) {
+      const now = this.audioContext.currentTime;
+      this.gainNode.gain.cancelScheduledValues(now);
+      this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, now);
+    }
   }
 
   async play(): Promise<void> {
     if (this.activePath === 'native') {
-      if (this.audioContext.state === 'suspended') await this.contextManager.resume();
+      if (this.audioContext?.state === 'suspended') await this.contextManager.resume();
       await this.audioElement.play();
       this.notifyStateChange();
       return;
@@ -557,6 +579,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
 
   destroy(): void {
     this.destroyed = true;
+    this.unsubscribeGraph();
     this.headerProbeAbort?.abort();
     this._cancelTransition();
     this.audioElement.pause();
@@ -565,7 +588,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
       this.sourceNode.disconnect();
       this.sourceNode = null;
     }
-    this.gainNode.disconnect();
+    this.gainNode?.disconnect();
     this.workletPlayer?.destroy();
     this.workletPlayer = null;
   }

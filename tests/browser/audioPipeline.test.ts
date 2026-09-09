@@ -67,14 +67,16 @@ async function withBackend(
 ): Promise<void> {
   const manager = new AudioContextManager();
   const backend = await createAudioBackend(mode, manager);
-  const context = manager.getContext();
 
   try {
     await backend.initialize();
     await run(backend, manager);
   } finally {
     backend.destroy();
-    if (context.state !== 'closed') await context.close();
+    if (manager.hasContext()) {
+      const context = manager.getContext();
+      if (context.state !== 'closed') await context.close();
+    }
   }
 }
 

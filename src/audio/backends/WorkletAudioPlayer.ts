@@ -3,6 +3,8 @@
 // Phase 2: Added streaming mode with ring buffer for chunked/low-memory playback.
 import { decodeAudio } from '../../audioDecoder';
 import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
+import { ensureContextForBuffer, ensureContextForUrl } from '../ensureContextForSource';
+import { resampleInterleavedLinear } from '../linearResampler';
 import { runHifiStreamPipeline } from '../hifiStreamPipeline';
 import { getOrFetchTrack } from '../../storage/trackCache';
 import type { PlaybackPathInfo } from '../../utils/playbackPath';
@@ -69,7 +71,7 @@ class FlacProcessor extends AudioWorkletProcessor {
     this.buffer = null;
     this.position = 0;
     this.channels = 0;
-    this.sampleRate = options?.processorOptions?.sampleRate || 44100;
+    this.sampleRate = options?.processorOptions?.sampleRate || sampleRate;
     this.isStreaming = false;
     this.hasEnded = false;
     this.totalRead = 0;
@@ -81,7 +83,7 @@ class FlacProcessor extends AudioWorkletProcessor {
 
     const ringSeconds = options?.processorOptions?.ringBufferSeconds || 30;
     const ringChannels = options?.processorOptions?.channels || 2;
-    const ringSampleRate = options?.processorOptions?.sampleRate || 44100;
+    const ringSampleRate = options?.processorOptions?.sampleRate || sampleRate;
     const ringCapacity = Math.floor(ringSeconds * ringSampleRate * ringChannels);
     this.ringBuffer = new RingBuffer(ringCapacity);
 
@@ -100,7 +102,7 @@ class FlacProcessor extends AudioWorkletProcessor {
       } else if (e.data.type === 'startStreaming') {
         this.isStreaming = true;
         this.channels = e.data.channels || 2;
-        this.sampleRate = e.data.sampleRate || 44100;
+        this.sampleRate = e.data.sampleRate || this.sampleRate;
         this.hasEnded = false;
         this.totalRead = 0;
         this.ringBuffer.clear();
@@ -113,7 +115,7 @@ class FlacProcessor extends AudioWorkletProcessor {
       } else if (e.data.type === 'endStreaming') {
         this.hasEnded = true;
       } else if (e.data.type === 'seek') {
-        this.position = Math.floor(e.data.position * sampleRate) * this.channels;
+        this.position = Math.floor(e.data.position * this.sampleRate) * this.channels;
         this.pcmAccum = null;
         this.pcmAccumPos = 0;
       } else if (e.data.type === 'stop') {
@@ -209,8 +211,8 @@ class FlacProcessor extends AudioWorkletProcessor {
 
     this._tapPCM(output, frames);
 
-    if (frames > 0 && this.position % (this.channels * 44100) < this.channels * 128) {
-      this.port.postMessage({ type: 'position', position: this.position / (this.channels * sampleRate) });
+    if (frames > 0 && this.position % (this.channels * this.sampleRate) < this.channels * 128) {
+      this.port.postMessage({ type: 'position', position: this.position / (this.channels * this.sampleRate) });
     }
 
     return true;
@@ -235,7 +237,7 @@ class FlacProcessor extends AudioWorkletProcessor {
       this.port.postMessage({ type: 'ended' });
     }
 
-    if (frames > 0 && this.totalRead % (this.channels * 44100) < this.channels * 128) {
+    if (frames > 0 && this.totalRead % (this.channels * this.sampleRate) < this.channels * 128) {
       this.port.postMessage({ type: 'position', position: this.totalRead / (this.channels * this.sampleRate) });
     }
 
@@ -252,7 +254,9 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   private gainNode: GainNode | null = null;
   private audioBuffer: Float32Array | null = null;
   private channels: number = 0;
-  private sampleRate: number = 44100;
+  private sampleRate: number = 0;
+  private fileSampleRate: number = 0;
+  private streamNeedsResample = false;
   private isPlaying: boolean = false;
   private isStreaming: boolean = false;
   private duration: number = 0;
@@ -274,10 +278,16 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   private pendingNextChannels = 0;
   private pendingNextDuration = 0;
   private pendingNextSampleRate = 0;
+  private readonly unsubscribeGraph: () => void;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
     super();
     this.setupWorkletUrl();
+    this.unsubscribeGraph = contextManager.subscribeGraphRecreated(() => {
+      this.stopNode();
+      this.gainNode = null;
+      this.audioContext = null;
+    });
   }
 
   private setupWorkletUrl() {
@@ -286,32 +296,38 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   }
 
   async initialize(): Promise<void> {
-    if (this.audioContext) return;
-    try {
-      this.audioContext = this.contextManager.getContext();
-      this.gainNode = this.audioContext.createGain();
-      this.contextManager.connectInput(this.gainNode);
+    /* AudioContext is created on first load at the track native rate. */
+  }
 
-      if (this.audioContext.audioWorklet && this.workletUrl) {
-        try {
-          await this.audioContext.audioWorklet.addModule(this.workletUrl);
-          console.log('[AudioWorkletPlayer] Using AudioWorklet');
-          this.useScriptProcessor = false;
-        } catch (err) {
-          console.warn('[AudioWorkletPlayer] AudioWorklet failed, falling back to ScriptProcessor:', err);
-          this.useScriptProcessor = true;
-        }
-      } else {
-        console.log('[AudioWorkletPlayer] AudioWorklet not available, using ScriptProcessor');
+  private async ensureWorkletGraph(sampleRate?: number, channels?: number): Promise<AudioContext> {
+    await this.contextManager.ensureForTrack({ sampleRate, channels });
+    const ctx = this.contextManager.getContext();
+    if (this.audioContext === ctx && this.gainNode) return ctx;
+
+    this.audioContext = ctx;
+    this.gainNode = ctx.createGain();
+    this.contextManager.connectInput(this.gainNode);
+
+    if (this.audioContext.audioWorklet && this.workletUrl) {
+      try {
+        await this.audioContext.audioWorklet.addModule(this.workletUrl);
+        console.log('[AudioWorkletPlayer] Using AudioWorklet');
+        this.useScriptProcessor = false;
+      } catch (err) {
+        console.warn('[AudioWorkletPlayer] AudioWorklet failed, falling back to ScriptProcessor:', err);
         this.useScriptProcessor = true;
       }
-
-    } catch (err) {
-      console.error('[AudioWorkletPlayer] Failed to initialize:', err);
-      this.audioContext = null;
-      this.gainNode = null;
-      throw err;
+    } else {
+      console.log('[AudioWorkletPlayer] AudioWorklet not available, using ScriptProcessor');
+      this.useScriptProcessor = true;
     }
+    return ctx;
+  }
+
+  private pcmForContext(interleaved: Float32Array, channels: number, fileRate: number): Float32Array {
+    const contextRate = this.audioContext?.sampleRate ?? fileRate;
+    if (!fileRate || contextRate === fileRate) return interleaved;
+    return resampleInterleavedLinear(interleaved, channels, fileRate, contextRate);
   }
 
   /**
@@ -359,7 +375,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
         if (controller.signal.aborted) return;
         const arrayBuffer = await response.arrayBuffer();
         if (controller.signal.aborted) return;
-        if (!this.audioContext) await this.initialize();
+        if (!this.audioContext) await this.ensureWorkletGraph();
         const decoded = await decodeAudio(arrayBuffer, this.audioContext!, undefined);
         if (controller.signal.aborted) return;
 
@@ -409,6 +425,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       this.channels = this.pendingNextChannels;
       this.duration = this.pendingNextDuration;
       this.sampleRate = this.pendingNextSampleRate;
+      this.fileSampleRate = this.pendingNextSampleRate;
       this.currentTime = 0;
       this.pendingNextBuffer = null;
       this.pendingNextChannels = 0;
@@ -450,10 +467,8 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   }
 
   async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
-    if (!this.audioContext) {
-      await this.initialize();
-    }
-    const audioContext = this.audioContext;
+    await ensureContextForBuffer(this.contextManager, arrayBuffer);
+    const audioContext = await this.ensureWorkletGraph();
     if (!audioContext) throw new Error('AudioWorklet context failed to initialize');
 
     this.notifyStateChange();
@@ -463,15 +478,25 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       this.clearPreload();
 
       const decodedData = await decodeAudio(arrayBuffer, audioContext, filename);
+      await this.contextManager.ensureForTrack({
+        sampleRate: decodedData.sampleRate,
+        channels: decodedData.channels,
+      });
+      await this.ensureWorkletGraph(decodedData.sampleRate, decodedData.channels);
 
       this.channels = decodedData.channels;
-      this.sampleRate = decodedData.sampleRate;
+      this.fileSampleRate = decodedData.sampleRate;
+      this.sampleRate = this.audioContext?.sampleRate ?? decodedData.sampleRate;
       this.duration = decodedData.duration;
       this.currentTime = 0;
       this.isStreaming = false;
       this.playbackPath = describePlaybackPath('buffered');
 
-      this.audioBuffer = decodedData.interleavedBuffer;
+      this.audioBuffer = this.pcmForContext(
+        decodedData.interleavedBuffer,
+        decodedData.channels,
+        decodedData.sampleRate
+      );
 
       console.log('[AudioWorkletPlayer] Loaded audio:', {
         channels: this.channels,
@@ -508,9 +533,8 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       onProgress?: (loaded: number, total: number | null) => void;
     } = {}
   ): Promise<void> {
-    if (!this.audioContext) {
-      await this.initialize();
-    }
+    await ensureContextForUrl(this.contextManager, url);
+    await this.ensureWorkletGraph();
     if (this.useScriptProcessor) {
       throw new Error('Hi-Fi streaming requires AudioWorklet (ScriptProcessor fallback unavailable)');
     }
@@ -522,7 +546,6 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     this.playbackPath = describePlaybackPath('hifi-stream');
     this.streamAbort = new AbortController();
 
-    let streamReady: Promise<void> | null = null;
     let finishResolve!: () => void;
     let finishReject!: (err: unknown) => void;
 
@@ -549,21 +572,16 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       expectedDuration: options.expectedDuration,
       signal: this.streamAbort.signal,
       onProgress: (p) => options.onProgress?.(p.loaded, p.total),
-      onMetadata: ({ channels, sampleRate }) => {
+      onMetadata: async ({ channels, sampleRate }) => {
         this.channels = channels;
-        this.sampleRate = sampleRate;
-        streamReady = this.startStreaming(channels, sampleRate).then(() => {
-          if (options.expectedDuration) {
-            this.duration = options.expectedDuration;
-          }
-        });
-        void streamReady.then(() => finishResolve());
-      },
-      onPcmChunk: (interleaved) => {
-        if (streamReady) {
-          void streamReady.then(() => this.appendChunk(interleaved));
+        this.fileSampleRate = sampleRate;
+        await this.startStreaming(channels, sampleRate);
+        if (options.expectedDuration) {
+          this.duration = options.expectedDuration;
         }
+        finishResolve();
       },
+      onPcmChunk: (interleaved) => this.appendChunk(interleaved),
       onEnded: () => this.endStreaming(),
       onError: (err) => {
         console.error('[AudioWorkletPlayer] Stream error:', err);
@@ -586,17 +604,17 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   // Streaming mode (Phase 2)
   // ---------------------------------------------------------------------------
 
-  async startStreaming(channels: number = 2, sampleRate: number = 44100): Promise<void> {
-    if (!this.audioContext) {
-      await this.initialize();
-    }
+  async startStreaming(channels: number, sampleRate: number): Promise<void> {
+    await this.ensureWorkletGraph(sampleRate, channels);
 
     // Tear down playback nodes only — do not abort an in-flight stream pipeline.
     this.stopNode();
     this.isPlaying = false;
 
     this.channels = channels;
-    this.sampleRate = sampleRate;
+    this.fileSampleRate = sampleRate;
+    this.sampleRate = this.audioContext?.sampleRate ?? sampleRate;
+    this.streamNeedsResample = this.sampleRate !== sampleRate;
     this.currentTime = 0;
     this.duration = 0;
     this.audioBuffer = null;
@@ -614,7 +632,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       numberOfOutputs: 1,
       outputChannelCount: [channels],
       processorOptions: {
-        sampleRate,
+        sampleRate: this.sampleRate,
         channels,
         ringBufferSeconds: 30
       }
@@ -625,7 +643,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     (this.workletNode as AudioWorkletNode).port.postMessage({
       type: 'startStreaming',
       channels,
-      sampleRate
+      sampleRate: this.sampleRate
     });
 
     this.attachWorkletPort(this.workletNode as AudioWorkletNode);
@@ -636,10 +654,13 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
 
   appendChunk(interleavedBuffer: Float32Array): void {
     if (!this.workletNode || this.useScriptProcessor || !this.isStreaming) return;
+    const pcm = this.streamNeedsResample && this.fileSampleRate
+      ? this.pcmForContext(interleavedBuffer, this.channels, this.fileSampleRate)
+      : interleavedBuffer;
     (this.workletNode as AudioWorkletNode).port.postMessage({
       type: 'chunk',
-      buffer: interleavedBuffer
-    }, [interleavedBuffer.buffer]);
+      buffer: pcm
+    }, [pcm.buffer]);
   }
 
   endStreaming(): void {
@@ -691,7 +712,8 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       numberOfOutputs: 1,
       outputChannelCount: [this.channels],
       processorOptions: {
-        sampleRate: this.sampleRate
+        sampleRate: this.sampleRate,
+        channels: this.channels,
       }
     });
 
@@ -884,12 +906,13 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     return {
       pcm: this.audioBuffer,
       channels: this.channels,
-      sampleRate: this.sampleRate,
+      sampleRate: this.fileSampleRate || this.sampleRate,
     };
   }
 
   destroy(): void {
     this.destroyed = true;
+    this.unsubscribeGraph();
     this.cancelStream();
     this.stop();
     if (this.gainNode) this.gainNode.disconnect();

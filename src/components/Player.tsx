@@ -6,6 +6,7 @@ import { useToastNotifications } from '../hooks/useToastNotifications';
 import { useAudioSettings } from '../hooks/useAudioSettings';
 import { usePlayerData } from '../hooks/usePlayerData';
 import { usePlaybackController } from '../hooks/usePlaybackController';
+import { sharedAudioContextManager } from '../audio/AudioContextManager';
 import { useGpuChoresOverview } from '../hooks/useGpuChoresOverview';
 import { VisualizerShell } from './VisualizerShell';
 import { ToastContainer } from './Toast';
@@ -38,6 +39,7 @@ export const Player: React.FC = () => {
     crossfadeEnabled, setCrossfadeEnabled,
     replayGainMode, setReplayGainMode, replayGainLimiter, setReplayGainLimiter,
     replayGainSettings,
+    latencyMode, setLatencyMode,
   } = useAudioSettings();
 
   const loader = useMemo(() => new AudioLoader(), []);
@@ -73,6 +75,13 @@ export const Player: React.FC = () => {
     handleLocalFiles, handleVolumeChange, toggleMute,
     getAnalyser, getDecodedPcm, stop, seek,
   } = playback;
+
+  const canSeek = playbackPath?.strategy !== 'hifi-stream';
+  const onSeek = canSeek ? seek : undefined;
+
+  useEffect(() => {
+    void sharedAudioContextManager.setLatencyMode(latencyMode);
+  }, [latencyMode]);
 
   const gpuOverview = useGpuChoresOverview({
     trackKey: currentTrack?.id ?? currentTrack?.url ?? null,
@@ -209,8 +218,12 @@ export const Player: React.FC = () => {
 
   useKeyboardShortcuts({
     onPlayPause: togglePlayback,
-    onSeekForward:  () => seek(Math.min(playerState.currentTime + 10, playerState.duration)),
-    onSeekBackward: () => seek(Math.max(playerState.currentTime - 10, 0)),
+    onSeekForward: canSeek
+      ? () => seek(Math.min(playerState.currentTime + 10, playerState.duration))
+      : undefined,
+    onSeekBackward: canSeek
+      ? () => seek(Math.max(playerState.currentTime - 10, 0))
+      : undefined,
     onNext: playNextInQueue,
     onPrevious: playPreviousInQueue,
     onSearchFocus: () => searchInputRef.current?.focus(),
@@ -269,7 +282,7 @@ export const Player: React.FC = () => {
           duration={playerState.duration}
           onPlay={togglePlayback}
           onStop={stop}
-          onSeek={seek}
+          onSeek={onSeek}
           onNext={playNextInQueue}
           onPrevious={playPreviousInQueue}
           onFileSelect={handleLocalFiles}
@@ -322,7 +335,7 @@ export const Player: React.FC = () => {
           currentTime={playerState.currentTime} duration={playerState.duration}
           volume={volume} muted={muted}
           onPlay={togglePlayback} onStop={stop}
-          onSeek={seek}
+          onSeek={onSeek}
           onTrackClick={(index) => playTrack(queue[index], index)}
           onVolumeChange={handleVolumeChange} onMute={toggleMute}
           onNext={playNextInQueue} onPrevious={playPreviousInQueue}
@@ -373,6 +386,7 @@ export const Player: React.FC = () => {
       crossfadeMs={crossfadeMs} setCrossfadeMs={setCrossfadeMs}
       replayGainMode={replayGainMode} setReplayGainMode={setReplayGainMode}
       replayGainLimiter={replayGainLimiter} setReplayGainLimiter={setReplayGainLimiter}
+      latencyMode={latencyMode} setLatencyMode={setLatencyMode}
       prebufferingNext={prebufferingNext}
       playbackPath={playbackPath}
       isSharedPlaylist={isSharedPlaylist} sharedPlaylistTitle={sharedPlaylistTitle}
@@ -386,7 +400,7 @@ export const Player: React.FC = () => {
       onTrackDoubleClick={playNow}
       onQueueTrackClick={(index) => playTrack(queue[index], index)}
       onPlay={togglePlayback} onStop={stop}
-      onSeek={seek}
+      onSeek={onSeek}
       onVolumeChange={handleVolumeChange} onMute={toggleMute}
       onNext={playNextInQueue} onPrevious={playPreviousInQueue}
       onFileSelect={handleLocalFiles}

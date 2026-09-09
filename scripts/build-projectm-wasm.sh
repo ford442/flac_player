@@ -5,6 +5,10 @@
 #   projectm-host.js, projectm-host.wasm, projectm-host.data (presets)
 #
 # Requires: emsdk, cmake, git
+#
+# Usage:
+#   scripts/build-projectm-wasm.sh
+#   scripts/build-projectm-wasm.sh --debug   # -O0 -g ASSERTIONS SAFE_HEAP
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -13,6 +17,23 @@ BUILD_ROOT="$PROJECT_ROOT/.build/projectm"
 OUT_DIR="$PROJECT_ROOT/public/projectm"
 PROJECTM_TAG="${PROJECTM_TAG:-v4.1.6}"
 HOST_CPP="$PROJECT_ROOT/src/projectm/projectm_host.cpp"
+DEBUG=0
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --debug) DEBUG=1 ;;
+    -h|--help)
+      echo "Usage: $0 [--debug]" >&2
+      exit 1
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
+      echo "Usage: $0 [--debug]" >&2
+      exit 1
+      ;;
+  esac
+  shift
+done
 
 mkdir -p "$OUT_DIR" "$BUILD_ROOT"
 
@@ -58,6 +79,13 @@ if [ ! -d "$PRESETS_DIR" ]; then
   PRESETS_DIR="$BUILD_ROOT/src/buildshare/presets"
 fi
 
+if [[ "$DEBUG" -eq 1 ]]; then
+  PM_OPT_FLAGS=(-O0 -g -s ASSERTIONS=1 -s SAFE_HEAP=1)
+  echo "projectM debug profile: -O0 -g ASSERTIONS=1 SAFE_HEAP=1"
+else
+  PM_OPT_FLAGS=(-O2)
+fi
+
 echo "Compiling projectm_host.cpp -> $OUT_DIR/projectm-host.js"
 em++ "$HOST_CPP" \
   -I"$LIB_BUILD/src/api/include" \
@@ -79,7 +107,7 @@ em++ "$HOST_CPP" \
   -s EXPORTED_FUNCTIONS='["_pm_init","_pm_resize","_pm_add_pcm","_pm_next_preset","_pm_prev_preset","_pm_load_preset_data","_pm_set_beat_sensitivity","_pm_destroy","_malloc","_free"]' \
   -s EXPORTED_RUNTIME_METHODS='["HEAPF32","HEAPU8","wasmMemory"]' \
   $( [ -d "$PRESETS_DIR" ] && echo "--preload-file ${PRESETS_DIR}@/presets" ) \
-  -O2 \
+  "${PM_OPT_FLAGS[@]}" \
   -o "$OUT_DIR/projectm-host.js"
 
 echo "projectM build finished."

@@ -13,7 +13,7 @@ export interface StreamingChunk {
 
 export class StreamingDecoder {
   private decoder: FlacDecoder;
-  private onChunkCallback?: (chunk: StreamingChunk) => void;
+  private onChunkCallback?: (chunk: StreamingChunk) => void | Promise<void>;
   private onErrorCallback?: (error: Error) => void;
   private onEndedCallback?: () => void;
   private _sampleRate = 0;
@@ -39,7 +39,7 @@ export class StreamingDecoder {
     try {
       const result = await this.decoder.decodeChunk(arrayBuffer);
       if (result) {
-        this._handleResult(result);
+        await this._handleResult(result);
       }
     } catch (err) {
       this.onErrorCallback?.(err as Error);
@@ -54,7 +54,7 @@ export class StreamingDecoder {
     try {
       const result = await this.decoder.flush();
       if (result) {
-        this._handleResult(result);
+        await this._handleResult(result);
       }
       this.onEndedCallback?.();
     } catch (err) {
@@ -62,14 +62,14 @@ export class StreamingDecoder {
     }
   }
 
-  private _handleResult(result: FlacDecoderResult): void {
+  private async _handleResult(result: FlacDecoderResult): Promise<void> {
     if (!result.interleavedBuffer) return;
 
     if (result.sampleRate > 0) this._sampleRate = result.sampleRate;
     if (result.channels > 0) this._channels = result.channels;
     this._totalSamplesDecoded += result.samplesDecoded || 0;
 
-    this.onChunkCallback?.({
+    await this.onChunkCallback?.({
       interleavedBuffer: result.interleavedBuffer,
       channels: result.channels,
       sampleRate: result.sampleRate,
@@ -78,7 +78,7 @@ export class StreamingDecoder {
     });
   }
 
-  onChunkDecoded(callback: (chunk: StreamingChunk) => void): void {
+  onChunkDecoded(callback: (chunk: StreamingChunk) => void | Promise<void>): void {
     this.onChunkCallback = callback;
   }
 

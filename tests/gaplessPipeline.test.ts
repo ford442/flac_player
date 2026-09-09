@@ -45,7 +45,6 @@ describe('WebAudioPlayer gapless scheduling', () => {
   it('schedules and hands off two decoded buffers exactly once', async () => {
     const contextManager = new AudioContextManager();
     const player = new WebAudioPlayer(contextManager);
-    const context = RecordingAudioContext.instances[0];
     const currentBuffer = new RecordingAudioBuffer(2, 44_100, 44_100) as unknown as AudioBuffer;
     const nextBuffer = new RecordingAudioBuffer(2, 22_050, 44_100) as unknown as AudioBuffer;
     const transitions: Array<TrackTransitionEvent | undefined> = [];
@@ -59,6 +58,7 @@ describe('WebAudioPlayer gapless scheduling', () => {
       player.setGaplessSettings({ mode: 'gapless', crossfadeMs: 0 });
       player.setOnEndedCallback((event) => transitions.push(event));
       await player.loadFromArrayBuffer(new Uint8Array([1]).buffer, 'current.flac');
+      const context = RecordingAudioContext.instances[0];
 
       player.preloadNext('https://fixtures.example/next.flac');
       await vi.waitFor(() => {

@@ -1,6 +1,7 @@
 // Buffered Web Audio API player with gapless queue scheduling.
 import { decodeAudioWithBuffer } from '../../audioDecoder';
 import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
+import { ensureContextForBuffer } from '../ensureContextForSource';
 import { getOrFetchTrack } from '../../storage/trackCache';
 import type { AudioPlaybackState, DecodedPcmView } from '../../types/audio';
 import {
@@ -18,10 +19,10 @@ export type { AudioPlaybackState } from '../../types/audio';
 const GAPLESS_SCHEDULE_LEAD_S = 0.05;
 
 export class WebAudioPlayer extends BaseAudioBackend {
-  private audioContext: AudioContext;
+  private audioContext: AudioContext | null = null;
   private sourceNode: AudioBufferSourceNode | null = null;
   private nextSourceNode: AudioBufferSourceNode | null = null;
-  private gainNode: GainNode;
+  private gainNode: GainNode | null = null;
   private crossfadeGainNode: GainNode | null = null;
   private audioBuffer: AudioBuffer | null = null;
   private nextAudioBuffer: AudioBuffer | null = null;
@@ -38,15 +39,36 @@ export class WebAudioPlayer extends BaseAudioBackend {
   private preloadAbort: AbortController | null = null;
   private nextScheduled = false;
   private segmentTransitionFired = false;
+  private readonly unsubscribeGraph: () => void;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
     super();
-    this.audioContext = contextManager.getContext();
-    this.gainNode = this.audioContext.createGain();
-    contextManager.connectInput(this.gainNode);
+    this.unsubscribeGraph = contextManager.subscribeGraphRecreated(() => {
+      this.sourceNode = null;
+      this.nextSourceNode = null;
+      this.crossfadeGainNode = null;
+      this.gainNode = null;
+      this.audioContext = null;
+    });
   }
 
-  async initialize(): Promise<void> { /* graph is initialized by the manager */ }
+  async initialize(): Promise<void> {
+    /* Context is created in loadAudio via ensureForTrack (native file rate). */
+  }
+
+  private attachGraph(): AudioContext {
+    const ctx = this.contextManager.getContext();
+    if (this.audioContext === ctx && this.gainNode) return ctx;
+    this.audioContext = ctx;
+    this.gainNode = ctx.createGain();
+    this.contextManager.connectInput(this.gainNode);
+    return ctx;
+  }
+
+  private requireGraph(): { context: AudioContext; gain: GainNode } {
+    const context = this.attachGraph();
+    return { context, gain: this.gainNode! };
+  }
 
   private setPrebuffering(active: boolean): void {
     if (this.prebufferingNext === active) return;
@@ -80,9 +102,10 @@ export class WebAudioPlayer extends BaseAudioBackend {
         if (controller.signal.aborted) return;
         const arrayBuffer = await response.arrayBuffer();
         if (controller.signal.aborted) return;
+        const { context } = this.requireGraph();
         const { decoderResult, audioBuffer: nativeBuffer } = await decodeAudioWithBuffer(
           arrayBuffer,
-          this.audioContext,
+          context,
           undefined
         );
         if (controller.signal.aborted) return;
@@ -91,7 +114,7 @@ export class WebAudioPlayer extends BaseAudioBackend {
           this.nextAudioBuffer = nativeBuffer;
         } else {
           const frameCount = decoderResult.interleavedBuffer.length / decoderResult.channels;
-          const buffer = this.audioContext.createBuffer(
+          const buffer = context.createBuffer(
             decoderResult.channels,
             frameCount,
             decoderResult.sampleRate
@@ -143,18 +166,26 @@ export class WebAudioPlayer extends BaseAudioBackend {
     try {
       this.stop();
       this.clearPreload();
+      await ensureContextForBuffer(this.contextManager, arrayBuffer);
+      const { context } = this.requireGraph();
 
       const { decoderResult, audioBuffer: nativeBuffer } = await decodeAudioWithBuffer(
         arrayBuffer,
-        this.audioContext,
+        context,
         filename
       );
 
-      if (nativeBuffer) {
+      await this.contextManager.ensureForTrack({
+        sampleRate: decoderResult.sampleRate,
+        channels: decoderResult.channels,
+      });
+      const { context: live } = this.requireGraph();
+
+      if (nativeBuffer && live === context) {
         this.audioBuffer = nativeBuffer;
       } else {
         const frameCount = decoderResult.interleavedBuffer.length / decoderResult.channels;
-        this.audioBuffer = this.audioContext.createBuffer(
+        this.audioBuffer = live.createBuffer(
           decoderResult.channels,
           frameCount,
           decoderResult.sampleRate
@@ -190,7 +221,8 @@ export class WebAudioPlayer extends BaseAudioBackend {
     const remaining = this.audioBuffer.duration - currentPos;
     if (remaining > lead + 0.25) return;
 
-    const when = this.audioContext.currentTime + Math.max(0, remaining - (overlap > 0 ? overlap : 0));
+    const { context } = this.requireGraph();
+    const when = context.currentTime + Math.max(0, remaining - (overlap > 0 ? overlap : 0));
     this._scheduleNextAt(when, overlap);
   }
 
@@ -198,23 +230,24 @@ export class WebAudioPlayer extends BaseAudioBackend {
     if (!this.nextAudioBuffer || this.nextScheduled) return;
     this.nextScheduled = true;
 
-    const nextSource = this.audioContext.createBufferSource();
+    const { context, gain } = this.requireGraph();
+    const nextSource = context.createBufferSource();
     nextSource.buffer = this.nextAudioBuffer;
     nextSource.playbackRate.value = this.playbackRate;
 
     if (overlap > 0) {
       if (!this.crossfadeGainNode) {
-        this.crossfadeGainNode = this.audioContext.createGain();
+        this.crossfadeGainNode = context.createGain();
         this.contextManager.connectInput(this.crossfadeGainNode);
       }
       nextSource.connect(this.crossfadeGainNode);
       const end = when + overlap;
-      this.gainNode.gain.setValueAtTime(this.gainNode.gain.value, when);
-      this.gainNode.gain.linearRampToValueAtTime(0, end);
+      gain.gain.setValueAtTime(gain.gain.value, when);
+      gain.gain.linearRampToValueAtTime(0, end);
       this.crossfadeGainNode.gain.setValueAtTime(0, when);
       this.crossfadeGainNode.gain.linearRampToValueAtTime(1, end);
     } else {
-      nextSource.connect(this.gainNode);
+      nextSource.connect(gain);
     }
 
     nextSource.onended = () => {
@@ -243,22 +276,23 @@ export class WebAudioPlayer extends BaseAudioBackend {
       this.nextAudioBuffer = null;
       this.nextScheduled = false;
       this.pausedAt = 0;
-      this.startTime = this.audioContext.currentTime;
+      const { context: live, gain } = this.requireGraph();
+      this.startTime = live.currentTime;
       this.sourceNode = nextSource;
       if (this.crossfadeGainNode) {
         nextSource.disconnect();
-        nextSource.connect(this.gainNode);
+        nextSource.connect(gain);
         this.crossfadeGainNode.disconnect();
         this.crossfadeGainNode = null;
-        const now = this.audioContext.currentTime;
-        this.gainNode.gain.cancelScheduledValues(now);
-        this.gainNode.gain.setValueAtTime(1, now);
+        const now = live.currentTime;
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(1, now);
       }
       this.notifyStateChange();
       if (this.onEndedCallback) {
         try { this.onEndedCallback({ alreadyPlayingNext: true }); } catch (err) { console.warn('onEnded callback threw', err); }
       }
-    }, Math.max(0, (swapAt - this.audioContext.currentTime) * 1000));
+    }, Math.max(0, (swapAt - context.currentTime) * 1000));
   }
 
   play(): void {
@@ -271,13 +305,15 @@ export class WebAudioPlayer extends BaseAudioBackend {
       return;
     }
 
-    if (this.audioContext.state === 'suspended') {
+    const { context, gain } = this.requireGraph();
+
+    if (context.state === 'suspended') {
       void this.contextManager.resume();
     }
 
-    this.sourceNode = this.audioContext.createBufferSource();
+    this.sourceNode = context.createBufferSource();
     this.sourceNode.buffer = this.audioBuffer;
-    this.sourceNode.connect(this.gainNode);
+    this.sourceNode.connect(gain);
     this.segmentTransitionFired = false;
 
     this.sourceNode.onended = () => {
@@ -293,7 +329,7 @@ export class WebAudioPlayer extends BaseAudioBackend {
     };
 
     this.sourceNode.playbackRate.value = this.playbackRate;
-    this.startTime = this.audioContext.currentTime - this.pausedAt / this.playbackRate;
+    this.startTime = context.currentTime - this.pausedAt / this.playbackRate;
     this.sourceNode.start(0, this.pausedAt);
     this.isPlaying = true;
     this.notifyStateChange();
@@ -301,7 +337,7 @@ export class WebAudioPlayer extends BaseAudioBackend {
     if (isGaplessActive(this.gaplessSettings) && this.nextAudioBuffer) {
       const overlap = overlapSeconds(this.gaplessSettings);
       const remaining = this.audioBuffer.duration - this.pausedAt;
-      const when = this.audioContext.currentTime + Math.max(0, remaining - (overlap > 0 ? overlap : GAPLESS_SCHEDULE_LEAD_S));
+      const when = context.currentTime + Math.max(0, remaining - (overlap > 0 ? overlap : GAPLESS_SCHEDULE_LEAD_S));
       this._scheduleNextAt(when, overlap);
     }
   }
@@ -312,7 +348,7 @@ export class WebAudioPlayer extends BaseAudioBackend {
     }
 
     this.rateAtPause = this.playbackRate;
-    this.pausedAt = (this.audioContext.currentTime - this.startTime) * this.rateAtPause;
+    this.pausedAt = ((this.audioContext?.currentTime ?? 0) - this.startTime) * this.rateAtPause;
 
     this.sourceNode.stop();
     this.sourceNode.disconnect();
@@ -375,7 +411,7 @@ export class WebAudioPlayer extends BaseAudioBackend {
 
     if (this.isPlaying) {
       return Math.min(
-        (this.audioContext.currentTime - this.startTime) * this.playbackRate,
+        (this.audioContext!.currentTime - this.startTime) * this.playbackRate,
         this.audioBuffer.duration
       );
     }
@@ -407,7 +443,7 @@ export class WebAudioPlayer extends BaseAudioBackend {
       const currentPos = this.getCurrentTime();
       this.playbackRate = clampedRate;
       this.sourceNode.playbackRate.value = clampedRate;
-      this.startTime = this.audioContext.currentTime - currentPos / clampedRate;
+      this.startTime = this.audioContext!.currentTime - currentPos / clampedRate;
     } else {
       this.playbackRate = clampedRate;
     }
@@ -450,8 +486,11 @@ export class WebAudioPlayer extends BaseAudioBackend {
 
   destroy(): void {
     this.destroyed = true;
+    this.unsubscribeGraph();
     this.clearPreload();
     this.stop();
-    this.gainNode.disconnect();
+    this.gainNode?.disconnect();
+    this.gainNode = null;
+    this.audioContext = null;
   }
 }

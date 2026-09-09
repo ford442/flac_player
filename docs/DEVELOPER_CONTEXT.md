@@ -1,6 +1,6 @@
 # DEVELOPER CONTEXT
 
-Last updated: August 2026
+Last updated: September 2026
 
 ## 1. High-Level Architecture & Intent
 
@@ -28,6 +28,7 @@ Last updated: August 2026
 | AudioWorklet + PCM tap | `src/audio/backends/WorkletAudioPlayer.ts` |
 | SDL3 / SDL2 WASM | `src/audio/backends/Sdl3AudioPlayer.ts`, `Sdl2AudioPlayer.ts` |
 | SDL → analyser bridge | `src/audio/SdlPcmBridge.ts`, `src/sdl/pcm_ring.h` |
+| SDL3 play ring | `src/sdl/play_ring.h`, `src/audio/playRingBackpressure.ts` |
 | Library / API client | `src/api/songApi.ts`, `src/audioLoader.ts` |
 | Offline cache | `src/storage/trackCache.ts`, `src/components/OfflineCache.tsx` |
 | Queue persistence | `src/storage/queueStorage.ts` |
@@ -44,8 +45,11 @@ Last updated: August 2026
 
 *   **WASM memory interop (`Sdl3AudioPlayer.ts`, `Sdl2AudioPlayer.ts` under `src/audio/backends/`):**
     *   Manual `malloc`, HEAP views, channel interleaving. PTHREADS builds expose memory differently (`wasmMemory.buffer` vs `HEAPU8.buffer`).
+    *   **`INITIAL_MEMORY` is 64 MiB** (`67108864`) with `ALLOW_MEMORY_GROWTH=1`. The previous 256 MiB floor was paid by every SDL user because the engines stored a full-track `std::vector<float>`. SDL3 stream mode uses `play_ring.h` (~1.5 MiB) instead. Debug: `scripts/build-wasm.sh --debug` (`-O0 -g ASSERTIONS SAFE_HEAP`, 32 MiB floor).
+    *   **Keep `-pthread`:** JS `_push_pcm` (main thread) and the SDL audio callback (pthread) share the play ring atomics. The viz tap (`SdlPcmBridge`) uses `Atomics` on `wasmMemory`. Dropping pthreads would require posting PCM onto the audio thread or polling non-shared HEAP. COOP/COEP is still required for AudioWorklet even without SDL pthreads.
 *   **SDL PCM ring → AudioWorklet (`SdlPcmBridge.ts`):**
-    *   C++ ring buffer written in the SDL audio callback; JS worklet reads and feeds `AnalyserNode`. Required for visualization when SDL owns speaker output.
+    *   Viz ring written in the SDL audio callback; JS worklet reads and feeds `AnalyserNode`. Separate from the play ring (`play_ring.h`).
+    *   Decoder high-water: pause JS decode when play-ring fill &gt; 75% (`src/audio/playRingBackpressure.ts`).
 *   **Cross-origin isolation (`webpack.config.js`, hosting headers):**
     *   COOP/COEP required for AudioWorklet, SharedArrayBuffer, SDL pthreads, projectM WASM.
 *   **WebGPU lifecycle (`webgpuVisualizer.ts`):**
@@ -55,7 +59,7 @@ Last updated: August 2026
 *   **ShaderGUI layout contract (`src/visuals/waveformContract.ts`):**
     *   Knob/LED glow UVs, palette colors, and intensity scales live in `WAVEFORM_LAYOUT`.
     *   Both WGSL (`src/shaders/waveform.ts`) and GLSL (`src/visuals/webgl2/shaders/waveform.ts`) inject these constants — change positions in **one** place.
-    *   `Alt+D` debug modes (`uv`, `waveform-only`, `audio-bins`, `spectrum`) remain available for the active WebGPU shader. GLSL parity code is dormant while fallback is disabled.
+    *   `Alt+D` debug modes (`uv`, `waveform-only`, `audio-bins`, `spectrum`) remain available for the active WebGPU or WebGL2 shader.
     *   Guard: `npm run test:visualizer` asserts layout injection parity + debug mode helpers.
 
 ## 4. Inherent Limitations & "Here be Dragons"
@@ -64,7 +68,7 @@ Last updated: August 2026
 *   **Test coverage:** Playwright smoke tests exist; no full audio pipeline integration suite yet ([#172](https://github.com/ford442/flac_player/issues/172)).
 *   **Deploy credentials:** `deploy.py` contains environment-specific SFTP config.
 *   **HTTPS + isolation:** App requires secure context with COOP/COEP for worklet/SDL/projectM paths.
-*   **WebGPU fail-closed phase:** ShaderGUI never creates WebGL2 or Canvas2D after a failed probe. Legacy `?visualizer=`, local-storage, and `DEBUG_VISUALIZER` GL/2D preferences are diagnostic breadcrumbs only. Inspect `window.webgpuProbe` for reason, browser brand, and adapter data; audio playback is independent.
+*   **WebGPU fail-closed default:** ShaderGUI probes WebGPU unless the user opts into WebGL2 (`?visualizer=webgl2` or Settings → Compatibility visualizer). Failed probes do not auto-start GL. Canvas2D is `DEBUG_VISUALIZER=canvas2d` only. Inspect `window.webgpuProbe` for reason, `powerPreference`, `requestedFeatures`, browser brand, and adapter data; audio playback is independent.
 
 ## 5. Key Flows
 

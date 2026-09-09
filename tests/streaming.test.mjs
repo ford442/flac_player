@@ -24,6 +24,7 @@ function selectDecodeStrategy(contentLength, { outputMode, url }) {
     return 'native-stream';
   }
   if (outputMode === 'worklet') return large ? 'hifi-stream' : 'buffered';
+  if (outputMode === 'sdl') return large ? 'hifi-stream' : 'buffered';
   return 'buffered';
 }
 

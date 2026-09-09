@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo, CloudPlaylist, type PlaybackPathInfo } from '../audioLoader';
 import { AudioOutputMode } from '../hooks/usePlayerState';
 import { LibraryView } from './LibraryView';
@@ -17,7 +17,13 @@ import { ConvertPanel } from './ConvertPanel';
 import { FAST_STORAGE_HOST } from '../utils/audioUtils';
 import type { GaplessMode } from '../types/gapless';
 import type { ReplayGainMode } from '../utils/replayGain';
+import type { LatencyMode } from '../audio/sampleRatePolicy';
 import { getNextQueueIndex, getPreviousQueueIndex } from '../utils/queueUtils';
+import {
+  isCompatibilityVisualizerEnabled,
+  setCompatibilityVisualizer,
+  subscribeVisualizerPreference,
+} from '../visuals/rendererSelection';
 
 type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'convert' | 'settings';
 type LibraryViewMode = 'grid' | 'list';
@@ -91,6 +97,8 @@ export interface PlayerFallbackViewProps {
   setReplayGainMode: (mode: ReplayGainMode) => void;
   replayGainLimiter: boolean;
   setReplayGainLimiter: (enabled: boolean) => void;
+  latencyMode: LatencyMode;
+  setLatencyMode: (mode: LatencyMode) => void;
   prebufferingNext: boolean;
   playbackPath: PlaybackPathInfo | null;
   isSharedPlaylist: boolean;
@@ -106,7 +114,7 @@ export interface PlayerFallbackViewProps {
   onQueueTrackClick: (index: number) => void;
   onPlay: () => void;
   onStop: () => void;
-  onSeek: (t: number) => void;
+  onSeek?: (t: number) => void;
   onVolumeChange: (v: number) => void;
   onMute: () => void;
   onNext: () => void;
@@ -146,6 +154,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate,
     gaplessMode, setGaplessMode, crossfadeMs, setCrossfadeMs,
     replayGainMode, setReplayGainMode, replayGainLimiter, setReplayGainLimiter,
+    latencyMode, setLatencyMode,
     prebufferingNext,
     playbackPath,
     isSharedPlaylist, sharedPlaylistTitle, analyser,
@@ -159,6 +168,13 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
   } = props;
 
   const [generationModelFilter, setGenerationModelFilter] = useState('all');
+  const [compatibilityVisualizer, setCompatibilityVisualizerState] = useState(
+    () => isCompatibilityVisualizerEnabled(),
+  );
+
+  useEffect(() => subscribeVisualizerPreference(() => {
+    setCompatibilityVisualizerState(isCompatibilityVisualizerEnabled());
+  }), []);
   const [variationTrack, setVariationTrack] = useState<PlaylistTrack | null>(null);
   const generationModels = useMemo(
     () => Array.from(new Set(library.map(track => track.generation_model).filter(Boolean) as string[])).sort(),
@@ -475,7 +491,8 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
                     gaplessMode={gaplessMode} onGaplessModeChange={setGaplessMode}
                     crossfadeMs={crossfadeMs} onCrossfadeMsChange={setCrossfadeMs}
                     replayGainMode={replayGainMode} onReplayGainModeChange={setReplayGainMode}
-                    replayGainLimiter={replayGainLimiter} onReplayGainLimiterChange={setReplayGainLimiter} />
+                    replayGainLimiter={replayGainLimiter} onReplayGainLimiterChange={setReplayGainLimiter}
+                    latencyMode={latencyMode} onLatencyModeChange={setLatencyMode} />
                 </div>
                 <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
                   <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Audio Engine</span>
@@ -496,6 +513,25 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
                     Smaller FLAC uses buffered decode. Non-FLAC URLs use native browser streaming.
                     Crossfade works in native streaming only.
                   </p>
+                </div>
+                <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Visualizer</span>
+                  <label className="flex items-start gap-3 text-sm text-white cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={compatibilityVisualizer}
+                      onChange={(e) => setCompatibilityVisualizer(e.target.checked)}
+                    />
+                    <span>
+                      <span className="font-medium">Compatibility visualizer</span>
+                      <span className="block text-xs text-gray-500 mt-1">
+                        Use WebGL2 ShaderGUI when WebGPU is missing (Safari / some Firefox).
+                        Default remains WebGPU or a fatal visualizer panel — this does not auto-fall through.
+                        Also available as <code>?visualizer=webgl2</code>.
+                      </span>
+                    </span>
+                  </label>
                 </div>
                 <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
                   <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Offline Cache</span>

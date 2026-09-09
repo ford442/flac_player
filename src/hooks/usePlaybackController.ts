@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createAudioBackend } from '../audio/createAudioBackend';
+import { sharedAudioContextManager } from '../audio/AudioContextManager';
 import type { ConfigurableAudioBackend, AudioPlaybackState, DecodedPcmView } from '../types/audio';
 import type { AudioOutputMode } from './usePlayerState';
 import {
@@ -82,6 +83,7 @@ export function usePlaybackController({
   const [currentFile, setCurrentFile] = useState<File | undefined>(undefined);
   const [playbackPath, setPlaybackPath] = useState<PlaybackPathInfo | null>(null);
   const [prebufferingNext, setPrebufferingNext] = useState(false);
+  const [graphGeneration, setGraphGeneration] = useState(0);
 
   const playerRef = useRef<ConfigurableAudioBackend | null>(null);
   const pendingFilesRef = useRef<File[]>([]);
@@ -201,10 +203,10 @@ export function usePlaybackController({
           if (outputMode === 'streaming' && player.loadFromURL) {
             await player.loadFromURL(candidateUrl, { expectedDuration });
             setPlaybackPath(player.getPlaybackPath?.() ?? null);
-          } else if (outputMode === 'worklet') {
+          } else if (outputMode === 'worklet' || outputMode === 'sdl') {
             const probe = await loader.probeAudioUrl(candidateUrl);
             const strategy = selectDecodeStrategy(probe.contentLength, {
-              outputMode: 'worklet',
+              outputMode,
               url: candidateUrl,
             });
             if (strategy === 'hifi-stream' && player.loadFromURLStreaming) {
@@ -428,7 +430,16 @@ export function usePlaybackController({
     playerRef.current?.setVolume(vol);
   }, [setMuted, setVolume, prevVolumeRef]);
 
-  const getAnalyser = useCallback(() => playerRef.current?.getAnalyser() ?? null, []);
+  useEffect(() => {
+    return sharedAudioContextManager.subscribeGraphRecreated(() => {
+      setGraphGeneration((n) => n + 1);
+    });
+  }, []);
+
+  const getAnalyser = useCallback(() => {
+    void graphGeneration;
+    return playerRef.current?.getAnalyser() ?? null;
+  }, [graphGeneration]);
   const getDecodedPcm = useCallback((): DecodedPcmView | null => {
     return playerRef.current?.getDecodedPcm?.() ?? null;
   }, []);
@@ -452,5 +463,6 @@ export function usePlaybackController({
     getDecodedPcm,
     stop,
     seek,
+    graphGeneration,
   };
 }

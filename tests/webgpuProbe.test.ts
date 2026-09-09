@@ -4,6 +4,7 @@ import {
   probeWebGPU,
   type BrowserIdentity,
 } from '../src/visuals/webgpuProbe';
+import { CANVAS_RENDER_ATTACHMENT } from '../src/visuals/webgpu/canvasConfig';
 
 const chrome: BrowserIdentity = {
   brand: 'Google Chrome',
@@ -21,6 +22,25 @@ function adapterInfo() {
   };
 }
 
+function featureSet(names: string[] = []) {
+  return {
+    has: (feature: string) => names.includes(feature),
+  };
+}
+
+function fakeAdapter(
+  extras: {
+    features?: string[];
+    requestDevice?: GPUAdapter['requestDevice'];
+  } = {},
+): GPUAdapter {
+  return {
+    info: adapterInfo(),
+    features: featureSet(extras.features ?? []),
+    requestDevice: extras.requestDevice ?? vi.fn(async () => ({ destroy: vi.fn() })),
+  } as unknown as GPUAdapter;
+}
+
 function fakeGpu(adapter: GPUAdapter | null) {
   return {
     requestAdapter: vi.fn(async () => adapter),
@@ -33,6 +53,7 @@ describe('WebGPU boot probe', () => {
     delete window.webgpuProbe;
     vi.restoreAllMocks();
     vi.spyOn(console, 'info').mockImplementation(() => {});
+    window.history.replaceState({}, '', '/');
   });
 
   it('distinguishes Edge from Chrome in adapter-failure JSON', async () => {
@@ -54,6 +75,7 @@ describe('WebGPU boot probe', () => {
       reason: 'webgpu-no-adapter',
       browser: { brand: 'Microsoft Edge' },
       adapter: null,
+      powerPreference: 'high-performance',
     });
 
     const chromeResult = await probeWebGPU(canvas, {
@@ -73,10 +95,7 @@ describe('WebGPU boot probe', () => {
     const requestDevice = vi.fn(async () => {
       throw new Error('device rejected');
     });
-    const adapter = {
-      info: adapterInfo(),
-      requestDevice,
-    } as unknown as GPUAdapter;
+    const adapter = fakeAdapter({ requestDevice });
     const getContext = vi.fn();
 
     const result = await probeWebGPU(
@@ -89,7 +108,7 @@ describe('WebGPU boot probe', () => {
     expect(getContext).not.toHaveBeenCalled();
     expect(window.webgpuProbe).toMatchObject({
       reason: 'webgpu-device-request-failed',
-      adapter: { description: 'Test GPU' },
+      adapter: { description: 'Test GPU', isFallbackAdapter: false },
     });
   });
 
@@ -97,10 +116,7 @@ describe('WebGPU boot probe', () => {
     const destroy = vi.fn();
     const device = { destroy } as unknown as GPUDevice;
     const requestDevice = vi.fn(async () => device);
-    const adapter = {
-      info: adapterInfo(),
-      requestDevice,
-    } as unknown as GPUAdapter;
+    const adapter = fakeAdapter({ requestDevice });
     const getContext = vi.fn(() => null);
 
     const result = await probeWebGPU(
@@ -118,10 +134,7 @@ describe('WebGPU boot probe', () => {
   it('destroys the probed device when requesting the WebGPU canvas context throws', async () => {
     const destroy = vi.fn();
     const device = { destroy } as unknown as GPUDevice;
-    const adapter = {
-      info: adapterInfo(),
-      requestDevice: vi.fn(async () => device),
-    } as unknown as GPUAdapter;
+    const adapter = fakeAdapter({ requestDevice: vi.fn(async () => device) });
 
     const result = await probeWebGPU(
       {
@@ -140,12 +153,48 @@ describe('WebGPU boot probe', () => {
     });
   });
 
+  it('requests a high-performance adapter by default and intersects optional features', async () => {
+    const requestDevice = vi.fn(async () => ({ destroy: vi.fn() }) as unknown as GPUDevice);
+    const adapter = fakeAdapter({
+      features: ['timestamp-query', 'texture-compression-bc'],
+      requestDevice,
+    });
+    const gpu = fakeGpu(adapter);
+    const context = { configure: vi.fn() } as unknown as GPUCanvasContext;
+
+    await probeWebGPU(
+      { getContext: vi.fn(() => context) } as unknown as HTMLCanvasElement,
+      { gpu, browser: chrome },
+    );
+
+    expect(gpu.requestAdapter).toHaveBeenCalledWith({ powerPreference: 'high-performance' });
+    expect(requestDevice).toHaveBeenCalledWith({
+      requiredFeatures: ['timestamp-query'],
+    });
+    expect(window.webgpuProbe).toMatchObject({
+      powerPreference: 'high-performance',
+      requestedFeatures: ['timestamp-query'],
+    });
+  });
+
+  it('honors ?gpu=low for adapter power preference', async () => {
+    window.history.replaceState({}, '', '/?gpu=low');
+    const adapter = fakeAdapter();
+    const gpu = fakeGpu(adapter);
+    const context = { configure: vi.fn() } as unknown as GPUCanvasContext;
+
+    await probeWebGPU(
+      { getContext: vi.fn(() => context) } as unknown as HTMLCanvasElement,
+      { gpu, browser: chrome },
+    );
+
+    expect(gpu.requestAdapter).toHaveBeenCalledWith({ powerPreference: 'low-power' });
+    expect(window.webgpuProbe?.powerPreference).toBe('low-power');
+  });
+
   it('returns the same adapter, device, and context configured for the visualizer', async () => {
     const device = { destroy: vi.fn() } as unknown as GPUDevice;
-    const adapter = {
-      info: adapterInfo(),
-      requestDevice: vi.fn(async () => device),
-    } as unknown as GPUAdapter;
+    const adapter = fakeAdapter({ requestDevice: vi.fn(async () => device) });
     const context = { configure: vi.fn() } as unknown as GPUCanvasContext;
     const gpu = fakeGpu(adapter);
 
@@ -163,11 +212,15 @@ describe('WebGPU boot probe', () => {
       device,
       format: 'bgra8unorm',
       alphaMode: 'opaque',
+      colorSpace: 'srgb',
+      usage: CANVAS_RENDER_ATTACHMENT,
     });
     expect(result.breadcrumb).toMatchObject({
       status: 'ready',
       requestedVisualizer: 'webgl2',
       adapter: { description: 'Test GPU' },
+      powerPreference: 'high-performance',
+      requestedFeatures: [],
     });
   });
 });

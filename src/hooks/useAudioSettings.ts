@@ -3,7 +3,9 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { DEFAULT_EQ_BANDS } from '../audio/EQChain';
+import {
+  DEFAULT_EQ_BANDS,
+} from '../audio/EQChain';
 import {
   DEFAULT_CROSSFADE_MS,
   DEFAULT_GAPLESS_MODE,
@@ -15,6 +17,11 @@ import {
   type ReplayGainMode,
   type ReplayGainSettings,
 } from '../utils/replayGain';
+import {
+  DEFAULT_LATENCY_MODE,
+  isLatencyMode,
+  type LatencyMode,
+} from '../audio/sampleRatePolicy';
 
 const EQ_STORAGE_KEY = 'flac_player_eq_gains';
 const SPEED_STORAGE_KEY = 'flac_player_playback_rate';
@@ -23,6 +30,7 @@ const GAPLESS_MODE_KEY = 'flac_player_gapless_mode';
 const CROSSFADE_MS_KEY = 'flac_player_crossfade_ms';
 const REPLAYGAIN_MODE_KEY = 'flac_player_replaygain_mode';
 const REPLAYGAIN_LIMITER_KEY = 'flac_player_replaygain_limiter';
+const LATENCY_MODE_KEY = 'flac_player_latency_mode';
 
 function loadStoredEQ(): number[] {
   try {
@@ -80,6 +88,14 @@ function loadStoredReplayGainLimiter(): boolean {
   }
 }
 
+function loadStoredLatencyMode(): LatencyMode {
+  try {
+    const stored = localStorage.getItem(LATENCY_MODE_KEY);
+    if (isLatencyMode(stored)) return stored;
+  } catch { /* ignore */ }
+  return DEFAULT_LATENCY_MODE;
+}
+
 export interface AudioSettingsHook {
   eqGains: number[];
   setEQBandGain: (index: number, gainDb: number) => void;
@@ -99,6 +115,8 @@ export interface AudioSettingsHook {
   replayGainLimiter: boolean;
   setReplayGainLimiter: (enabled: boolean) => void;
   replayGainSettings: ReplayGainSettings;
+  latencyMode: LatencyMode;
+  setLatencyMode: (mode: LatencyMode) => void;
 }
 
 export function useAudioSettings(): AudioSettingsHook {
@@ -108,6 +126,7 @@ export function useAudioSettings(): AudioSettingsHook {
   const [crossfadeMs, setCrossfadeMsState] = useState<number>(loadStoredCrossfadeMs);
   const [replayGainMode, setReplayGainModeState] = useState<ReplayGainMode>(loadStoredReplayGainMode);
   const [replayGainLimiter, setReplayGainLimiterState] = useState<boolean>(loadStoredReplayGainLimiter);
+  const [latencyMode, setLatencyModeState] = useState<LatencyMode>(loadStoredLatencyMode);
 
   useEffect(() => {
     try { localStorage.setItem(EQ_STORAGE_KEY, JSON.stringify(eqGains)); } catch { /* quota */ }
@@ -135,6 +154,10 @@ export function useAudioSettings(): AudioSettingsHook {
   useEffect(() => {
     try { localStorage.setItem(REPLAYGAIN_LIMITER_KEY, String(replayGainLimiter)); } catch { /* quota */ }
   }, [replayGainLimiter]);
+
+  useEffect(() => {
+    try { localStorage.setItem(LATENCY_MODE_KEY, latencyMode); } catch { /* quota */ }
+  }, [latencyMode]);
 
   const setEQBandGain = useCallback((index: number, gainDb: number) => {
     setEqGains(prev => {
@@ -172,6 +195,10 @@ export function useAudioSettings(): AudioSettingsHook {
     setReplayGainLimiterState(enabled);
   }, []);
 
+  const setLatencyMode = useCallback((mode: LatencyMode) => {
+    setLatencyModeState(mode);
+  }, []);
+
   const gaplessSettings: GaplessSettings = { mode: gaplessMode, crossfadeMs };
   const replayGainSettings: ReplayGainSettings = { mode: replayGainMode, limiterEnabled: replayGainLimiter };
 
@@ -193,5 +220,7 @@ export function useAudioSettings(): AudioSettingsHook {
     replayGainLimiter,
     setReplayGainLimiter,
     replayGainSettings,
+    latencyMode,
+    setLatencyMode,
   };
 }

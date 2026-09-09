@@ -36,7 +36,12 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 - **Pre-buffering:** The player calls `preloadNext()` ~8 s before track end (or immediately when the queue changes). The queue panel shows **pre-buffering next** while decode/fetch is in progress.
 - **Internal transitions:** When a backend has already started the next track, `onEnded` receives `{ alreadyPlayingNext: true }` so the UI advances the queue index without reloading audio.
 - **SDL backends:** Gapless is not implemented; tracks still stop at EOF and advance via `onEnded` → `playTrack` (audible gap). Use `worklet` or `streaming` for gapless queues.
-- **Different sample rates:** Adjacent tracks with mismatched sample rates may click; dynamic resampling is tracked in [#179](https://github.com/ford442/flac_player/issues/179).
+- **Sample-rate policy (#194):** `AudioContextManager` opens the shared graph at the **file native rate** when `AudioContext.isSampleRateSupported` (or a construct/close probe) allows it. Otherwise `sampleRate` is omitted and the OS device default is used. A later track at a different rate **recreates** the graph (ReplayGain, master volume, EQ, analyser, `externalPlaybackActive` restored). Same-rate album queues stay gapless; a rate or latency change may produce a brief audible gap. Latency hint is Settings → **Output latency** (`flac_player_latency_mode`, default `playback`).
+  - **streaming (native `<audio>`):** media-element clock; analyser lives on the shared native-rate context.
+  - **web-audio:** `AudioBuffer` stays at file rate; `BufferSourceNode` lets the browser resample if the context could not match.
+  - **worklet:** PCM is consumed 1:1 with the context callback rate. The processor is given the file (or context) rate via `processorOptions`; if the device cannot open native rate, a documented linear interpolator (`linearResampler.ts`) converts chunks. Seek uses the processor's own `this.sampleRate`.
+  - **sdl:** WASM device opens at file rate. Large FLACs use the C++ play ring (`play_ring.h`); the analyser tap is still `SdlPcmBridge` at `context.sampleRate`.
+  - **sdl2:** Device is created in `set_audio_data` at file rate (full-buffer only).
 - **ReplayGain / loudness matching:** Settings → **Loudness (ReplayGain)** (`flac_player_replaygain_mode`, `flac_player_replaygain_limiter`). Applies a dedicated gain stage **before** the master volume fader on streaming, web-audio, and worklet backends. SDL backends multiply gain into WASM `_set_volume` (visualizer tap still uses the shared graph). Client-side tag fetch uses a 64 KiB range request when API metadata is missing. Crossfade overlap may briefly mismatch levels when adjacent tracks have very different tags ([#184](https://github.com/ford442/flac_player/issues/184)).
 
 ## Backend reference
@@ -110,13 +115,18 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 
 ### 4. SDL3 WASM (`sdl`)
 
-**Files:** `src/audio/backends/Sdl3AudioPlayer.ts`, `src/sdl/audio_engine.cpp`, `public/sdl-audio.*`
+**Files:** `src/audio/backends/Sdl3AudioPlayer.ts`, `src/sdl/audio_engine.cpp`, `src/sdl/play_ring.h`, `public/sdl-audio.*`
 
-**How it works:** Full file fetch → interleaved float → WASM heap → SDL3 audio callback. PCM copied to a lock-free ring; `SdlPcmBridge` AudioWorklet feeds the shared analyser.
+**How it works:**
+
+- **Small files (buffered):** full fetch → decode → `_create_audio_buffer` / `_set_audio_data` (compat path).
+- **Large files (≥ 32 MB) or `forceStream`:** `runHifiStreamPipeline` → `_set_stream_format` → `_push_pcm` into a **play ring** (`PLAY_RING_CAPACITY` = 384000 floats, ~2 s stereo f32 @ 96 kHz). JS pauses decode when fill &gt; 75% (`get_play_ring_fill`). The SDL callback drains the play ring, volume-scales into a pre-sized scratch, then writes the **viz** ring (`pcm_ring.h`, 65536 floats) for `SdlPcmBridge`.
+
+Seek is **disabled** in hi-fi stream mode (same as worklet). SDL2 remains full-buffer only.
 
 **Gapless:** Not supported — each track is loaded with `stop()` between files.
 
-**Build:** `npm run build:wasm:sdl3` or `bash src/sdl/build.sh`.
+**Build:** `npm run build:wasm:sdl3` or `bash src/sdl/build.sh`. Debug: `scripts/build-wasm.sh --debug --sdl3`.
 
 ---
 
@@ -124,7 +134,7 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 
 **Files:** `src/audio/backends/Sdl2AudioPlayer.ts`, `src/sdl/audio_engine_sdl2.cpp`, `public/sdl2-audio.*`
 
-Same as SDL3 but uses SDL2 + AudioWorklet glue. **Gapless:** not supported.
+Same as SDL3 **buffered** path (full-track `std::vector` + `set_audio_data`). No `push_pcm` / play ring yet. **Gapless:** not supported. Large files still allocate the whole decoded PCM in the WASM heap.
 
 Build: `npm run build:wasm:sdl2` or `bash src/sdl/build_sdl2.sh`.
 

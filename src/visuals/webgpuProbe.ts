@@ -1,4 +1,10 @@
 import type { VisualizerBackend } from './types';
+import {
+  buildCanvasConfiguration,
+  buildDeviceDescriptor,
+  readGpuPowerPreference,
+  selectDeviceFeatures,
+} from './webgpu/canvasConfig';
 
 export interface BrowserIdentity {
   brand: string;
@@ -23,6 +29,8 @@ export interface WebGPUProbeBreadcrumb {
   browser: BrowserIdentity;
   adapter: WebGPUAdapterSummary | null;
   requestedVisualizer: VisualizerBackend | null;
+  powerPreference: GPUPowerPreference;
+  requestedFeatures: GPUFeatureName[];
   timestamp: string;
 }
 
@@ -52,6 +60,7 @@ export interface WebGPUProbeOptions {
   browser?: BrowserIdentity;
   requestedVisualizer?: VisualizerBackend | null;
   publish?: boolean;
+  powerPreference?: GPUPowerPreference;
 }
 
 declare global {
@@ -127,6 +136,8 @@ function breadcrumb(
   adapter: WebGPUAdapterSummary | null,
   reason: string | null = null,
   detail: string | null = null,
+  powerPreference: GPUPowerPreference = 'high-performance',
+  requestedFeatures: GPUFeatureName[] = [],
 ): WebGPUProbeBreadcrumb {
   return {
     status,
@@ -135,6 +146,8 @@ function breadcrumb(
     browser,
     adapter,
     requestedVisualizer,
+    powerPreference,
+    requestedFeatures,
     timestamp: new Date().toISOString(),
   };
 }
@@ -152,8 +165,19 @@ function failure(
   requestedVisualizer: VisualizerBackend | null,
   adapter: WebGPUAdapterSummary | null,
   publish: boolean,
+  powerPreference: GPUPowerPreference = 'high-performance',
+  requestedFeatures: GPUFeatureName[] = [],
 ): WebGPUProbeFailure {
-  const value = breadcrumb('failed', browser, requestedVisualizer, adapter, reason, detail);
+  const value = breadcrumb(
+    'failed',
+    browser,
+    requestedVisualizer,
+    adapter,
+    reason,
+    detail,
+    powerPreference,
+    requestedFeatures,
+  );
   if (publish) publishWebGPUProbe(value);
   return { ok: false, breadcrumb: value };
 }
@@ -181,12 +205,15 @@ export async function probeWebGPU(
   const browser = options.browser ?? identifyBrowser();
   const requestedVisualizer = options.requestedVisualizer ?? null;
   const shouldPublish = options.publish !== false;
+  const powerPreference = options.powerPreference ?? readGpuPowerPreference();
   const gpu = options.gpu === undefined
     ? (typeof navigator === 'undefined' ? null : navigator.gpu)
     : options.gpu;
 
   if (shouldPublish) {
-    publishWebGPUProbe(breadcrumb('probing', browser, requestedVisualizer, null));
+    publishWebGPUProbe(breadcrumb(
+      'probing', browser, requestedVisualizer, null, null, null, powerPreference,
+    ));
   }
   if (!gpu) {
     return failure(
@@ -196,12 +223,13 @@ export async function probeWebGPU(
       requestedVisualizer,
       null,
       shouldPublish,
+      powerPreference,
     );
   }
 
   let adapter: GPUAdapter | null;
   try {
-    adapter = await gpu.requestAdapter();
+    adapter = await gpu.requestAdapter({ powerPreference });
   } catch (error) {
     return failure(
       'webgpu-adapter-request-failed',
@@ -210,6 +238,7 @@ export async function probeWebGPU(
       requestedVisualizer,
       null,
       shouldPublish,
+      powerPreference,
     );
   }
   if (!adapter) {
@@ -220,13 +249,16 @@ export async function probeWebGPU(
       requestedVisualizer,
       null,
       shouldPublish,
+      powerPreference,
     );
   }
 
   const adapterSummary = summarizeAdapter(adapter);
+  const requestedFeatures = selectDeviceFeatures(adapter);
+  const deviceDescriptor = buildDeviceDescriptor(adapter);
   let device: GPUDevice;
   try {
-    device = await adapter.requestDevice();
+    device = await adapter.requestDevice(deviceDescriptor);
   } catch (error) {
     return failure(
       'webgpu-device-request-failed',
@@ -235,6 +267,8 @@ export async function probeWebGPU(
       requestedVisualizer,
       adapterSummary,
       shouldPublish,
+      powerPreference,
+      requestedFeatures,
     );
   }
 
@@ -250,6 +284,8 @@ export async function probeWebGPU(
       requestedVisualizer,
       adapterSummary,
       shouldPublish,
+      powerPreference,
+      requestedFeatures,
     );
   }
   if (!context) {
@@ -261,13 +297,15 @@ export async function probeWebGPU(
       requestedVisualizer,
       adapterSummary,
       shouldPublish,
+      powerPreference,
+      requestedFeatures,
     );
   }
 
   let format: GPUTextureFormat;
   try {
     format = gpu.getPreferredCanvasFormat();
-    context.configure({ device, format, alphaMode: 'opaque' });
+    context.configure(buildCanvasConfiguration({ device, format }));
   } catch (error) {
     destroyDevice(device);
     return failure(
@@ -277,10 +315,21 @@ export async function probeWebGPU(
       requestedVisualizer,
       adapterSummary,
       shouldPublish,
+      powerPreference,
+      requestedFeatures,
     );
   }
 
-  const ready = breadcrumb('ready', browser, requestedVisualizer, adapterSummary);
+  const ready = breadcrumb(
+    'ready',
+    browser,
+    requestedVisualizer,
+    adapterSummary,
+    null,
+    null,
+    powerPreference,
+    requestedFeatures,
+  );
   if (shouldPublish) publishWebGPUProbe(ready);
   return { ok: true, adapter, device, context, format, breadcrumb: ready };
 }
@@ -297,4 +346,21 @@ export function recordWebGPUFailure(
     detail,
     timestamp: new Date().toISOString(),
   });
+}
+
+/** Fatal visualizer breadcrumb for opt-in WebGL2 / Canvas2D init failures (no WebGPU probe). */
+export function createVisualizerBootFailure(
+  reason: string,
+  detail: string | null,
+  requestedVisualizer: VisualizerBackend | null,
+): WebGPUProbeBreadcrumb {
+  return publishWebGPUProbe(breadcrumb(
+    'failed',
+    identifyBrowser(),
+    requestedVisualizer,
+    null,
+    reason,
+    detail,
+    readGpuPowerPreference(),
+  ));
 }
