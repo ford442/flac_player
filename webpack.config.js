@@ -15,8 +15,6 @@ const envVars = {};
 const SDL_ARTIFACTS = [
   'sdl-audio.js',
   'sdl-audio.wasm',
-  'sdl2-audio.js',
-  'sdl2-audio.wasm',
 ];
 
 function wasmArtifactsPresent(publicDir) {
@@ -46,7 +44,6 @@ module.exports = (env = {}, argv = {}) => {
   if (hasWasm) {
     copyPatterns.push(
       { from: 'public/sdl-audio.*', to: '[name][ext]' },
-      { from: 'public/sdl2-audio.*', to: '[name][ext]' },
     );
   } else if (!skipWasm) {
     throw new Error(
@@ -154,11 +151,6 @@ module.exports = (env = {}, argv = {}) => {
           sdl3: {
             test: /[\\/]Sdl3AudioPlayer\.ts$/,
             name: 'sdl3-player',
-            chunks: 'async',
-          },
-          sdl2: {
-            test: /[\\/]Sdl2AudioPlayer\.ts$/,
-            name: 'sdl2-player',
             chunks: 'async',
           },
           projectm: {

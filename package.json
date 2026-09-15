@@ -5,9 +5,8 @@
   "private": true,
   "scripts": {
     "start": "webpack serve --mode development --open",
-    "build:wasm": "bash ./scripts/build-wasm.sh --all",
+    "build:wasm": "bash ./scripts/build-wasm.sh --sdl3",
     "build:wasm:sdl3": "bash ./scripts/build-wasm.sh --sdl3",
-    "build:wasm:sdl2": "bash ./scripts/build-wasm.sh --sdl2",
     "build:projectm": "bash ./scripts/build-projectm-wasm.sh",
     "verify:wasm": "bash ./scripts/verify-wasm-artifacts.sh",
     "build": "webpack --mode production",

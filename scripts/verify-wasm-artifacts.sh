@@ -9,8 +9,6 @@ HASH_FILE="$PROJECT_ROOT/public/wasm-source.sha256"
 required=(
   "$PROJECT_ROOT/public/sdl-audio.js"
   "$PROJECT_ROOT/public/sdl-audio.wasm"
-  "$PROJECT_ROOT/public/sdl2-audio.js"
-  "$PROJECT_ROOT/public/sdl2-audio.wasm"
 )
 
 for artifact in "${required[@]}"; do
@@ -33,7 +31,7 @@ if [ "$current" != "$expected" ]; then
   echo "SDL WASM sources changed but public/wasm-source.sha256 is stale." >&2
   echo "  expected (committed): $expected" >&2
   echo "  current  (sources):   $current" >&2
-  echo "Run: npm run build:wasm && commit public/sdl-audio.* public/sdl2-audio.* public/wasm-source.sha256" >&2
+  echo "Run: npm run build:wasm && commit public/sdl-audio.* public/wasm-source.sha256" >&2
   exit 1
 fi
 

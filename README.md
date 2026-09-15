@@ -4,7 +4,7 @@ A high-quality React application for playing FLAC and WAV audio files with WebGP
 
 ## Features
 
-- **Five audio backends**: Streaming (default), Web Audio, AudioWorklet, SDL3 WASM, SDL2 WASM — see [docs/AUDIO_BACKENDS.md](docs/AUDIO_BACKENDS.md)
+- **Four audio backends**: Streaming (default), Web Audio, AudioWorklet, SDL3 WASM — see [docs/AUDIO_BACKENDS.md](docs/AUDIO_BACKENDS.md)
 - **FLAC and WAV Support**: Decode and play via Web Audio, libflac WASM, or CDN streaming (HTTP range requests)
 - **Streaming playback (default)**: Instant start on remote files without full download; optional **crossfade / gapless** between queue tracks
 - **10-band EQ** and playback-rate control (`EQPanel`)
@@ -73,16 +73,15 @@ git clone https://github.com/emscripten-core/emsdk.git
 cd emsdk && ./emsdk install latest && ./emsdk activate latest
 source ./emsdk_env.sh
 
-# Build both SDL3 and SDL2 WASM artifacts into public/
+# Build SDL3 WASM artifacts into public/
 cd ..   # back to repo root
-npm run build:wasm              # scripts/build-wasm.sh --all
-npm run build:wasm:sdl3         # SDL3 only (same as bash src/sdl/build.sh)
-npm run build:wasm:sdl2         # SDL2 only (same as bash src/sdl/build_sdl2.sh)
+npm run build:wasm              # scripts/build-wasm.sh --sdl3
+npm run build:wasm:sdl3         # same as bash src/sdl/build.sh
 
 npm start
 ```
 
-**WASM policy:** C++ sources live in `src/sdl/`; compiled `public/sdl-audio.*` and `public/sdl2-audio.*` are committed to the repo. CI runs `npm run verify:wasm` to ensure the source hash in `public/wasm-source.sha256` matches. PRs that touch SDL sources also run an optional emsdk build job.
+**WASM policy:** C++ sources live in `src/sdl/`; compiled `public/sdl-audio.*` is committed to the repo. CI runs `npm run verify:wasm` to ensure the source hash in `public/wasm-source.sha256` matches. PRs that touch SDL sources also run an optional emsdk build job. SDL2 playback was retired (#212); projectM uses a separate `USE_SDL=2` video host.
 
 **Production webpack build** does not compile WASM (no emsdk required). It copies prebuilt artifacts from `public/`:
 
@@ -91,7 +90,7 @@ npm run build                   # webpack only (--env skipWasm=true in CI)
 npm run build:all               # build:wasm + webpack
 ```
 
-SDL WASM glue (~1.3 MiB) is **not** in the main JS bundle — backend modules and Emscripten scripts load only when the user selects SDL3/SDL2.
+SDL WASM glue is **not** in the main JS bundle — the SDL3 backend and Emscripten scripts load only when the user selects SDL3.
 
 This will open the app at `http://localhost:3000`
 

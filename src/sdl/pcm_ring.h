@@ -81,7 +81,9 @@ inline const float* scale_samples(const float* src, int numFloats, float volume)
     if (volume == 1.0f || numFloats <= 0) return src;
     const size_t n = static_cast<size_t>(numFloats);
     if (g_volumeScratch.size() < n) {
-        g_volumeScratch.resize(n);
+        // Do not allocate on the audio thread. Caller must chunk
+        // to <= PCM_VOLUME_SCRATCH_MIN (SDL3: g_callbackScratch[8192]).
+        return src;
     }
     float* dst = g_volumeScratch.data();
     for (int i = 0; i < numFloats; ++i) {

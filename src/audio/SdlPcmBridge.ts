@@ -1,6 +1,6 @@
 import { AudioContextManager } from './AudioContextManager';
 
-/** WASM exports shared by SDL3 and SDL2 audio modules. */
+/** WASM exports from the SDL3 audio module. */
 export interface SdlPcmModule {
   _get_pcm_ring_state(): number;
   _get_pcm_ring_data(): number;

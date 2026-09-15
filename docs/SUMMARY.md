@@ -4,12 +4,12 @@ Last updated: July 2026
 
 ## Project Overview
 
-A React/TypeScript high-fidelity audio player with **five interchangeable audio backends**, a **fail-closed WebGPU visualization session**, optional **projectM Milkdrop host**, and **library management** backed by `storage.noahcohn.com`.
+A React/TypeScript high-fidelity audio player with **four interchangeable audio backends**, a **fail-closed WebGPU visualization session**, optional **projectM Milkdrop host**, and **library management** backed by `storage.noahcohn.com`.
 
 ## Key Features
 
 ### Audio
-- **Five backends:** Streaming (default), Web Audio, AudioWorklet, SDL3 WASM, SDL2 WASM
+- **Four backends:** Streaming (default), Web Audio, AudioWorklet, SDL3 WASM
 - **FLAC/WAV/MP3** via browser decode, libflac WASM, or CDN streaming
 - **10-band EQ**, playback rate, volume
 - **Crossfade / gapless** (streaming mode, 3 s fade)
@@ -41,7 +41,7 @@ flac_player/
 ├── src/
 │   ├── components/       Player, LibraryView, QueuePanel, ShaderGUI, VisualizerShell, ProjectMHost
 │   ├── audio/            createAudioBackend, AudioContextManager, EQChain, SdlPcmBridge
-│   │   └── backends/     BaseAudioBackend + Streaming, WebAudio, Worklet, Sdl3, Sdl2
+│   │   └── backends/     BaseAudioBackend + Streaming, WebAudio, Worklet, Sdl3
 │   ├── hooks/            usePlaybackController, usePlayerState, useAudioSettings
 │   ├── api/              songApi.ts
 │   ├── storage/          libraryCache, trackCache, queueStorage
@@ -60,7 +60,7 @@ npm install
 npm start                    # dev server, COOP/COEP headers
 npm run build                # production (prebuilt WASM in public/)
 npm run build:all            # rebuild SDL WASM + webpack
-npm run build:wasm           # SDL3 + SDL2
+npm run build:wasm           # SDL3 only
 npm run build:wasm:sdl3      # SDL3 only (also: bash src/sdl/build.sh)
 npm run build:projectm       # optional Milkdrop WASM
 npm run verify:wasm          # CI artifact freshness check
@@ -77,9 +77,9 @@ Live against **`https://storage.noahcohn.com`**:
 - **Gapless / ReplayGain** — shipped on shared graph; SDL gapless still unsupported
 - **Uploads** — storage admin → FLAC conversion → `songs.json` index
 
-Foundation refactor ([#193](https://github.com/ford442/flac_player/issues/193)) is **done**: all five backends live under `src/audio/backends/` with shared `BaseAudioBackend`, and playback lifecycle is owned by `usePlaybackController` (~450 lines) while `Player.tsx` is composition-only (~388 lines). Native-rate `AudioContext` ([#194](https://github.com/ford442/flac_player/issues/194)) is **done**. Remaining foundation backlog: [#196](https://github.com/ford442/flac_player/issues/196) (integration test harness) — see [ROADMAP.md](./ROADMAP.md).
+Foundation refactor ([#193](https://github.com/ford442/flac_player/issues/193)) is **done**: playback backends live under `src/audio/backends/` with shared `BaseAudioBackend`, and playback lifecycle is owned by `usePlaybackController`. Native-rate `AudioContext` ([#194](https://github.com/ford442/flac_player/issues/194)) is **done**. WASM dual-backend hardening ([#212](https://github.com/ford442/flac_player/issues/212)) is **done** (512 MiB heap cap, configure ABI, SDL2 playback retired). See [ROADMAP.md](./ROADMAP.md).
 - **Shareable playlists** — `?share=<id>` loads from `/api/share/<id>`
-- **Five audio backends** — user-selectable; lazy-loaded WASM chunks
+- **Four audio backends** — user-selectable; lazy-loaded SDL3 WASM chunk
 - **Visualizer** — required WebGPU ShaderGUI + optional projectM split mode
 - **Offline cache** — per-track download via Cache API
 - **Tests** — Playwright smoke suite + decoder unit test

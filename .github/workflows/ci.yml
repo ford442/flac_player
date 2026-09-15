@@ -94,5 +94,5 @@ jobs:
         if: steps.wasm_changes.outputs.wasm == 'true'
         run: |
           git diff --exit-code public/sdl-audio.js public/sdl-audio.wasm \
-            public/sdl2-audio.js public/sdl2-audio.wasm public/wasm-source.sha256 \
+            public/wasm-source.sha256 \
             || (echo "::error::WASM build produced diffs. Run npm run build:wasm locally and commit public/ artifacts." && exit 1)

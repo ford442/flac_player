@@ -4,7 +4,7 @@ Last updated: September 2026
 
 ## 1. High-Level Architecture & Intent
 
-*   **Core Purpose:** High-performance in-browser audio player for FLAC/WAV and library-backed streaming. Features a **five-backend audio engine** (streaming, Web Audio, AudioWorklet, SDL3 WASM, SDL2 WASM), a fail-closed WebGPU ShaderGUI, and an optional projectM Milkdrop host.
+*   **Core Purpose:** High-performance in-browser audio player for FLAC/WAV and library-backed streaming. Features a **four-backend audio engine** (streaming, Web Audio, AudioWorklet, SDL3 WASM), a fail-closed WebGPU ShaderGUI, and an optional projectM Milkdrop host.
 *   **Tech Stack:**
     *   **Frontend:** React 18, TypeScript, CSS3.
     *   **Build:** Webpack 5, Babel, lazy dynamic imports for WASM backends.
@@ -26,7 +26,7 @@ Last updated: September 2026
 | Streaming (default) | `src/audio/backends/StreamingAudioPlayer.ts` |
 | Buffered Web Audio | `src/audio/backends/WebAudioPlayer.ts` |
 | AudioWorklet + PCM tap | `src/audio/backends/WorkletAudioPlayer.ts` |
-| SDL3 / SDL2 WASM | `src/audio/backends/Sdl3AudioPlayer.ts`, `Sdl2AudioPlayer.ts` |
+| SDL3 WASM | `src/audio/backends/Sdl3AudioPlayer.ts` |
 | SDL → analyser bridge | `src/audio/SdlPcmBridge.ts`, `src/sdl/pcm_ring.h` |
 | SDL3 play ring | `src/sdl/play_ring.h`, `src/audio/playRingBackpressure.ts` |
 | Library / API client | `src/api/songApi.ts`, `src/audioLoader.ts` |
@@ -43,9 +43,9 @@ Last updated: September 2026
 
 ## 3. Complexity Hotspots
 
-*   **WASM memory interop (`Sdl3AudioPlayer.ts`, `Sdl2AudioPlayer.ts` under `src/audio/backends/`):**
-    *   Manual `malloc`, HEAP views, channel interleaving. PTHREADS builds expose memory differently (`wasmMemory.buffer` vs `HEAPU8.buffer`).
-    *   **`INITIAL_MEMORY` is 64 MiB** (`67108864`) with `ALLOW_MEMORY_GROWTH=1`. The previous 256 MiB floor was paid by every SDL user because the engines stored a full-track `std::vector<float>`. SDL3 stream mode uses `play_ring.h` (~1.5 MiB) instead. Debug: `scripts/build-wasm.sh --debug` (`-O0 -g ASSERTIONS SAFE_HEAP`, 32 MiB floor).
+*   **WASM memory interop (`Sdl3AudioPlayer.ts` under `src/audio/backends/`):**
+    *   Manual `malloc`, HEAP views, channel interleaving. PTHREADS builds expose memory differently (`wasmMemory.buffer` vs `HEAPU8.buffer`). `heapF32()` re-reads `HEAPF32` / `wasmMemory.buffer` after grow.
+    *   **`INITIAL_MEMORY` is 64 MiB** (`67108864`) with `ALLOW_MEMORY_GROWTH=1` and **`MAXIMUM_MEMORY` 512 MiB** (`536870912`). Without the explicit cap, pthreads+growth still set `Memory.maximum` to 32768 pages (**2 GiB**). The 512 MiB flag **lowers** that SAB max. SDL3 stream mode uses `play_ring.h` (~1.5 MiB); buffered `_create_audio_buffer` rejects >384 MiB of f32 PCM. Debug: `scripts/build-wasm.sh --debug` (`-O0 -g ASSERTIONS SAFE_HEAP`, 32 MiB floor, same 512 MiB max).
     *   **Keep `-pthread`:** JS `_push_pcm` (main thread) and the SDL audio callback (pthread) share the play ring atomics. The viz tap (`SdlPcmBridge`) uses `Atomics` on `wasmMemory`. Dropping pthreads would require posting PCM onto the audio thread or polling non-shared HEAP. COOP/COEP is still required for AudioWorklet even without SDL pthreads.
 *   **SDL PCM ring → AudioWorklet (`SdlPcmBridge.ts`):**
     *   Viz ring written in the SDL audio callback; JS worklet reads and feeds `AnalyserNode`. Separate from the play ring (`play_ring.h`).

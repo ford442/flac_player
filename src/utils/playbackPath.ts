@@ -25,7 +25,7 @@ export function isFlacUrl(url: string): boolean {
 export function selectDecodeStrategy(
   contentLength: number | null,
   options: {
-    outputMode: 'streaming' | 'worklet' | 'web-audio' | 'sdl' | 'sdl2';
+    outputMode: 'streaming' | 'worklet' | 'web-audio' | 'sdl';
     url: string;
     forceStream?: boolean;
   }

@@ -2,6 +2,7 @@
 #include <emscripten.h>
 #include <vector>
 #include <iostream>
+#include <cstdio>
 #include <cmath>
 #include <algorithm>
 #include "pcm_ring.h"
@@ -62,6 +63,7 @@ static int configure_stream(int channels, int sampleRate) {
 
     if (!SDL_BindAudioStream(g_state.deviceId, g_state.stream)) {
         std::cerr << "[C++] SDL_BindAudioStream failed: " << SDL_GetError() << std::endl;
+        destroy_stream();
         return 0;
     }
     return 1;
@@ -123,7 +125,9 @@ void SDLCALL fill_audio_callback(void *userdata, SDL_AudioStream *stream, int ad
 
 EMSCRIPTEN_KEEPALIVE
 int init_audio() {
+#ifndef NDEBUG
     printf("[C++] init_audio called\n");
+#endif
     if (!SDL_Init(SDL_INIT_AUDIO)) {
         std::cerr << "[C++] SDL_Init failed: " << SDL_GetError() << std::endl;
         return 0;
@@ -139,42 +143,49 @@ int init_audio() {
 
     pcm_ring_init(65536);
     play_ring_init(PLAY_RING_CAPACITY);
+#ifndef NDEBUG
     printf("[C++] init_audio success. Device ID: %u play_ring=%u floats\n",
            g_state.deviceId, PLAY_RING_CAPACITY);
+#endif
     return 1;
 }
 
+// 384 MiB of f32 PCM; leaves ~128 MiB inside the 512 MiB WASM ceiling
+// for SDL, pthread stacks, play/viz rings, and fragmentation.
+static constexpr int kMaxBufferedFloats = (384 * 1024 * 1024) / (int)sizeof(float); // 100663296
+
 EMSCRIPTEN_KEEPALIVE
 float* create_audio_buffer(int length) {
-    try {
-        g_state.streamMode = false;
-        g_state.audioBuffer.resize(length);
-        return g_state.audioBuffer.data();
-    } catch (const std::exception& e) {
-        std::cerr << "[C++] Error resizing audio buffer: " << e.what() << std::endl;
+    if (length <= 0 || length > kMaxBufferedFloats) {
+        std::cerr << "[C++] create_audio_buffer rejected length=" << length << std::endl;
         return nullptr;
     }
+    g_state.streamMode = false;
+    // resize may still throw std::bad_alloc / abort on fragmentation OOM
+    // inside the cap. Until DISABLE_EXCEPTION_CATCHING, that is an uncaught
+    // wasm exception, not nullptr.
+    g_state.audioBuffer.resize((size_t)length);
+    return g_state.audioBuffer.data();
 }
 
 EMSCRIPTEN_KEEPALIVE
-void set_audio_data(int length, int channels, int sampleRate) {
+int set_audio_data(int length, int channels, int sampleRate) {
     if (g_state.audioBuffer.size() != (size_t)length) {
         std::cerr << "[C++] Buffer size mismatch." << std::endl;
-        return;
+        return 0;
     }
-
     g_state.streamMode = false;
     play_ring_reset();
-    configure_stream(channels, sampleRate);
+    return configure_stream(channels, sampleRate);
 }
 
 EMSCRIPTEN_KEEPALIVE
-void set_stream_format(int channels, int sampleRate) {
+int set_stream_format(int channels, int sampleRate) {
     g_state.streamMode = true;
     g_state.audioBuffer.clear();
     g_state.audioBuffer.shrink_to_fit();
     play_ring_reset();
-    configure_stream(channels, sampleRate);
+    return configure_stream(channels, sampleRate);
 }
 
 EMSCRIPTEN_KEEPALIVE

@@ -18,11 +18,11 @@ Earlier issues (#166–#185, then #193–#202) shipped the product surface and t
 
 ## Open issues (do next)
 
-Foundation leftovers, then finish existing library surface, then OS/social adapters. SDL2 is still full-buffer; EQ/ReplayGain still skip SDL speakers.
+Foundation leftovers, then finish existing library surface, then OS/social adapters. SDL2 **playback** is retired (#212); EQ/ReplayGain still skip SDL speakers.
 
 | Issue | Title | Priority |
 |-------|-------|----------|
-| [#212](https://github.com/ford442/flac_player/issues/212) | Foundation: WASM compile audit, C++ error reporting, and SDL2 retirement | **P0** — compile flags, `configure_stream` errors, retire or slim SDL2 |
+| [#212](https://github.com/ford442/flac_player/issues/212) | Foundation: WASM compile audit, C++ error reporting, and SDL2 retirement | **Done** — 512 MiB `MAXIMUM_MEMORY`, configure ABI, SDL2 playback retired |
 | [#213](https://github.com/ford442/flac_player/issues/213) | Foundation: Finish AudioContext — output device, channels, latency telemetry, DSP on SDL | **P0** — leftover #194; EQ/RG must hit SDL speakers before #209 DSP |
 | [#214](https://github.com/ford442/flac_player/issues/214) | Hygiene: dead TypeScript, docs drift, PlayerFallbackView split, deploy secrets | **P0** — unblocks agents; remove hardcoded deploy token |
 | [#216](https://github.com/ford442/flac_player/issues/216) | Feature: Finish library product — offline, pagination, accessibility, MusicBrainz | **P1** — wire surfaces that already exist |
@@ -32,7 +32,7 @@ Foundation leftovers, then finish existing library surface, then OS/social adapt
 
 ## Foundation before features
 
-1. Ship **#212** (WASM/C++ flags and errors) and **#213** (AudioContext sink + SDL DSP) before depending on SDL/worklet clocks in rooms or Cast.
+1. **#212** WASM/C++ flags, configure errors, and SDL2 playback retirement are **done**. Ship **#213** (AudioContext sink + SDL DSP) before depending on SDL/worklet clocks in rooms or Cast.
 2. Ship **#214** in parallel (docs, dead code, `deploy.py` secrets, split `PlayerFallbackView` so #208/#209 do not grow the prop dump).
 3. **#216** is the next user-facing work (offline badges, pagination, a11y) — unfinished wiring, not a new product.
 4. **#208** Media Session after the clock is honest; Cast after #215 seek or stay on the streaming `<audio>` backend.
@@ -44,12 +44,12 @@ Ideas validated by the September 2026 audit for a later cycle:
 
 - **Installable offline hi-fi PWA** — full library mirror + gapless offline once #216 badges and #215 gapless land
 - **projectM visual radio** — preset packs, beat-sync, shareable embeds (WASM host already optional)
-- **SDL3-only WASM** — after #212 Phase 3 retirement; keep SDL2 only if projectM needs it
+- **SDL3-only playback WASM** — **shipped** (#212). projectM keeps a separate `USE_SDL=2` video host.
 - **Shared `gpu-chores` package** — in-repo stub shipped (#201); extract when a second app needs it
 
 ## Documentation index
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — system diagram, five backends, visualizer chain
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — system diagram, four backends, visualizer chain
 - [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) — backend selection guide
 - [API.md](./API.md) — REST + projectM embed contract
 - [LISTENING_ROOMS.md](./LISTENING_ROOMS.md) — synced “listen together” rooms (design; implement via #209)

@@ -19,10 +19,6 @@ export async function createAudioBackend(
       const { Sdl3AudioPlayer } = await import('./backends/Sdl3AudioPlayer');
       return new Sdl3AudioPlayer(contextManager);
     }
-    case 'sdl2': {
-      const { Sdl2AudioPlayer } = await import('./backends/Sdl2AudioPlayer');
-      return new Sdl2AudioPlayer(contextManager);
-    }
     case 'web-audio': {
       const { WebAudioPlayer } = await import('./backends/WebAudioPlayer');
       return new WebAudioPlayer(contextManager);

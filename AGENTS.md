@@ -4,11 +4,11 @@ This document provides essential information for AI coding agents working on the
 
 ## Project Overview
 
-FLAC Player is a high-fidelity audio player web application with a **React/TypeScript frontend** and a **FastAPI Python backend**. It plays FLAC and WAV audio files directly in the browser and features a **five-backend audio engine** (streaming, Web Audio API, AudioWorklet, SDL3 WASM, SDL2 WASM) with real-time WebGPU shader visualization. It also includes advanced library management: track rating, tagging, smart playlist mixing, and playlist sharing.
+FLAC Player is a high-fidelity audio player web application with a **React/TypeScript frontend** and a **FastAPI Python backend**. It plays FLAC and WAV audio files directly in the browser and features a **four-backend audio engine** (streaming, Web Audio API, AudioWorklet, SDL3 WASM) with real-time WebGPU shader visualization. It also includes advanced library management: track rating, tagging, smart playlist mixing, and playlist sharing.
 
 **Key Capabilities:**
 - Play FLAC/WAV audio from URLs (HTTP/HTTPS, Google Cloud Storage)
-- Five audio output backends: **Streaming** (default), Web Audio API, AudioWorklet, SDL3 (WASM), SDL2 (WASM)
+- Four audio output backends: **Streaming** (default), Web Audio API, AudioWorklet, SDL3 (WASM)
 - Real-time audio visualization using WebGPU shaders (flat waveform + 3D cube + hardware GUI modes)
 - Music library management with ratings, tags, search, and filtering
 - Smart Mix: auto-generate queues based on shared tags
@@ -25,7 +25,7 @@ FLAC Player is a high-fidelity audio player web application with a **React/TypeS
 | Build System | Webpack 5, Babel, ESLint |
 | Audio (Native) | Web Audio API (`AudioContext`, `AnalyserNode`, `BufferSourceNode`) |
 | Audio (Worklet) | `AudioWorkletNode` with inline processor blob, ScriptProcessor fallback |
-| Audio (WASM) | SDL3/SDL2 compiled via Emscripten |
+| Audio (WASM) | SDL3 compiled via Emscripten |
 | Visualization | WebGPU API with WGSL shaders |
 | Backend | FastAPI, Pydantic v2, aiocache, httpx, uvicorn |
 | Storage | JSON file persistence (`data/songs/index.json`) |
@@ -45,8 +45,6 @@ flac_player/
 │   ├── index.html              # HTML template
 │   ├── sdl-audio.js            # SDL3 WASM module (generated via Emscripten)
 │   ├── sdl-audio.wasm          # SDL3 WASM binary (generated)
-│   ├── sdl2-audio.js           # SDL2 WASM module (generated via Emscripten)
-│   ├── sdl2-audio.wasm         # SDL2 WASM binary (generated)
 │   ├── script-processor-shim.js     # AudioWorklet fallback shim
 │   └── script-processor-processor.js # AudioWorklet processor
 ├── src/
@@ -72,10 +70,9 @@ flac_player/
 │   │   ├── useKnob.ts              # Drag interaction hook for rotary knobs
 │   │   └── useShaderUniforms.ts    # Shader uniform state management
 │   ├── sdl/
-│   │   ├── audio_engine.cpp    # SDL3 C++ audio engine (~209 lines)
-│   │   ├── audio_engine_sdl2.cpp # SDL2 C++ audio engine
-│   │   ├── build.sh            # wrapper -> scripts/build-wasm.sh --sdl3
-│   │   └── build_sdl2.sh       # wrapper -> scripts/build-wasm.sh --sdl2
+│   │   ├── audio_engine.cpp    # SDL3 C++ audio engine
+│   │   ├── pcm_ring.h / play_ring.h
+│   │   └── build.sh            # wrapper -> scripts/build-wasm.sh --sdl3
 │   ├── shaders/
 │   │   ├── waveform.ts         # WGSL shader for ShaderGUI
 │   │   └── waveform.wgsl       # Standalone WGSL file (reference)
@@ -85,12 +82,11 @@ flac_player/
 │   ├── audio/                  # Shared graph + backend factory
 │   │   ├── createAudioBackend.ts
 │   │   ├── AudioContextManager.ts, EQChain.ts, ReplayGainNode.ts, SdlPcmBridge.ts
-│   │   └── backends/           # Five selectable implementations
+│   │   └── backends/           # Four selectable implementations
 │   │       ├── StreamingAudioPlayer.ts   # default — HTMLAudio + range requests
 │   │       ├── WebAudioPlayer.ts         # buffered Web Audio API
 │   │       ├── WorkletAudioPlayer.ts     # AudioWorklet + PCM tap
-│   │       ├── Sdl3AudioPlayer.ts        # SDL3 WASM
-│   │       └── Sdl2AudioPlayer.ts        # SDL2 WASM
+│   │       └── Sdl3AudioPlayer.ts        # SDL3 WASM
 │   ├── hooks/
 │   │   ├── usePlaybackController.ts  # Backend lifecycle, load/play, queue advance
 │   ├── audioLoader.ts          # Audio fetching + backend API client (~765 lines)
@@ -129,9 +125,8 @@ pip install -r requirements.txt
 npm start
 
 # Build WASM modules (requires Emscripten/emsdk)
-npm run build:wasm              # scripts/build-wasm.sh --all (SDL3 + SDL2)
-npm run build:wasm:sdl3         # SDL3 only — equivalent to bash src/sdl/build.sh
-npm run build:wasm:sdl2         # SDL2 only — equivalent to bash src/sdl/build_sdl2.sh
+npm run build:wasm              # scripts/build-wasm.sh --sdl3
+npm run build:wasm:sdl3         # equivalent to bash src/sdl/build.sh
 npm run build:projectm          # optional projectM Milkdrop host
 npm run verify:wasm             # CI: check committed artifacts match sources
 
@@ -196,18 +191,17 @@ Copy `.env.example` to `.env` for local development.
 
 ### Code Patterns
 - **Observer Pattern**: Players use `setStateChangeCallback` to notify UI of state changes
-- **Strategy Pattern**: Five audio player implementations share the `AudioBackend` / `ConfigurableAudioBackend` interface via `createAudioBackend()`
+- **Strategy Pattern**: Four audio player implementations share the `AudioBackend` / `ConfigurableAudioBackend` interface via `createAudioBackend()`
 - **Manual Resource Management**: WebGPU resources and audio nodes must be explicitly destroyed
 
 ## Critical Architecture Details
 
 ### Audio Backend Selection
-The `Player.tsx` component selects one of five backends via `createAudioBackend()` (lazy dynamic imports):
+The `Player.tsx` component selects one of four backends via `createAudioBackend()` (lazy dynamic imports):
 1. **Streaming** (`audio/backends/StreamingAudioPlayer.ts`) - Default. HTMLAudioElement + HTTP range requests; crossfade support
 2. **Web Audio** (`audio/backends/WebAudioPlayer.ts`) - Full fetch + decode; buffered `BufferSourceNode`
 3. **AudioWorklet** (`audio/backends/WorkletAudioPlayer.ts`) - Low-latency worklet; `setPCMCallback` for projectM PCM tap
 4. **SDL3** (`audio/backends/Sdl3AudioPlayer.ts`) - C++ SDL3 compiled to WASM; PCM ring → `SdlPcmBridge` → analyser
-5. **SDL2** (`audio/backends/Sdl2AudioPlayer.ts`) - C++ SDL2 compiled to WASM with AudioWorklet glue
 
 See `docs/AUDIO_BACKENDS.md` for selection guidance.
 
@@ -221,14 +215,9 @@ The SDL audio players require careful memory handling:
 const ptr = module._create_audio_buffer(length);
 const floatIndex = ptr / 4;
 module.HEAPF32.set(interleaved, floatIndex);
-
-// SDL2: Uses _malloc(), writes to wasmMemory.buffer or HEAPU8.buffer
-const ptr = module._malloc(byteLength);
-const destination = new Float32Array(module.wasmMemory.buffer, ptr, length);
-destination.set(interleaved);
 ```
 
-**WARNING**: Emscripten builds with `PTHREADS` and `AUDIO_WORKLET` expose memory differently (`wasmMemory.buffer` vs `HEAPU8.buffer`). The current implementation has multiple fallbacks. Always verify memory access works.
+**WARNING**: Emscripten builds with `PTHREADS` expose memory differently (`wasmMemory.buffer` vs `HEAPU8.buffer`). `heapF32()` re-reads the view after grow. Heap is capped at 512 MiB (`MAXIMUM_MEMORY`).
 
 ### Cross-Origin Isolation Requirements
 The application requires specific headers for AudioWorklet and SharedArrayBuffer:
@@ -295,7 +284,7 @@ User selects track
     ↓
 audioLoader / songApi → absolute https:// URL from storage.noahcohn.com
     ↓
-createAudioBackend(mode) — streaming (default) | web-audio | worklet | sdl | sdl2
+createAudioBackend(mode) — streaming (default) | web-audio | worklet | sdl
     ↓
 AudioContextManager (EQ, analyser, volume)
     ↓
@@ -381,9 +370,9 @@ Due to SharedArrayBuffer usage, the app must be served over HTTPS (except localh
 
 1. **Streaming vs buffered**: Streaming requires URL + CORS + Accept-Ranges; cannot load raw ArrayBuffers. Crossfade is streaming-only.
 2. **Test coverage**: Vitest unit tests (`queueUtils`, `audioDecoder`, `rendererSelection`) + Playwright smoke suite; expand audio pipeline integration ([#172](https://github.com/ford442/flac_player/issues/172))
-3. **WASM Build**: `scripts/build-wasm.sh` builds both SDL3 and SDL2; SDL3 also via `bash src/sdl/build.sh`; `npm run verify:wasm` checks artifact freshness in CI
+3. **WASM Build**: `scripts/build-wasm.sh` builds SDL3 only; also `bash src/sdl/build.sh`; `npm run verify:wasm` checks artifact freshness in CI
 4. **Hardcoded Deploy Credentials**: `deploy.py` contains server-specific configuration
-5. **Memory Constraints**: Large audio files may require WASM memory growth (`ALLOW_MEMORY_GROWTH=1` is enabled in build scripts)
+5. **Memory Constraints**: WASM heap grows from a 64 MiB floor up to **512 MiB** (`MAXIMUM_MEMORY`). Large files use the play ring, not a full-buffer vector.
 6. **Shader-to-CSS layout**: Knob/LED UVs live in `src/visuals/waveformContract.ts`. Changing CSS layout requires updating that contract once (both GPU shaders inject it).
 
 ## Development Workflow
@@ -391,7 +380,7 @@ Due to SharedArrayBuffer usage, the app must be served over HTTPS (except localh
 1. **Setup**: `npm install` and `pip install -r requirements.txt`
 2. **Data directories**: Ensure `data/music/` and `data/songs/` exist and are writable
 3. **Backend**: `python app.py` (runs on port 7860 by default)
-4. **WASM Build** (if modifying C++): `npm run build:wasm`, commit `public/sdl-audio.*`, `public/sdl2-audio.*`, and `public/wasm-source.sha256`
+4. **WASM Build** (if modifying C++): `npm run build:wasm`, commit `public/sdl-audio.*` and `public/wasm-source.sha256`
 5. **Development**: `npm start` — opens at http://localhost:3000 with hot reload
 6. **Lint**: `npm run lint` — must pass before committing
 7. **Build**: `npm run build` — outputs production bundle to `dist/`
@@ -402,7 +391,7 @@ Due to SharedArrayBuffer usage, the app must be served over HTTPS (except localh
 Key module dependencies:
 - `Player.tsx` → `usePlaybackController`, `audio/backends/*`, `audioLoader.ts`, `webgpuVisualizer.ts`, `useKeyboardShortcuts.ts`, `LibraryView.tsx`, `QueuePanel.tsx`, `StarRating.tsx`, `ShaderGUI.tsx`
 - `ShaderGUI.tsx` → `WebGPUVisualizer`, `useBeatDetection`, `TopScreen`, `BottomScreen`, `Knob`, `Button`, `VolumeSlider`, `Chassis`
-- `WebAudioPlayer.ts` / `WorkletAudioPlayer.ts` / `Sdl3AudioPlayer.ts` / `Sdl2AudioPlayer.ts` → `flacDecoder.ts`
+- `WebAudioPlayer.ts` / `WorkletAudioPlayer.ts` / `Sdl3AudioPlayer.ts` → `flacDecoder.ts`
 - `webgpuVisualizer.ts` → `math.ts`, `waveform.ts`
 - `app.py` → `data/songs/index.json` (runtime)
 
@@ -430,5 +419,5 @@ Dependencies (npm + pip) are installed automatically by the startup update scrip
 - **Python console scripts install to `~/.local/bin`** (not on PATH). Run the backend with `python3 app.py` or `python3 -m uvicorn app:app --host 0.0.0.0 --port 7860`.
 - **Playwright browsers are not part of `npm install`.** For `npm run test:e2e`, first run `npx playwright install chromium` (add `--with-deps` for system libs).
 - **WebGPU may be unavailable in headless Chrome**, so ShaderGUI shows the expected WebGPU fatal panel and does not start WebGL2/Canvas2D. Audio playback tests still work because the failure is isolated to the visualizer slot.
-- **WASM builds need Emscripten/emsdk, which is NOT installed.** Prebuilt `public/sdl-audio.*` / `sdl2-audio.*` are committed, so `npm start`, `npm run build`, and all default (streaming) playback work without emsdk. Only `npm run build:wasm*` requires the toolchain.
+- **WASM builds need Emscripten/emsdk, which is NOT installed.** Prebuilt `public/sdl-audio.*` is committed, so `npm start`, `npm run build`, and all default (streaming) playback work without emsdk. Only `npm run build:wasm*` requires the toolchain.
 - `npm start` uses `--open`; there is no desktop browser auto-launch in the VM, but the dev server still serves on `http://localhost:3000`.

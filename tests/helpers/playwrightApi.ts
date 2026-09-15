@@ -67,7 +67,8 @@ export async function stubWasmBackendImports(page: Page): Promise<void> {
     const noopModule = {
       _malloc: () => 0,
       _free: () => {},
-      _set_audio_data: () => {},
+      _set_audio_data: () => 1,
+      _set_stream_format: () => 1,
       _play: () => {},
       _pause: () => {},
       _stop: () => {},

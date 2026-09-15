@@ -11,8 +11,8 @@ import { playRingShouldPause } from '../playRingBackpressure';
 interface SdlModule extends SdlPcmModule {
   _init_audio(): number;
   _create_audio_buffer(length: number): number;
-  _set_audio_data(length: number, channels: number, sampleRate: number): void;
-  _set_stream_format(channels: number, sampleRate: number): void;
+  _set_audio_data(length: number, channels: number, sampleRate: number): number;
+  _set_stream_format(channels: number, sampleRate: number): number;
   _push_pcm(ptr: number, count: number): number;
   _get_play_ring_fill(): number;
   _get_play_ring_capacity(): number;
@@ -232,7 +232,10 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
       try {
         const floatIndex = ptr / 4;
         this.heapF32().set(interleaved, floatIndex);
-        this.module._set_audio_data(interleavedLength, channels, result.sampleRate);
+        const configured = this.module._set_audio_data(interleavedLength, channels, result.sampleRate);
+        if (configured !== 1) {
+          throw new Error('SDL stream configure failed (set_audio_data)');
+        }
 
         await this.contextManager.ensureForTrack({
           sampleRate: result.sampleRate,
@@ -314,7 +317,10 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
         if (!this.module) return;
         this.decodedChannels = channels;
         this.decodedSampleRate = sampleRate;
-        this.module._set_stream_format(channels, sampleRate);
+        const configured = this.module._set_stream_format(channels, sampleRate);
+        if (configured !== 1) {
+          throw new Error('SDL stream configure failed (set_stream_format)');
+        }
         await this.contextManager.ensureForTrack({ sampleRate, channels });
         await this.contextManager.resume();
         await sharedSdlPcmBridge.connect(this.contextManager, this.module, channels);

@@ -4,7 +4,7 @@ Last updated: August 2026
 
 ## System overview
 
-The app is a React/TypeScript single-page player with a **five-backend audio engine**, a **fail-closed WebGPU visualizer**, optional **projectM Milkdrop host**, and a **FastAPI library backend** (production default: `storage.noahcohn.com`).
+The app is a React/TypeScript single-page player with a **four-backend audio engine**, a **fail-closed WebGPU visualizer**, optional **projectM Milkdrop host**, and a **FastAPI library backend** (production default: `storage.noahcohn.com`).
 
 ```mermaid
 flowchart TB
@@ -23,7 +23,6 @@ flowchart TB
     WebAudio["WebAudioPlayer<br/>buffered Web Audio API"]
     Worklet["WorkletAudioPlayer<br/>worklet + libflac decode"]
     SDL3["Sdl3AudioPlayer<br/>SDL3 WASM"]
-    SDL2["Sdl2AudioPlayer<br/>SDL2 WASM"]
   end
 
   subgraph Load["Loading & library"]
@@ -60,7 +59,6 @@ flowchart TB
   WebAudio --> ACM
   Worklet --> ACM
   SDL3 --> ACM
-  SDL2 --> ACM
   ACM --> EQ --> Analyser
   Analyser --> Probe
   Probe -->|adapter + device + canvas context ready| WebGPU
@@ -68,7 +66,6 @@ flowchart TB
   Analyser -->|visualizer=webgl2 or Settings| WebGL2
   Worklet -->|PCM tap| ProjectM
   SDL3 -->|PCM ring bridge| Analyser
-  SDL2 -->|PCM ring bridge| Analyser
 ```
 
 ## Audio data flow
@@ -84,7 +81,7 @@ GET https://storage.noahcohn.com/api/songs  (or REACT_APP_API_URL)
     ↓
 Each song.url is an absolute https:// URL to the audio file
     ↓
-createAudioBackend(outputMode) → one of five players
+createAudioBackend(outputMode) → one of four players
     ↓
 AudioContextManager (shared context, EQ chain, analyser, volume)
     ↓
@@ -119,15 +116,14 @@ Optional 3s crossfade via second <audio> element
 
 No full-file download before playback starts. Requires CORS + `Accept-Ranges` on the audio host.
 
-## Five audio backends
+## Four audio backends
 
 | Mode | Module | Load model | Best for |
 |------|--------|------------|----------|
 | `streaming` (default) | `audio/backends/StreamingAudioPlayer.ts` | URL → `<audio>` | Large library, instant start, crossfade |
 | `web-audio` | `audio/backends/WebAudioPlayer.ts` | Full fetch + decode | Simple buffered playback, debugging |
 | `worklet` | `audio/backends/WorkletAudioPlayer.ts` | Fetch/decode → worklet ring | Low latency, projectM PCM tap, EQ |
-| `sdl` | `audio/backends/Sdl3AudioPlayer.ts` | Range + play ring (large) or full fetch (small) | Experimental WASM output; bounded RAM |
-| `sdl2` | `audio/backends/Sdl2AudioPlayer.ts` | Full fetch → WASM SDL2 | Same, SDL2 + AudioWorklet glue |
+| `sdl` | `audio/backends/Sdl3AudioPlayer.ts` | Range + play ring (large) or full fetch (small) | Experimental WASM output; 512 MiB heap cap |
 
 Backend factory: `src/audio/createAudioBackend.ts` (dynamic `import()` — WASM chunks load lazily).
 
@@ -185,7 +181,7 @@ In-app ProjectMHost OR postMessage / BroadcastChannel('projectm-audio')
 
 ### SDL PCM bridge (`src/audio/SdlPcmBridge.ts`)
 
-Visualizer tap only: lock-free ring in C++ (`src/sdl/pcm_ring.h`, 65536 floats) → AudioWorklet → `AnalyserNode` for SDL3/SDL2. SDL3 **playback** uses a separate play ring (`src/sdl/play_ring.h`, 384000 floats) fed by `_push_pcm`.
+Visualizer tap only: lock-free ring in C++ (`src/sdl/pcm_ring.h`, 65536 floats) → AudioWorklet → `AnalyserNode` for SDL3. SDL3 **playback** uses a separate play ring (`src/sdl/play_ring.h`, 384000 floats) fed by `_push_pcm`.
 
 ## Library & storage (client)
 
@@ -209,9 +205,8 @@ Key endpoints: `GET /api/songs`, `POST /api/songs/{id}/play`, `POST /api/share`,
 
 | Artifact | Build command | Committed in `public/` |
 |----------|---------------|------------------------|
-| SDL3 | `npm run build:wasm:sdl3` or `bash src/sdl/build.sh` (`--debug` via `scripts/build-wasm.sh --debug --sdl3`) | `sdl-audio.js`, `sdl-audio.wasm` |
-| SDL2 | `npm run build:wasm:sdl2` or `bash src/sdl/build_sdl2.sh` | `sdl2-audio.js`, `sdl2-audio.wasm` |
-| projectM | `npm run build:projectm` | `projectm/projectm-host.*` (optional) |
+| SDL3 | `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh` (`--debug` via `scripts/build-wasm.sh --debug --sdl3`) | `sdl-audio.js`, `sdl-audio.wasm` |
+| projectM | `npm run build:projectm` | `projectm/projectm-host.*` (optional; separate `USE_SDL=2` video host) |
 
 CI runs `npm run verify:wasm` against `public/wasm-source.sha256`. Production webpack uses `--env skipWasm=true` and copies prebuilt binaries.
 

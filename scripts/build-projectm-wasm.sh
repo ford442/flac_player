@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 # Build in-app projectM WASM host (libprojectM + projectm_host.cpp).
 #
+# Host is a GL/SDL2 video module (USE_SDL=2, WebGL2, FULL_ES2/ES3, preset
+# preload). -O2 is the Emscripten default for large CMake/static-lib links:
+# faster compiles, less brittle inlining across libprojectM, and the host is
+# not on the audio callback. SDL audio uses -O3 because the pthread callback
+# + ring copy is the hot path. Do not copy SDL's -O3 (or a future pinned-emsdk
+# -flto) here without a dedicated projectM size/perf measurement.
+#
 # Outputs to public/projectm/:
 #   projectm-host.js, projectm-host.wasm, projectm-host.data (presets)
 #

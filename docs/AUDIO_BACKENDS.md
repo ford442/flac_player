@@ -1,6 +1,6 @@
 # Audio Backends Guide
 
-Choose the output mode in the player UI or via persisted `localStorage` (`flac_player_output_mode`). Default: **`streaming`**.
+Choose the output mode in the player footer `<select>` (session-only in `usePlayerState`; not persisted). Default: **`streaming`**.
 
 Factory entry point: `src/audio/createAudioBackend.ts`.
 
@@ -17,14 +17,14 @@ Need full in-memory buffer + simplest Web Audio graph?
   └─ YES → web-audio
 
 Experimenting with C++ SDL WASM output?
-  └─ YES → sdl (SDL3) or sdl2 (SDL2)
+  └─ YES → sdl (SDL3)
 ```
 
 ## Gapless / crossfade matrix
 
 Queue transition mode is configured in **Settings → Queue transitions** (`flac_player_gapless_mode`, `flac_player_crossfade_ms`).
 
-| Mode | Streaming (native `<audio>`) | Streaming (hi-fi worklet path) | Web Audio | Worklet | SDL3/2 |
+| Mode | Streaming (native `<audio>`) | Streaming (hi-fi worklet path) | Web Audio | Worklet | SDL3 |
 |------|-------------------------------|-------------------------------|-----------|---------|--------|
 | **Gapless** | ✓ Header-parsed duration, dual `<audio>` handoff | ✓ Worklet buffer queue | ✓ Scheduled `BufferSourceNode` | ✓ Worklet buffer queue | — |
 | **Crossfade** | ✓ Dual `<audio>` + gain ramps | Gapless handoff (no overlap) | Gapless handoff when overlap minimal | Gapless handoff | — |
@@ -40,8 +40,7 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
   - **streaming (native `<audio>`):** media-element clock; analyser lives on the shared native-rate context.
   - **web-audio:** `AudioBuffer` stays at file rate; `BufferSourceNode` lets the browser resample if the context could not match.
   - **worklet:** PCM is consumed 1:1 with the context callback rate. The processor is given the file (or context) rate via `processorOptions`; if the device cannot open native rate, a documented linear interpolator (`linearResampler.ts`) converts chunks. Seek uses the processor's own `this.sampleRate`.
-  - **sdl:** WASM device opens at file rate. Large FLACs use the C++ play ring (`play_ring.h`); the analyser tap is still `SdlPcmBridge` at `context.sampleRate`.
-  - **sdl2:** Device is created in `set_audio_data` at file rate (full-buffer only).
+  - **sdl:** WASM device opens at file rate. Large FLACs use the C++ play ring (`play_ring.h`); the analyser tap is still `SdlPcmBridge` at `context.sampleRate`. `_set_audio_data` / `_set_stream_format` return `1` on success; TypeScript rejects the load on `!== 1`. WASM heap is capped at 512 MiB (`MAXIMUM_MEMORY`).
 - **ReplayGain / loudness matching:** Settings → **Loudness (ReplayGain)** (`flac_player_replaygain_mode`, `flac_player_replaygain_limiter`). Applies a dedicated gain stage **before** the master volume fader on streaming, web-audio, and worklet backends. SDL backends multiply gain into WASM `_set_volume` (visualizer tap still uses the shared graph). Client-side tag fetch uses a 64 KiB range request when API metadata is missing. Crossfade overlap may briefly mismatch levels when adjacent tracks have very different tags ([#184](https://github.com/ford442/flac_player/issues/184)).
 
 ## Backend reference
@@ -122,27 +121,19 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 - **Small files (buffered):** full fetch → decode → `_create_audio_buffer` / `_set_audio_data` (compat path).
 - **Large files (≥ 32 MB) or `forceStream`:** `runHifiStreamPipeline` → `_set_stream_format` → `_push_pcm` into a **play ring** (`PLAY_RING_CAPACITY` = 384000 floats, ~2 s stereo f32 @ 96 kHz). JS pauses decode when fill &gt; 75% (`get_play_ring_fill`). The SDL callback drains the play ring, volume-scales into a pre-sized scratch, then writes the **viz** ring (`pcm_ring.h`, 65536 floats) for `SdlPcmBridge`.
 
-Seek is **disabled** in hi-fi stream mode (same as worklet). SDL2 remains full-buffer only.
+Seek is **disabled** in hi-fi stream mode (same as worklet).
+
+Buffered `_create_audio_buffer` rejects lengths above 384 MiB of f32 PCM (`nullptr`); `_set_audio_data` / `_set_stream_format` return `0` if `SDL_CreateAudioStream` / `SDL_BindAudioStream` fail, and the JS player throws instead of hanging.
 
 **Gapless:** Not supported — each track is loaded with `stop()` between files.
 
-**Build:** `npm run build:wasm:sdl3` or `bash src/sdl/build.sh`. Debug: `scripts/build-wasm.sh --debug --sdl3`.
-
----
-
-### 5. SDL2 WASM (`sdl2`)
-
-**Files:** `src/audio/backends/Sdl2AudioPlayer.ts`, `src/sdl/audio_engine_sdl2.cpp`, `public/sdl2-audio.*`
-
-Same as SDL3 **buffered** path (full-track `std::vector` + `set_audio_data`). No `push_pcm` / play ring yet. **Gapless:** not supported. Large files still allocate the whole decoded PCM in the WASM heap.
-
-Build: `npm run build:wasm:sdl2` or `bash src/sdl/build_sdl2.sh`.
+**Build:** `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh`. Debug: `scripts/build-wasm.sh --debug --sdl3`. Release: `-O3 -DNDEBUG`, `INITIAL_MEMORY=64 MiB`, `MAXIMUM_MEMORY=512 MiB`. SDL2 **playback** was retired (#212); projectM still uses a separate `USE_SDL=2` **video** host (`npm run build:projectm`).
 
 ---
 
 ## Shared features (all backends)
 
-| Feature | Streaming | Web Audio | Worklet | SDL3/2 |
+| Feature | Streaming | Web Audio | Worklet | SDL3 |
 |---------|-----------|-----------|---------|--------|
 | EQ (10-band) | ✓ | ✓ | ✓ | ✓ |
 | Analyser → visualizer | ✓ | ✓ | ✓ | ✓ (PCM bridge) |
@@ -163,7 +154,7 @@ Build: `npm run build:wasm:sdl2` or `bash src/sdl/build_sdl2.sh`.
 | streaming | Analyser (~60 fps) | Analyser PCM |
 | web-audio | Analyser | Analyser PCM |
 | worklet | Analyser + optional PCM | Worklet PCM tap (best) |
-| sdl / sdl2 | Analyser via PCM bridge | Analyser PCM |
+| sdl | Analyser via PCM bridge | Analyser PCM |
 
 In **split** aesthetic mode, ShaderGUI keeps the required WebGPU renderer with a reduced visual layout alongside projectM. If the WebGPU boot probe fails, only the ShaderGUI surface hard-fails; audio and projectM remain independent.
 

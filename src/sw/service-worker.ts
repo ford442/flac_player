@@ -76,9 +76,9 @@ registerRoute(
   ({ url, request }) => request.method === 'GET'
     && url.origin === self.location.origin
     && /\.(wasm|js)$/.test(url.pathname)
-    && /\/(sdl-audio|sdl2-audio|script-processor|projectm)/.test(url.pathname),
+    && /\/(sdl-audio|script-processor|projectm)/.test(url.pathname),
   new CacheFirst({
-    cacheName: 'flac-player-wasm-v1',
+    cacheName: 'flac-player-wasm-v2',
     plugins: [
       new CacheableResponsePlugin({ statuses: [0, 200] }),
       new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 60 * 60 * 24 * 30 }),

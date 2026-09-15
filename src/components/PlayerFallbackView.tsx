@@ -617,7 +617,6 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
               <option value="web-audio">Web Audio (buffered)</option>
               <option value="worklet">AudioWorklet</option>
               <option value="sdl">SDL3</option>
-              <option value="sdl2">SDL2</option>
             </select>
             <span className="text-xs text-gray-400 w-12 text-right">{muted ? '🔇 0%' : `${Math.round(volume * 100)}%`}</span>
           </div>

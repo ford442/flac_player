@@ -26,7 +26,6 @@ export function loadWasmScript(url: string): Promise<void> {
 
 export const WASM_ASSETS = {
   sdl3: '/sdl-audio.js',
-  sdl2: '/sdl2-audio.js',
   scriptProcessorShim: '/script-processor-shim.js',
   projectmHost: '/projectm/projectm-host.js',
 } as const;

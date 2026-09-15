@@ -40,7 +40,7 @@ in `contabo_storage_manager/packages/python-bridge/app/config.py`.
 
 ## Audio pipeline
 
-Five backends via `src/audio/createAudioBackend.ts`. See `docs/AUDIO_BACKENDS.md`.
+Four backends via `src/audio/createAudioBackend.ts`. See `docs/AUDIO_BACKENDS.md`.
 
 **Streaming (default):**
 ```
@@ -83,7 +83,6 @@ Helper: `src/utils/debug.ts` — used by `audioLoader.ts` and `api/songApi.ts`.
 
 ```bash
 npm run build:wasm:sdl3    # or bash src/sdl/build.sh
-npm run build:wasm:sdl2    # or bash src/sdl/build_sdl2.sh
 npm run build:projectm     # optional Milkdrop host
 npm run verify:wasm        # CI artifact check
 ```
