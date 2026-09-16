@@ -7,6 +7,7 @@
 #include <algorithm>
 #include "pcm_ring.h"
 #include "play_ring.h"
+#include "dsp_chain.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -47,6 +48,7 @@ static int configure_stream(int channels, int sampleRate) {
     g_state.playHead = 0;
     g_state.isPlaying = false;
     pcm_ring_reset();
+    dsp_request_reset();
 
     SDL_AudioSpec spec;
     spec.channels = channels;
@@ -85,12 +87,14 @@ void SDLCALL fill_audio_callback(void *userdata, SDL_AudioStream *stream, int ad
     if (floatsWanted <= 0) return;
     floatsWanted = std::min(floatsWanted, (int)(sizeof(g_callbackScratch) / sizeof(g_callbackScratch[0])));
 
+    // Speaker DSP (ReplayGain -> limiter -> volume -> EQ) runs in place on the
+    // scratch copy; the viz ring receives the processed signal the user hears.
     if (g_state.streamMode) {
         int got = play_ring_read(g_callbackScratch, floatsWanted);
         if (got > 0) {
-            const float* scaled = scale_samples(g_callbackScratch, got, g_state.volume);
-            pcm_ring_write(scaled, got);
-            SDL_PutAudioStreamData(stream, scaled, got * (int)sizeof(float));
+            dsp_process(g_callbackScratch, got, g_state.channels, g_state.sampleRate, g_state.volume);
+            pcm_ring_write(g_callbackScratch, got);
+            SDL_PutAudioStreamData(stream, g_callbackScratch, got * (int)sizeof(float));
             g_state.playHead += (size_t)got;
         }
         if (play_ring_fill() == 0 && play_ring_ended()) {
@@ -110,11 +114,11 @@ void SDLCALL fill_audio_callback(void *userdata, SDL_AudioStream *stream, int ad
     }
 
     int floatsToPush = (int)std::min(samplesRemaining, (size_t)floatsWanted);
-    const float* src = &g_state.audioBuffer[g_state.playHead];
-    const float* scaled = scale_samples(src, floatsToPush, g_state.volume);
+    std::copy_n(&g_state.audioBuffer[g_state.playHead], floatsToPush, g_callbackScratch);
+    dsp_process(g_callbackScratch, floatsToPush, g_state.channels, g_state.sampleRate, g_state.volume);
 
-    pcm_ring_write(scaled, floatsToPush);
-    SDL_PutAudioStreamData(stream, scaled, floatsToPush * (int)sizeof(float));
+    pcm_ring_write(g_callbackScratch, floatsToPush);
+    SDL_PutAudioStreamData(stream, g_callbackScratch, floatsToPush * (int)sizeof(float));
 
     g_state.playHead += (size_t)floatsToPush;
 
@@ -238,6 +242,7 @@ void stop() {
     g_state.playHead = 0;
     play_ring_reset();
     pcm_ring_reset();
+    dsp_request_reset();
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -255,6 +260,7 @@ void seek(float time) {
     SDL_ClearAudioStream(g_state.stream);
     g_state.playHead = sampleIndex;
     pcm_ring_reset();
+    dsp_request_reset();
 }
 
 EMSCRIPTEN_KEEPALIVE
@@ -277,6 +283,18 @@ float get_current_time() {
 EMSCRIPTEN_KEEPALIVE
 void set_volume(float vol) {
     g_state.volume = std::max(0.0f, std::min(1.0f, vol));
+}
+
+// EQ band from JS DEFAULT_EQ_BANDS. type: 0 lowshelf, 1 peaking, 2 highshelf.
+EMSCRIPTEN_KEEPALIVE
+void set_eq_band(int index, int type, float freq, float q, float gainDb) {
+    dsp_set_eq_band(index, type, freq, q, gainDb);
+}
+
+// ReplayGain stage before volume (linear, unclamped above 1) + peak limiter toggle.
+EMSCRIPTEN_KEEPALIVE
+void set_replaygain(float linear, int limiterEnabled) {
+    dsp_set_replaygain(linear, limiterEnabled);
 }
 
 EMSCRIPTEN_KEEPALIVE

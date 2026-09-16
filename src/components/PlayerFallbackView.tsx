@@ -18,6 +18,7 @@ import { FAST_STORAGE_HOST } from '../utils/audioUtils';
 import type { GaplessMode } from '../types/gapless';
 import type { ReplayGainMode } from '../utils/replayGain';
 import type { LatencyMode } from '../audio/sampleRatePolicy';
+import type { AudioOutputControls } from './EQPanel';
 import { getNextQueueIndex, getPreviousQueueIndex } from '../utils/queueUtils';
 import {
   isCompatibilityVisualizerEnabled,
@@ -99,6 +100,7 @@ export interface PlayerFallbackViewProps {
   setReplayGainLimiter: (enabled: boolean) => void;
   latencyMode: LatencyMode;
   setLatencyMode: (mode: LatencyMode) => void;
+  audioOutput: AudioOutputControls;
   prebufferingNext: boolean;
   playbackPath: PlaybackPathInfo | null;
   isSharedPlaylist: boolean;
@@ -154,7 +156,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate,
     gaplessMode, setGaplessMode, crossfadeMs, setCrossfadeMs,
     replayGainMode, setReplayGainMode, replayGainLimiter, setReplayGainLimiter,
-    latencyMode, setLatencyMode,
+    latencyMode, setLatencyMode, audioOutput,
     prebufferingNext,
     playbackPath,
     isSharedPlaylist, sharedPlaylistTitle, analyser,
@@ -492,7 +494,8 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
                     crossfadeMs={crossfadeMs} onCrossfadeMsChange={setCrossfadeMs}
                     replayGainMode={replayGainMode} onReplayGainModeChange={setReplayGainMode}
                     replayGainLimiter={replayGainLimiter} onReplayGainLimiterChange={setReplayGainLimiter}
-                    latencyMode={latencyMode} onLatencyModeChange={setLatencyMode} />
+                    latencyMode={latencyMode} onLatencyModeChange={setLatencyMode}
+                    audioOutput={audioOutput} />
                 </div>
                 <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
                   <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Audio Engine</span>

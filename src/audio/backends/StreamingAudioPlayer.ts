@@ -546,7 +546,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     this.contextManager.setReplayGainLimiter(enabled);
   }
 
-  getAnalyser(): AnalyserNode {
+  getAnalyser(): AnalyserNode | null {
     return this.contextManager.getAnalyser();
   }
 

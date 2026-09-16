@@ -1,5 +1,6 @@
 import { decodeAudio } from '../../audioDecoder';
 import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
+import { DEFAULT_EQ_BANDS } from '../EQChain';
 import { SdlPcmModule, sharedSdlPcmBridge } from '../SdlPcmBridge';
 import { WASM_ASSETS, loadWasmScript } from '../wasmLoader';
 import type { AudioPlaybackState, DecodedPcmView } from '../../types/audio';
@@ -24,6 +25,9 @@ interface SdlModule extends SdlPcmModule {
   _seek(time: number): void;
   _get_current_time(): number;
   _set_volume(volume: number): void;
+  /** Speaker DSP (dsp_chain.h). Optional so an older prebuilt WASM still loads. */
+  _set_eq_band?(index: number, type: number, frequency: number, q: number, gainDb: number): void;
+  _set_replaygain?(linear: number, limiterEnabled: number): void;
   _get_pcm_ring_state(): number;
   _get_pcm_ring_data(): number;
   _cleanup(): void;
@@ -41,6 +45,12 @@ declare global {
     __sdl_script_processor_shim_loaded?: boolean;
   }
 }
+
+const EQ_TYPE_CODES: Partial<Record<BiquadFilterType, number>> = {
+  lowshelf: 0,
+  peaking: 1,
+  highshelf: 2,
+};
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -62,6 +72,7 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
   private playbackPath: PlaybackPathInfo | null = null;
   private streamAbort: AbortController | null = null;
   private pipelineTask: Promise<void> | null = null;
+  private limiterEnabled = false;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
     super();
@@ -113,6 +124,8 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
       } else {
         console.log('[SdlAudioPlayer] SDL Audio initialized successfully.');
         this.isReady = true;
+        this.applyNativeEq(this.contextManager.getEQGains());
+        this.applyNativeReplayGain();
         this.setVolume(this.lastVolume);
         this.startPolling();
       }
@@ -406,20 +419,49 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
 
   setPlaybackRate(rate: number): void { void rate; }
 
+  /** WASM runs EQ / ReplayGain / limiter on the speaker path (dsp_chain.h). */
+  private hasNativeDsp(): boolean {
+    return typeof this.module?._set_eq_band === 'function'
+      && typeof this.module?._set_replaygain === 'function';
+  }
+
+  /** Legacy WASM without DSP exports: fold ReplayGain into `_set_volume` (clamps at 1). */
+  protected effectiveVolume(volume: number): number {
+    return this.hasNativeDsp() ? volume : super.effectiveVolume(volume);
+  }
+
+  private applyNativeEq(gains: number[]): void {
+    if (!this.module || !this.hasNativeDsp()) return;
+    DEFAULT_EQ_BANDS.forEach((band, i) => {
+      this.module!._set_eq_band!(i, EQ_TYPE_CODES[band.type] ?? 1, band.frequency, band.Q, gains[i] ?? 0);
+    });
+  }
+
+  private applyNativeReplayGain(): void {
+    if (!this.module || !this.hasNativeDsp()) return;
+    this.module._set_replaygain!(this.replayGainLinear, this.limiterEnabled ? 1 : 0);
+  }
+
+  // The shared graph keeps the values (speakers are muted while SDL plays, and the
+  // viz tap bypasses its EQ), so a later switch to a Web Audio backend applies them once.
   setEQGains(gains: number[]): void {
     this.contextManager.setEQGains(gains);
+    this.applyNativeEq(this.contextManager.getEQGains());
   }
 
   setReplayGainLinear(linear: number): void {
     this.applyReplayGainLinear(linear, () => this.setVolume(this.lastVolume));
     this.contextManager.setReplayGainLinear(this.replayGainLinear);
+    this.applyNativeReplayGain();
   }
 
   setReplayGainLimiter(enabled: boolean): void {
+    this.limiterEnabled = enabled;
     this.contextManager.setReplayGainLimiter(enabled);
+    this.applyNativeReplayGain();
   }
 
-  getAnalyser(): AnalyserNode {
+  getAnalyser(): AnalyserNode | null {
     return this.contextManager.getAnalyser();
   }
 

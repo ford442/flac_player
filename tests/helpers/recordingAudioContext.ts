@@ -79,6 +79,17 @@ class RecordingBiquadFilterNode extends RecordingAudioNode {
   }
 }
 
+export class RecordingDestinationNode extends RecordingAudioNode {
+  channelCount = 2;
+  maxChannelCount = 2;
+  channelCountMode: ChannelCountMode = 'explicit';
+  channelInterpretation: ChannelInterpretation = 'speakers';
+
+  constructor(context: RecordingAudioContext) {
+    super(context, 'destination');
+  }
+}
+
 class RecordingAnalyserNode extends RecordingAudioNode {
   fftSize = 2048;
 
@@ -137,6 +148,9 @@ export class RecordingAudioBufferSourceNode extends RecordingAudioNode {
 /** Minimal, inspectable Web Audio implementation for graph and scheduler tests. */
 export class RecordingAudioContext {
   static readonly instances: RecordingAudioContext[] = [];
+  /** Return true to make the constructor throw for these options (NotSupportedError). */
+  static rejectOptions: ((options: AudioContextOptions & { sinkId?: string }) => boolean) | null = null;
+  static maxChannelCount = 2;
 
   readonly constructorOptions: AudioContextOptions;
   readonly sampleRate: number;
@@ -144,15 +158,25 @@ export class RecordingAudioContext {
   state: AudioContextState = 'running';
   currentTime = 0;
   readonly destination: AudioDestinationNode;
+  readonly baseLatency = 0.01;
+  outputLatency = 0.02;
+  sinkId: string;
+  readonly setSinkIdCalls: string[] = [];
   readonly gainNodes: RecordingGainNode[] = [];
   readonly compressorNodes: RecordingDynamicsCompressorNode[] = [];
   readonly bufferSources: RecordingAudioBufferSourceNode[] = [];
 
-  constructor(options: AudioContextOptions = {}) {
+  constructor(options: AudioContextOptions & { sinkId?: string } = {}) {
+    if (RecordingAudioContext.rejectOptions?.(options)) {
+      throw new DOMException('rejected by test', 'NotSupportedError');
+    }
     this.constructorOptions = options;
     this.sampleRate = options.sampleRate ?? 44100;
     this.latencyHint = options.latencyHint;
-    this.destination = new RecordingAudioNode(this, 'destination') as unknown as AudioDestinationNode;
+    this.sinkId = options.sinkId ?? '';
+    const destination = new RecordingDestinationNode(this);
+    destination.maxChannelCount = RecordingAudioContext.maxChannelCount;
+    this.destination = destination as unknown as AudioDestinationNode;
     RecordingAudioContext.instances.push(this);
   }
 
@@ -190,6 +214,14 @@ export class RecordingAudioContext {
     return new RecordingAudioBuffer(channels, length, sampleRate) as unknown as AudioBuffer;
   }
 
+  async setSinkId(sinkId: string): Promise<void> {
+    this.setSinkIdCalls.push(sinkId);
+    if (sinkId === 'missing-device') {
+      throw new DOMException('device not found', 'NotFoundError');
+    }
+    this.sinkId = sinkId;
+  }
+
   async resume(): Promise<void> {
     this.state = 'running';
   }
@@ -203,6 +235,8 @@ export class RecordingAudioContext {
 export function installRecordingAudioContext(): () => void {
   const previous = globalThis.AudioContext;
   RecordingAudioContext.instances.length = 0;
+  RecordingAudioContext.rejectOptions = null;
+  RecordingAudioContext.maxChannelCount = 2;
   Object.defineProperty(globalThis, 'AudioContext', {
     configurable: true,
     writable: true,
@@ -216,5 +250,6 @@ export function installRecordingAudioContext(): () => void {
       value: previous,
     });
     RecordingAudioContext.instances.length = 0;
+    RecordingAudioContext.rejectOptions = null;
   };
 }

@@ -3,11 +3,14 @@ import { ReplayGainNode } from './ReplayGainNode';
 import {
   DEFAULT_AUDIO_CONTEXT_POLICY,
   chooseContextSampleRate,
+  destinationChannelCount,
   latencyHintsEqual,
   latencyModeToHint,
   probeSampleRateSupported,
+  relaxContextOptions,
   shouldRecreateContext,
   type AudioContextLatencyHint,
+  type AudioContextOptionsWithSink,
   type AudioContextOptionsPolicy,
   type LatencyMode,
 } from './sampleRatePolicy';
@@ -17,6 +20,32 @@ export interface EnsureTrackAudioOptions {
   channels?: number;
 }
 
+/** Read-only snapshot of the live graph for Settings (hi-fi readout). */
+export interface AudioOutputInfo {
+  sampleRate: number;
+  /** Seconds of processing latency inside the context (`AudioContext.baseLatency`). */
+  baseLatency: number | null;
+  /** Seconds from graph to the device (`AudioContext.outputLatency`). */
+  outputLatency: number | null;
+  latencyHint: AudioContextLatencyHint;
+  channelCount: number;
+  /** '' = system default output. */
+  sinkId: string;
+  state: AudioContextState;
+  graphGeneration: number;
+}
+
+type SinkAudioContext = AudioContext & {
+  sinkId?: string | { type: string };
+  setSinkId?: (sinkId: string) => Promise<void>;
+};
+
+/** True when `AudioContext.setSinkId` exists (Chromium 110+). */
+export function isAudioContextSinkSupported(): boolean {
+  const Ctor = globalThis.AudioContext as { prototype?: SinkAudioContext } | undefined;
+  return typeof Ctor?.prototype?.setSinkId === 'function';
+}
+
 /**
  * Owns the application-lifetime Web Audio graph.
  *
@@ -24,7 +53,13 @@ export interface EnsureTrackAudioOptions {
  * ReplayGain -> master Gain -> EQ -> Analyser -> destination chain is rebuilt
  * when sample rate or latency hint changes.
  * SDL backends tap PCM into the analyser via {@link connectVisualizerFeed} while
- * {@link setExternalPlaybackActive} mutes Web Audio speakers (SDL owns output).
+ * {@link setExternalPlaybackActive} mutes Web Audio speakers (SDL owns output and
+ * runs its own EQ / ReplayGain in WASM — see docs/AUDIO_BACKENDS.md).
+ *
+ * The context is created lazily at the track's native rate by {@link ensureForTrack}.
+ * Setters (volume, EQ, ReplayGain, sink) only store state until a graph exists.
+ * {@link getContext} is the one lazy creator: calling it before `ensureForTrack`
+ * opens the device-default rate and the first track may recreate the graph.
  */
 export class AudioContextManager {
   private context: AudioContext | null = null;
@@ -44,6 +79,9 @@ export class AudioContextManager {
   private graphGeneration = 0;
   private readonly graphListeners = new Set<() => void>();
   private lastTrackChannels: number | undefined;
+  private sinkId = '';
+  /** Rates whose constructor threw; skipped so each track does not retry them. */
+  private readonly rejectedSampleRates = new Set<number>();
 
   subscribeGraphRecreated(listener: () => void): () => void {
     this.graphListeners.add(listener);
@@ -84,8 +122,12 @@ export class AudioContextManager {
   async ensureForTrack(options: EnsureTrackAudioOptions = {}): Promise<AudioContext> {
     if (options.channels && options.channels > 0) {
       this.lastTrackChannels = options.channels;
+      this.applyDestinationChannels();
     }
-    const targetRate = chooseContextSampleRate(options.sampleRate, probeSampleRateSupported);
+    const targetRate = chooseContextSampleRate(
+      options.sampleRate,
+      (rate) => !this.rejectedSampleRates.has(rate) && probeSampleRateSupported(rate)
+    );
     const nextHint = this.policy.latencyHint;
 
     if (!this.context) {
@@ -105,6 +147,10 @@ export class AudioContextManager {
     return this.context;
   }
 
+  /**
+   * Live context, creating one at the device default rate if none exists.
+   * Call {@link ensureForTrack} first on playback paths to avoid a recreate.
+   */
   getContext(): AudioContext {
     return this.initialize();
   }
@@ -117,20 +163,66 @@ export class AudioContextManager {
     return this.lastTrackChannels;
   }
 
-  getAnalyser(): AnalyserNode {
-    this.initialize();
-    return this.analyser!;
+  /** Analyser of the live graph, or null before the first track opens one. */
+  getAnalyser(): AnalyserNode | null {
+    return this.analyser;
   }
 
   connectInput(node: AudioNode): void {
-    this.initialize();
+    this.getContext();
     node.connect(this.replayGain!.input);
   }
 
   /** Feed SDL PCM tap worklet into the analyser (parallel to masterGain path). */
   connectVisualizerFeed(node: AudioNode): void {
-    this.initialize();
+    this.getContext();
     node.connect(this.visualizerFeedGain!);
+  }
+
+  getSinkId(): string {
+    return this.sinkId;
+  }
+
+  /**
+   * Route the graph to an output device ('' = system default). Applied live via
+   * `AudioContext.setSinkId` and passed to future constructors. Resolves false
+   * (and falls back to the default sink) when the device is rejected.
+   */
+  async setSinkId(sinkId: string): Promise<boolean> {
+    this.sinkId = sinkId;
+    const ctx = this.context as SinkAudioContext | null;
+    if (!ctx || typeof ctx.setSinkId !== 'function') return true;
+    if (this.currentContextSinkId(ctx) === sinkId) return true;
+    try {
+      await ctx.setSinkId(sinkId);
+      return true;
+    } catch (err) {
+      console.warn('[AudioContextManager] setSinkId rejected; using default output', err);
+      this.sinkId = '';
+      try {
+        await ctx.setSinkId('');
+      } catch {
+        /* already on default */
+      }
+      return false;
+    }
+  }
+
+  getOutputInfo(): AudioOutputInfo | null {
+    const ctx = this.context as SinkAudioContext | null;
+    if (!ctx) return null;
+    const finite = (v: unknown): number | null =>
+      typeof v === 'number' && Number.isFinite(v) ? v : null;
+    return {
+      sampleRate: ctx.sampleRate,
+      baseLatency: finite(ctx.baseLatency),
+      outputLatency: finite(ctx.outputLatency),
+      latencyHint: this.appliedLatencyHint,
+      channelCount: ctx.destination.channelCount,
+      sinkId: this.currentContextSinkId(ctx),
+      state: ctx.state,
+      graphGeneration: this.graphGeneration,
+    };
   }
 
   /** Mute Web Audio speakers when SDL owns playback; analyser still receives PCM. */
@@ -145,9 +237,10 @@ export class AudioContextManager {
     return this.externalPlaybackActive;
   }
 
+  /** Resume a suspended graph. No-op before a graph exists (does not create one). */
   async resume(): Promise<void> {
-    const context = this.initialize();
-    if (context.state === 'suspended') await context.resume();
+    const context = this.context;
+    if (context?.state === 'suspended') await context.resume();
   }
 
   setVolume(volume: number): void {
@@ -163,8 +256,7 @@ export class AudioContextManager {
 
   setReplayGainLinear(linear: number): void {
     this.replayGainLinear = Math.max(0, linear);
-    if (!this.replayGain) this.initialize();
-    this.replayGain!.setGainLinear(this.replayGainLinear);
+    this.replayGain?.setGainLinear(this.replayGainLinear);
   }
 
   getReplayGainLinear(): number {
@@ -173,14 +265,12 @@ export class AudioContextManager {
 
   setReplayGainLimiter(enabled: boolean): void {
     this.limiterEnabled = enabled;
-    if (!this.replayGain) this.initialize();
-    this.replayGain!.setLimiterEnabled(enabled);
+    this.replayGain?.setLimiterEnabled(enabled);
   }
 
   setEQGains(gains: number[]): void {
     this.eqGains = DEFAULT_EQ_BANDS.map((_, i) => gains[i] ?? 0);
-    if (!this.eqChain) this.initialize();
-    this.eqChain!.setAllGains(this.eqGains);
+    this.eqChain?.setAllGains(this.eqGains);
   }
 
   getEQGains(): number[] {
@@ -188,15 +278,19 @@ export class AudioContextManager {
   }
 
   private buildGraph(sampleRate: number | undefined): AudioContext {
-    const options: AudioContextOptions = {
+    const options: AudioContextOptionsWithSink = {
       latencyHint: this.policy.latencyHint,
     };
     if (sampleRate !== undefined) {
       options.sampleRate = sampleRate;
     }
+    if (this.sinkId && isAudioContextSinkSupported()) {
+      options.sinkId = this.sinkId;
+    }
 
-    this.context = this.constructContext(options);
-    this.appliedLatencyHint = options.latencyHint ?? this.policy.latencyHint;
+    const { context, options: applied } = this.constructContext(options);
+    this.context = context;
+    this.appliedLatencyHint = applied.latencyHint ?? this.policy.latencyHint;
     this.replayGain = new ReplayGainNode(this.context);
     this.masterGain = this.context.createGain();
     this.eqChain = new EQChain(this.context);
@@ -214,19 +308,62 @@ export class AudioContextManager {
     this.speakerGain.connect(this.context.destination);
 
     this.applyStoredGraphState();
+    this.applyDestinationChannels();
+    if (options.sinkId !== undefined && applied.sinkId === undefined) {
+      // Constructor relaxation dropped the sink (e.g. it was the rate that failed); retry live.
+      void this.setSinkId(this.sinkId);
+    }
     return this.context;
   }
 
-  private constructContext(options: AudioContextOptions): AudioContext {
-    try {
-      return new AudioContext(options);
-    } catch (err) {
-      if (typeof options.latencyHint === 'number') {
-        const fallback: AudioContextOptions = { ...options, latencyHint: 'interactive' };
-        this.policy.latencyHint = 'interactive';
-        return new AudioContext(fallback);
+  /**
+   * Construct with progressively relaxed options (see {@link relaxContextOptions}).
+   * A dropped numeric hint updates the policy; a dropped rate is remembered so
+   * later tracks at that rate do not retry the failing constructor.
+   */
+  private constructContext(
+    options: AudioContextOptionsWithSink
+  ): { context: AudioContext; options: AudioContextOptionsWithSink } {
+    let attempt = options;
+    for (;;) {
+      try {
+        return { context: new AudioContext(attempt), options: attempt };
+      } catch (err) {
+        const next = relaxContextOptions(attempt);
+        if (!next) throw err;
+        console.warn('[AudioContextManager] AudioContext options rejected; retrying', {
+          rejected: attempt,
+          retry: next,
+          err,
+        });
+        if (typeof attempt.latencyHint === 'number' && next.latencyHint !== attempt.latencyHint) {
+          this.policy.latencyHint = next.latencyHint ?? 'interactive';
+        }
+        if (attempt.sampleRate !== undefined && next.sampleRate === undefined) {
+          this.rejectedSampleRates.add(attempt.sampleRate);
+        }
+        attempt = next;
       }
-      throw err;
+    }
+  }
+
+  private currentContextSinkId(ctx: SinkAudioContext): string {
+    return typeof ctx.sinkId === 'string' ? ctx.sinkId : '';
+  }
+
+  /** Match destination channels to the track (≥ stereo, ≤ device max). */
+  private applyDestinationChannels(): void {
+    const ctx = this.context;
+    if (!ctx) return;
+    const destination = ctx.destination;
+    const count = destinationChannelCount(this.lastTrackChannels, destination.maxChannelCount);
+    if (count === undefined || destination.channelCount === count) return;
+    try {
+      destination.channelCount = count;
+      destination.channelCountMode = 'explicit';
+      destination.channelInterpretation = 'speakers';
+    } catch (err) {
+      console.warn('[AudioContextManager] destination.channelCount rejected', { count, err });
     }
   }
 

@@ -89,3 +89,46 @@ export function probeSampleRateSupported(rate: number): boolean {
     return false;
   }
 }
+
+/** `AudioContextOptions` plus `sinkId` (Chromium 110+; not yet in lib.dom). */
+export interface AudioContextOptionsWithSink extends AudioContextOptions {
+  sinkId?: string;
+}
+
+/**
+ * Next, less demanding constructor options after `new AudioContext(options)` threw.
+ * Order: numeric latencyHint → 'interactive', then drop sinkId, then drop sampleRate.
+ * Returns null when nothing is left to relax (caller rethrows).
+ */
+export function relaxContextOptions(
+  options: AudioContextOptionsWithSink
+): AudioContextOptionsWithSink | null {
+  if (typeof options.latencyHint === 'number') {
+    return { ...options, latencyHint: 'interactive' };
+  }
+  if (options.sinkId !== undefined) {
+    const rest = { ...options };
+    delete rest.sinkId;
+    return rest;
+  }
+  if (options.sampleRate !== undefined) {
+    const rest = { ...options };
+    delete rest.sampleRate;
+    return rest;
+  }
+  return null;
+}
+
+/**
+ * Destination channel count for a track. Never below stereo (mono files are
+ * upmixed by the graph, not by collapsing the device), never above the device.
+ */
+export function destinationChannelCount(
+  trackChannels: number | undefined,
+  maxChannelCount: number | undefined
+): number | undefined {
+  if (!trackChannels || !Number.isFinite(trackChannels) || trackChannels <= 0) return undefined;
+  const wanted = Math.max(2, Math.floor(trackChannels));
+  if (!maxChannelCount || maxChannelCount <= 0) return wanted;
+  return Math.max(1, Math.min(wanted, maxChannelCount));
+}

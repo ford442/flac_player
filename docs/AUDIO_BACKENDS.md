@@ -41,7 +41,7 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
   - **web-audio:** `AudioBuffer` stays at file rate; `BufferSourceNode` lets the browser resample if the context could not match.
   - **worklet:** PCM is consumed 1:1 with the context callback rate. The processor is given the file (or context) rate via `processorOptions`; if the device cannot open native rate, a documented linear interpolator (`linearResampler.ts`) converts chunks. Seek uses the processor's own `this.sampleRate`.
   - **sdl:** WASM device opens at file rate. Large FLACs use the C++ play ring (`play_ring.h`); the analyser tap is still `SdlPcmBridge` at `context.sampleRate`. `_set_audio_data` / `_set_stream_format` return `1` on success; TypeScript rejects the load on `!== 1`. WASM heap is capped at 512 MiB (`MAXIMUM_MEMORY`).
-- **ReplayGain / loudness matching:** Settings → **Loudness (ReplayGain)** (`flac_player_replaygain_mode`, `flac_player_replaygain_limiter`). Applies a dedicated gain stage **before** the master volume fader on streaming, web-audio, and worklet backends. SDL backends multiply gain into WASM `_set_volume` (visualizer tap still uses the shared graph). Client-side tag fetch uses a 64 KiB range request when API metadata is missing. Crossfade overlap may briefly mismatch levels when adjacent tracks have very different tags ([#184](https://github.com/ford442/flac_player/issues/184)).
+- **ReplayGain / loudness matching:** Settings → **Loudness (ReplayGain)** (`flac_player_replaygain_mode`, `flac_player_replaygain_limiter`). Applies a dedicated gain stage **before** the master volume fader on streaming, web-audio, and worklet backends. SDL runs the same stage (plus the limiter) in WASM on the speaker path — see [Speaker-path DSP](#speaker-path-dsp-eq--replaygain). Client-side tag fetch uses a 64 KiB range request when API metadata is missing. Crossfade overlap may briefly mismatch levels when adjacent tracks have very different tags ([#184](https://github.com/ford442/flac_player/issues/184)).
 
 ## Backend reference
 
@@ -119,13 +119,15 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 **How it works:**
 
 - **Small files (buffered):** full fetch → decode → `_create_audio_buffer` / `_set_audio_data` (compat path).
-- **Large files (≥ 32 MB) or `forceStream`:** `runHifiStreamPipeline` → `_set_stream_format` → `_push_pcm` into a **play ring** (`PLAY_RING_CAPACITY` = 384000 floats, ~2 s stereo f32 @ 96 kHz). JS pauses decode when fill &gt; 75% (`get_play_ring_fill`). The SDL callback drains the play ring, volume-scales into a pre-sized scratch, then writes the **viz** ring (`pcm_ring.h`, 65536 floats) for `SdlPcmBridge`.
+- **Large files (≥ 32 MB) or `forceStream`:** `runHifiStreamPipeline` → `_set_stream_format` → `_push_pcm` into a **play ring** (`PLAY_RING_CAPACITY` = 384000 floats, ~2 s stereo f32 @ 96 kHz). JS pauses decode when fill &gt; 75% (`get_play_ring_fill`). The SDL callback drains the play ring into a pre-sized scratch, runs speaker DSP (`dsp_chain.h`) in place, then writes the **viz** ring (`pcm_ring.h`, 65536 floats) for `SdlPcmBridge`.
 
 Seek is **disabled** in hi-fi stream mode (same as worklet).
 
 Buffered `_create_audio_buffer` rejects lengths above 384 MiB of f32 PCM (`nullptr`); `_set_audio_data` / `_set_stream_format` return `0` if `SDL_CreateAudioStream` / `SDL_BindAudioStream` fail, and the JS player throws instead of hanging.
 
 **Gapless:** Not supported — each track is loaded with `stop()` between files.
+
+**Output device:** SDL opens its own Emscripten audio context, so Settings → **Output device** (`AudioContext.setSinkId`) does not apply; it uses the system default.
 
 **Build:** `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh`. Debug: `scripts/build-wasm.sh --debug --sdl3`. Release: `-O3 -DNDEBUG`, `INITIAL_MEMORY=64 MiB`, `MAXIMUM_MEMORY=512 MiB`. SDL2 **playback** was retired (#212); projectM still uses a separate `USE_SDL=2` **video** host (`npm run build:projectm`).
 
@@ -142,6 +144,28 @@ Buffered `_create_audio_buffer` rejects lengths above 384 MiB of f32 PCM (`nullp
 | Crossfade | ✓ (native path) | partial | partial | — |
 | Offline cache (`trackCache`) | URL fetch | ArrayBuffer | ArrayBuffer | ArrayBuffer |
 | Playback rate | ✓ | ✓ | ✓ | ✓ |
+
+## Speaker-path DSP (EQ / ReplayGain)
+
+EQ and ReplayGain must affect what the speakers play on every backend (prerequisite for #209 studio DSP).
+
+| Backend | Where DSP runs | Speaker path |
+|---------|----------------|--------------|
+| streaming / web-audio / worklet | Shared Web Audio graph (`AudioContextManager`) | `input → ReplayGainNode → master Gain → EQChain → analyser → speakerGain → destination` |
+| sdl | C++ `src/sdl/dsp_chain.h`, inside the SDL stream callback | `play ring / buffer → scratch → ReplayGain → limiter → volume → 5 biquads → SDL + viz ring` |
+
+- **Why C++ and not the Web Audio graph for SDL:** keeps SDL exclusive (no second clock, no graph→WASM copy). The duplicated DSP is ~200 lines.
+- **One band layout:** `Sdl3AudioPlayer` pushes `DEFAULT_EQ_BANDS` (type / frequency / Q) and gains via `_set_eq_band(index, type, freq, q, gainDb)`; coefficients follow the Web Audio `BiquadFilterNode` formulas (shelves use S = 1 and ignore Q), recomputed at the stream rate. `_set_replaygain(linear, limiter)` mirrors `ReplayGainNode` (threshold −1 dBFS, ratio 20, 3 ms / 100 ms, no makeup gain). `_set_volume` is the fader only.
+- **No double-apply:** while SDL plays, `setExternalPlaybackActive(true)` zeroes `speakerGain`, and the `SdlPcmBridge` tap enters **after** the Web Audio EQ (`visualizerFeedGain → analyser`), so the analyser sees exactly the processed PCM SDL played. The shared graph still stores EQ/RG values; switching to streaming destroys the SDL backend, unmutes the graph, and applies them once.
+- **Older prebuilt WASM** without the DSP exports: EQ is visualizer-only and ReplayGain folds into `_set_volume` (clamped at unity) — rebuild with `npm run build:wasm:sdl3`.
+
+## AudioContext lifecycle and output (`AudioContextManager`)
+
+- **Lazy, native-rate creation.** `ensureForTrack({ sampleRate, channels })` creates the context at the file rate. Volume / EQ / ReplayGain / sink setters, `getAnalyser()` (returns `null` before a graph) and `resume()` never open a graph. `getContext()` is the only lazy creator; calling it before `ensureForTrack` opens the device default rate and the first track may recreate.
+- **Constructor fallbacks.** If `new AudioContext(options)` throws, options are relaxed in order: numeric `latencyHint → 'interactive'`, drop `sinkId` (re-applied live via `setSinkId`), drop `sampleRate`. A rejected rate is remembered so later tracks at that rate do not retry.
+- **Channels.** `destination.channelCount` follows the track (`max(2, channels)`, capped at `maxChannelCount`), `channelCountMode = 'explicit'`, `'speakers'` interpretation.
+- **Output device.** Settings → **Output device** persists `flac_player_output_device` (`{ id, label }`, `''` = default). Uses `navigator.mediaDevices.selectAudioOutput` where present, otherwise an `enumerateDevices()` list, applied with `AudioContext.setSinkId` (Chromium 110+) and passed as `sinkId` to future constructors. Browsers without `setSinkId` keep the default sink. A rejected device falls back to default with a toast.
+- **Latency readout.** Settings → **Output latency** shows context rate, `baseLatency`, `outputLatency`, and destination channels (`useAudioOutputInfo`, polled each second, refreshed on graph recreate).
 
 ## Switching backends
 

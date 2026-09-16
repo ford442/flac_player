@@ -125,7 +125,12 @@ describe('replayGain utils', () => {
         settings: { mode: 'track', limiterEnabled: true },
       });
 
-      const context = RecordingAudioContext.instances[0];
+      // Setters store state only; the graph opens at the track rate and applies it.
+      expect(RecordingAudioContext.instances).toHaveLength(0);
+      await contextManager.ensureForTrack({ sampleRate: 44100, channels: 2 });
+
+      // instances[0] may be the sample-rate probe; the graph is the latest context.
+      const context = RecordingAudioContext.instances[RecordingAudioContext.instances.length - 1];
       const replayGainNode = context.gainNodes[0];
       const limiter = context.compressorNodes[0];
       const expectedLinear = dbToLinear(-6.5);

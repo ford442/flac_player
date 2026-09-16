@@ -897,7 +897,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     this.contextManager.setReplayGainLimiter(enabled);
   }
 
-  getAnalyser(): AnalyserNode {
+  getAnalyser(): AnalyserNode | null {
     return this.contextManager.getAnalyser();
   }
 

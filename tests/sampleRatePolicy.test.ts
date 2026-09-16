@@ -4,7 +4,9 @@ import {
   chooseContextSampleRate,
   latencyHintsEqual,
   latencyModeToHint,
+  destinationChannelCount,
   probeSampleRateSupported,
+  relaxContextOptions,
   shouldRecreateContext,
 } from '../src/audio/sampleRatePolicy';
 import { resampleInterleavedLinear } from '../src/audio/linearResampler';
@@ -113,5 +115,25 @@ describe('resampleInterleavedLinear', () => {
     const pcm = new Float32Array([0, 0, 1, 1, 0, 0]);
     const out = resampleInterleavedLinear(pcm, 2, 48000, 24000);
     expect(out.length).toBe(4);
+  });
+});
+
+describe('context option fallbacks', () => {
+  it('relaxes numeric hint, then sinkId, then sampleRate', () => {
+    let o = relaxContextOptions({ latencyHint: 0.03, sinkId: 'dac', sampleRate: 96000 });
+    expect(o).toEqual({ latencyHint: 'interactive', sinkId: 'dac', sampleRate: 96000 });
+    o = relaxContextOptions(o!);
+    expect(o).toEqual({ latencyHint: 'interactive', sampleRate: 96000 });
+    o = relaxContextOptions(o!);
+    expect(o).toEqual({ latencyHint: 'interactive' });
+    expect(relaxContextOptions(o!)).toBeNull();
+  });
+
+  it('clamps destination channels to stereo..device max', () => {
+    expect(destinationChannelCount(undefined, 8)).toBeUndefined();
+    expect(destinationChannelCount(1, 2)).toBe(2);
+    expect(destinationChannelCount(6, 2)).toBe(2);
+    expect(destinationChannelCount(6, 8)).toBe(6);
+    expect(destinationChannelCount(6, 0)).toBe(6);
   });
 });

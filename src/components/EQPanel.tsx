@@ -4,6 +4,28 @@ import type { GaplessMode } from '../types/gapless';
 import { MAX_CROSSFADE_MS, MIN_CROSSFADE_MS } from '../types/gapless';
 import type { ReplayGainMode } from '../utils/replayGain';
 import type { LatencyMode } from '../audio/sampleRatePolicy';
+import type { AudioOutputInfo } from '../audio/AudioContextManager';
+import type { OutputDeviceOption } from '../hooks/useAudioOutputInfo';
+
+/** Output sink picker + read-only graph latency, composed in Player.tsx. */
+export interface AudioOutputControls {
+  /** '' = system default. */
+  deviceId: string;
+  deviceLabel: string;
+  /** `AudioContext.setSinkId` exists. */
+  sinkSupported: boolean;
+  /** `navigator.mediaDevices.selectAudioOutput` exists. */
+  pickerSupported: boolean;
+  devices: OutputDeviceOption[];
+  onSelectOutputDevice: (deviceId?: string, label?: string) => Promise<void>;
+  info: AudioOutputInfo | null;
+  /** SDL owns the device; the Web Audio sink does not apply. */
+  externalPlayback: boolean;
+}
+
+function formatMs(seconds: number | null): string {
+  return seconds === null ? '—' : `${(seconds * 1000).toFixed(1)} ms`;
+}
 
 interface EQPanelProps {
   eqGains: number[];
@@ -21,6 +43,7 @@ interface EQPanelProps {
   onReplayGainLimiterChange: (enabled: boolean) => void;
   latencyMode: LatencyMode;
   onLatencyModeChange: (mode: LatencyMode) => void;
+  audioOutput?: AudioOutputControls;
   /** @deprecated kept for callers still passing the legacy toggle */
   crossfadeEnabled?: boolean;
   onCrossfadeChange?: (enabled: boolean) => void;
@@ -62,6 +85,7 @@ export const EQPanel: React.FC<EQPanelProps> = ({
   onReplayGainLimiterChange,
   latencyMode,
   onLatencyModeChange,
+  audioOutput,
 }) => {
   return (
     <div className="eq-panel space-y-4 text-sm text-white">
@@ -194,7 +218,7 @@ export const EQPanel: React.FC<EQPanelProps> = ({
         )}
         <p className="text-xs text-gray-500 mt-2">
           Applies before the master volume fader. Gain is clamped to ±12 dB.
-          SDL backends apply gain in WASM volume; crossfade overlap may briefly mismatch levels.
+          SDL3 applies EQ and gain in WASM on the speaker path; crossfade overlap may briefly mismatch levels.
         </p>
       </div>
 
@@ -223,7 +247,83 @@ export const EQPanel: React.FC<EQPanelProps> = ({
           Recreates the shared AudioContext. Same-rate albums stay gapless; a rate or latency
           change may produce a brief audible gap.
         </p>
+        {audioOutput && (
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-1 mt-3 text-xs">
+            <dt className="text-gray-500">Context rate</dt>
+            <dd className="font-mono text-purple-300">
+              {audioOutput.info ? `${audioOutput.info.sampleRate} Hz` : 'not open'}
+            </dd>
+            <dt className="text-gray-500">Base latency</dt>
+            <dd className="font-mono text-purple-300">{formatMs(audioOutput.info?.baseLatency ?? null)}</dd>
+            <dt className="text-gray-500">Output latency</dt>
+            <dd className="font-mono text-purple-300">{formatMs(audioOutput.info?.outputLatency ?? null)}</dd>
+            <dt className="text-gray-500">Channels</dt>
+            <dd className="font-mono text-purple-300">{audioOutput.info?.channelCount ?? '—'}</dd>
+          </dl>
+        )}
       </div>
+
+      {audioOutput && (
+        <div>
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+            Output device
+          </span>
+          {audioOutput.sinkSupported ? (
+            <div className="flex gap-1 mt-2 flex-wrap items-center">
+              {audioOutput.devices.length > 0 && (
+                <select
+                  value={audioOutput.deviceId}
+                  onChange={(e) => {
+                    const option = audioOutput.devices.find((d) => d.deviceId === e.target.value);
+                    void audioOutput.onSelectOutputDevice(e.target.value, option?.label);
+                  }}
+                  className="flex-1 min-w-0 px-2 py-1 bg-white/10 border border-white/20 rounded text-xs text-white"
+                >
+                  <option value="">System default</option>
+                  {audioOutput.devices.map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                  ))}
+                  {audioOutput.deviceId && !audioOutput.devices.some((d) => d.deviceId === audioOutput.deviceId) && (
+                    <option value={audioOutput.deviceId}>{audioOutput.deviceLabel || 'Selected device'}</option>
+                  )}
+                </select>
+              )}
+              {audioOutput.pickerSupported && (
+                <button
+                  onClick={() => void audioOutput.onSelectOutputDevice()}
+                  className="px-2 py-1 rounded text-xs bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white"
+                >
+                  Choose…
+                </button>
+              )}
+              {audioOutput.devices.length === 0 && (
+                <>
+                  <span className="text-xs text-gray-300 truncate">
+                    {audioOutput.deviceId ? audioOutput.deviceLabel || 'Selected device' : 'System default'}
+                  </span>
+                  {audioOutput.deviceId && (
+                    <button
+                      onClick={() => void audioOutput.onSelectOutputDevice('')}
+                      className="px-2 py-1 rounded text-xs bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white"
+                    >
+                      Reset
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-500 mt-2">
+              This browser cannot route Web Audio to another device; the system default is used.
+            </p>
+          )}
+          {audioOutput.externalPlayback && (
+            <p className="text-xs text-gray-500 mt-2">
+              SDL3 opens its own device; this choice applies to streaming, Web Audio, and worklet.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Gapless / Crossfade */}
       <div>

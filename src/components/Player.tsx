@@ -3,10 +3,12 @@ import { AudioLoader, PlaylistTrack, loadQueueFromStorage } from '../audioLoader
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { usePlayerState } from '../hooks/usePlayerState';
 import { useToastNotifications } from '../hooks/useToastNotifications';
-import { useAudioSettings } from '../hooks/useAudioSettings';
+import { isOutputPickerSupported, useAudioSettings } from '../hooks/useAudioSettings';
+import { useAudioOutputInfo, useOutputDevices } from '../hooks/useAudioOutputInfo';
 import { usePlayerData } from '../hooks/usePlayerData';
 import { usePlaybackController } from '../hooks/usePlaybackController';
-import { sharedAudioContextManager } from '../audio/AudioContextManager';
+import { isAudioContextSinkSupported, sharedAudioContextManager } from '../audio/AudioContextManager';
+import type { AudioOutputControls } from './EQPanel';
 import { useGpuChoresOverview } from '../hooks/useGpuChoresOverview';
 import { VisualizerShell } from './VisualizerShell';
 import { ToastContainer } from './Toast';
@@ -40,6 +42,7 @@ export const Player: React.FC = () => {
     replayGainMode, setReplayGainMode, replayGainLimiter, setReplayGainLimiter,
     replayGainSettings,
     latencyMode, setLatencyMode,
+    outputDevice, onSelectOutputDevice,
   } = useAudioSettings();
 
   const loader = useMemo(() => new AudioLoader(), []);
@@ -82,6 +85,29 @@ export const Player: React.FC = () => {
   useEffect(() => {
     void sharedAudioContextManager.setLatencyMode(latencyMode);
   }, [latencyMode]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void sharedAudioContextManager.setSinkId(outputDevice.id).then((ok) => {
+      if (ok || cancelled) return;
+      addToast(`Output device unavailable — using system default`, 'error');
+      void onSelectOutputDevice('');
+    });
+    return () => { cancelled = true; };
+  }, [outputDevice.id, addToast, onSelectOutputDevice]);
+
+  const audioOutputInfo = useAudioOutputInfo();
+  const outputDevices = useOutputDevices();
+  const audioOutput = useMemo<AudioOutputControls>(() => ({
+    deviceId: outputDevice.id,
+    deviceLabel: outputDevice.label,
+    sinkSupported: isAudioContextSinkSupported(),
+    pickerSupported: isOutputPickerSupported(),
+    devices: outputDevices,
+    onSelectOutputDevice,
+    info: audioOutputInfo,
+    externalPlayback: outputMode === 'sdl',
+  }), [outputDevice, outputDevices, onSelectOutputDevice, audioOutputInfo, outputMode]);
 
   const gpuOverview = useGpuChoresOverview({
     trackKey: currentTrack?.id ?? currentTrack?.url ?? null,
@@ -387,6 +413,7 @@ export const Player: React.FC = () => {
       replayGainMode={replayGainMode} setReplayGainMode={setReplayGainMode}
       replayGainLimiter={replayGainLimiter} setReplayGainLimiter={setReplayGainLimiter}
       latencyMode={latencyMode} setLatencyMode={setLatencyMode}
+      audioOutput={audioOutput}
       prebufferingNext={prebufferingNext}
       playbackPath={playbackPath}
       isSharedPlaylist={isSharedPlaylist} sharedPlaylistTitle={sharedPlaylistTitle}

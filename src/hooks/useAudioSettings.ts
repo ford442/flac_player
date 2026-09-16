@@ -1,5 +1,6 @@
 /**
- * useAudioSettings – persisted EQ, playback-speed, gapless, and ReplayGain state.
+ * useAudioSettings – persisted EQ, playback-speed, gapless, ReplayGain, latency,
+ * and output-device state.
  */
 
 import { useState, useCallback, useEffect } from 'react';
@@ -31,6 +32,26 @@ const CROSSFADE_MS_KEY = 'flac_player_crossfade_ms';
 const REPLAYGAIN_MODE_KEY = 'flac_player_replaygain_mode';
 const REPLAYGAIN_LIMITER_KEY = 'flac_player_replaygain_limiter';
 const LATENCY_MODE_KEY = 'flac_player_latency_mode';
+const OUTPUT_DEVICE_KEY = 'flac_player_output_device';
+
+/** Persisted output sink. `id === ''` is the system default. */
+export interface OutputDeviceSetting {
+  id: string;
+  label: string;
+}
+
+export const DEFAULT_OUTPUT_DEVICE: OutputDeviceSetting = { id: '', label: '' };
+
+type MediaDevicesWithOutputPicker = MediaDevices & {
+  selectAudioOutput?: (options?: { deviceId?: string }) => Promise<MediaDeviceInfo>;
+};
+
+export function isOutputPickerSupported(): boolean {
+  const devices = (typeof navigator !== 'undefined'
+    ? navigator.mediaDevices
+    : undefined) as MediaDevicesWithOutputPicker | undefined;
+  return typeof devices?.selectAudioOutput === 'function';
+}
 
 function loadStoredEQ(): number[] {
   try {
@@ -96,6 +117,18 @@ function loadStoredLatencyMode(): LatencyMode {
   return DEFAULT_LATENCY_MODE;
 }
 
+function loadStoredOutputDevice(): OutputDeviceSetting {
+  try {
+    const raw = localStorage.getItem(OUTPUT_DEVICE_KEY);
+    if (!raw) return DEFAULT_OUTPUT_DEVICE;
+    const parsed = JSON.parse(raw) as Partial<OutputDeviceSetting>;
+    if (typeof parsed.id === 'string') {
+      return { id: parsed.id, label: typeof parsed.label === 'string' ? parsed.label : '' };
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_OUTPUT_DEVICE;
+}
+
 export interface AudioSettingsHook {
   eqGains: number[];
   setEQBandGain: (index: number, gainDb: number) => void;
@@ -117,6 +150,12 @@ export interface AudioSettingsHook {
   replayGainSettings: ReplayGainSettings;
   latencyMode: LatencyMode;
   setLatencyMode: (mode: LatencyMode) => void;
+  outputDevice: OutputDeviceSetting;
+  /**
+   * `undefined` opens the browser output picker (`selectAudioOutput`);
+   * a device id selects it directly; `''` restores the system default.
+   */
+  onSelectOutputDevice: (deviceId?: string, label?: string) => Promise<void>;
 }
 
 export function useAudioSettings(): AudioSettingsHook {
@@ -127,6 +166,7 @@ export function useAudioSettings(): AudioSettingsHook {
   const [replayGainMode, setReplayGainModeState] = useState<ReplayGainMode>(loadStoredReplayGainMode);
   const [replayGainLimiter, setReplayGainLimiterState] = useState<boolean>(loadStoredReplayGainLimiter);
   const [latencyMode, setLatencyModeState] = useState<LatencyMode>(loadStoredLatencyMode);
+  const [outputDevice, setOutputDevice] = useState<OutputDeviceSetting>(loadStoredOutputDevice);
 
   useEffect(() => {
     try { localStorage.setItem(EQ_STORAGE_KEY, JSON.stringify(eqGains)); } catch { /* quota */ }
@@ -158,6 +198,10 @@ export function useAudioSettings(): AudioSettingsHook {
   useEffect(() => {
     try { localStorage.setItem(LATENCY_MODE_KEY, latencyMode); } catch { /* quota */ }
   }, [latencyMode]);
+
+  useEffect(() => {
+    try { localStorage.setItem(OUTPUT_DEVICE_KEY, JSON.stringify(outputDevice)); } catch { /* quota */ }
+  }, [outputDevice]);
 
   const setEQBandGain = useCallback((index: number, gainDb: number) => {
     setEqGains(prev => {
@@ -199,6 +243,22 @@ export function useAudioSettings(): AudioSettingsHook {
     setLatencyModeState(mode);
   }, []);
 
+  const onSelectOutputDevice = useCallback(async (deviceId?: string, label?: string) => {
+    if (deviceId !== undefined) {
+      setOutputDevice(deviceId === '' ? DEFAULT_OUTPUT_DEVICE : { id: deviceId, label: label ?? '' });
+      return;
+    }
+    const devices = navigator.mediaDevices as MediaDevicesWithOutputPicker | undefined;
+    if (typeof devices?.selectAudioOutput !== 'function') return;
+    try {
+      const picked = await devices.selectAudioOutput();
+      setOutputDevice({ id: picked.deviceId, label: picked.label });
+    } catch (err) {
+      // NotAllowedError when the user dismisses the picker: keep the current sink.
+      console.warn('[useAudioSettings] selectAudioOutput failed', err);
+    }
+  }, []);
+
   const gaplessSettings: GaplessSettings = { mode: gaplessMode, crossfadeMs };
   const replayGainSettings: ReplayGainSettings = { mode: replayGainMode, limiterEnabled: replayGainLimiter };
 
@@ -222,5 +282,7 @@ export function useAudioSettings(): AudioSettingsHook {
     replayGainSettings,
     latencyMode,
     setLatencyMode,
+    outputDevice,
+    onSelectOutputDevice,
   };
 }
