@@ -146,7 +146,7 @@ Get a shared playlist by ID.
 #### GET `/playlist/{share_id}`
 Redirect to the main app with the shared playlist loaded.
 
-### Listening rooms (planned — #185)
+### Listening rooms (planned — #209)
 
 > **Not implemented yet.** Static share endpoints above remain the only sharing API in production. See [LISTENING_ROOMS.md](./LISTENING_ROOMS.md) for the full design.
 
@@ -191,6 +191,26 @@ Direct MusicBrainz search endpoint.
   }
 }
 ```
+
+**Frontend:** `searchMusicBrainz()` in `src/api/songApi.ts`, rendered by
+`src/components/MusicBrainzPanel.tsx` from library edit mode ("Look up on MusicBrainz" / `MB`).
+The user ticks which fields to apply; only then is `PATCH /api/songs/{id}` sent with
+`title`, `genre`, `description`, and/or merged `tags`. `artist` is shown for reference only —
+the PATCH body has no `author` field yet.
+
+### Library pagination & tag suggestions (frontend)
+
+- `usePlayerData` fetches `GET /api/songs?limit=200&offset=N` (`LIBRARY_PAGE_SIZE`). "Load more"
+  requests the next offset with the same filters and appends; it is shown while the last page was full.
+- Library edit mode calls `GET /api/songs/{id}/suggest-tags` and shows the results as one-click chips
+  under `TagInput`.
+
+### Cloud playlists — known gap
+
+The Playlists tab reads `GET {REACT_APP_PLAYLIST_API_URL}/api/playlists` (read-only). There is **no**
+create / update / delete playlist endpoint on storage.noahcohn.com, so the app cannot save a playlist
+in-app. Use queue share links (`POST /api/share`) instead; adding `POST /api/playlists` on the backend
+would unblock an in-app save path.
 
 ## MusicBrainz Auto-Enrichment
 

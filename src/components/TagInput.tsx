@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useId } from 'react';
 
 interface TagInputProps {
   tags: string[];
@@ -6,6 +6,11 @@ interface TagInputProps {
   onChange: (tags: string[]) => void;
   placeholder?: string;
   maxTags?: number;
+  /** Tags suggested for this track by the API (`/suggest-tags`); shown as one-click chips. */
+  suggestedTags?: string[];
+  /** True while suggestions are being fetched. */
+  suggestionsLoading?: boolean;
+  label?: string;
 }
 
 export const TagInput: React.FC<TagInputProps> = ({
@@ -13,8 +18,12 @@ export const TagInput: React.FC<TagInputProps> = ({
   availableTags,
   onChange,
   placeholder = 'Add tags...',
-  maxTags = 10
+  maxTags = 10,
+  suggestedTags = [],
+  suggestionsLoading = false,
+  label = 'Tags'
 }) => {
+  const listboxId = useId();
   const [inputValue, setInputValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -61,6 +70,8 @@ export const TagInput: React.FC<TagInputProps> = ({
   };
   
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Typing in the input shouldn't reach row-level key handlers (Escape may bubble to close the editor).
+    if (e.key !== 'Escape') e.stopPropagation();
     if (e.key === 'Enter') {
       e.preventDefault();
       if (suggestions[selectedIndex]) {
@@ -77,6 +88,7 @@ export const TagInput: React.FC<TagInputProps> = ({
       e.preventDefault();
       setSelectedIndex(prev => (prev - 1 + suggestions.length) % Math.max(suggestions.length, 1));
     } else if (e.key === 'Escape') {
+      if (showSuggestions) e.stopPropagation();
       setShowSuggestions(false);
     }
   };
@@ -91,8 +103,10 @@ export const TagInput: React.FC<TagInputProps> = ({
           >
             {tag}
             <button
-              onClick={() => removeTag(tag)}
-              className="hover:text-white transition-colors"
+              type="button"
+              onClick={(e) => { e.stopPropagation(); removeTag(tag); inputRef.current?.focus(); }}
+              aria-label={`Remove tag ${tag}`}
+              className="hover:text-white transition-colors rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-400"
             >
               ×
             </button>
@@ -110,16 +124,29 @@ export const TagInput: React.FC<TagInputProps> = ({
           onKeyDown={handleKeyDown}
           onFocus={() => setShowSuggestions(true)}
           placeholder={tags.length === 0 ? placeholder : ''}
+          role="combobox"
+          aria-label={label}
+          aria-autocomplete="list"
+          aria-expanded={showSuggestions && suggestions.length > 0}
+          aria-controls={listboxId}
+          aria-activedescendant={showSuggestions && suggestions[selectedIndex] ? `${listboxId}-${selectedIndex}` : undefined}
+          onClick={(e) => e.stopPropagation()}
           className="flex-1 min-w-[80px] bg-transparent text-white placeholder-gray-500 outline-none text-sm"
         />
       </div>
       
       {showSuggestions && suggestions.length > 0 && (
-        <div className="absolute z-50 mt-1 w-full bg-[#1a1a2e] border border-white/20 rounded-lg shadow-xl max-h-48 overflow-auto">
+        <div id={listboxId} role="listbox" aria-label={`${label} suggestions`} className="absolute z-50 mt-1 w-full bg-[#1a1a2e] border border-white/20 rounded-lg shadow-xl max-h-48 overflow-auto">
           {suggestions.map((suggestion, index) => (
             <button
+              type="button"
               key={suggestion}
-              onClick={() => addTag(suggestion)}
+              id={`${listboxId}-${index}`}
+              role="option"
+              aria-selected={index === selectedIndex}
+              tabIndex={-1}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => { e.stopPropagation(); addTag(suggestion); }}
               className={`w-full text-left px-3 py-2 text-sm transition-colors ${
                 index === selectedIndex
                   ? 'bg-purple-500/30 text-white'
@@ -127,6 +154,23 @@ export const TagInput: React.FC<TagInputProps> = ({
               }`}
             >
               {suggestion}
+            </button>
+          ))}
+        </div>
+      )}
+      {(suggestionsLoading || suggestedTags.some(t => !tags.includes(t))) && (
+        <div className="mt-1 flex flex-wrap items-center gap-1 text-xs" aria-label="Suggested tags" role="group">
+          <span className="text-gray-500">{suggestionsLoading ? 'Finding suggestions…' : 'Suggested:'}</span>
+          {suggestedTags.filter(t => !tags.includes(t)).slice(0, 8).map(tag => (
+            <button
+              type="button"
+              key={tag}
+              onClick={(e) => { e.stopPropagation(); addTag(tag); }}
+              disabled={tags.length >= maxTags}
+              aria-label={`Add suggested tag ${tag}`}
+              className="px-1.5 py-0.5 rounded-full border border-dashed border-purple-400/50 text-purple-200 hover:bg-purple-500/20 disabled:opacity-40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-400"
+            >
+              + {tag}
             </button>
           ))}
         </div>

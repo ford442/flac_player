@@ -108,6 +108,16 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const rsycrbRef = useRef(0.0);
   const fractalRef = useRef(0.0);
   const pulseRef = useRef(0.0);
+  // prefers-reduced-motion: zero the pulse uniform (read per frame; media query listener keeps it fresh).
+  const reducedMotionRef = useRef(false);
+  useEffect(() => {
+    const mq = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    if (!mq) return;
+    reducedMotionRef.current = mq.matches;
+    const onChange = (e: MediaQueryListEvent) => { reducedMotionRef.current = e.matches; };
+    mq.addEventListener?.('change', onChange);
+    return () => mq.removeEventListener?.('change', onChange);
+  }, []);
 
   const [modeNone, setModeNone] = useState(1);
   const [modeIR, setModeIR] = useState(0);
@@ -311,7 +321,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         beatPhase: beatPhaseRef.current,
         rsycrb: rsycrbRef.current,
         fractal: fractalRef.current,
-        pulse: pulseRef.current,
+        pulse: reducedMotionRef.current ? 0 : pulseRef.current,
         spectrum: spectrumRef.current,
         modeNone,
         modeIR,

@@ -18,7 +18,8 @@ import { EmbedPlayerView } from './EmbedPlayerView';
 import { shuffleArray, isFastMirrorEligible } from '../utils/audioUtils';
 import { IS_PROJECTM_EMBED } from '../utils/embedMode';
 import { getInitialVisualizerAesthetic, VisualizerAesthetic } from '../utils/visualizerMode';
-import { clearTrackCache } from '../storage/trackCache';
+import { clearTrackCache, downloadForOffline, isTrackCached } from '../storage/trackCache';
+import { isOfflineCacheAvailable } from './OfflineCache';
 import './Player.css';
 
 const getSharedPlaylistId = (): string | null => {
@@ -38,7 +39,7 @@ export const Player: React.FC = () => {
   const {
     eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate,
     gaplessSettings, setGaplessMode, crossfadeMs, setCrossfadeMs,
-    crossfadeEnabled, setCrossfadeEnabled,
+    crossfadeEnabled,
     replayGainMode, setReplayGainMode, replayGainLimiter, setReplayGainLimiter,
     replayGainSettings,
     latencyMode, setLatencyMode,
@@ -48,7 +49,7 @@ export const Player: React.FC = () => {
   const loader = useMemo(() => new AudioLoader(), []);
   const data = usePlayerData({ loader, addToast, setError, setCurrentTrack, isSharedPlaylist });
   const {
-    library, allTags, stats, isLoadingLibrary, isResyncingLibrary,
+    library, allTags, stats, isLoadingLibrary, isResyncingLibrary, hasMoreLibrary, loadMoreLibrary,
     playlists, isLoadingPlaylists,
     sharedPlaylistTitle, setSharedPlaylistTitle,
     searchQuery, setSearchQuery, minRating, setMinRating,
@@ -220,6 +221,24 @@ export const Player: React.FC = () => {
     } catch {
       addToast('Failed to create smart mix', 'error');
     }
+  };
+
+  const downloadQueueForOffline = async () => {
+    if (queue.length === 0) { addToast('Add tracks to the queue first.', 'info'); return; }
+    if (!isOfflineCacheAvailable()) { addToast('Offline cache is unavailable in this browser', 'error'); return; }
+    addToast(`Downloading ${queue.length} tracks for offline…`, 'info');
+    let saved = 0;
+    const failed: string[] = [];
+    for (const track of queue) {
+      try {
+        if (!(await isTrackCached(track.url))) await downloadForOffline(track.url);
+        saved++;
+      } catch {
+        failed.push(track.title || track.name);
+      }
+    }
+    if (failed.length === 0) addToast(`${saved} tracks available offline`, 'success');
+    else addToast(`Offline: ${saved} saved, ${failed.length} failed (${failed.slice(0, 3).join(', ')}${failed.length > 3 ? '…' : ''})`, 'error');
   };
 
   const generateShareLink = async () => {
@@ -407,7 +426,6 @@ export const Player: React.FC = () => {
       volume={volume} muted={muted} outputMode={outputMode} setOutputMode={setOutputMode}
       eqGains={eqGains} setEQBandGain={setEQBandGain} resetEQ={resetEQ}
       playbackRate={playbackRate} setPlaybackRate={setPlaybackRate}
-      crossfadeEnabled={crossfadeEnabled} setCrossfadeEnabled={setCrossfadeEnabled}
       gaplessMode={gaplessSettings.mode} setGaplessMode={setGaplessMode}
       crossfadeMs={crossfadeMs} setCrossfadeMs={setCrossfadeMs}
       replayGainMode={replayGainMode} setReplayGainMode={setReplayGainMode}
@@ -436,6 +454,9 @@ export const Player: React.FC = () => {
       onRemoveFromQueue={removeFromQueue} onClearQueue={clearQueue}
       onReorderQueue={reorderQueue} onSmartMix={handleSmartMix}
       onShareQueue={generateShareLink}
+      onDownloadQueue={downloadQueueForOffline}
+      hasMoreLibrary={hasMoreLibrary} onLoadMoreLibrary={loadMoreLibrary}
+      onNotify={addToast}
       onUpdateTrack={updateTrack} onTrashTrack={trashTrack}
       onLoadCloudPlaylist={loadCloudPlaylist}
       onSetShowHtmlFallback={setShowHtmlFallback}

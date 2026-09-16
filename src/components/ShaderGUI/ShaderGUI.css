@@ -247,6 +247,10 @@
   animation: loading-pulse 1s ease-in-out infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .loading-text { animation: none; }
+}
+
 @keyframes loading-pulse {
   0%, 100% { opacity: 0.5; }
   50% { opacity: 1; }

@@ -49,7 +49,7 @@ flac_player/
 │   └── script-processor-processor.js # AudioWorklet processor
 ├── src/
 │   ├── components/
-│   │   ├── Player.tsx          # Main player UI component (~1196 lines)
+│   │   ├── Player.tsx          # Main player UI component (~446 lines)
 │   │   ├── Player.css          # Player styles (utility-first)
 │   │   ├── LibraryView.tsx     # Grid/list library display with inline editing (~488 lines)
 │   │   ├── QueuePanel.tsx      # Queue sidebar/panel with drag-to-reorder (~236 lines)
@@ -89,7 +89,7 @@ flac_player/
 │   │       └── Sdl3AudioPlayer.ts        # SDL3 WASM
 │   ├── hooks/
 │   │   ├── usePlaybackController.ts  # Backend lifecycle, load/play, queue advance
-│   ├── audioLoader.ts          # Audio fetching + backend API client (~765 lines)
+│   ├── audioLoader.ts          # Audio fetching + backend API client (~379 lines)
 │   ├── flacDecoder.ts          # FLAC/WAV decoder (Web Audio API)
 │   ├── webgpuVisualizer.ts     # WebGPU visualization engine (~687 lines)
 │   └── math.ts                 # 3D math utilities (Vec3, Mat4)
@@ -197,7 +197,9 @@ Copy `.env.example` to `.env` for local development.
 ## Critical Architecture Details
 
 ### Audio Backend Selection
-The `Player.tsx` component selects one of four backends via `createAudioBackend()` (lazy dynamic imports):
+`usePlaybackController` (`src/hooks/usePlaybackController.ts`) owns backend lifecycle — load/play/queue
+advance — and selects one of four backends via `createAudioBackend()` (lazy dynamic imports). `Player.tsx`
+just calls into the hook; it does not choose the backend itself:
 1. **Streaming** (`audio/backends/StreamingAudioPlayer.ts`) - Default. HTMLAudioElement + HTTP range requests; crossfade support
 2. **Web Audio** (`audio/backends/WebAudioPlayer.ts`) - Full fetch + decode; buffered `BufferSourceNode`
 3. **AudioWorklet** (`audio/backends/WorkletAudioPlayer.ts`) - Low-latency worklet; `setPCMCallback` for projectM PCM tap
@@ -364,16 +366,17 @@ The FastAPI backend already adds `CORSMiddleware` with `allow_origins=["*"]`.
 Due to SharedArrayBuffer usage, the app must be served over HTTPS (except localhost).
 
 ### Deployment Credentials
-`deploy.py` contains hardcoded server credentials. This is a known issue — do not commit sensitive credentials in production.
+`deploy.py` reads `DEPLOY_TOKEN` from the environment only (`export DEPLOY_TOKEN="..."`) and fails
+fast if it's unset — never hardcode a token value in the file. `deploy_old.py` (plaintext SFTP
+password, superseded by `deploy.py`'s bundle-upload flow) has been removed.
 
 ## Known Issues & Limitations
 
 1. **Streaming vs buffered**: Streaming requires URL + CORS + Accept-Ranges; cannot load raw ArrayBuffers. Crossfade is streaming-only.
-2. **Test coverage**: Vitest unit tests (`queueUtils`, `audioDecoder`, `rendererSelection`) + Playwright smoke suite; expand audio pipeline integration ([#172](https://github.com/ford442/flac_player/issues/172))
+2. **Test coverage**: Vitest unit tests (`queueUtils`, `audioDecoder`, `rendererSelection`) + Playwright smoke suite + a real decode→playback→analyser integration harness (`tests/browser/audioPipeline.test.ts`, shipped via [#196](https://github.com/ford442/flac_player/issues/196))
 3. **WASM Build**: `scripts/build-wasm.sh` builds SDL3 only; also `bash src/sdl/build.sh`; `npm run verify:wasm` checks artifact freshness in CI
-4. **Hardcoded Deploy Credentials**: `deploy.py` contains server-specific configuration
-5. **Memory Constraints**: WASM heap grows from a 64 MiB floor up to **512 MiB** (`MAXIMUM_MEMORY`). Large files use the play ring, not a full-buffer vector.
-6. **Shader-to-CSS layout**: Knob/LED UVs live in `src/visuals/waveformContract.ts`. Changing CSS layout requires updating that contract once (both GPU shaders inject it).
+4. **Memory Constraints**: WASM heap grows from a 64 MiB floor up to **512 MiB** (`MAXIMUM_MEMORY`). Large files use the play ring, not a full-buffer vector.
+5. **Shader-to-CSS layout**: Knob/LED UVs live in `src/visuals/waveformContract.ts`. Changing CSS layout requires updating that contract once (both GPU shaders inject it).
 
 ## Development Workflow
 

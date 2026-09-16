@@ -1,7 +1,7 @@
 # Synced Listening Rooms — Design Document
 
 **Status:** Design (pre-implementation)  
-**Tracking:** [#185](https://github.com/ford442/flac_player/issues/185)  
+**Tracking:** [#209](https://github.com/ford442/flac_player/issues/209) (design closed as #197; implementation lives here)  
 **Last updated:** July 2026
 
 ## Summary
@@ -464,5 +464,5 @@ Static share remains unchanged. Optional later: **"Share playlist"** vs **"Liste
 
 - [API.md](./API.md) — REST catalog (room endpoints marked planned)
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — system diagram (listening layer)
-- [ROADMAP.md](./ROADMAP.md) — #185 tracking
+- [ROADMAP.md](./ROADMAP.md) — #209 tracking
 - [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) — why streaming-only for MVP

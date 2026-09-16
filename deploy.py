@@ -37,9 +37,9 @@ BUILD_DIR: str = 'dist'
 CONTABO_BASE_URL: str = "https://storage.noahcohn.com"
 DEPLOY_FOLDER: str = ""  # override remote target folder; empty = use PROJECT_NAME
 
-# Optional deploy token (recommended for security).
+# Deploy token, read from the environment only — never hardcode a value here.
 # Set via environment: export DEPLOY_TOKEN="your_long_token_from_vps_env"
-DEPLOY_TOKEN: Optional[str] = "6de44dca5425348f2e2ef9456fc820bfe56a5ace68bddeb6da4a1c2a9d9cadc0"
+DEPLOY_TOKEN: Optional[str] = os.environ.get("DEPLOY_TOKEN")
 # ============================================================
 
 
@@ -100,6 +100,11 @@ def deploy_bundle(build_path: Path) -> bool:
 
 def main():
     print(f"\n=== Deploying '{PROJECT_NAME}' via Contabo -> storage.1ink.us ===\n")
+
+    if not DEPLOY_TOKEN:
+        print("ERROR: DEPLOY_TOKEN is not set.")
+        print('Set it before deploying: export DEPLOY_TOKEN="your_long_token_from_vps_env"')
+        sys.exit(1)
 
     build_path = Path(BUILD_DIR)
     if not build_path.exists() or not build_path.is_dir():

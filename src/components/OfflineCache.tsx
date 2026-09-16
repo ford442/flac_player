@@ -21,23 +21,43 @@ interface OfflineBadgeProps {
   onDownload?: (url: string) => void;
   /** If provided, an evict button is shown. */
   onEvict?: (url: string) => void;
+  /** Called with a user-facing message when download / evict fails. */
+  onError?: (message: string) => void;
+}
+
+/** Cache API needs a secure context; some browsers / private modes block it. */
+export function isOfflineCacheAvailable(): boolean {
+  return typeof window !== 'undefined' && window.isSecureContext !== false && 'caches' in window;
+}
+
+function describeCacheError(action: 'download' | 'remove', error: unknown): string {
+  const msg = error instanceof Error ? error.message : String(error);
+  if (error instanceof TypeError || /failed to fetch|network|cors/i.test(msg)) {
+    return `Offline ${action} failed: network or CORS blocked the audio file`;
+  }
+  if (/quota/i.test(msg) || (error instanceof DOMException && error.name === 'QuotaExceededError')) {
+    return `Offline ${action} failed: browser storage is full`;
+  }
+  return `Offline ${action} failed: ${msg}`;
 }
 
 /**
  * Small indicator/button that shows offline availability for a single track.
  */
-export const OfflineBadge: React.FC<OfflineBadgeProps> = ({ track, onDownload, onEvict }) => {
+export const OfflineBadge: React.FC<OfflineBadgeProps> = ({ track, onDownload, onEvict, onError }) => {
   const [cached, setCached] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    isTrackCached(track.url).then(c => { if (!cancelled) setCached(c); });
+    if (!isOfflineCacheAvailable()) return;
+    isTrackCached(track.url).then(c => { if (!cancelled) setCached(c); }).catch(() => {});
     return () => { cancelled = true; };
   }, [track.url]);
 
-  const handleDownload = useCallback(async () => {
+  const handleDownload = useCallback(async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setProgress(0);
     try {
       if (canUseBackgroundDownloads()) {
@@ -49,29 +69,46 @@ export const OfflineBadge: React.FC<OfflineBadgeProps> = ({ track, onDownload, o
       }
       setCached(true);
       onDownload?.(track.url);
-    } catch {
-      // silently fail
+    } catch (error) {
+      // Cancelled background downloads reject too; don't toast those.
+      if (!(error instanceof DOMException && error.name === 'AbortError') && !/cancel/i.test(String(error))) {
+        onError?.(describeCacheError('download', error));
+      }
     } finally {
       setRequestId(null);
       setProgress(null);
     }
-  }, [track.url, onDownload]);
+  }, [track.url, onDownload, onError]);
 
-  const handleCancel = useCallback(() => {
+  const handleCancel = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
     if (requestId) cancelBackgroundDownload(requestId);
     setRequestId(null);
     setProgress(null);
   }, [requestId]);
 
-  const handleEvict = useCallback(async () => {
-    await evictTrack(track.url);
-    setCached(false);
-    onEvict?.(track.url);
-  }, [track.url, onEvict]);
+  const handleEvict = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await evictTrack(track.url);
+      setCached(false);
+      onEvict?.(track.url);
+    } catch (error) {
+      onError?.(describeCacheError('remove', error));
+    }
+  }, [track.url, onEvict, onError]);
+
+  if (!isOfflineCacheAvailable()) {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-gray-600" title="Offline cache unavailable in this browser (needs HTTPS and Cache API)">
+        ⊘ Offline
+      </span>
+    );
+  }
 
   if (progress !== null) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs text-blue-300" title="Downloading…">
+      <span className="inline-flex items-center gap-1 text-xs text-blue-300" title="Downloading…" role="status" aria-live="polite">
         <span className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
         {Math.round(progress * 100)}%
         {requestId && (
@@ -92,7 +129,10 @@ export const OfflineBadge: React.FC<OfflineBadgeProps> = ({ track, onDownload, o
   if (cached) {
     return (
       <button
+        type="button"
         onClick={handleEvict}
+        onDoubleClick={e => e.stopPropagation()}
+        data-testid="offline-badge-cached"
         className="inline-flex items-center gap-1 text-xs text-green-400 hover:text-red-400 transition-colors"
         title="Available offline – click to remove"
         aria-label="Remove offline cache"
@@ -104,7 +144,10 @@ export const OfflineBadge: React.FC<OfflineBadgeProps> = ({ track, onDownload, o
 
   return (
     <button
+      type="button"
       onClick={handleDownload}
+      onDoubleClick={e => e.stopPropagation()}
+      data-testid="offline-badge-download"
       className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-blue-300 transition-colors"
       title="Download for offline"
       aria-label="Download for offline"

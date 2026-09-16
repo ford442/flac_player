@@ -9,6 +9,9 @@ import {
   addTrackToQueue, playNextTrack, removeFromQueue as removeFromQueueUtil, reorderQueueIndex
 } from '../utils/queueUtils';
 
+/** Songs fetched per library page; `hasMoreLibrary` is true while pages come back full. */
+export const LIBRARY_PAGE_SIZE = 200;
+
 interface UsePlayerDataParams {
   loader: AudioLoader;
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
@@ -25,6 +28,7 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
     total_play_count: 0, untagged_count: 0, trash_count: 0, unique_tags: 0, top_tags: []
   });
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
+  const [hasMoreLibrary, setHasMoreLibrary] = useState(false);
   const [isResyncingLibrary, setIsResyncingLibrary] = useState(false);
   const [playlists, setPlaylists] = useState<CloudPlaylist[]>([]);
   const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
@@ -55,26 +59,43 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
   }, [loader]);
 
   const loadTags = useCallback(async () => {
-    try { setAllTags(await loader.fetchTags()); } catch { /* no-op */ }
-  }, [loader]);
+    try {
+      setAllTags(await loader.fetchTags());
+    } catch {
+      setAllTags([]);
+      addToast('Could not load tags (server unavailable)', 'error');
+    }
+  }, [loader, addToast]);
 
   const loadStats = useCallback(async () => {
-    try { setStats(await loader.fetchStats()); } catch { /* no-op */ }
-  }, [loader]);
+    try {
+      setStats(await loader.fetchStats());
+    } catch {
+      setStats({
+        total_tracks: 0, rated_4plus: 0, total_duration_hours: 0,
+        total_play_count: 0, untagged_count: 0, trash_count: 0, unique_tags: 0, top_tags: []
+      });
+      addToast('Could not load library stats (server unavailable)', 'error');
+    }
+  }, [loader, addToast]);
+
+  const libraryQuery = useCallback((offset: number) => ({
+    ratingGte: minRating,
+    tags: selectedTags.length > 0 ? selectedTags : undefined,
+    untagged: untaggedOnly,
+    search: searchQuery || undefined,
+    sortBy, sortDesc: true, limit: LIBRARY_PAGE_SIZE, offset,
+  }), [minRating, selectedTags, untaggedOnly, searchQuery, sortBy]);
 
   const loadLibrary = useCallback(async () => {
     setIsLoadingLibrary(true);
     try {
-      const { tracks } = await loader.fetchLibrary({
-        ratingGte: minRating,
-        tags: selectedTags.length > 0 ? selectedTags : undefined,
-        untagged: untaggedOnly,
-        search: searchQuery || undefined,
-        sortBy, sortDesc: true, limit: 1000
-      });
+      const { tracks } = await loader.fetchLibrary(libraryQuery(0));
       setLibrary(tracks);
+      setHasMoreLibrary(tracks.length === LIBRARY_PAGE_SIZE);
       setCachedLibrary(tracks, allTags, stats);
     } catch {
+      setHasMoreLibrary(false);
       const cached = getCachedLibrary();
       if (cached && cached.tracks.length > 0) {
         setLibrary(cached.tracks);
@@ -87,7 +108,27 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
     } finally {
       setIsLoadingLibrary(false);
     }
-  }, [loader, minRating, selectedTags, untaggedOnly, searchQuery, sortBy, allTags, stats, addToast, setError]);
+  }, [loader, libraryQuery, allTags, stats, addToast, setError]);
+
+  /** Fetch the next page with the same filters and append (deduped by id). */
+  const loadMoreLibrary = useCallback(async () => {
+    if (isLoadingLibrary || !hasMoreLibrary) return;
+    setIsLoadingLibrary(true);
+    try {
+      const { tracks } = await loader.fetchLibrary(libraryQuery(library.length));
+      setLibrary(prev => {
+        const seen = new Set(prev.map(t => t.id));
+        const next = [...prev, ...tracks.filter(t => !seen.has(t.id))];
+        setCachedLibrary(next, allTags, stats);
+        return next;
+      });
+      setHasMoreLibrary(tracks.length === LIBRARY_PAGE_SIZE);
+    } catch {
+      addToast('Could not load more tracks (server unavailable)', 'error');
+    } finally {
+      setIsLoadingLibrary(false);
+    }
+  }, [isLoadingLibrary, hasMoreLibrary, loader, libraryQuery, library.length, allTags, stats, addToast]);
 
   const loadPlaylists = useCallback(async () => {
     setIsLoadingPlaylists(true);
@@ -224,7 +265,7 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
 
   return {
     library, setLibrary, allTags, setAllTags, stats, setStats,
-    isLoadingLibrary, isResyncingLibrary,
+    isLoadingLibrary, isResyncingLibrary, hasMoreLibrary, loadMoreLibrary,
     playlists, isLoadingPlaylists,
     sharedPlaylistTitle, setSharedPlaylistTitle,
     searchQuery, setSearchQuery, minRating, setMinRating,

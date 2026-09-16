@@ -184,7 +184,7 @@ export async function fetchTags(): Promise<TagInfo[]> {
       url: `${API_BASE_URL}/api/songs/tags`,
       stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3) : undefined
     });
-    return [];
+    throw error;
   }
 }
 
@@ -225,16 +225,7 @@ export async function fetchStats(): Promise<LibraryStats> {
       type: error instanceof TypeError ? 'TypeError (network-level)' : error instanceof Error ? error.constructor.name : 'unknown',
       apiBase: API_BASE_URL
     });
-    return {
-      total_tracks: 0,
-      rated_4plus: 0,
-      total_duration_hours: 0,
-      total_play_count: 0,
-      untagged_count: 0,
-      trash_count: 0,
-      unique_tags: 0,
-      top_tags: []
-    };
+    throw error;
   }
 }
 
@@ -440,6 +431,32 @@ export async function suggestTags(musicId: string): Promise<{ suggestions: strin
     });
     return { suggestions: [], source: 'error' };
   }
+}
+
+// =============================================================================
+// MusicBrainz
+// =============================================================================
+
+export interface MusicBrainzMatch {
+  title?: string | null;
+  artist?: string | null;
+  genre?: string | null;
+  tags: string[];
+  description?: string | null;
+  year?: number | null;
+}
+
+/** `GET /api/musicbrainz/search` — returns null when MusicBrainz has no match. Throws on HTTP errors. */
+export async function searchMusicBrainz(query: string, artist?: string): Promise<MusicBrainzMatch | null> {
+  const params = new URLSearchParams({ query });
+  if (artist) params.append('artist', artist);
+  const url = `${API_BASE_URL}/api/musicbrainz/search?${params}`;
+  debug.log('MUSICBRAINZ_REQUEST', { url });
+  const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
+  if (!response.ok) throw new Error(`MusicBrainz search failed: ${response.status}`);
+  const data = await response.json();
+  if (!data?.found || !data.data) return null;
+  return { ...data.data, tags: Array.isArray(data.data.tags) ? data.data.tags : [] };
 }
 
 // =============================================================================

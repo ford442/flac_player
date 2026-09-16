@@ -14,6 +14,7 @@ interface QueuePanelProps {
   onShuffle: () => void;
   onSmartMix: () => void;
   onShareQueue?: () => void;
+  onDownloadQueue?: () => void;
   onReorderQueue?: (startIndex: number, endIndex: number) => void;
   shuffle: boolean;
   repeatMode: RepeatMode;
@@ -33,6 +34,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
   onShuffle,
   onSmartMix,
   onShareQueue,
+  onDownloadQueue,
   onReorderQueue,
   shuffle,
   repeatMode,
@@ -93,7 +95,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="queue-panel fixed right-0 top-0 bottom-0 w-80 bg-[#0f0f1e]/95 border-l border-white/10 shadow-2xl flex flex-col z-40">
+    <div role="complementary" aria-label="Play queue" className="queue-panel fixed right-0 top-0 bottom-0 w-80 bg-[#0f0f1e]/95 border-l border-white/10 shadow-2xl flex flex-col z-40">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-white/10">
         <div>
@@ -108,8 +110,10 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
           </p>
         </div>
         <button
+          type="button"
           onClick={onClose}
-          className="p-2 text-gray-400 hover:text-white transition-colors"
+          aria-label="Close queue"
+          className="p-2 text-gray-400 hover:text-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-400 rounded"
         >
           ✕
         </button>
@@ -118,7 +122,9 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
       {/* Controls */}
       <div className="flex items-center gap-2 p-3 border-b border-white/10">
         <button
+          type="button"
           onClick={onShuffle}
+          aria-pressed={shuffle}
           className={`flex-1 px-3 py-1.5 text-sm rounded transition-colors ${
             shuffle
               ? 'bg-purple-500 text-white'
@@ -135,6 +141,8 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
               : 'bg-white/10 text-gray-300 hover:bg-white/20'
           }`}
           title={`Repeat: ${repeatMode}`}
+          aria-label={`Repeat: ${repeatMode}`}
+          aria-pressed={repeatMode !== 'off'}
         >
           {repeatMode === 'one' ? '🔂' : '🔁'}
         </button>
@@ -146,11 +154,25 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
         </button>
         {onShareQueue && (
           <button
+            type="button"
             onClick={onShareQueue}
+            aria-label="Share queue"
             className="px-3 py-1.5 text-sm bg-white/10 text-gray-300 rounded hover:bg-white/20 transition-colors"
             title="Share Queue"
           >
             🔗
+          </button>
+        )}
+        {onDownloadQueue && (
+          <button
+            type="button"
+            onClick={onDownloadQueue}
+            disabled={queue.length === 0}
+            className="px-3 py-1.5 text-sm bg-white/10 text-gray-300 rounded hover:bg-white/20 disabled:opacity-40 transition-colors"
+            title="Download queue for offline"
+            aria-label="Download queue for offline"
+          >
+            ↓
           </button>
         )}
       </div>
@@ -164,7 +186,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
             <p className="text-sm mt-2">Add tracks from the library</p>
           </div>
         ) : (
-          <div className="divide-y divide-white/5">
+          <ol className="divide-y divide-white/5" aria-label="Queued tracks">
             {queue.map((track, index) => {
               const isCurrent = index === currentIndex;
               const isLoadingTrack = track.id === loadingTrackId;
@@ -172,7 +194,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
               const isDragOver = dragOverIndex === index && draggedIndex !== index;
 
               return (
-                <div key={`${track.id}-${index}`}>
+                <li key={`${track.id}-${index}`}>
                   {/* Drop indicator above item */}
                   {isDragOver && draggedIndex !== null && draggedIndex > index && (
                     <div className="h-0.5 bg-purple-500 mx-2 rounded-full" />
@@ -186,7 +208,21 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(index, e)}
                     onClick={() => onTrackClick(index)}
-                    className={`group flex items-center gap-3 p-3 cursor-pointer transition-colors ${
+                    onKeyDown={(e) => {
+                      if (e.target !== e.currentTarget) return;
+                      if (e.key === 'Enter' || e.key === ' ') onTrackClick(index);
+                      else if (e.key === 'Delete' || e.key === 'Backspace') onRemoveTrack(index);
+                      else if (onReorderQueue && e.altKey && e.key === 'ArrowUp' && index > 0) onReorderQueue(index, index - 1);
+                      else if (onReorderQueue && e.altKey && e.key === 'ArrowDown' && index < queue.length - 1) onReorderQueue(index, index + 1);
+                      else return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    aria-current={isCurrent ? 'true' : undefined}
+                    aria-label={`${index + 1}. ${track.title || track.name}${isCurrent ? ' (playing)' : ''}. Enter to play, Delete to remove${onReorderQueue ? ', Alt+Arrow to move' : ''}`}
+                    className={`group flex focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-400 items-center gap-3 p-3 cursor-pointer transition-colors ${
                       isCurrent
                         ? 'bg-purple-500/20 border-l-2 border-purple-500'
                         : 'hover:bg-white/5 border-l-2 border-transparent'
@@ -218,7 +254,10 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
                         e.stopPropagation();
                         onRemoveTrack(index);
                       }}
-                      className="opacity-0 group-hover:opacity-100 p-1 text-gray-500 hover:text-red-400 transition-all"
+                      type="button"
+                      tabIndex={-1}
+                      aria-label={`Remove ${track.title || track.name} from queue`}
+                      className="opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 p-1 text-gray-500 hover:text-red-400 transition-all"
                     >
                       ✕
                     </button>
@@ -228,10 +267,10 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
                   {isDragOver && draggedIndex !== null && draggedIndex < index && (
                     <div className="h-0.5 bg-purple-500 mx-2 rounded-full" />
                   )}
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ol>
         )}
       </div>
 

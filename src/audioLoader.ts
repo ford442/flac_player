@@ -231,7 +231,7 @@ export class AudioLoader {
       return tracks;
     } catch (error) {
       console.error('Error finding similar tracks:', error);
-      return [];
+      throw error;
     }
   }
 

@@ -65,7 +65,7 @@ Last updated: September 2026
 ## 4. Inherent Limitations & "Here be Dragons"
 
 *   **Streaming vs buffered:** Streaming cannot load raw ArrayBuffers; buffered backends cannot crossfade. Mode switch resets playback.
-*   **Test coverage:** Playwright smoke tests exist; no full audio pipeline integration suite yet ([#172](https://github.com/ford442/flac_player/issues/172)).
+*   **Test coverage:** Playwright smoke tests plus a real decode→playback→analyser integration harness (`tests/browser/audioPipeline.test.ts`, shipped via [#196](https://github.com/ford442/flac_player/issues/196)).
 *   **Deploy credentials:** `deploy.py` contains environment-specific SFTP config.
 *   **HTTPS + isolation:** App requires secure context with COOP/COEP for worklet/SDL/projectM paths.
 *   **WebGPU fail-closed default:** ShaderGUI probes WebGPU unless the user opts into WebGL2 (`?visualizer=webgl2` or Settings → Compatibility visualizer). Failed probes do not auto-start GL. Canvas2D is `DEBUG_VISUALIZER=canvas2d` only. Inspect `window.webgpuProbe` for reason, `powerPreference`, `requestedFeatures`, browser brand, and adapter data; audio playback is independent.

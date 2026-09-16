@@ -1,4 +1,5 @@
 import React from 'react';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface KeyboardHelpModalProps {
   onClose: () => void;
@@ -20,17 +21,23 @@ const SHORTCUTS = [
 ];
 
 export const KeyboardHelpModal: React.FC<KeyboardHelpModalProps> = ({ onClose }) => {
+  const dialogRef = useFocusTrap<HTMLDivElement>(onClose);
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
       onClick={onClose}
     >
       <div
-        className="bg-[#1a1a2e] border border-white/20 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="keyboard-help-title"
+        tabIndex={-1}
+        className="bg-[#1a1a2e] border border-white/20 rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl focus:outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-white">⌨️ Keyboard Shortcuts</h2>
+          <h2 id="keyboard-help-title" className="text-lg font-bold text-white">⌨️ Keyboard Shortcuts</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors text-xl leading-none"
