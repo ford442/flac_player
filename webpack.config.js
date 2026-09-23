@@ -39,6 +39,8 @@ module.exports = (env = {}, argv = {}) => {
     { from: 'public/icons', to: 'icons' },
     // Small UMD wrapper + worker for client-side convert (core WASM loaded from CDN).
     { from: 'public/ffmpeg', to: 'ffmpeg' },
+    // HQ resampler (src/audio/resampler.ts); linear fallback when absent.
+    { from: 'public/speex-resampler.*', to: '[name][ext]', noErrorOnMissing: true },
   ];
 
   if (hasWasm) {
@@ -76,6 +78,11 @@ module.exports = (env = {}, argv = {}) => {
         {
           test: /\.css$/,
           use: ['style-loader', 'css-loader'],
+        },
+        {
+          // WGSL modules (src/shaders/*.wgsl) imported as `?raw` strings.
+          resourceQuery: /raw/,
+          type: 'asset/source',
         },
       ],
     },

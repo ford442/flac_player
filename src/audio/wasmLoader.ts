@@ -28,4 +28,5 @@ export const WASM_ASSETS = {
   sdl3: '/sdl-audio.js',
   scriptProcessorShim: '/script-processor-shim.js',
   projectmHost: '/projectm/projectm-host.js',
+  speexResampler: '/speex-resampler.js',
 } as const;

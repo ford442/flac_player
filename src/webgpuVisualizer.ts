@@ -7,8 +7,13 @@ import {
 import type { WebGL2DebugMode } from './visuals/types';
 import { createDebugConfig, debugModeToUniform } from './visuals/webgl2/debugModes';
 import type { WebGL2DebugConfig } from './visuals/types';
-import type { WebGPUProbeSuccess } from './visuals/webgpuProbe';
-import { buildCanvasConfiguration } from './visuals/webgpu/canvasConfig';
+import { updateWebGPUTiming, type WebGPUProbeSuccess } from './visuals/webgpuProbe';
+import {
+  buildCanvasConfiguration,
+  DEFAULT_CANVAS_DISPLAY,
+  type CanvasDisplayOptions,
+} from './visuals/webgpu/canvasConfig';
+import { GpuPassTimer } from './visuals/webgpu/gpuPassTimer';
 import { createWaveformResources, type WaveformGpuResources } from './visuals/webgpu/waveformResources';
 import { createGuiResources, type GuiGpuResources } from './visuals/webgpu/guiResources';
 import { createCubeResources, type CubeGpuResources } from './visuals/webgpu/cubeResources';
@@ -37,6 +42,8 @@ export class WebGPUVisualizer {
   private guiAudioData: Float32Array = new Float32Array(64);
   private debug: WebGL2DebugConfig = createDebugConfig();
   private depthTexture: GPUTexture | null = null;
+  private display: CanvasDisplayOptions = DEFAULT_CANVAS_DISPLAY;
+  private passTimer: GpuPassTimer | null = null;
 
   private cameraRotation = { x: 0, y: 0 };
   private isDragging = false;
@@ -53,6 +60,20 @@ export class WebGPUVisualizer {
 
   getDevice(): GPUDevice | null {
     return this.device;
+  }
+
+  /** Smoothed waveform-pass GPU time (timestamp-query), null if unsupported / not yet sampled. */
+  getGpuTimeMs(): number | null {
+    return this.passTimer?.gpuTimeMs ?? null;
+  }
+
+  /** Device features actually in use (for the debug HUD). */
+  getRenderInfo(): { timestampQuery: boolean; f16: boolean; display: CanvasDisplayOptions } {
+    return {
+      timestampQuery: this.passTimer?.supported ?? false,
+      f16: this.gui?.f16 ?? false,
+      display: this.display,
+    };
   }
 
   setMode(mode: VisualizerMode) {
@@ -73,6 +94,7 @@ export class WebGPUVisualizer {
       this.context = boot.context;
       const canvasFormat = boot.format;
       this.canvasFormat = canvasFormat;
+      this.display = boot.display;
 
       this.device.lost.then((info) => {
         console.warn('WebGPU device lost:', info.message, 'reason:', info.reason);
@@ -84,6 +106,7 @@ export class WebGPUVisualizer {
       this.context.configure(buildCanvasConfiguration({
         device: this.device,
         format: canvasFormat,
+        display: this.display,
       }));
 
       this.analyser = analyser;
@@ -92,6 +115,7 @@ export class WebGPUVisualizer {
       this.waveform = await createWaveformResources(this.device, canvasFormat);
       this.cube = await createCubeResources(this.device, canvasFormat);
       this.gui = await createGuiResources(this.device, canvasFormat);
+      this.passTimer = new GpuPassTimer(this.device);
 
       return true;
     } catch (error) {
@@ -112,6 +136,8 @@ export class WebGPUVisualizer {
   }
 
   private destroyGpuBuffers() {
+    this.passTimer?.destroy();
+    this.passTimer = null;
     this.waveform?.uniformBuffer.destroy();
     this.waveform = null;
     this.gui?.uniformBuffer.destroy();
@@ -194,12 +220,13 @@ export class WebGPUVisualizer {
         loadOp: 'clear',
         storeOp: 'store',
       }],
+      timestampWrites: this.passTimer?.passTimestampWrites(),
     });
     pass.setPipeline(this.waveform.pipeline);
     pass.setBindGroup(0, this.waveform.bindGroup);
     pass.draw(6);
     pass.end();
-    this.device.queue.submit([commandEncoder.finish()]);
+    this.submitTimed(commandEncoder);
   }
 
   private render3D(audioLevel: number) {
@@ -218,6 +245,7 @@ export class WebGPUVisualizer {
         loadOp: 'clear',
         storeOp: 'store',
       }],
+      timestampWrites: this.passTimer?.passTimestampWrites(),
     });
     waveformPass.setPipeline(this.waveform.pipeline);
     waveformPass.setBindGroup(0, this.waveform.bindGroup);
@@ -278,7 +306,7 @@ export class WebGPUVisualizer {
     cubePass.drawIndexed(36);
 
     cubePass.end();
-    this.device.queue.submit([commandEncoder.finish()]);
+    this.submitTimed(commandEncoder);
   }
 
   setUniforms(data: ShaderGUIUniforms): void {
@@ -313,6 +341,7 @@ export class WebGPUVisualizer {
     this.context.configure(buildCanvasConfiguration({
       device: this.device,
       format: this.canvasFormat,
+      display: this.display,
     }));
   }
 
@@ -337,12 +366,22 @@ export class WebGPUVisualizer {
         loadOp: 'clear',
         storeOp: 'store',
       }],
+      timestampWrites: this.passTimer?.passTimestampWrites(),
     });
     pass.setPipeline(this.gui.pipeline);
     pass.setBindGroup(0, this.gui.bindGroup);
     pass.draw(6);
     pass.end();
+    this.submitTimed(commandEncoder);
+  }
+
+  /** Resolve the frame's pass timestamps (if any), submit, and publish gpuTimeMs. */
+  private submitTimed(commandEncoder: GPUCommandEncoder): void {
+    if (!this.device) return;
+    this.passTimer?.resolve(commandEncoder);
     this.device.queue.submit([commandEncoder.finish()]);
+    this.passTimer?.afterSubmit();
+    updateWebGPUTiming(this.getGpuTimeMs());
   }
 
   startAnimation(): void {

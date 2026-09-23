@@ -223,4 +223,37 @@ describe('WebGPU boot probe', () => {
       requestedFeatures: [],
     });
   });
+
+  it('falls back to the sRGB swapchain when an HDR configure is rejected', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const device = { destroy: vi.fn() } as unknown as GPUDevice;
+    const adapter = fakeAdapter({ requestDevice: vi.fn(async () => device) });
+    const configure = vi.fn((config: GPUCanvasConfiguration) => {
+      if (config.format === 'rgba16float') throw new TypeError('toneMapping unsupported');
+    });
+    const context = { configure } as unknown as GPUCanvasContext;
+
+    const result = await probeWebGPU(
+      { getContext: vi.fn(() => context) } as unknown as HTMLCanvasElement,
+      {
+        gpu: fakeGpu(adapter),
+        browser: chrome,
+        display: { colorSpace: 'srgb', toneMapping: 'extended', formatOverride: 'rgba16float' },
+      },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error('expected successful WebGPU probe');
+    expect(device.destroy).not.toHaveBeenCalled();
+    expect(result.format).toBe('bgra8unorm');
+    expect(result.display).toEqual({ colorSpace: 'srgb', formatOverride: null });
+    expect(configure).toHaveBeenLastCalledWith({
+      device,
+      format: 'bgra8unorm',
+      alphaMode: 'opaque',
+      colorSpace: 'srgb',
+      usage: CANVAS_RENDER_ATTACHMENT,
+    });
+    expect(result.breadcrumb.gpuTimeMs).toBeNull();
+  });
 });

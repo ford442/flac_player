@@ -58,7 +58,7 @@ describe('WorkletAudioPlayer hi-fi pause', () => {
   it('reports hi-fi capabilities honestly', async () => {
     const player = new WorkletAudioPlayer(new AudioContextManager());
     await player.startStreaming(2, 44100);
-    expect(player.getCapabilities()).toMatchObject({ seek: false, playbackRate: false, crossfade: false });
+    expect(player.getCapabilities()).toMatchObject({ seek: true, gapless: true, playbackRate: false, crossfade: false });
     player.destroy();
   });
 });

@@ -146,6 +146,53 @@ export function glslVec3(v: WaveformVec3): string {
   return `vec3(${fmt(v.r)}, ${fmt(v.g)}, ${fmt(v.b)})`;
 }
 
+export type WaveformShaderLanguage = 'wgsl' | 'glsl';
+
+/**
+ * The ONE layout inject: WAVEFORM_LAYOUT → shader literals, keyed by the
+ * placeholder names used in src/shaders/waveform.wgsl and the GLSL port.
+ */
+export function waveformLayoutTokens(lang: WaveformShaderLanguage): Record<string, string> {
+  const L = WAVEFORM_LAYOUT;
+  const v2 = lang === 'wgsl' ? wgslVec2 : glslVec2;
+  const v3 = lang === 'wgsl' ? wgslVec3 : glslVec3;
+  return {
+    knobRsycrb: v2(L.knobs.rsycrb.center),
+    knobFractal: v2(L.knobs.fractal.center),
+    knobPulse: v2(L.knobs.pulse.center),
+    knobRadius: fmt(L.knobs.rsycrb.radius),
+    knobScale: fmt(L.knobIntensityScale),
+    ledNone: v2(L.leds.none.center),
+    ledIR: v2(L.leds.ir.center),
+    ledStop: v2(L.leds.stop.center),
+    ledPlay: v2(L.leds.play.center),
+    ledNoneColor: v3(L.leds.none.color),
+    ledIRColor: v3(L.leds.ir.color),
+    ledStopColor: v3(L.leds.stop.color),
+    ledPlayColor: v3(L.leds.play.color),
+    ledNoneI: fmt(L.ledIntensity.none),
+    ledIRI: fmt(L.ledIntensity.ir),
+    ledStopI: fmt(L.ledIntensity.stop),
+    ledPlayI: fmt(L.ledIntensity.play),
+    knobGlow: v3(L.colors.knobGlow),
+    wavePrimary: v3(L.colors.wavePrimary),
+    wavePulse: v3(L.colors.wavePulse),
+    gradTop: v3(L.colors.screenGradTop),
+    gradBottom: v3(L.colors.screenGradBottom),
+    audioBins: String(L.audioBins),
+    aberration: fmt(L.aberrationScale),
+  };
+}
+
+/** Replace every double-brace token; throws on unknown or leftover placeholders. */
+export function injectShaderTokens(source: string, tokens: Record<string, string>): string {
+  const out = source.replace(/\{\{(\w+)\}\}/g, (_, name: string) => {
+    if (!(name in tokens)) throw new Error(`waveform shader: unknown placeholder {{${name}}}`);
+    return tokens[name];
+  });
+  return out;
+}
+
 /** Float32 payload for the WebGPU ShaderGUI uniform buffer (22 floats / 88 bytes). */
 export function packWaveformUniforms(
   u: WaveformUniforms,

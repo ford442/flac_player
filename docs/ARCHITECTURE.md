@@ -150,7 +150,28 @@ preference webgl2 (opt-in)  → WebGL2Visualizer (WAVEFORM_LAYOUT GLSL)
 DEBUG_VISUALIZER=canvas2d   → CanvasFallbackVisualizer (debug only)
 ```
 
-The boot probe is the **only** `requestAdapter` / `requestDevice` call. It uses `powerPreference: 'high-performance'` (`?gpu=low` → `'low-power'`), intersects optional features (`timestamp-query`, `shader-f16`), and configures the canvas via `buildCanvasConfiguration` in `src/visuals/webgpu/canvasConfig.ts` (opaque sRGB, `RENDER_ATTACHMENT` only). `WebGPUVisualizer` adopts that device and reuses the same configure factory on init/resize. Inspect `window.webgpuProbe` for status, reason, browser, adapter (including `isFallbackAdapter`), `powerPreference`, and `requestedFeatures`.
+The boot probe is the **only** `requestAdapter` / `requestDevice` call. It uses `powerPreference: 'high-performance'` (`?gpu=low` → `'low-power'`), intersects optional features (`timestamp-query`, `shader-f16`; never required), and configures the canvas via `buildCanvasConfiguration` in `src/visuals/webgpu/canvasConfig.ts`. `WebGPUVisualizer` adopts that device and reuses the same configure factory on init/resize. Inspect `window.webgpuProbe` for status, reason, browser, adapter (including `isFallbackAdapter`), `powerPreference`, `requestedFeatures`, `display`, and live `gpuTimeMs`.
+
+`GPUCanvasConfiguration` fields (`resolveCanvasDisplay` → `buildCanvasConfiguration`):
+
+| Field | Value | When |
+|-------|-------|------|
+| `format` | `getPreferredCanvasFormat()` | default |
+| | `rgba16float` | `?hdr=1` **and** toneMapping supported |
+| `alphaMode` | `opaque` | always (ShaderGUI does not composite through the canvas) |
+| `colorSpace` | `srgb` | default |
+| | `display-p3` | `matchMedia('(color-gamut: p3)')` matches |
+| `toneMapping` | omitted | default (SDR) |
+| | `{ mode: 'extended' }` | `?hdr=1` and `GPUCanvasContext.prototype.getConfiguration` exists |
+| `usage` | `RENDER_ATTACHMENT` | always; compute chores use dedicated `GPUBuffer`s |
+
+If a P3/HDR configure throws, the probe retries plain sRGB before failing closed; that is a display downgrade, not a renderer fallback.
+
+Device features in use:
+- **`timestamp-query`**: `GpuPassTimer` (`src/visuals/webgpu/gpuPassTimer.ts`) writes begin/end timestamps around the waveform pass (ShaderGUI, flat, or the 3D waveform-to-texture pass) and resolves them into a ring of 4 readback buffers. The smoothed value appears in the 🎛 HUD and as `window.webgpuProbe.gpuTimeMs`. Without the feature it does nothing and the HUD shows `n/a`.
+- **`shader-f16`**: the ShaderGUI glow math compiles as `f16` (`buildWaveformWGSL({ f16: true })`); the f32 module is used when the feature is missing or f16 fails to compile.
+
+WGSL source of truth: `src/shaders/waveform.wgsl` (imported `?raw`; webpack `asset/source`). `src/shaders/waveform.ts` only injects `waveformLayoutTokens('wgsl')` from `waveformContract.ts`; the GLSL port uses the same table with `'glsl'`.
 
 `?visualizer=webgl2` / Settings **Compatibility visualizer** creates WebGL2 ShaderGUI **without** probing WebGPU (no dual-hot GL+WebGPU on one canvas). Failed WebGPU without that opt-in still hard-fails the visualizer; audio continues. Canvas2D is not a product path.
 

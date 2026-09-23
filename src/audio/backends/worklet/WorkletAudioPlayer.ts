@@ -5,8 +5,8 @@
 import { decodeAudio } from '../../../audioDecoder';
 import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextManager } from '../../AudioContextManager';
 import { ensureContextForBuffer, ensureContextForUrl } from '../../ensureContextForSource';
-import { resampleInterleavedLinear } from '../../linearResampler';
-import { runHifiStreamPipeline } from '../../hifiStreamPipeline';
+import { createStreamResampler, resampleInterleaved, type StreamResampler } from '../../resampler';
+import { HifiStreamSession, type HifiTrackSource } from '../../hifiStreamPipeline';
 import { getOrFetchTrack } from '../../../storage/trackCache';
 import type { PlaybackPathInfo } from '../../../utils/playbackPath';
 import { describePlaybackPath } from '../../../utils/playbackPath';
@@ -42,7 +42,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   private channels: number = 0;
   private sampleRate: number = 0;
   private fileSampleRate: number = 0;
-  private streamNeedsResample = false;
+  private streamResampler: StreamResampler | null = null;
   private isPlaying: boolean = false;
   private isStreaming: boolean = false;
   private duration: number = 0;
@@ -51,9 +51,17 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   private useScriptProcessor: boolean = false;
   private streamFeeder: HifiStreamFeeder | null = null;
   private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
-  private streamAbort: AbortController | null = null;
   private playbackPath: PlaybackPathInfo | null = null;
-  private pipelineTask: Promise<void> | null = null;
+  private session: HifiStreamSession | null = null;
+  /** Bumped on every stream seek; stale `position` messages are ignored. */
+  private streamEpoch = 0;
+  /** Durations of spliced tracks, in ring order, until their segmentEnded arrives. */
+  private splicedDurations: Array<number | null> = [];
+  /** The processor reported `ended`: play() restarts the stream from 0. */
+  private streamFinished = false;
+  /** Latest preloadNext() request, forwarded to the hi-fi session once it exists. */
+  private nextSource: HifiTrackSource | null = null;
+  private lastPreloadRequest: HifiTrackSource | null = null;
   private gaplessSettings: GaplessSettings = {
     mode: DEFAULT_GAPLESS_MODE,
     crossfadeMs: DEFAULT_CROSSFADE_MS,
@@ -93,9 +101,12 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
 
   getCapabilities(): AudioBackendCapabilities {
     return {
-      seek: !this.isStreaming,
+      // Hi-fi streams restart the decoder at the target frame (hifiStreamPipeline.ts).
+      seek: true,
       playbackRate: false,
-      gapless: !this.isStreaming && !this.useScriptProcessor,
+      // Hi-fi streams splice same-format successors into the ring; crossfade mode
+      // is treated as gapless here (overlap stays native-streaming / web-audio).
+      gapless: !this.useScriptProcessor,
       crossfade: false,
       sinkId: isAudioContextSinkSupported(),
     };
@@ -130,10 +141,11 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     return ctx;
   }
 
-  private pcmForContext(interleaved: Float32Array, channels: number, fileRate: number): Float32Array {
+  /** No-op when chooseContextSampleRate matched the file rate. */
+  private async pcmForContext(interleaved: Float32Array, channels: number, fileRate: number): Promise<Float32Array> {
     const contextRate = this.audioContext?.sampleRate ?? fileRate;
     if (!fileRate || contextRate === fileRate) return interleaved;
-    return resampleInterleavedLinear(interleaved, channels, fileRate, contextRate);
+    return resampleInterleaved(interleaved, channels, fileRate, contextRate);
   }
 
   /**
@@ -168,8 +180,15 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   }
 
   preloadNext(options: PreloadNextOptions | string): void {
-    if (!isGaplessActive(this.gaplessSettings) || this.isStreaming) return;
-    const { url } = typeof options === 'string' ? { url: options } : options;
+    if (!isGaplessActive(this.gaplessSettings)) return;
+    const { url, duration } = typeof options === 'string' ? { url: options, duration: undefined } : options;
+    this.lastPreloadRequest = { url, expectedDuration: duration };
+    if (this.playbackPath?.strategy === 'hifi-stream') {
+      // Decode-ahead happens in the session once the current decode finishes.
+      this.nextSource = { url, expectedDuration: duration };
+      this.session?.setNext(this.nextSource);
+      return;
+    }
     this.preloadAbort?.abort();
     const controller = new AbortController();
     this.preloadAbort = controller;
@@ -208,6 +227,9 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     this.pendingNextDuration = 0;
     this.pendingNextSampleRate = 0;
     this.setPrebuffering(false);
+    this.nextSource = null;
+    this.lastPreloadRequest = null;
+    this.session?.setNext(null);
     this.post({ type: 'clearQueue' });
   }
 
@@ -248,21 +270,42 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     }
   }
 
+  /** Streaming: the read head crossed a gapless splice. */
+  private handleStreamSegmentEnded(): void {
+    this.session?.crossBoundary();
+    const duration = this.splicedDurations.shift();
+    this.duration = duration ?? 0;
+    this.currentTime = 0;
+    this.notifyStateChange();
+    if (this.onEndedCallback) {
+      try { this.onEndedCallback({ alreadyPlayingNext: true }); } catch (err) { console.warn('onEnded threw', err); }
+    }
+  }
+
   private attachWorkletPort(node: AudioWorkletNode): void {
     node.port.onmessage = (e: MessageEvent<FlacProcessorOutbound>) => {
       if (e.data.type === 'ended') {
         this.isPlaying = false;
-        this.isStreaming = false;
-        this.currentTime = 0;
+        if (this.isStreaming) {
+          // Keep the node and session: seek (or play → restart) works after the end.
+          this.streamFinished = true;
+          this.currentTime = this.duration;
+        } else {
+          this.currentTime = 0;
+        }
         this.notifyStateChange();
         if (this.onEndedCallback) {
           try { this.onEndedCallback(); } catch (err) { console.warn('onEnded threw', err); }
         }
       } else if (e.data.type === 'segmentEnded') {
-        this._handleSegmentEnded();
+        if (!this.isStreaming) this._handleSegmentEnded();
+        else if (e.data.epoch === this.streamEpoch) this.handleStreamSegmentEnded();
       } else if (e.data.type === 'position') {
+        if (this.isStreaming) {
+          if (e.data.epoch !== this.streamEpoch) return;
+          this.streamFeeder?.noteConsumed(e.data.consumed);
+        }
         this.currentTime = e.data.position;
-        if (this.isStreaming) this.streamFeeder?.noteConsumed(e.data.consumed);
       } else if (e.data.type === 'projectm-pcm') {
         if (this.onPCMBlock) {
           this.onPCMBlock(e.data.buffer, e.data.channels, e.data.sampleRate);
@@ -297,7 +340,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       this.isStreaming = false;
       this.playbackPath = describePlaybackPath('buffered');
 
-      this.audioBuffer = this.pcmForContext(
+      this.audioBuffer = await this.pcmForContext(
         decodedData.interleavedBuffer,
         decodedData.channels,
         decodedData.sampleRate
@@ -328,7 +371,8 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
 
   /**
    * Stream-decode a remote FLAC URL via HTTP Range → WASM chunks → worklet ring buffer.
-   * Memory stays bounded; no full-file ArrayBuffer is retained.
+   * Memory stays bounded; no full-file ArrayBuffer is retained. Seek restarts the
+   * decoder at the target frame; a queued same-format successor is spliced in gaplessly.
    */
   async loadFromURLStreaming(
     url: string,
@@ -338,6 +382,9 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       onProgress?: (loaded: number, total: number | null) => void;
     } = {}
   ): Promise<void> {
+    // Set before any await: a preloadNext() racing this load goes to the session.
+    this.playbackPath = describePlaybackPath('hifi-stream');
+    this.adoptPreloadForStream(url);
     await ensureContextForUrl(this.contextManager, url);
     await this.ensureWorkletGraph();
     if (this.useScriptProcessor) {
@@ -348,67 +395,75 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     this.stopNode();
     this.isPlaying = false;
     this.isStreaming = false;
-    this.playbackPath = describePlaybackPath('hifi-stream');
-    this.streamAbort = new AbortController();
-    const signal = this.streamAbort.signal;
 
-    let finishResolve!: () => void;
-    let finishReject!: (err: unknown) => void;
-
-    const readyPromise = new Promise<void>((resolve, reject) => {
-      let settled = false;
-      finishResolve = () => {
-        if (settled) return;
-        settled = true;
-        resolve();
-      };
-      finishReject = (err: unknown) => {
-        if (settled) return;
-        settled = true;
-        reject(err instanceof Error ? err : new Error(String(err)));
-      };
-      setTimeout(() => {
-        finishReject(new Error('Streaming playback did not start in time'));
-      }, 30_000);
-    });
-
-    const pipeline = runHifiStreamPipeline({
-      url,
-      cachedResponse: options.cachedResponse,
-      expectedDuration: options.expectedDuration,
-      signal,
-      onProgress: (p) => options.onProgress?.(p.loaded, p.total),
-      onMetadata: async ({ channels, sampleRate }) => {
+    const session = new HifiStreamSession({
+      onFormat: async ({ channels, sampleRate }) => {
         this.channels = channels;
         this.fileSampleRate = sampleRate;
         await this.startStreaming(channels, sampleRate);
-        if (options.expectedDuration) {
-          this.duration = options.expectedDuration;
-        }
-        finishResolve();
+        this.duration = (await session.audibleDuration) ?? options.expectedDuration ?? 0;
       },
-      onPcmChunk: async (interleaved) => {
+      pushPcm: async (pcm, signal) => {
         // Backpressure: hold the decoder while paused or while the ring is near full.
-        await this.streamFeeder?.waitForSpace(interleaved.length, signal);
-        if (!signal.aborted) this.appendChunk(interleaved);
+        await this.streamFeeder?.waitForSpace(pcm.length, signal);
+        if (!signal.aborted && this.session === session) this.appendChunk(pcm);
       },
-      onEnded: () => this.endStreaming(),
-      onError: (err) => {
-        console.error('[AudioWorkletPlayer] Stream error:', err);
-        finishReject(err);
+      onSplice: ({ duration }) => {
+        // Same rate on both sides: the resampler keeps running across the join
+        // (the marker lands within the filter latency, < 3 ms, of the true boundary).
+        this.splicedDurations.push(duration);
+        this.post({ type: 'markSegment' });
       },
+      onDecodeEnded: () => {
+        this.drainResampler();
+        this.endStreaming();
+      },
+      onError: (err) => console.error('[AudioWorkletPlayer] Stream error:', err),
     });
+    this.session = session;
+    session.setNext(this.nextSource);
 
-    this.pipelineTask = pipeline;
-    pipeline.catch(finishReject);
-    await readyPromise;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error('Streaming playback did not start in time')), 30_000);
+    });
+    try {
+      await Promise.race([
+        session.load(
+          { url, cachedResponse: options.cachedResponse, expectedDuration: options.expectedDuration },
+          { onProgress: (p) => options.onProgress?.(p.loaded, p.total) }
+        ),
+        timeout,
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /** A buffered preload requested before this stream load becomes the session's successor. */
+  private adoptPreloadForStream(url: string): void {
+    const request = this.lastPreloadRequest;
+    if (this.preloadAbort) {
+      this.preloadAbort.abort();
+      this.preloadAbort = null;
+      this.pendingNextBuffer = null;
+      this.setPrebuffering(false);
+      this.post({ type: 'clearQueue' });
+    }
+    if (!this.nextSource && request && request.url !== url && isGaplessActive(this.gaplessSettings)) {
+      this.nextSource = request;
+    }
+    if (this.nextSource?.url === url) this.nextSource = null;
   }
 
   private cancelStream(): void {
     this.streamFeeder?.release();
-    this.streamAbort?.abort();
-    this.streamAbort = null;
-    this.pipelineTask = null;
+    this.session?.cancel();
+    this.session = null;
+    this.splicedDurations = [];
+    this.streamFinished = false;
+    this.streamResampler?.destroy();
+    this.streamResampler = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -425,11 +480,20 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     this.channels = channels;
     this.fileSampleRate = sampleRate;
     this.sampleRate = this.audioContext?.sampleRate ?? sampleRate;
-    this.streamNeedsResample = this.sampleRate !== sampleRate;
+    this.streamResampler?.destroy();
+    this.streamResampler = this.sampleRate !== sampleRate
+      ? await createStreamResampler(channels, sampleRate, this.sampleRate)
+      : null;
+    if (this.streamResampler) {
+      console.log(`[AudioWorkletPlayer] Resampling ${sampleRate} → ${this.sampleRate} Hz (${this.streamResampler.kind})`);
+    }
     this.currentTime = 0;
     this.duration = 0;
     this.audioBuffer = null;
     this.isStreaming = true;
+    this.streamEpoch = 0;
+    this.streamFinished = false;
+    this.splicedDurations = [];
 
     await this.contextManager.resume();
 
@@ -456,13 +520,25 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     this.notifyStateChange();
   }
 
-  appendChunk(interleavedBuffer: Float32Array): void {
-    if (!this.workletNode || this.useScriptProcessor || !this.isStreaming) return;
-    const pcm = this.streamNeedsResample && this.fileSampleRate
-      ? this.pcmForContext(interleavedBuffer, this.channels, this.fileSampleRate)
-      : interleavedBuffer;
+  private postPcm(pcm: Float32Array): void {
+    if (pcm.length === 0) return;
     this.streamFeeder?.noteWritten(pcm.length);
     this.post({ type: 'chunk', buffer: pcm }, [pcm.buffer]);
+  }
+
+  appendChunk(interleavedBuffer: Float32Array): void {
+    if (!this.workletNode || this.useScriptProcessor || !this.isStreaming) return;
+    const pcm = this.streamResampler ? this.streamResampler.process(interleavedBuffer) : interleavedBuffer;
+    // A subarray view would transfer (and detach) its whole parent buffer.
+    this.postPcm(pcm.byteOffset === 0 && pcm.byteLength === pcm.buffer.byteLength ? pcm : pcm.slice());
+  }
+
+  /** Emit the resampler's filter tail (end of a track's samples). */
+  private drainResampler(): void {
+    if (!this.streamResampler || !this.isStreaming) return;
+    const tail = this.streamResampler.flush();
+    this.streamResampler.reset();
+    this.postPcm(tail.slice());
   }
 
   endStreaming(): void {
@@ -489,6 +565,11 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     }
 
     if (this.isStreaming) {
+      if (this.streamFinished) {
+        // Ring drained at end of stream: restart from the top.
+        this.isPlaying = true;
+        this.seek(0);
+      }
       this.post({ type: 'resume' });
       this.streamFeeder?.setPaused(false);
       this.isPlaying = true;
@@ -592,7 +673,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
 
   seek(time: number): void {
     if (this.isStreaming) {
-      console.warn('[AudioWorkletPlayer] Seek not supported in streaming mode');
+      this.seekStream(time);
       return;
     }
 
@@ -610,6 +691,30 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       this.play();
     }
 
+    this.notifyStateChange();
+  }
+
+  /**
+   * Hi-fi stream seek: empty the processor ring (epoch-tagged so late position
+   * messages are dropped), then restart the decoder at the target frame.
+   * The shared AudioContext keeps running throughout.
+   */
+  private seekStream(time: number): void {
+    if (!this.session?.isActive || !this.workletNode) return;
+    const target = Math.max(0, this.duration > 0 ? Math.min(time, this.duration) : time);
+    this.streamEpoch++;
+    this.splicedDurations = [];
+    this.streamFinished = false;
+    this.streamResampler?.reset();
+    this.streamFeeder?.reset();
+    this.post({ type: 'seekStream', position: target, epoch: this.streamEpoch });
+    if (!this.isPlaying) {
+      // After `ended` the processor is not paused; hold it until play().
+      this.post({ type: 'pause' });
+      this.streamFeeder?.setPaused(true);
+    }
+    this.currentTime = target;
+    this.session.seek(target);
     this.notifyStateChange();
   }
 

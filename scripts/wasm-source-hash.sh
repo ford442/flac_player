@@ -10,7 +10,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
   sha256sum \
     scripts/build-wasm.sh \
     src/sdl/audio_engine.cpp \
+    src/sdl/dsp_chain.h \
     src/sdl/pcm_ring.h \
     src/sdl/play_ring.h \
-    2>/dev/null | sort | sha256sum | awk '{print $1}'
+    | sort | sha256sum | awk '{print $1}'
 )
