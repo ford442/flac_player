@@ -63,4 +63,27 @@ describe('audio backend package layout', () => {
     expect(src).toMatch(/<option value="sdl">SDL3<\/option>/);
     expect(src).not.toMatch(/value="sdl2"/);
   });
+
+  it('exports the SDL3 transport ABI and keeps buffered _seek', () => {
+    const build = readFileSync(resolve(__dirname, '../scripts/build-wasm.sh'), 'utf8');
+    for (const sym of ['_seek', '_seek_stream', '_set_playback_rate', '_get_device_format']) {
+      expect(build).toContain(`"${sym}"`);
+    }
+    const engine = readFileSync(resolve(__dirname, '../src/sdl/audio_engine.cpp'), 'utf8');
+    expect(engine).toMatch(/int seek_stream\(double seconds\)/);
+    expect(engine).toMatch(/SDL_SetAudioStreamFrequencyRatio/);
+    // Buffered seek still indexes the PCM buffer.
+    expect(engine).toMatch(/void seek\(float time\)[\s\S]*?g_state\.playHead = sampleIndex/);
+
+    const player = readFileSync(resolve(BACKENDS_DIR, 'Sdl3AudioPlayer.ts'), 'utf8');
+    expect(player).toMatch(/_seek_stream\(time\)/);
+    expect(player).toMatch(/this\.module\._seek\(time\)/);
+  });
+
+  it('hashes every SDL header into wasm-source.sha256', () => {
+    const hash = readFileSync(resolve(__dirname, '../scripts/wasm-source-hash.sh'), 'utf8');
+    for (const f of ['audio_engine.cpp', 'dsp_chain.h', 'pcm_ring.h', 'play_ring.h']) {
+      expect(hash).toContain(`src/sdl/${f}`);
+    }
+  });
 });

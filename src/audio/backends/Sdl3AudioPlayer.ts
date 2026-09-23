@@ -23,6 +23,11 @@ interface SdlModule extends SdlPcmModule {
   _resume_audio(): void;
   _stop(): void;
   _seek(time: number): void;
+  /** Stream-mode ring reset (audio_engine.cpp). Optional so an older prebuilt WASM still loads. */
+  _seek_stream?(seconds: number): number;
+  /** SDL_SetAudioStreamFrequencyRatio, clamped 0.25..4 in C++. */
+  _set_playback_rate?(ratio: number): number;
+  _get_device_format?(freqPtr: number, channelsPtr: number): number;
   _get_current_time(): number;
   _set_volume(volume: number): void;
   /** Speaker DSP (dsp_chain.h). Optional so an older prebuilt WASM still loads. */
@@ -127,10 +132,26 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
         this.applyNativeEq(this.contextManager.getEQGains());
         this.applyNativeReplayGain();
         this.setVolume(this.lastVolume);
+        this.module._set_playback_rate?.(this.playbackRate);
+        this.logDeviceFormat();
         this.startPolling();
       }
     } catch (err) {
       console.error('[SdlAudioPlayer] Error initializing SDL module:', err);
+    }
+  }
+
+  private logDeviceFormat(): void {
+    const m = this.module;
+    if (!m?._get_device_format) return;
+    const ptr = m._malloc(8);
+    try {
+      if (m._get_device_format(ptr, ptr + 4) === 1) {
+        const heap = new Int32Array(this.heapF32().buffer, ptr, 2);
+        console.log(`[SdlAudioPlayer] SDL device format: ${heap[0]} Hz, ${heap[1]} ch (streams at file rate; SDL resamples on bind)`);
+      }
+    } finally {
+      m._free(ptr);
     }
   }
 
@@ -384,7 +405,18 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
   seek(time: number): void {
     if (!this.module) return;
     if (this.isStreaming) {
-      console.warn('[SdlAudioPlayer] Seek not supported in streaming mode');
+      // Rings/DSP reset and the clock jumps to `time`. Restarting the decoder
+      // at `time` (HTTP range + flacDecoder) is the #215 follow-up; until then
+      // the pipeline keeps pushing PCM from its current decode position.
+      if (typeof this.module._seek_stream !== 'function') {
+        console.warn('[SdlAudioPlayer] Seek not supported in streaming mode (WASM lacks _seek_stream)');
+        return;
+      }
+      if (this.module._seek_stream(time) === 1) {
+        sharedSdlPcmBridge.resetRing(this.module);
+        this.endedNotified = false;
+      }
+      this.notifyStateChange();
       return;
     }
     this.module._seek(time);
@@ -402,7 +434,7 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
 
   getCapabilities(): AudioBackendCapabilities {
     // SDL owns speaker output: no rate, no gapless/crossfade queue, no Web Audio sink.
-    return { seek: true, playbackRate: false, gapless: false, crossfade: false, sinkId: false };
+    return { seek: true, playbackRate: this.hasNativeRate(), gapless: false, crossfade: false, sinkId: false };
   }
 
   getState(): AudioPlaybackState {
@@ -422,7 +454,18 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
     });
   }
 
-  setPlaybackRate(rate: number): void { void rate; }
+  private playbackRate = 1;
+
+  private hasNativeRate(): boolean {
+    // Before the module loads, report the capability the current build ships.
+    return !this.module || typeof this.module._set_playback_rate === 'function';
+  }
+
+  /** Tempo via SDL resampling (pitch follows speed). Clock stays in media seconds. */
+  setPlaybackRate(rate: number): void {
+    this.playbackRate = Math.max(0.25, Math.min(4, Number.isFinite(rate) ? rate : 1));
+    this.module?._set_playback_rate?.(this.playbackRate);
+  }
 
   /** WASM runs EQ / ReplayGain / limiter on the speaker path (dsp_chain.h). */
   private hasNativeDsp(): boolean {
