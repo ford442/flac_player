@@ -15,6 +15,9 @@
 #include <atomic>
 #include <cmath>
 #include <cstdint>
+#if defined(__wasm_simd128__)
+#include <wasm_simd128.h>
+#endif
 
 enum DspEqType { DSP_EQ_LOWSHELF = 0, DSP_EQ_PEAKING = 1, DSP_EQ_HIGHSHELF = 2 };
 
@@ -188,40 +191,37 @@ inline void dsp_refresh(DspState& s, int channels, int sampleRate) {
     }
 }
 
-/**
- * In-place speaker DSP on interleaved f32. `samples` must be a scratch copy,
- * never the buffered source PCM. `numFloats` need not be frame-aligned.
- */
-inline void dsp_process(float* samples, int numFloats, int channels, int sampleRate, float volume) {
-    if (numFloats <= 0 || channels <= 0) return;
-    channels = std::min(channels, DSP_MAX_CHANNELS);
-    DspState& s = g_dspState;
-    dsp_refresh(s, channels, sampleRate);
-
+// Gain stage: ReplayGain -> channel-linked limiter -> volume. Sequential across
+// channels (one detector), so it stays scalar.
+inline void dsp_gain_stage(DspState& s, float* samples, int numFloats, float volume) {
     const double preGain = g_dspParams.replayGain.load();
     const bool limiter = g_dspParams.limiter.load() != 0;
     const double vol = volume;
-    int ch = s.channelPos;
-
+    if (!limiter) {
+        if (preGain * vol == 1.0) return;
+        for (int i = 0; i < numFloats; ++i) samples[i] = (float)((double)samples[i] * preGain * vol);
+        return;
+    }
     for (int i = 0; i < numFloats; ++i) {
         double x = samples[i] * preGain;
-
-        if (limiter) {
-            // Channel-linked envelope: every sample of every channel drives one detector.
-            const double peak = std::fabs(x);
-            double targetDb = 0.0;
-            if (peak > 1e-9) {
-                const double levelDb = 20.0 * std::log10(peak);
-                const double over = levelDb - DSP_LIMITER_THRESHOLD_DB;
-                if (over > 0.0) targetDb = -over * (1.0 - 1.0 / DSP_LIMITER_RATIO);
-            }
-            const double coeff = targetDb < s.limiterEnvDb ? s.attackCoeff : s.releaseCoeff;
-            s.limiterEnvDb = targetDb + coeff * (s.limiterEnvDb - targetDb);
-            if (s.limiterEnvDb < -1e-6) x *= std::pow(10.0, s.limiterEnvDb / 20.0);
+        const double peak = std::fabs(x);
+        double targetDb = 0.0;
+        if (peak > 1e-9) {
+            const double levelDb = 20.0 * std::log10(peak);
+            const double over = levelDb - DSP_LIMITER_THRESHOLD_DB;
+            if (over > 0.0) targetDb = -over * (1.0 - 1.0 / DSP_LIMITER_RATIO);
         }
+        const double coeff = targetDb < s.limiterEnvDb ? s.attackCoeff : s.releaseCoeff;
+        s.limiterEnvDb = targetDb + coeff * (s.limiterEnvDb - targetDb);
+        if (s.limiterEnvDb < -1e-6) x *= std::pow(10.0, s.limiterEnvDb / 20.0);
+        samples[i] = (float)(x * vol);
+    }
+}
 
-        x *= vol;
-
+// Scalar EQ over samples[begin, end). `ch` is the interleave position of samples[begin].
+inline int dsp_eq_scalar(DspState& s, float* samples, int begin, int end, int channels, int ch) {
+    for (int i = begin; i < end; ++i) {
+        double x = samples[i];
         for (int b = 0; b < s.bands; ++b) {
             if (!s.bandActive[b]) continue;
             const DspBiquadCoeffs& c = s.coeffs[b];
@@ -230,9 +230,66 @@ inline void dsp_process(float* samples, int numFloats, int channels, int sampleR
             s.z2[b][ch] = c.b2 * x - c.a2 * y;
             x = y;
         }
-
         samples[i] = (float)x;
         if (++ch >= channels) ch = 0;
     }
-    s.channelPos = ch;
+    return ch;
+}
+
+#if defined(__wasm_simd128__)
+// Stereo EQ with one f64x2 lane per channel. Same double ops in the same order
+// as dsp_eq_scalar (wasm has no implicit FMA), so the output is bit-identical.
+inline int dsp_eq_simd_stereo(DspState& s, float* samples, int numFloats, int ch) {
+    int i = 0;
+    if (ch != 0) {
+        // Finish the frame split across the previous callback.
+        i = std::min(numFloats, 2 - ch);
+        ch = dsp_eq_scalar(s, samples, 0, i, 2, ch);
+        if (ch != 0) return ch;
+    }
+    const int pairEnd = i + ((numFloats - i) & ~1);
+    for (; i < pairEnd; i += 2) {
+        v128_t x = wasm_f64x2_promote_low_f32x4(wasm_v128_load64_zero(samples + i));
+        for (int b = 0; b < s.bands; ++b) {
+            if (!s.bandActive[b]) continue;
+            const DspBiquadCoeffs& c = s.coeffs[b];
+            v128_t z1 = wasm_v128_load(&s.z1[b][0]);
+            v128_t z2 = wasm_v128_load(&s.z2[b][0]);
+            const v128_t y = wasm_f64x2_add(wasm_f64x2_mul(wasm_f64x2_splat(c.b0), x), z1);
+            z1 = wasm_f64x2_add(wasm_f64x2_sub(wasm_f64x2_mul(wasm_f64x2_splat(c.b1), x),
+                                               wasm_f64x2_mul(wasm_f64x2_splat(c.a1), y)), z2);
+            z2 = wasm_f64x2_sub(wasm_f64x2_mul(wasm_f64x2_splat(c.b2), x),
+                                wasm_f64x2_mul(wasm_f64x2_splat(c.a2), y));
+            wasm_v128_store(&s.z1[b][0], z1);
+            wasm_v128_store(&s.z2[b][0], z2);
+            x = y;
+        }
+        wasm_v128_store64_lane(samples + i, wasm_f32x4_demote_f64x2_zero(x), 0);
+    }
+    return dsp_eq_scalar(s, samples, pairEnd, numFloats, 2, 0);
+}
+#endif
+
+/**
+ * In-place speaker DSP on interleaved f32. `samples` must be a scratch copy,
+ * never the buffered source PCM. `numFloats` need not be frame-aligned.
+ * `allowSimd` exists for the scalar-vs-SIMD golden test.
+ */
+inline void dsp_process(float* samples, int numFloats, int channels, int sampleRate, float volume,
+                        bool allowSimd = true) {
+    if (numFloats <= 0 || channels <= 0) return;
+    channels = std::min(channels, DSP_MAX_CHANNELS);
+    DspState& s = g_dspState;
+    dsp_refresh(s, channels, sampleRate);
+
+    dsp_gain_stage(s, samples, numFloats, volume);
+#if defined(__wasm_simd128__)
+    if (allowSimd && channels == 2) {
+        s.channelPos = dsp_eq_simd_stereo(s, samples, numFloats, s.channelPos);
+        return;
+    }
+#else
+    (void)allowSimd;
+#endif
+    s.channelPos = dsp_eq_scalar(s, samples, 0, numFloats, channels, s.channelPos);
 }

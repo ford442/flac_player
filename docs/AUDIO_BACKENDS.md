@@ -121,15 +121,19 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 - **Small files (buffered):** full fetch → decode → `_create_audio_buffer` / `_set_audio_data` (compat path).
 - **Large files (≥ 32 MB) or `forceStream`:** `runHifiStreamPipeline` → `_set_stream_format` → `_push_pcm` into a **play ring** (`PLAY_RING_CAPACITY` = 384000 floats, ~2 s stereo f32 @ 96 kHz). JS pauses decode when fill &gt; 75% (`get_play_ring_fill`). The SDL callback drains the play ring into a pre-sized scratch, runs speaker DSP (`dsp_chain.h`) in place, then writes the **viz** ring (`pcm_ring.h`, 65536 floats) for `SdlPcmBridge`.
 
-Seek is **disabled** in hi-fi stream mode (same as worklet).
+**Stream-mode seek (ABI only):** `seek(t)` calls `_seek_stream(t)`, which (under the SDL stream lock) clears the SDL stream, play ring, viz ring, DSP history and the ended flag, and sets the clock to `t`. Restarting the decoder / HTTP range at `t` is the #215 follow-up; until then, playback continues from the decoder's current position while the clock shows `t`.
 
-Buffered `_create_audio_buffer` rejects lengths above 384 MiB of f32 PCM (`nullptr`); `_set_audio_data` / `_set_stream_format` return `0` if `SDL_CreateAudioStream` / `SDL_BindAudioStream` fail, and the JS player throws instead of hanging.
+**Playback rate:** `_set_playback_rate(r)` → `SDL_SetAudioStreamFrequencyRatio` (clamped 0.25–4; pitch follows speed). `get_current_time` stays in **media seconds**: `playHead` counts file samples handed to SDL, and queued output bytes are scaled by `r` back to file samples before being subtracted.
+
+**Device format:** `_get_device_format(int* freq, int* ch)` is logged at init (SDL resamples file rate → device on bind).
+
+Buffered `_create_audio_buffer` rejects lengths above 384 MiB of f32 PCM and returns `nullptr` on allocation failure (the buffer is `malloc`-backed, so OOM never aborts); `_set_audio_data` / `_set_stream_format` return `0` if `SDL_CreateAudioStream` / `SDL_BindAudioStream` fail, and the JS player throws instead of hanging.
 
 **Gapless:** Not supported — each track is loaded with `stop()` between files.
 
 **Output device:** SDL opens its own Emscripten audio context, so Settings → **Output device** (`AudioContext.setSinkId`) does not apply; it uses the system default.
 
-**Build:** `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh`. Debug: `scripts/build-wasm.sh --debug --sdl3`. Release: `-O3 -DNDEBUG`, `INITIAL_MEMORY=64 MiB`, `MAXIMUM_MEMORY=512 MiB`. SDL2 **playback** was retired (#212); projectM still uses a separate `USE_SDL=2` **video** host (`npm run build:projectm`).
+**Build:** `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh`. Debug: `scripts/build-wasm.sh --debug --sdl3`. Release: `-O3 -DNDEBUG -msimd128` (stereo EQ uses f64x2 lanes; scalar fallback otherwise, bit-identical — `npm run test:dsp-golden`), `INITIAL_MEMORY=64 MiB`, `MAXIMUM_MEMORY=512 MiB`. SDL2 **playback** was retired (#212); projectM still uses a separate `USE_SDL=2` **video** host (`npm run build:projectm`).
 
 ---
 
@@ -143,8 +147,8 @@ Buffered `_create_audio_buffer` rejects lengths above 384 MiB of f32 PCM (`nullp
 | Gapless queue | ✓ (native + worklet paths) | ✓ | ✓ | — |
 | Crossfade | ✓ (native path) | ✓ | — | — |
 | Offline cache (`trackCache`) | URL fetch | ArrayBuffer | ArrayBuffer | ArrayBuffer |
-| Playback rate | ✓ (native path) | ✓ | — | — |
-| Seek | ✓ (not on hi-fi stream) | ✓ | ✓ buffered / — hi-fi | ✓ |
+| Playback rate | ✓ (native path) | ✓ | — | ✓ (SDL frequency ratio) |
+| Seek | ✓ (not on hi-fi stream) | ✓ | ✓ buffered / — hi-fi | ✓ buffered / ring reset only on hi-fi (#215) |
 
 The UI reads these from `AudioBackend.getCapabilities()` (`AudioBackendCapabilities`) and disables controls the live backend cannot honor.
 
