@@ -22,12 +22,14 @@ import {
   reduceRms,
   reduceSpectrum,
 } from './reduce';
+import { clampFftSize, reduceFftSpectrum } from './fft';
+import { runWebGpuFft } from './webgpuFft';
 import { runWebGpuReduce } from './webgpuReduce';
 import { runWorkerChore } from './workerClient';
 import type { GpuChoreBackend, GpuChoreJob, GpuChorePrefer, GpuChoreResult } from './types';
 
 function defaultBinsFor(kind: GpuChoreJob['kind']): number {
-  return kind === 'spectrum_bins' ? DEFAULT_SPECTRUM_BINS : DEFAULT_SCRUBBER_BINS;
+  return kind === 'spectrum_bins' || kind === 'fft_spectrum' ? DEFAULT_SPECTRUM_BINS : DEFAULT_SCRUBBER_BINS;
 }
 
 function cpuResult(job: GpuChoreJob, reason: string, started: number): GpuChoreResult {
@@ -46,6 +48,9 @@ function cpuResult(job: GpuChoreJob, reason: string, started: number): GpuChoreR
     const peek = reduceRms(job.pcm);
     base.rms = peek.rms;
     base.peak = peek.peak;
+  } else if (job.kind === 'fft_spectrum') {
+    base.fftSize = clampFftSize(job.fftSize);
+    base.spectrum = reduceFftSpectrum(job.pcm, binCount, channels, base.fftSize);
   } else if (job.kind === 'spectrum_bins') {
     base.spectrum = reduceSpectrum(job.pcm, binCount, channels);
   } else if (job.kind === 'peak_pyramid') {
@@ -103,12 +108,32 @@ async function tryWebGpu(job: GpuChoreJob, prefer: GpuChorePrefer): Promise<GpuC
   const channels = Math.max(1, job.channels ?? 1);
   const binCount = clampBinCount(job.binCount ?? defaultBinsFor(job.kind), defaultBinsFor(job.kind));
   const started = performance.now();
+  const reason = eligibility.ok ? 'adopted-visualizer-device' : `forced-webgpu:${eligibility.reason}`;
+
+  if (job.kind === 'fft_spectrum') {
+    try {
+      const fft = await runWebGpuFft(device, job.pcm, binCount, channels, job.fftSize, job.signal);
+      return finish({
+        kind: job.kind,
+        backend: 'webgpu',
+        reason,
+        spectrum: fft.spectrum,
+        fftSize: fft.fftSize,
+        elapsedMs: performance.now() - started,
+        sampleCount: job.pcm.length,
+        binCount,
+      }, prefer);
+    } catch {
+      return null;
+    }
+  }
+
   try {
     const gpu = await runWebGpuReduce(device, job.pcm, binCount, channels, job.kind, job.signal);
     const result: GpuChoreResult = {
       kind: job.kind,
       backend: 'webgpu',
-      reason: eligibility.ok ? 'adopted-visualizer-device' : `forced-webgpu:${eligibility.reason}`,
+      reason,
       minmax: job.kind === 'reduce_rms' ? undefined : gpu.minmax,
       levels: job.kind === 'peak_pyramid' ? pyramidFromMinMax(gpu.minmax) : undefined,
       rms: gpu.rms,

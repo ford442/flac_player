@@ -20,7 +20,7 @@
     "test:e2e": "npx playwright test",
     "test:streaming": "vitest run --config vitest.browser.config.ts",
     "test:visualizer": "vitest run tests/rendererSelection.test.ts tests/waveformContract.test.ts tests/debugModes.test.ts tests/canvasConfig.test.ts",
-    "test:gpu-chores": "vitest run tests/gpuChores.reduce.test.ts tests/gpuChores.dispatcher.test.ts",
+    "test:gpu-chores": "vitest run tests/gpuChores.reduce.test.ts tests/gpuChores.dispatcher.test.ts tests/gpuChores.fft.test.ts",
     "profile:chrome": "lighthouse http://localhost:3000 --view --preset=desktop",
     "test:dsp-golden": "mkdir -p .build && em++ -std=c++17 -O2 -msimd128 tests/native/dsp_simd_golden.cpp -o .build/dsp_simd_golden.js && node .build/dsp_simd_golden.js"
   },

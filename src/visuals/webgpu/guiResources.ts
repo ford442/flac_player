@@ -1,4 +1,4 @@
-import { waveformWGSL } from '../../shaders/waveform';
+import { buildWaveformWGSL } from '../../shaders/waveform';
 import { checkShaderCompilation } from './checkShaderCompilation';
 
 export interface GuiGpuResources {
@@ -6,6 +6,23 @@ export interface GuiGpuResources {
   audioBuffer: GPUBuffer;
   bindGroup: GPUBindGroup;
   pipeline: GPURenderPipeline;
+  /** True when the glow math compiled as f16 (`shader-f16`). */
+  f16: boolean;
+}
+
+async function compileGuiModule(device: GPUDevice): Promise<{ module: GPUShaderModule; f16: boolean }> {
+  if (device.features.has('shader-f16')) {
+    try {
+      const module = device.createShaderModule({ code: buildWaveformWGSL({ f16: true }), label: 'gui-f16' });
+      await checkShaderCompilation(module, 'gui-f16');
+      return { module, f16: true };
+    } catch (error) {
+      console.warn('[ShaderGUI] f16 waveform failed to compile; using f32:', error);
+    }
+  }
+  const module = device.createShaderModule({ code: buildWaveformWGSL(), label: 'gui' });
+  await checkShaderCompilation(module, 'gui');
+  return { module, f16: false };
 }
 
 export async function createGuiResources(
@@ -22,8 +39,7 @@ export async function createGuiResources(
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
 
-  const guiModule = device.createShaderModule({ code: waveformWGSL });
-  await checkShaderCompilation(guiModule, 'gui');
+  const { module: guiModule, f16 } = await compileGuiModule(device);
 
   const guiBindGroupLayout = device.createBindGroupLayout({
     entries: [
@@ -51,5 +67,5 @@ export async function createGuiResources(
     primitive: { topology: 'triangle-list' },
   });
 
-  return { uniformBuffer, audioBuffer, bindGroup, pipeline };
+  return { uniformBuffer, audioBuffer, bindGroup, pipeline, f16 };
 }

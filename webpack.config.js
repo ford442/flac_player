@@ -79,6 +79,11 @@ module.exports = (env = {}, argv = {}) => {
           test: /\.css$/,
           use: ['style-loader', 'css-loader'],
         },
+        {
+          // WGSL modules (src/shaders/*.wgsl) imported as `?raw` strings.
+          resourceQuery: /raw/,
+          type: 'asset/source',
+        },
       ],
     },
     plugins: [

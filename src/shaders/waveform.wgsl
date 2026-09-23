@@ -1,7 +1,15 @@
-// REFERENCE ONLY — not loaded at runtime.
-// Authoritative WGSL is src/shaders/waveform.ts, which injects layout from
-// src/visuals/waveformContract.ts (WAVEFORM_LAYOUT). Edit the contract for
-// knob/LED UV changes; keep this file in sync only if you use it as a WGSL sandbox.
+// ShaderGUI waveform — SOURCE OF TRUTH (loaded via `?raw` by src/shaders/waveform.ts).
+//
+// Double-brace placeholders are replaced once from src/visuals/waveformContract.ts
+// (WAVEFORM_LAYOUT) — the same contract the WebGL2 GLSL uses. Do not hardcode
+// knob/LED UVs or palette colors here; edit the contract.
+//
+// F16_ENABLE / GLOW_T: `enable f16;` + `f16` when the device has
+// `shader-f16`, otherwise empty + `f32`. The glow math in sampleRealWaveform runs in
+// glow_t; everything else stays f32.
+
+{{F16_ENABLE}}
+alias glow_t = {{GLOW_T}};
 
 struct ShaderGUIUniforms {
   resolution: vec2<f32>,
@@ -31,7 +39,12 @@ struct ShaderGUIUniforms {
   debugMode: f32,
 };
 
+struct AudioData {
+  values: array<f32, {{audioBins}}>,
+};
+
 @group(0) @binding(0) var<uniform> uniforms: ShaderGUIUniforms;
+@group(0) @binding(1) var<storage, read> audioData: AudioData;
 
 struct VertexOutput {
   @builtin(position) position: vec4<f32>,
@@ -50,6 +63,8 @@ fn vertex_main(@builtin(vertex_index) vertexIndex: u32) -> VertexOutput {
   return output;
 }
 
+const AUDIO_BINS: i32 = {{audioBins}};
+
 fn fractalWave(x: f32, depth: f32, audio: f32) -> f32 {
   var y = 0.0;
   var amp = 1.0;
@@ -64,7 +79,33 @@ fn fractalWave(x: f32, depth: f32, audio: f32) -> f32 {
   return y;
 }
 
-fn sampleWaveform(uv: vec2<f32>, audio: f32) -> f32 {
+fn sampleRealWaveform(uv: vec2<f32>) -> f32 {
+  let x = uv.x;
+  let binCount = f32(AUDIO_BINS);
+  let idx = x * binCount;
+  let i0 = clamp(i32(idx), 0, AUDIO_BINS - 1);
+  let i1 = clamp(i0 + 1, 0, AUDIO_BINS - 1);
+  let frac = idx - f32(i0);
+
+  let v0 = audioData.values[i0];
+  let v1 = audioData.values[i1];
+  let value = mix(v0, v1, frac);
+
+  // Draw mirrored waveform (top and bottom) in glow_t (f16 when available).
+  let v = glow_t(value);
+  let y = glow_t(uv.y);
+  let waveY = glow_t(0.5) + v * glow_t(0.38);
+  let dist = abs(y - waveY);
+  let glow = glow_t(0.018) / (dist + glow_t(0.008));
+
+  let waveY2 = glow_t(0.5) - v * glow_t(0.38);
+  let dist2 = abs(y - waveY2);
+  let glow2 = glow_t(0.018) / (dist2 + glow_t(0.008));
+
+  return f32(max(glow, glow2));
+}
+
+fn sampleSyntheticWaveform(uv: vec2<f32>, audio: f32) -> f32 {
   let waveX = uv.x * 2.0 - 1.0;
   let audioMod = audio * 0.3;
   let waveY = sin(waveX * 10.0 + uniforms.time * 2.0) * audioMod;
@@ -76,11 +117,21 @@ fn sampleWaveform(uv: vec2<f32>, audio: f32) -> f32 {
   return glow;
 }
 
+fn sampleWaveform(uv: vec2<f32>, audio: f32) -> f32 {
+  // If audio is very low (SDL dummy analyser), use synthetic fallback
+  // that still animates so the screen doesn't flatline
+  if (audio < 0.005) {
+    let fallback = sampleSyntheticWaveform(uv, 0.15 + sin(uniforms.time * 0.8) * 0.08);
+    return fallback * 0.6;
+  }
+  return sampleRealWaveform(uv);
+}
+
 fn drawKnobGlow(uv: vec2<f32>, center: vec2<f32>, radius: f32, intensity: f32) -> vec3<f32> {
   let glowRadius = radius + 0.04;
   let glowDist = abs(distance(uv, center) - glowRadius);
   let glow = 0.5 / (glowDist + 1.0) * intensity;
-  return vec3<f32>(0.75, 0.52, 0.99) * glow;
+  return {{knobGlow}} * glow;
 }
 
 fn drawLedGlow(uv: vec2<f32>, center: vec2<f32>, color: vec3<f32>, intensity: f32) -> vec3<f32> {
@@ -89,69 +140,76 @@ fn drawLedGlow(uv: vec2<f32>, center: vec2<f32>, color: vec3<f32>, intensity: f3
   return color * ledGlow;
 }
 
+// Layout constants injected from src/visuals/waveformContract.ts (WAVEFORM_LAYOUT).
+
 @fragment
 fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
   let uv = input.uv;
-  let time = uniforms.time;
+  let debugMode = i32(uniforms.debugMode);
+
+  // Alt+D debug modes (parity with WebGL2 GLSL path)
+  if (debugMode == 1) {
+    return vec4<f32>(uv, 0.5, 1.0);
+  }
+
+  if (debugMode == 3) {
+    let bin = clamp(i32(uv.x * f32(AUDIO_BINS)), 0, AUDIO_BINS - 1);
+    let h = audioData.values[bin];
+    let bar = step(uv.y, h) * step(0.02, uv.y);
+    return vec4<f32>(vec3<f32>(0.2, 0.6, 1.0) * bar + vec3<f32>(0.05, 0.05, 0.1), 1.0);
+  }
+
+  if (debugMode == 4) {
+    let s = uniforms.spectrum0 + uniforms.spectrum1 + uniforms.spectrum2 + uniforms.spectrum3 + uniforms.spectrum4;
+    return vec4<f32>(vec3<f32>(s, uniforms.audioLevelL, uniforms.audioLevelR) * 2.0, 1.0);
+  }
+
   let audio = uniforms.audioLevel;
 
-  // --- Screen Background ---
   let screenGrad = mix(
-    vec3<f32>(0.102, 0.039, 0.180),
-    vec3<f32>(0.176, 0.106, 0.306),
+    {{gradTop}},
+    {{gradBottom}},
     uv.y
   );
 
-  // --- Waveform with RSYCRB chromatic aberration ---
-  let aberration = uniforms.rsycrb * 0.015;
+  let aberration = uniforms.rsycrb * {{aberration}};
 
   let rVal = sampleWaveform(uv + vec2<f32>(-aberration, 0.0), audio);
   let gVal = sampleWaveform(uv, audio);
   let bVal = sampleWaveform(uv + vec2<f32>(aberration, 0.0), audio);
 
-  // --- PULSE bloom ---
   let pulseBloom = 1.0 + uniforms.pulse * 2.0;
   var rWave = rVal * pulseBloom;
   var gWave = gVal * pulseBloom;
   var bWave = bVal * pulseBloom;
 
-  // --- Color mix based on pulse ---
   let waveColor = mix(
-    vec3<f32>(0.75, 0.52, 0.99),
-    vec3<f32>(0.96, 0.45, 0.71),
+    {{wavePrimary}},
+    {{wavePulse}},
     uniforms.pulse
   );
 
   var finalColor = screenGrad + vec3<f32>(rWave, gWave, bWave) * waveColor;
 
-  // --- CRT Scanline Overlay ---
-  let scanline = sin(uv.y * 200.0) * 0.04;
-  finalColor = finalColor - scanline;
+  // debugMode 2 = waveform-only (skip scanlines, vignette, chrome glows)
+  if (debugMode != 2) {
+    let scanline = sin(uv.y * 200.0) * 0.04;
+    finalColor = finalColor - scanline;
 
-  // --- Vignette ---
-  let vignette = 1.0 - length((uv - 0.5) * 1.2);
-  finalColor = finalColor * vignette;
+    let vignette = 1.0 - length((uv - 0.5) * 1.2);
+    finalColor = finalColor * vignette;
 
-  // --- Knob Glow Rings (normalized positions) ---
-  // Knob 1: RSYCRB ~ top-right area
-  finalColor = finalColor + drawKnobGlow(uv, vec2<f32>(0.72, 0.22), 0.06, uniforms.rsycrb * 0.5);
-  // Knob 2: FRACTAL
-  finalColor = finalColor + drawKnobGlow(uv, vec2<f32>(0.82, 0.22), 0.06, uniforms.fractal * 0.5);
-  // Knob 3: PULSE
-  finalColor = finalColor + drawKnobGlow(uv, vec2<f32>(0.92, 0.22), 0.06, uniforms.pulse * 0.5);
+    finalColor = finalColor + drawKnobGlow(uv, {{knobRsycrb}}, {{knobRadius}}, uniforms.rsycrb * {{knobScale}});
+    finalColor = finalColor + drawKnobGlow(uv, {{knobFractal}}, {{knobRadius}}, uniforms.fractal * {{knobScale}});
+    finalColor = finalColor + drawKnobGlow(uv, {{knobPulse}}, {{knobRadius}}, uniforms.pulse * {{knobScale}});
 
-  // --- Button LED Glows ---
-  // NONE - gray LED
-  finalColor = finalColor + drawLedGlow(uv, vec2<f32>(0.68, 0.42), vec3<f32>(0.3, 0.33, 0.39), uniforms.modeNone * 0.3);
-  // IR - pink LED
-  finalColor = finalColor + drawLedGlow(uv, vec2<f32>(0.76, 0.42), vec3<f32>(0.96, 0.45, 0.71), uniforms.modeIR * 0.6);
-  // STOP - red LED (momentary flash when pressed)
-  finalColor = finalColor + drawLedGlow(uv, vec2<f32>(0.84, 0.42), vec3<f32>(0.97, 0.44, 0.44), 0.0);
-  // PLAY - green LED
-  finalColor = finalColor + drawLedGlow(uv, vec2<f32>(0.92, 0.42), vec3<f32>(0.29, 0.87, 0.50), uniforms.isPlaying * 0.6);
+    finalColor = finalColor + drawLedGlow(uv, {{ledNone}}, {{ledNoneColor}}, uniforms.modeNone * {{ledNoneI}});
+    finalColor = finalColor + drawLedGlow(uv, {{ledIR}}, {{ledIRColor}}, uniforms.modeIR * {{ledIRI}});
+    finalColor = finalColor + drawLedGlow(uv, {{ledStop}}, {{ledStopColor}}, {{ledStopI}});
+    finalColor = finalColor + drawLedGlow(uv, {{ledPlay}}, {{ledPlayColor}}, uniforms.isPlaying * {{ledPlayI}});
 
-  // --- Volume brightness influence ---
-  finalColor = finalColor * (0.7 + uniforms.volume * 0.3);
+    finalColor = finalColor * (0.7 + uniforms.volume * 0.3);
+  }
 
   return vec4<f32>(finalColor, 1.0);
 }

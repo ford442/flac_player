@@ -58,7 +58,7 @@ Last updated: September 2026
     *   Manual resource cleanup in `destroy()`; 60 fps rAF loop. Probe/init/device-loss failures remain local to the GPU surface.
 *   **ShaderGUI layout contract (`src/visuals/waveformContract.ts`):**
     *   Knob/LED glow UVs, palette colors, and intensity scales live in `WAVEFORM_LAYOUT`.
-    *   Both WGSL (`src/shaders/waveform.ts`) and GLSL (`src/visuals/webgl2/shaders/waveform.ts`) inject these constants — change positions in **one** place.
+    *   Both WGSL (`src/shaders/waveform.wgsl`, injected by `waveform.ts`) and GLSL (`src/visuals/webgl2/shaders/waveform.ts`) inject these constants — change positions in **one** place.
     *   `Alt+D` debug modes (`uv`, `waveform-only`, `audio-bins`, `spectrum`) remain available for the active WebGPU or WebGL2 shader.
     *   Guard: `npm run test:visualizer` asserts layout injection parity + debug mode helpers.
 

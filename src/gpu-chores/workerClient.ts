@@ -3,6 +3,7 @@
  * buffer is never transferred away from the audio backend.
  */
 
+import { clampFftSize } from './fft';
 import { DEFAULT_SCRUBBER_BINS, DEFAULT_SPECTRUM_BINS, WORKER_CHUNK_SAMPLES } from './constants';
 import { clampBinCount } from './breakEven';
 import { pyramidFromMinMax } from './reduce';
@@ -51,7 +52,9 @@ export function disposeGpuChoreWorker(): void {
 
 export async function runWorkerChore(job: GpuChoreJob): Promise<GpuChoreResult> {
   const channels = Math.max(1, job.channels ?? 1);
-  const defaultBins = job.kind === 'spectrum_bins' ? DEFAULT_SPECTRUM_BINS : DEFAULT_SCRUBBER_BINS;
+  const defaultBins = job.kind === 'spectrum_bins' || job.kind === 'fft_spectrum'
+    ? DEFAULT_SPECTRUM_BINS
+    : DEFAULT_SCRUBBER_BINS;
   const binCount = clampBinCount(job.binCount ?? defaultBins, defaultBins);
   const host = getWorker();
   const id = nextId++;
@@ -65,6 +68,7 @@ export async function runWorkerChore(job: GpuChoreJob): Promise<GpuChoreResult> 
     channels,
     binCount,
     totalSamples: job.pcm.length,
+    fftSize: job.kind === 'fft_spectrum' ? clampFftSize(job.fftSize) : undefined,
   };
   host.postMessage(start);
 
@@ -98,6 +102,7 @@ export async function runWorkerChore(job: GpuChoreJob): Promise<GpuChoreResult> 
     rms: response.rms,
     peak: response.peak,
     spectrum: response.spectrum,
+    fftSize: job.kind === 'fft_spectrum' ? clampFftSize(job.fftSize) : undefined,
     elapsedMs: performance.now() - started,
     sampleCount: job.pcm.length,
     binCount,

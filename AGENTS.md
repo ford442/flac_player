@@ -75,7 +75,7 @@ flac_player/
 │   │   └── build.sh            # wrapper -> scripts/build-wasm.sh --sdl3
 │   ├── shaders/
 │   │   ├── waveform.ts         # WGSL shader for ShaderGUI
-│   │   └── waveform.wgsl       # Standalone WGSL file (reference)
+│   │   └── waveform.wgsl       # ShaderGUI WGSL source of truth (layout tokens injected by waveform.ts)
 │   ├── App.tsx                 # Root React component (handles shared playlist routes)
 │   ├── App.css                 # App styles
 │   ├── index.tsx               # React entry point (StrictMode)

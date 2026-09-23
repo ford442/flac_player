@@ -2,8 +2,11 @@ import type { VisualizerBackend } from './types';
 import {
   buildCanvasConfiguration,
   buildDeviceDescriptor,
+  DEFAULT_CANVAS_DISPLAY,
   readGpuPowerPreference,
+  resolveCanvasDisplay,
   selectDeviceFeatures,
+  type CanvasDisplayOptions,
 } from './webgpu/canvasConfig';
 
 export interface BrowserIdentity {
@@ -31,6 +34,10 @@ export interface WebGPUProbeBreadcrumb {
   requestedVisualizer: VisualizerBackend | null;
   powerPreference: GPUPowerPreference;
   requestedFeatures: GPUFeatureName[];
+  /** Canvas color space / tone mapping actually configured (ready only). */
+  display?: CanvasDisplayOptions;
+  /** Smoothed ShaderGUI GPU pass time (timestamp-query); null until measured / unsupported. */
+  gpuTimeMs?: number | null;
   timestamp: string;
 }
 
@@ -40,6 +47,7 @@ export interface WebGPUProbeSuccess {
   device: GPUDevice;
   context: GPUCanvasContext;
   format: GPUTextureFormat;
+  display: CanvasDisplayOptions;
   breadcrumb: WebGPUProbeBreadcrumb;
 }
 
@@ -61,6 +69,8 @@ export interface WebGPUProbeOptions {
   requestedVisualizer?: VisualizerBackend | null;
   publish?: boolean;
   powerPreference?: GPUPowerPreference;
+  /** Defaults to resolveCanvasDisplay() (P3 when supported, HDR only with ?hdr=1). */
+  display?: CanvasDisplayOptions;
 }
 
 declare global {
@@ -303,9 +313,19 @@ export async function probeWebGPU(
   }
 
   let format: GPUTextureFormat;
+  let display = options.display ?? resolveCanvasDisplay();
   try {
-    format = gpu.getPreferredCanvasFormat();
-    context.configure(buildCanvasConfiguration({ device, format }));
+    format = display.formatOverride ?? gpu.getPreferredCanvasFormat();
+    try {
+      context.configure(buildCanvasConfiguration({ device, format, display }));
+    } catch (displayError) {
+      // P3 / HDR are cosmetic opt-ins: retry the plain sRGB swapchain before failing closed.
+      if (display === DEFAULT_CANVAS_DISPLAY) throw displayError;
+      console.warn('[webgpuProbe] display config rejected, using sRGB:', errorDetail(displayError));
+      display = DEFAULT_CANVAS_DISPLAY;
+      format = gpu.getPreferredCanvasFormat();
+      context.configure(buildCanvasConfiguration({ device, format, display }));
+    }
   } catch (error) {
     destroyDevice(device);
     return failure(
@@ -330,8 +350,20 @@ export async function probeWebGPU(
     powerPreference,
     requestedFeatures,
   );
+  ready.display = display;
+  ready.gpuTimeMs = null;
   if (shouldPublish) publishWebGPUProbe(ready);
-  return { ok: true, adapter, device, context, format, breadcrumb: ready };
+  return { ok: true, adapter, device, context, format, display, breadcrumb: ready };
+}
+
+/**
+ * Per-frame GPU timing update. Mutates the published breadcrumb in place (no
+ * console line) so `window.webgpuProbe.gpuTimeMs` stays live for the HUD.
+ */
+export function updateWebGPUTiming(gpuTimeMs: number | null): void {
+  if (typeof window === 'undefined' || !window.webgpuProbe) return;
+  if (window.webgpuProbe.status !== 'ready') return;
+  window.webgpuProbe.gpuTimeMs = gpuTimeMs;
 }
 
 export function recordWebGPUFailure(

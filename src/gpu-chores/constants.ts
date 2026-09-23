@@ -49,3 +49,11 @@ export const WORKER_CHUNK_SAMPLES = 1_048_576;
 
 /** Live meters: never faster than this (UI/overview rate, not audio callback). */
 export const METER_HZ = 30;
+
+/** `fft_spectrum` window size (frames per Welch segment). Power of two. */
+export const DEFAULT_FFT_SIZE = 2048;
+export const MIN_FFT_SIZE = 64;
+export const MAX_FFT_SIZE = 16_384;
+
+/** @workgroup_size for the Stockham FFT kernels. */
+export const GPU_FFT_WORKGROUP_SIZE = 64;
