@@ -77,7 +77,16 @@ class FlacProcessor extends AudioWorkletProcessor {
     this.isStreaming = false;
     this.paused = false;
     this.hasEnded = false;
-    this.totalRead = 0;
+    // Streaming clock. readAbs/writtenAbs count interleaved samples since the
+    // last startStreaming/seekStream; a segment is one track inside the ring.
+    this.readAbs = 0;
+    this.writtenAbs = 0;
+    this.segStartAbs = 0;
+    this.segStartTime = 0;
+    /** @type {number[]} writtenAbs values where a spliced track begins */
+    this.boundaries = [];
+    this.epoch = 0;
+    this.framesSincePosition = 0;
 
     // PCM tap for projectM visualization (512 samples per channel)
     this.pcmBlockSize = 512;
@@ -108,6 +117,30 @@ class FlacProcessor extends AudioWorkletProcessor {
     this.pcmAccumPos = 0;
   }
 
+  /** Empty the ring and restart the clock at `position` seconds. */
+  resetStreamClock(/** @type {number} */ position, /** @type {number} */ epoch) {
+    this.ringBuffer.clear();
+    this.hasEnded = false;
+    this.readAbs = 0;
+    this.writtenAbs = 0;
+    this.segStartAbs = 0;
+    this.segStartTime = position;
+    this.boundaries = [];
+    this.epoch = epoch;
+    this.framesSincePosition = 0;
+    this.resetTap();
+  }
+
+  sendStreamPosition() {
+    this.framesSincePosition = 0;
+    this.send({
+      type: 'position',
+      position: this.segStartTime + (this.readAbs - this.segStartAbs) / (this.channels * this.sampleRate),
+      consumed: this.readAbs,
+      epoch: this.epoch,
+    });
+  }
+
   /** @param {FlacInbound} msg */
   onMessage(msg) {
     switch (msg.type) {
@@ -125,13 +158,16 @@ class FlacProcessor extends AudioWorkletProcessor {
         this.paused = false;
         this.channels = msg.channels || 2;
         this.sampleRate = msg.sampleRate || this.sampleRate;
-        this.hasEnded = false;
-        this.totalRead = 0;
-        this.ringBuffer.clear();
-        this.resetTap();
+        this.resetStreamClock(0, 0);
+        break;
+      case 'seekStream':
+        this.resetStreamClock(msg.position, msg.epoch);
+        break;
+      case 'markSegment':
+        if (this.isStreaming) this.boundaries.push(this.writtenAbs);
         break;
       case 'chunk':
-        if (this.isStreaming) this.ringBuffer.write(msg.buffer);
+        if (this.isStreaming) this.writtenAbs += this.ringBuffer.write(msg.buffer);
         break;
       case 'endStreaming':
         this.hasEnded = true;
@@ -264,21 +300,27 @@ class FlacProcessor extends AudioWorkletProcessor {
       for (let ch = 0; ch < output.length; ch++) output[ch][i] = 0;
     }
 
-    this.totalRead += readFrames * this.channels;
+    this.readAbs += readFrames * this.channels;
     this.tapPCM(output, frames);
+
+    // Gapless splice: the next track's samples follow in the same ring. Once
+    // the read head passes the boundary, restart the per-track clock.
+    let crossed = false;
+    while (this.boundaries.length > 0 && this.readAbs >= this.boundaries[0]) {
+      this.segStartAbs = /** @type {number} */ (this.boundaries.shift());
+      this.segStartTime = 0;
+      crossed = true;
+    }
+    if (crossed) this.send({ type: 'segmentEnded', epoch: this.epoch });
 
     if (this.hasEnded && this.ringBuffer.getAvailable() === 0 && readFrames < frames) {
       this.hasEnded = false;
       this.send({ type: 'ended' });
     }
 
-    if (frames > 0 && this.totalRead % (this.channels * this.sampleRate) < this.channels * 128) {
-      this.send({
-        type: 'position',
-        position: this.totalRead / (this.channels * this.sampleRate),
-        consumed: this.totalRead,
-      });
-    }
+    // ~every 100 ms (the seek bar and the feeder's backpressure read this).
+    this.framesSincePosition += frames;
+    if (crossed || this.framesSincePosition >= this.sampleRate / 10) this.sendStreamPosition();
     return true;
   }
 }

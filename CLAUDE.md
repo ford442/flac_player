@@ -83,6 +83,7 @@ Helper: `src/utils/debug.ts` — used by `audioLoader.ts` and `api/songApi.ts`.
 
 ```bash
 npm run build:wasm:sdl3    # or bash src/sdl/build.sh
+npm run build:wasm:resampler  # SpeexDSP HQ resampler (worklet rate mismatch)
 npm run build:projectm     # optional Milkdrop host
 npm run verify:wasm        # CI artifact check
 ```

@@ -180,3 +180,80 @@ export async function* streamResponseBody(
     yield pending.buffer.slice(pending.byteOffset, pending.byteOffset + pending.byteLength);
   }
 }
+
+/** Random-access reader (matches `ByteReader` in audio/flacSeek.ts). */
+export interface RangeByteReader {
+  readonly size: number | null;
+  /** True when arbitrary offsets can be read (Range support or local Blob). */
+  readonly seekable: boolean;
+  read(start: number, end: number, signal?: AbortSignal): Promise<Uint8Array>;
+}
+
+/**
+ * Confirm Range support when HEAD did not advertise it (some servers/CDNs omit
+ * Accept-Ranges on HEAD): a 1-byte Range GET answered with 206 + Content-Range.
+ */
+export async function confirmRangeSupport(probe: RemoteAudioProbe, signal?: AbortSignal): Promise<RemoteAudioProbe> {
+  if (probe.acceptsRanges && probe.contentLength !== null) return probe;
+  try {
+    const response = await fetch(probe.url, {
+      method: 'GET',
+      mode: 'cors',
+      credentials: 'omit',
+      headers: { Range: 'bytes=0-0' },
+      signal,
+    });
+    const match = /\/(\d+)\s*$/.exec(response.headers.get('content-range') || '');
+    void response.body?.cancel();
+    if (response.status === 206 && match) {
+      return { ...probe, acceptsRanges: true, contentLength: parseInt(match[1], 10) };
+    }
+  } catch (err) {
+    if (signal?.aborted) throw err;
+  }
+  return probe;
+}
+
+/** HTTP Range reader. `size` comes from the HEAD probe. */
+export function createRangeReader(probe: RemoteAudioProbe): RangeByteReader {
+  const size = probe.contentLength;
+  return {
+    size,
+    seekable: probe.acceptsRanges && size !== null,
+    async read(start, end, signal) {
+      const last = (size !== null ? Math.min(end, size) : end) - 1;
+      if (last < start) return new Uint8Array(0);
+      return new Uint8Array(await fetchByteRange(probe.url, start, last, signal));
+    },
+  };
+}
+
+/** Reader over a Blob (e.g. a Cache API hit) — slices stay lazy. */
+export function createBlobReader(blob: Blob): RangeByteReader {
+  return {
+    size: blob.size,
+    seekable: true,
+    async read(start, end) {
+      return new Uint8Array(await blob.slice(start, Math.min(end, blob.size)).arrayBuffer());
+    },
+  };
+}
+
+/** Stream `reader` from `startByte` to EOF in `chunkSize` pieces. */
+export async function* streamFromReader(
+  reader: RangeByteReader,
+  startByte: number,
+  options: StreamRemoteAudioOptions = {}
+): AsyncGenerator<ArrayBuffer, void, undefined> {
+  const chunkSize = options.chunkSize ?? DEFAULT_CHUNK_SIZE;
+  const total = reader.size;
+  if (total === null) throw new Error('streamFromReader requires a known size');
+  let loaded = startByte;
+  for (let start = startByte; start < total; start += chunkSize) {
+    if (options.signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    const bytes = await reader.read(start, Math.min(start + chunkSize, total), options.signal);
+    loaded += bytes.byteLength;
+    emitProgress(loaded, total, options.onProgress);
+    yield bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  }
+}

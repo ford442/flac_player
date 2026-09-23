@@ -19,6 +19,10 @@ export type FlacProcessorInbound =
   | { type: 'chunk'; buffer: Float32Array }
   | { type: 'endStreaming' }
   | { type: 'seek'; position: number }
+  /** Hi-fi stream: empty the ring, clock restarts at `position` s; `epoch` tags later positions. */
+  | { type: 'seekStream'; position: number; epoch: number }
+  /** Hi-fi stream: the next chunk begins a spliced (gapless) track. */
+  | { type: 'markSegment' }
   | { type: 'stop' }
   | { type: 'pause' }
   | { type: 'resume' }
@@ -28,7 +32,11 @@ export type FlacProcessorInbound =
 /** Processor → main thread. */
 export type FlacProcessorOutbound =
   | { type: 'ended' }
-  | { type: 'segmentEnded' }
-  /** `consumed` = interleaved samples read from the streaming ring so far. */
-  | { type: 'position'; position: number; consumed: number }
+  /** Buffered queue swap, or (streaming) the read head crossed a `markSegment`. */
+  | { type: 'segmentEnded'; epoch?: number }
+  /**
+   * `consumed` = interleaved samples read from the streaming ring since the last
+   * startStreaming/seekStream; `epoch` echoes the last seekStream (streaming only).
+   */
+  | { type: 'position'; position: number; consumed: number; epoch?: number }
   | { type: 'projectm-pcm'; buffer: Float32Array; channels: number; sampleRate: number };

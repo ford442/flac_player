@@ -53,7 +53,7 @@ export function describePlaybackPath(strategy: DecodeStrategy): PlaybackPathInfo
       return {
         strategy,
         label: 'Hi-Fi streaming',
-        detail: 'WASM FLAC decoder → bounded PCM ring (worklet or SDL3). Seek is disabled.',
+        detail: 'WASM FLAC decoder → bounded PCM ring (worklet or SDL3). Seek restarts the decoder at the target frame; same-format queue items splice gaplessly.',
       };
     case 'native-stream':
       return {
