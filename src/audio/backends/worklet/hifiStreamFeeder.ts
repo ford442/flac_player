@@ -62,6 +62,13 @@ export class HifiStreamFeeder {
     this.wake();
   }
 
+  /** Ring emptied by a seek: counters restart, pause state is kept. */
+  reset(): void {
+    this.written = 0;
+    this.consumed = 0;
+    this.wake();
+  }
+
   /** Release every waiter (stream cancelled / torn down). */
   release(): void {
     this.paused = false;

@@ -76,7 +76,7 @@ describe('audio backend package layout', () => {
     expect(engine).toMatch(/void seek\(float time\)[\s\S]*?g_state\.playHead = sampleIndex/);
 
     const player = readFileSync(resolve(BACKENDS_DIR, 'Sdl3AudioPlayer.ts'), 'utf8');
-    expect(player).toMatch(/_seek_stream\(time\)/);
+    expect(player).toMatch(/_seek_stream\(target\)/);
     expect(player).toMatch(/this\.module\._seek\(time\)/);
   });
 
