@@ -1,7 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createAudioBackend } from '../audio/createAudioBackend';
 import { sharedAudioContextManager } from '../audio/AudioContextManager';
-import type { ConfigurableAudioBackend, AudioPlaybackState, DecodedPcmView } from '../types/audio';
+import {
+  DEFAULT_AUDIO_BACKEND_CAPABILITIES,
+  type AudioBackendCapabilities,
+  type ConfigurableAudioBackend,
+  type AudioPlaybackState,
+  type DecodedPcmView,
+} from '../types/audio';
 import type { AudioOutputMode } from './usePlayerState';
 import {
   AudioLoader,
@@ -81,11 +87,18 @@ export function usePlaybackController({
   const { applyReplayGain } = useReplayGainApplication();
 
   const [currentFile, setCurrentFile] = useState<File | undefined>(undefined);
-  const [playbackPath, setPlaybackPath] = useState<PlaybackPathInfo | null>(null);
+  const [playbackPath, setPlaybackPathState] = useState<PlaybackPathInfo | null>(null);
+  const [capabilities, setCapabilities] = useState<AudioBackendCapabilities>(DEFAULT_AUDIO_BACKEND_CAPABILITIES);
   const [prebufferingNext, setPrebufferingNext] = useState(false);
   const [graphGeneration, setGraphGeneration] = useState(0);
 
   const playerRef = useRef<ConfigurableAudioBackend | null>(null);
+
+  /** Path and capabilities change together (load / backend swap). */
+  const setPlaybackPath = useCallback((path: PlaybackPathInfo | null) => {
+    setPlaybackPathState(path);
+    setCapabilities(playerRef.current?.getCapabilities() ?? DEFAULT_AUDIO_BACKEND_CAPABILITIES);
+  }, []);
   const pendingFilesRef = useRef<File[]>([]);
   const handleAutoAdvanceRef = useRef<() => void>(() => {});
 
@@ -321,6 +334,7 @@ export function usePlaybackController({
         handleAutoAdvanceRef.current();
       });
       playerRef.current = player;
+      setCapabilities(player.getCapabilities());
       player.setVolume(muted ? 0 : volume);
       player.setEQGains(eqGains);
       player.setPlaybackRate(playbackRate);
@@ -451,6 +465,7 @@ export function usePlaybackController({
     playerRef,
     currentFile,
     playbackPath,
+    capabilities,
     prebufferingNext,
     playTrack,
     playNextInQueue,

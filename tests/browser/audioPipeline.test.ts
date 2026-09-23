@@ -98,7 +98,7 @@ describe('real browser audio pipeline', () => {
   });
 
   it('stream-decodes FLAC through the hifi Worklet path with PCM and analyser output', async () => {
-    await withBackend('worklet', async (backend) => {
+    await withBackend('worklet', async (backend, manager) => {
       const response = await fetch(fixtureUrl);
       expect(response.ok).toBe(true);
       const fixture = await response.arrayBuffer();
@@ -133,6 +133,15 @@ describe('real browser audio pipeline', () => {
       expect(pcmCallbacks).toBeGreaterThan(0);
       expect(observedPcmPeak).toBeGreaterThan(0.0001);
       expect(activity.waveformPeak).toBeGreaterThan(0.0001);
+
+      // Pause is a processor message; the shared AudioContext keeps running.
+      backend.pause();
+      expect(backend.getState().isPlaying).toBe(false);
+      await new Promise((resolve) => window.setTimeout(resolve, 50));
+      expect(manager.getContext().state).toBe('running');
+      backend.play();
+      expect(manager.getContext().state).toBe('running');
+      expect(backend.getState().isPlaying).toBe(true);
     });
   });
 

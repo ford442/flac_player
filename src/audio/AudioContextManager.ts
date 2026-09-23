@@ -1,4 +1,5 @@
 import { EQChain, DEFAULT_EQ_BANDS } from './EQChain';
+import { applyAnalyserPolicy } from './analyserPolicy';
 import { ReplayGainNode } from './ReplayGainNode';
 import {
   DEFAULT_AUDIO_CONTEXT_POLICY,
@@ -295,7 +296,7 @@ export class AudioContextManager {
     this.masterGain = this.context.createGain();
     this.eqChain = new EQChain(this.context);
     this.analyser = this.context.createAnalyser();
-    this.analyser.fftSize = 2048;
+    applyAnalyserPolicy(this.analyser);
     this.speakerGain = this.context.createGain();
     this.visualizerFeedGain = this.context.createGain();
     this.visualizerFeedGain.gain.value = 1;

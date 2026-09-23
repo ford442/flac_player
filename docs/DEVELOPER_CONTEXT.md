@@ -25,7 +25,7 @@ Last updated: September 2026
 | Backend factory | `src/audio/createAudioBackend.ts` |
 | Streaming (default) | `src/audio/backends/StreamingAudioPlayer.ts` |
 | Buffered Web Audio | `src/audio/backends/WebAudioPlayer.ts` |
-| AudioWorklet + PCM tap | `src/audio/backends/WorkletAudioPlayer.ts` |
+| AudioWorklet + PCM tap | `src/audio/backends/worklet/WorkletAudioPlayer.ts`, processor `src/audio/worklets/flacProcessor.js` |
 | SDL3 WASM | `src/audio/backends/Sdl3AudioPlayer.ts` |
 | SDL → analyser bridge | `src/audio/SdlPcmBridge.ts`, `src/sdl/pcm_ring.h` |
 | SDL3 play ring | `src/sdl/play_ring.h`, `src/audio/playRingBackpressure.ts` |

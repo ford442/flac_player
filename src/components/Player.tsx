@@ -9,6 +9,7 @@ import { usePlayerData } from '../hooks/usePlayerData';
 import { usePlaybackController } from '../hooks/usePlaybackController';
 import { isAudioContextSinkSupported, sharedAudioContextManager } from '../audio/AudioContextManager';
 import type { AudioOutputControls } from './EQPanel';
+import { AudioCapabilitiesContext } from './AudioCapabilitiesContext';
 import { useGpuChoresOverview } from '../hooks/useGpuChoresOverview';
 import { VisualizerShell } from './VisualizerShell';
 import { ToastContainer } from './Toast';
@@ -74,13 +75,13 @@ export const Player: React.FC = () => {
   });
 
   const {
-    currentFile, playbackPath, prebufferingNext,
+    currentFile, playbackPath, capabilities, prebufferingNext,
     playTrack, playNextInQueue, playPreviousInQueue, togglePlayback,
     handleLocalFiles, handleVolumeChange, toggleMute,
     getAnalyser, getDecodedPcm, stop, seek,
   } = playback;
 
-  const canSeek = playbackPath?.strategy !== 'hifi-stream';
+  const canSeek = capabilities.seek;
   const onSeek = canSeek ? seek : undefined;
 
   useEffect(() => {
@@ -398,6 +399,7 @@ export const Player: React.FC = () => {
   }
 
   return (
+    <AudioCapabilitiesContext.Provider value={capabilities}>
     <PlayerFallbackView
       toasts={toasts} removeToast={removeToast}
       showHelp={showHelp} setShowHelp={setShowHelp}
@@ -463,5 +465,6 @@ export const Player: React.FC = () => {
       onClearCache={() => clearTrackCache().then(() => addToast('Offline cache cleared', 'success'))}
       onGenerationCompleted={handleGenerationCompleted}
     />
+    </AudioCapabilitiesContext.Provider>
   );
 };

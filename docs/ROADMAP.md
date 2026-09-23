@@ -18,25 +18,24 @@ Earlier issues (#166–#185, then #193–#202) shipped the product surface and t
 
 ## Open issues (do next)
 
-Foundation leftovers, then finish existing library surface, then OS/social adapters. SDL2 **playback** is retired (#212); EQ/ReplayGain still skip SDL speakers.
+Matches GitHub open issues as of 2026-09-23. The shared AudioContext / worklet graph (#218) is done: backends never suspend the shared context, processors are static modules, and `AudioBackendCapabilities` drives the UI.
 
 | Issue | Title | Priority |
 |-------|-------|----------|
-| [#212](https://github.com/ford442/flac_player/issues/212) | Foundation: WASM compile audit, C++ error reporting, and SDL2 retirement | **Done** — 512 MiB `MAXIMUM_MEMORY`, configure ABI, SDL2 playback retired |
-| [#213](https://github.com/ford442/flac_player/issues/213) | Foundation: Finish AudioContext — output device, channels, latency telemetry, DSP on SDL | **P0** — leftover #194; EQ/RG must hit SDL speakers before #209 DSP |
-| [#214](https://github.com/ford442/flac_player/issues/214) | Hygiene: dead TypeScript, docs drift, PlayerFallbackView split, deploy secrets | **P0** — unblocks agents; remove hardcoded deploy token |
-| [#216](https://github.com/ford442/flac_player/issues/216) | Feature: Finish library product — offline, pagination, accessibility, MusicBrainz | **P1** — wire surfaces that already exist |
-| [#208](https://github.com/ford442/flac_player/issues/208) | Feature: Media Session, lock-screen controls, and Remote Playback / Cast | **P1** — after honest clock; Cast after streaming seek |
-| [#215](https://github.com/ford442/flac_player/issues/215) | Feature: Hi-fi streaming transport — seek and gapless on SDL3/worklet, soxr WASM | **P2** — after #212/#213; unblocks hi-fi seek bar |
-| [#209](https://github.com/ford442/flac_player/issues/209) | Feature: Synced listening rooms MVP + later studio DSP (Rubber Band / LUFS) | **P2** — after #212/#213; Rubber Band after #213 speaker DSP |
+| [#219](https://github.com/ford442/flac_player/issues/219) | Foundation: WASM source hash, C++ stream-seek ABI, SIMD DSP, SDL playback rate | **P0** |
+| [#220](https://github.com/ford442/flac_player/issues/220) | Incomplete: #215 Hi-fi streaming seek, gapless splice, and soxr WASM resampler | **P0** — flips `seek` / `gapless` capabilities on the hi-fi path |
+| [#217](https://github.com/ford442/flac_player/issues/217) | Agent task: scan wiped positive changes + audit every issue for implementation completeness | **P1** |
+| [#208](https://github.com/ford442/flac_player/issues/208) | Feature: Media Session, lock-screen controls, and Remote Playback / Cast | **P1** — use `AudioBackendCapabilities` for seek/play |
+| [#222](https://github.com/ford442/flac_player/issues/222) | Feature: Local-first playlists (IndexedDB) and cloud playlist CRUD contract | **P1** |
+| [#221](https://github.com/ford442/flac_player/issues/221) | WebGPU: timestamp-query/shader-f16, HDR canvas, GPU FFT, WGSL modules | **P2** |
+| [#223](https://github.com/ford442/flac_player/issues/223) | Feature: WebMIDI / HID hardware mapping for ShaderGUI knobs, EQ, and transport | **P2** |
+| [#209](https://github.com/ford442/flac_player/issues/209) | Feature: Synced listening rooms MVP + later studio DSP (Rubber Band / LUFS) | **P2** — streaming-HTML clock for MVP |
 
 ## Foundation before features
 
-1. **#212** WASM/C++ flags, configure errors, and SDL2 playback retirement are **done**. Ship **#213** (AudioContext sink + SDL DSP) before depending on SDL/worklet clocks in rooms or Cast.
-2. Ship **#214** in parallel (docs, dead code, `deploy.py` secrets, split `PlayerFallbackView` so #208/#209 do not grow the prop dump).
-3. **#216** is the next user-facing work (offline badges, pagination, a11y) — unfinished wiring, not a new product.
-4. **#208** Media Session after the clock is honest; Cast after #215 seek or stay on the streaming `<audio>` backend.
-5. **#209** rooms implement `LISTENING_ROOMS.md` (streaming-HTML clock for MVP). Studio DSP (Rubber Band / LUFS) is Phase 3 of #209; soxr resampler for rate mismatch is #215 Phase 3.
+1. **#219 / #220** finish WASM stream-seek and hi-fi seek/gapless; the capability flags then light up the seek bar on worklet/SDL.
+2. **#208** Media Session reads `getCapabilities()`; Cast stays on the streaming `<audio>` backend until #220 lands.
+3. **#209** rooms implement `LISTENING_ROOMS.md` on the streaming-HTML clock.
 
 ## Horizon (not yet ticketed)
 

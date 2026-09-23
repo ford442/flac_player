@@ -17,6 +17,29 @@ export interface DecodedPcmView {
   sampleRate: number;
 }
 
+/**
+ * What the live backend can honor right now. May change per track (e.g. the
+ * streaming facade on its hi-fi path cannot seek). UI reads this instead of
+ * inferring from output mode or playback path.
+ */
+export interface AudioBackendCapabilities {
+  seek: boolean;
+  playbackRate: boolean;
+  gapless: boolean;
+  crossfade: boolean;
+  /** Output device selection (AudioContext.setSinkId). */
+  sinkId: boolean;
+}
+
+/** Permissive default for callers that have no backend yet. */
+export const DEFAULT_AUDIO_BACKEND_CAPABILITIES: AudioBackendCapabilities = {
+  seek: true,
+  playbackRate: true,
+  gapless: true,
+  crossfade: true,
+  sinkId: false,
+};
+
 /** Stable contract shared by every selectable audio implementation. */
 export interface AudioBackend {
   initialize(): Promise<void>;
@@ -37,6 +60,7 @@ export interface AudioBackend {
   setOnEndedCallback(callback?: (event?: TrackTransitionEvent) => void): void;
   setStateChangeCallback(callback: (state: AudioPlaybackState) => void): void;
   getState(): AudioPlaybackState;
+  getCapabilities(): AudioBackendCapabilities;
 }
 
 /** Optional controls used by the streaming and Worklet implementations. */

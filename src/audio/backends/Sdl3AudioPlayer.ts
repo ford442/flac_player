@@ -3,7 +3,7 @@ import { AudioContextManager, sharedAudioContextManager } from '../AudioContextM
 import { DEFAULT_EQ_BANDS } from '../EQChain';
 import { SdlPcmModule, sharedSdlPcmBridge } from '../SdlPcmBridge';
 import { WASM_ASSETS, loadWasmScript } from '../wasmLoader';
-import type { AudioPlaybackState, DecodedPcmView } from '../../types/audio';
+import type { AudioBackendCapabilities, AudioPlaybackState, DecodedPcmView } from '../../types/audio';
 import { BaseAudioBackend } from './BaseAudioBackend';
 import { runHifiStreamPipeline } from '../hifiStreamPipeline';
 import { describePlaybackPath, type PlaybackPathInfo } from '../../utils/playbackPath';
@@ -398,6 +398,11 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
 
   getDuration(): number {
     return this.duration;
+  }
+
+  getCapabilities(): AudioBackendCapabilities {
+    // SDL owns speaker output: no rate, no gapless/crossfade queue, no Web Audio sink.
+    return { seek: true, playbackRate: false, gapless: false, crossfade: false, sinkId: false };
   }
 
   getState(): AudioPlaybackState {

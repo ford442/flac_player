@@ -81,11 +81,13 @@ flac_player/
 │   ├── index.tsx               # React entry point (StrictMode)
 │   ├── audio/                  # Shared graph + backend factory
 │   │   ├── createAudioBackend.ts
-│   │   ├── AudioContextManager.ts, EQChain.ts, ReplayGainNode.ts, SdlPcmBridge.ts
+│   │   ├── AudioContextManager.ts, EQChain.ts, ReplayGainNode.ts, SdlPcmBridge.ts, analyserPolicy.ts
+│   │   ├── worklets/           # flacProcessor.js, sdlPcmTapProcessor.js (static AudioWorklet modules, @ts-check)
 │   │   └── backends/           # Four selectable implementations
 │   │       ├── StreamingAudioPlayer.ts   # default — HTMLAudio + range requests
 │   │       ├── WebAudioPlayer.ts         # buffered Web Audio API
-│   │       ├── WorkletAudioPlayer.ts     # AudioWorklet + PCM tap
+│   │       ├── WorkletAudioPlayer.ts     # re-export of worklet/WorkletAudioPlayer
+│   │       ├── worklet/                  # AudioWorklet orchestration, hi-fi feeder, ScriptProcessor fallback
 │   │       └── Sdl3AudioPlayer.ts        # SDL3 WASM
 │   ├── hooks/
 │   │   ├── usePlaybackController.ts  # Backend lifecycle, load/play, queue advance

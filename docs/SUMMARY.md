@@ -11,7 +11,7 @@ A React/TypeScript high-fidelity audio player with **four interchangeable audio 
 ### Audio
 - **Four backends:** Streaming (default), Web Audio, AudioWorklet, SDL3 WASM
 - **FLAC/WAV/MP3** via browser decode, libflac WASM, or CDN streaming
-- **10-band EQ**, playback rate, volume
+- **5-band EQ**, playback rate (streaming / Web Audio), volume
 - **Crossfade / gapless** (streaming mode, 3 s fade)
 - **Offline track cache** via Cache API (`trackCache.ts`)
 

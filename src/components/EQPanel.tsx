@@ -6,6 +6,7 @@ import type { ReplayGainMode } from '../utils/replayGain';
 import type { LatencyMode } from '../audio/sampleRatePolicy';
 import type { AudioOutputInfo } from '../audio/AudioContextManager';
 import type { OutputDeviceOption } from '../hooks/useAudioOutputInfo';
+import { useAudioCapabilities } from './AudioCapabilitiesContext';
 
 /** Output sink picker + read-only graph latency, composed in Player.tsx. */
 export interface AudioOutputControls {
@@ -87,6 +88,8 @@ export const EQPanel: React.FC<EQPanelProps> = ({
   onLatencyModeChange,
   audioOutput,
 }) => {
+  const capabilities = useAudioCapabilities();
+  const rateDisabled = !capabilities.playbackRate;
   return (
     <div className="eq-panel space-y-4 text-sm text-white">
       {/* EQ Section */}
@@ -162,7 +165,8 @@ export const EQPanel: React.FC<EQPanelProps> = ({
           step={0.05}
           value={playbackRate}
           onChange={(e) => onPlaybackRateChange(parseFloat(e.target.value))}
-          className="w-full"
+          disabled={rateDisabled}
+          className="w-full disabled:opacity-40"
           style={{ accentColor: '#a78bfa' }}
           aria-label="Playback speed"
         />
@@ -172,7 +176,8 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             <button
               key={speed}
               onClick={() => onPlaybackRateChange(speed)}
-              className={`px-2 py-0.5 rounded text-xs transition-colors ${
+              disabled={rateDisabled}
+              className={`disabled:opacity-40 disabled:cursor-not-allowed px-2 py-0.5 rounded text-xs transition-colors ${
                 Math.abs(playbackRate - speed) < 0.01
                   ? 'bg-purple-600 text-white'
                   : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
@@ -182,6 +187,11 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             </button>
           ))}
         </div>
+        {rateDisabled && (
+          <p className="text-xs text-gray-500 mt-2">
+            The current output mode cannot change speed. Switch to Streaming or Web Audio.
+          </p>
+        )}
       </div>
 
       {/* ReplayGain / Loudness */}
@@ -335,7 +345,11 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             <button
               key={mode}
               onClick={() => onGaplessModeChange(mode)}
-              className={`px-2 py-1 rounded text-xs transition-colors ${
+              disabled={
+                (mode === 'gapless' && !capabilities.gapless) ||
+                (mode === 'crossfade' && !capabilities.crossfade)
+              }
+              className={`disabled:opacity-40 disabled:cursor-not-allowed px-2 py-1 rounded text-xs transition-colors ${
                 gaplessMode === mode
                   ? 'bg-purple-600 text-white'
                   : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'

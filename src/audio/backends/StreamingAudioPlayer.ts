@@ -5,9 +5,9 @@
 //
 // Gapless / crossfade is implemented on the native <audio> path (dual elements).
 
-import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
+import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextManager } from '../AudioContextManager';
 import { ensureContextForUrl } from '../ensureContextForSource';
-import { WorkletAudioPlayer } from './WorkletAudioPlayer';
+import { WorkletAudioPlayer } from './worklet/WorkletAudioPlayer';
 import { probeRemoteAudio } from '../../utils/rangeFetch';
 import { probeRemoteAudioDuration } from '../../utils/audioHeader';
 import {
@@ -17,7 +17,7 @@ import {
   type PlaybackPathInfo,
 } from '../../utils/playbackPath';
 import { isTrackCached, getOrFetchTrack } from '../../storage/trackCache';
-import type { AudioPlaybackState, DecodedPcmView } from '../../types/audio';
+import type { AudioBackendCapabilities, AudioPlaybackState, DecodedPcmView } from '../../types/audio';
 import {
   DEFAULT_GAPLESS_MODE,
   DEFAULT_CROSSFADE_MS,
@@ -548,6 +548,19 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
 
   getAnalyser(): AnalyserNode | null {
     return this.contextManager.getAnalyser();
+  }
+
+  getCapabilities(): AudioBackendCapabilities {
+    if ((this.activePath === 'hifi' || this.activePath === 'buffered') && this.workletPlayer) {
+      return this.workletPlayer.getCapabilities();
+    }
+    return {
+      seek: true,
+      playbackRate: true,
+      gapless: true,
+      crossfade: true,
+      sinkId: isAudioContextSinkSupported(),
+    };
   }
 
   getState(): AudioPlaybackState {

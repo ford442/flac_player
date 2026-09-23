@@ -92,9 +92,9 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 
 ### 3. AudioWorklet (`worklet`)
 
-**File:** `src/audio/backends/WorkletAudioPlayer.ts`
+**Files:** `src/audio/backends/worklet/` — `WorkletAudioPlayer.ts` (graph + orchestration), `hifiStreamFeeder.ts` (hi-fi ring backpressure), `scriptProcessorFallback.ts`. Processor: `src/audio/worklets/flacProcessor.js` (static same-origin module; message union in `flacProcessorMessages.ts`).
 
-**How it works:** Decodes via `flacDecoder` / worker, feeds an inline `FlacProcessor` AudioWorklet (ScriptProcessor shim fallback). Supports buffered and chunked streaming into a ring buffer.
+**How it works:** Decodes via `flacDecoder` / worker, feeds the `flac-processor` AudioWorklet (ScriptProcessor fallback for buffered playback only). Supports buffered and chunked streaming into a ring buffer. Pause on the hi-fi path is a `pause` / `resume` port message — the shared `AudioContext` is never suspended — and the decoder is held while paused or while the ring is above 75 % full.
 
 **Use when:**
 - **projectM integration** — `setPCMCallback()` provides audio-clock-synchronized PCM
@@ -137,13 +137,16 @@ Buffered `_create_audio_buffer` rejects lengths above 384 MiB of f32 PCM (`nullp
 
 | Feature | Streaming | Web Audio | Worklet | SDL3 |
 |---------|-----------|-----------|---------|--------|
-| EQ (10-band) | ✓ | ✓ | ✓ | ✓ |
+| EQ (5-band) | ✓ | ✓ | ✓ | ✓ |
 | Analyser → visualizer | ✓ | ✓ | ✓ | ✓ (PCM bridge) |
 | projectM PCM tap | Analyser fallback | Analyser fallback | ✓ native | Analyser fallback |
 | Gapless queue | ✓ (native + worklet paths) | ✓ | ✓ | — |
-| Crossfade | ✓ (native path) | partial | partial | — |
+| Crossfade | ✓ (native path) | ✓ | — | — |
 | Offline cache (`trackCache`) | URL fetch | ArrayBuffer | ArrayBuffer | ArrayBuffer |
-| Playback rate | ✓ | ✓ | ✓ | ✓ |
+| Playback rate | ✓ (native path) | ✓ | — | — |
+| Seek | ✓ (not on hi-fi stream) | ✓ | ✓ buffered / — hi-fi | ✓ |
+
+The UI reads these from `AudioBackend.getCapabilities()` (`AudioBackendCapabilities`) and disables controls the live backend cannot honor.
 
 ## Speaker-path DSP (EQ / ReplayGain)
 

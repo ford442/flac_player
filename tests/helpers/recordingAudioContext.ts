@@ -91,7 +91,11 @@ export class RecordingDestinationNode extends RecordingAudioNode {
 }
 
 class RecordingAnalyserNode extends RecordingAudioNode {
-  fftSize = 2048;
+  // NaN until the graph applies an explicit policy (see analyserPolicy.test.ts).
+  fftSize = NaN;
+  smoothingTimeConstant = NaN;
+  minDecibels = NaN;
+  maxDecibels = NaN;
 
   constructor(context: RecordingAudioContext) {
     super(context, 'analyser');
@@ -222,8 +226,21 @@ export class RecordingAudioContext {
     this.sinkId = sinkId;
   }
 
+  suspendCalls = 0;
+  readonly addedModules: string[] = [];
+  readonly audioWorklet = {
+    addModule: async (url: string): Promise<void> => {
+      this.addedModules.push(url);
+    },
+  };
+
   async resume(): Promise<void> {
     this.state = 'running';
+  }
+
+  async suspend(): Promise<void> {
+    this.suspendCalls += 1;
+    this.state = 'suspended';
   }
 
   async close(): Promise<void> {

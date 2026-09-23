@@ -34,7 +34,7 @@ flowchart TB
 
   subgraph FX["Shared audio graph"]
     ACM["AudioContextManager"]
-    EQ["EQChain (10-band)"]
+    EQ["EQChain (5-band)"]
     Analyser["AnalyserNode"]
   end
 
@@ -122,7 +122,7 @@ No full-file download before playback starts. Requires CORS + `Accept-Ranges` on
 |------|--------|------------|----------|
 | `streaming` (default) | `audio/backends/StreamingAudioPlayer.ts` | URL → `<audio>` | Large library, instant start, crossfade |
 | `web-audio` | `audio/backends/WebAudioPlayer.ts` | Full fetch + decode | Simple buffered playback, debugging |
-| `worklet` | `audio/backends/WorkletAudioPlayer.ts` | Fetch/decode → worklet ring | Low latency, projectM PCM tap, EQ |
+| `worklet` | `audio/backends/worklet/WorkletAudioPlayer.ts` | Fetch/decode → worklet ring | Low latency, projectM PCM tap, EQ |
 | `sdl` | `audio/backends/Sdl3AudioPlayer.ts` | Range + play ring (large) or full fetch (small) | Experimental WASM output; 512 MiB heap cap |
 
 Backend factory: `src/audio/createAudioBackend.ts` (dynamic `import()` — WASM chunks load lazily).
@@ -175,7 +175,9 @@ In-app ProjectMHost OR postMessage / BroadcastChannel('projectm-audio')
 ### AudioContextManager (`src/audio/AudioContextManager.ts`)
 
 - Single shared `AudioContext`
-- 10-band EQ via `EQChain.ts`
+- 5-band EQ via `EQChain.ts`
+- Analyser policy (`fftSize`, smoothing, dB range) set explicitly from `analyserPolicy.ts`
+- Application-lifetime device: backends connect/disconnect sources and never `suspend()` it
 - `connectInput()` / `connectVisualizerFeed()` routing
 - SDL backends mute Web Audio destination while WASM owns speakers; PCM is tapped back for the analyser
 

@@ -7,11 +7,11 @@ A high-quality React application for playing FLAC and WAV audio files with WebGP
 - **Four audio backends**: Streaming (default), Web Audio, AudioWorklet, SDL3 WASM — see [docs/AUDIO_BACKENDS.md](docs/AUDIO_BACKENDS.md)
 - **FLAC and WAV Support**: Decode and play via Web Audio, libflac WASM, or CDN streaming (HTTP range requests)
 - **Streaming playback (default)**: Instant start on remote files without full download; optional **crossfade / gapless** between queue tracks
-- **10-band EQ** and playback-rate control (`EQPanel`)
+- **5-band EQ** (60 / 250 / 1k / 4k / 12k Hz) and playback-rate control (`EQPanel`; speed is disabled on backends that cannot honor it)
 - **Offline track cache**: Download tracks for offline playback via Cache API (`OfflineCache` UI)
 - **Convert (MP3 ↔ FLAC)**: Client-side convert & download in the **Convert** tab (ffmpeg.wasm; files never leave the browser)
 - **WebGPU Visualization**: Real-time ShaderGUI hardware panel with audio-reactive WGSL shaders
-- **WebGL2 / Canvas2D fallback**: Automatic fallback when WebGPU is unavailable
+- **WebGL2 / Canvas2D**: opt-in compatibility renderers (`?visualizer=webgl2` or the Compatibility toggle); WebGPU fails closed instead of silently falling back (#202)
 - **projectM Milkdrop** (optional): In-app visualizer — `?aesthetic=projectm|split`; build with `npm run build:projectm`
 - **Library management**: Ratings, tags, smart mix, queue, shareable playlists
 - **Multiple Audio Sources**: Load audio from:

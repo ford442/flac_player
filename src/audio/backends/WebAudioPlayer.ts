@@ -1,9 +1,9 @@
 // Buffered Web Audio API player with gapless queue scheduling.
 import { decodeAudioWithBuffer } from '../../audioDecoder';
-import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
+import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextManager } from '../AudioContextManager';
 import { ensureContextForBuffer } from '../ensureContextForSource';
 import { getOrFetchTrack } from '../../storage/trackCache';
-import type { AudioPlaybackState, DecodedPcmView } from '../../types/audio';
+import type { AudioBackendCapabilities, AudioPlaybackState, DecodedPcmView } from '../../types/audio';
 import {
   DEFAULT_CROSSFADE_MS,
   DEFAULT_GAPLESS_MODE,
@@ -421,6 +421,16 @@ export class WebAudioPlayer extends BaseAudioBackend {
 
   getDuration(): number {
     return this.audioBuffer ? this.audioBuffer.duration : 0;
+  }
+
+  getCapabilities(): AudioBackendCapabilities {
+    return {
+      seek: true,
+      playbackRate: true,
+      gapless: true,
+      crossfade: true,
+      sinkId: isAudioContextSinkSupported(),
+    };
   }
 
   getState(): AudioPlaybackState {
