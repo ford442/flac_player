@@ -35,7 +35,7 @@ export const PlayerFallbackPlaylistsTab: React.FC<PlayerFallbackPlaylistsTabProp
       {playlists.length === 0 && !isLoadingPlaylists && (
         <div className="text-gray-400 text-center py-12">
           <p>No playlists found.</p>
-          <p className="text-sm mt-2">The API can't create playlists yet — share your queue (🔗 in the queue panel) to save a set of tracks.</p>
+          <p className="text-sm mt-2">The API can&apos;t create playlists yet — share your queue (🔗 in the queue panel) to save a set of tracks.</p>
         </div>
       )}
       <div className="space-y-2">
