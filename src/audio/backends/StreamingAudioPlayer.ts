@@ -360,7 +360,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
   private _ensureNextGraph(): void {
     if (!this.nextAudioElement || !this.nextTrackUrl) return;
 
-    const { context, gain } = this.attachNativeGraph();
+    const { context } = this.attachNativeGraph();
     if (!this.nextSourceNode) {
       this.nextGainNode = context.createGain();
       this.nextGainNode.gain.value = 0;

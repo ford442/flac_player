@@ -56,11 +56,17 @@ describe('audio backend package layout', () => {
   });
 
   it('does not offer SDL2 in the footer output-mode select', () => {
+    // The footer select moved from PlayerFallbackView.tsx into the transport bar.
     const src = readFileSync(
-      resolve(__dirname, '../src/components/PlayerFallbackView.tsx'),
+      resolve(__dirname, '../src/components/player-fallback/PlayerFallbackTransportBar.tsx'),
       'utf8'
     );
     expect(src).toMatch(/<option value="sdl">SDL3<\/option>/);
     expect(src).not.toMatch(/value="sdl2"/);
+    const settings = readFileSync(
+      resolve(__dirname, '../src/components/player-fallback/PlayerFallbackSettingsTab.tsx'),
+      'utf8'
+    );
+    expect(settings).not.toMatch(/value="sdl2"/);
   });
 });
