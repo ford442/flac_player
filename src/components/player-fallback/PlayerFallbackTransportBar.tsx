@@ -1,10 +1,10 @@
 import React from 'react';
-import { PlaylistTrack } from '../../audioLoader';
+import { PlaylistTrack } from '../../api/audioLoader';
 import { AudioOutputMode } from '../../hooks/usePlayerState';
 import { MetadataPanel } from '../MetadataPanel';
 import { WaveformOverview } from '../WaveformOverview';
 import { getNextQueueIndex, getPreviousQueueIndex } from '../../utils/queueUtils';
-import { OverviewData, PlaybackModeState, TransportControls, TransportState } from './types';
+import { OUTPUT_MODE_LABELS, OverviewData, PlaybackModeState, TransportControls, TransportState } from './types';
 
 export interface PlayerFallbackTransportBarProps {
   currentTrack: PlaylistTrack | null;
@@ -95,10 +95,9 @@ export const PlayerFallbackTransportBar: React.FC<PlayerFallbackTransportBarProp
           </button>
           <select value={outputMode} onChange={(e) => setOutputMode(e.target.value as AudioOutputMode)}
             className="px-3 py-1 bg-white/10 rounded text-sm" aria-label="Audio output mode">
-            <option value="streaming">Streaming (default)</option>
-            <option value="web-audio">Web Audio (buffered)</option>
-            <option value="worklet">AudioWorklet</option>
-            <option value="sdl">SDL3</option>
+            {Object.entries(OUTPUT_MODE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
           </select>
           <span className="text-xs text-gray-400 w-12 text-right">{muted ? '🔇 0%' : `${Math.round(volume * 100)}%`}</span>
         </div>

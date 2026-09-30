@@ -29,7 +29,7 @@ function uint8ArrayToBase64(data: Uint8Array): string {
   let binary = '';
   const len = data.byteLength;
   for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(data[i]);
+    binary += String.fromCharCode(data[i]!);
   }
   return btoa(binary);
 }
@@ -190,6 +190,9 @@ export const MetadataPanel: React.FC<MetadataPanelProps> = ({
     loadMetadata();
 
     return () => { cancelled = true; };
+    // trackInfo.coverUrl is deliberately omitted: it's only a fallback and always changes together with
+    // cacheKey (both derive from the same track), so listing it would just re-fetch/re-parse the audio blob.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [file, audioUrl, cacheKey]);
 
   const toggleTheme = () => {

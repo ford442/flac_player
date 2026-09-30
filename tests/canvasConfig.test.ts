@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   buildCanvasConfiguration,
   buildDeviceDescriptor,
+  buildWebGL2ContextAttributes,
+  readGlStrict,
+  VISUALIZER_DEVICE_LABEL,
   CANVAS_RENDER_ATTACHMENT,
   DEFAULT_CANVAS_DISPLAY,
   OPTIONAL_DEVICE_FEATURES,
@@ -16,6 +19,33 @@ import {
 } from '../src/visuals/webgpu/gpuPassTimer';
 import { buildWaveformWGSL, waveformWGSL } from '../src/shaders/waveform';
 
+describe('webgl2 context attributes', () => {
+  it('defaults: no MSAA, no preserved buffer, desynchronized, lenient caveat', () => {
+    expect(buildWebGL2ContextAttributes({ search: '' })).toEqual({
+      alpha: false,
+      premultipliedAlpha: false,
+      antialias: false,
+      powerPreference: 'high-performance',
+      preserveDrawingBuffer: false,
+      desynchronized: true,
+      failIfMajorPerformanceCaveat: false,
+      xrCompatible: false,
+    });
+  });
+
+  it('follows ?gpu=low and ?gl=strict', () => {
+    const attrs = buildWebGL2ContextAttributes({ search: '?gpu=low&gl=strict' });
+    expect(attrs.powerPreference).toBe('low-power');
+    expect(attrs.failIfMajorPerformanceCaveat).toBe(true);
+    expect(readGlStrict('?gl=strict')).toBe(true);
+    expect(readGlStrict('?gl=loose')).toBe(false);
+  });
+
+  it('antialias is opt-in per pass', () => {
+    expect(buildWebGL2ContextAttributes({ search: '', antialias: true }).antialias).toBe(true);
+  });
+});
+
 describe('gpu canvas policy', () => {
   it('defaults to high-performance and honors ?gpu=low', () => {
     expect(readGpuPowerPreference('')).toBe('high-performance');
@@ -27,13 +57,16 @@ describe('gpu canvas policy', () => {
   it('intersects optional features and never requires unsupported ones', () => {
     const none = { features: { has: () => false } };
     expect(selectDeviceFeatures(none)).toEqual([]);
-    expect(buildDeviceDescriptor(none)).toEqual({});
+    expect(buildDeviceDescriptor(none)).toEqual({ label: VISUALIZER_DEVICE_LABEL });
 
     const some = { features: { has: (f: string) => f === 'timestamp-query' } };
     expect(selectDeviceFeatures(some)).toEqual(['timestamp-query']);
     expect(buildDeviceDescriptor(some)).toEqual({
+      label: 'flac-player-visualizer',
       requiredFeatures: ['timestamp-query'],
     });
+    // No requiredLimits: adapter defaults keep Intel iGPUs eligible.
+    expect(buildDeviceDescriptor(some)).not.toHaveProperty('requiredLimits');
   });
 
   it('builds a shared opaque srgb canvas configuration', () => {
@@ -51,7 +84,7 @@ describe('gpu canvas policy', () => {
     const both = { features: { has: (f: string) => f === 'timestamp-query' || f === 'shader-f16' } };
     expect(selectDeviceFeatures(both)).toEqual(['timestamp-query', 'shader-f16']);
     const f16Only = { features: { has: (f: string) => f === 'shader-f16' } };
-    expect(buildDeviceDescriptor(f16Only)).toEqual({ requiredFeatures: ['shader-f16'] });
+    expect(buildDeviceDescriptor(f16Only)).toEqual({ label: VISUALIZER_DEVICE_LABEL, requiredFeatures: ['shader-f16'] });
   });
 
   it('never requests features outside the optional allowlist', () => {

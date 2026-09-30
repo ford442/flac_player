@@ -229,8 +229,8 @@ export class RecordingAudioContext {
   suspendCalls = 0;
   readonly addedModules: string[] = [];
   readonly audioWorklet = {
-    addModule: async (url: string): Promise<void> => {
-      this.addedModules.push(url);
+    addModule: async (url: string | URL): Promise<void> => {
+      this.addedModules.push(String(url));
     },
   };
 

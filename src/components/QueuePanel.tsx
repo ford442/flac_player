@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { PlaylistTrack, RepeatMode } from '../audioLoader';
+import { PlaylistTrack, RepeatMode } from '../api/audioLoader';
 
 interface QueuePanelProps {
   queue: PlaylistTrack[];

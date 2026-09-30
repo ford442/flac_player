@@ -563,19 +563,20 @@ export async function healthCheck(): Promise<{
       const endTime = performance.now();
       const duration = endTime - startTime;
 
-      results[endpoint.name] = {
+      const entry: HealthCheckResult = {
         status: response.status,
         ok: response.ok,
         duration: `${duration.toFixed(2)}ms`,
         contentType: response.headers.get('content-type'),
         corsOrigin: response.headers.get('access-control-allow-origin')
       };
+      results[endpoint.name] = entry;
 
-      debug.log(`HEALTH_CHECK_${endpoint.name.toUpperCase()}`, results[endpoint.name]);
+      debug.log(`HEALTH_CHECK_${endpoint.name.toUpperCase()}`, entry);
 
       if (!response.ok) {
         const text = await response.text();
-        results[endpoint.name].errorBody = text.substring(0, 200);
+        entry.errorBody = text.substring(0, 200);
       }
     } catch (error) {
       results[endpoint.name] = {

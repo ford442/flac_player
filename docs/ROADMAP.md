@@ -1,6 +1,6 @@
 # Roadmap
 
-Planning cycle: September 2026 (post-audit after #193–#202 foundation closure).
+Planning cycle: September 2026 (post-audit after #193–#202 foundation closure). Open-issue table last checked against GitHub 2026-09-30.
 
 Earlier issues (#166–#185, then #193–#202) shipped the product surface and the audio/visual foundation: unified backends under `src/audio/backends/`, `usePlaybackController`, native-rate `AudioContext`, SDL3 ring-fed streaming, gpu-chores, and fail-closed WebGPU. The decode→playback harness (#196) and listening-rooms **design** (#197, formerly #185) are closed; rooms implementation lives on **#209**.
 
@@ -14,28 +14,27 @@ Earlier issues (#166–#185, then #193–#202) shipped the product surface and t
 | [#196](https://github.com/ford442/flac_player/issues/196) | Testing: Real decode → playback → analyser integration harness | **Done** (`tests/browser/audioPipeline.test.ts`) |
 | [#197](https://github.com/ford442/flac_player/issues/197) | Feature: Synced listening rooms MVP (design) | **Closed** — implement via [#209](https://github.com/ford442/flac_player/issues/209) |
 | [#201](https://github.com/ford442/flac_player/issues/201) | Display: gpu-chores peak pyramid / RMS (Worker + adopted-device compute) | **Done** (PR #204) |
+| [#217](https://github.com/ford442/flac_player/issues/217) | Agent task: scan wiped positive changes + audit issues for completeness | **Closed** |
+| [#219](https://github.com/ford442/flac_player/issues/219) | Foundation: WASM source hash, C++ stream-seek ABI, SIMD DSP, SDL playback rate | **Done** |
+| [#220](https://github.com/ford442/flac_player/issues/220) | Hi-fi streaming seek, gapless splice, and WASM resampler | **Done** |
+| [#221](https://github.com/ford442/flac_player/issues/221) | WebGPU: timestamp-query/shader-f16, HDR canvas, GPU FFT | **Closed** |
 | [#202](https://github.com/ford442/flac_player/issues/202) | Visualizer: fail-closed WebGPU (no auto GL ladder) | **Done** — WebGL2 is now **opt-in** (`?visualizer=webgl2` / Compatibility toggle) |
 
 ## Open issues (do next)
 
-Matches GitHub open issues as of 2026-09-23. The shared AudioContext / worklet graph (#218) is done: backends never suspend the shared context, processors are static modules, and `AudioBackendCapabilities` drives the UI.
+Matches GitHub as of 2026-09-30. The shared AudioContext / worklet graph (#218) is done: backends never suspend the shared context, processors are static modules, and `AudioBackendCapabilities` drives the UI.
 
 | Issue | Title | Priority |
 |-------|-------|----------|
-| [#219](https://github.com/ford442/flac_player/issues/219) | Foundation: WASM source hash, C++ stream-seek ABI, SIMD DSP, SDL playback rate | **P0** |
-| [#220](https://github.com/ford442/flac_player/issues/220) | Incomplete: #215 Hi-fi streaming seek, gapless splice, and soxr WASM resampler | **P0** — flips `seek` / `gapless` capabilities on the hi-fi path |
-| [#217](https://github.com/ford442/flac_player/issues/217) | Agent task: scan wiped positive changes + audit every issue for implementation completeness | **P1** |
 | [#208](https://github.com/ford442/flac_player/issues/208) | Feature: Media Session, lock-screen controls, and Remote Playback / Cast | **P1** — use `AudioBackendCapabilities` for seek/play |
 | [#222](https://github.com/ford442/flac_player/issues/222) | Feature: Local-first playlists (IndexedDB) and cloud playlist CRUD contract | **P1** |
-| [#221](https://github.com/ford442/flac_player/issues/221) | WebGPU: timestamp-query/shader-f16, HDR canvas, GPU FFT, WGSL modules | **P2** |
 | [#223](https://github.com/ford442/flac_player/issues/223) | Feature: WebMIDI / HID hardware mapping for ShaderGUI knobs, EQ, and transport | **P2** |
 | [#209](https://github.com/ford442/flac_player/issues/209) | Feature: Synced listening rooms MVP + later studio DSP (Rubber Band / LUFS) | **P2** — streaming-HTML clock for MVP |
 
 ## Foundation before features
 
-1. **#219 / #220** finish WASM stream-seek and hi-fi seek/gapless; the capability flags then light up the seek bar on worklet/SDL.
-2. **#208** Media Session reads `getCapabilities()`; Cast stays on the streaming `<audio>` backend until #220 lands.
-3. **#209** rooms implement `LISTENING_ROOMS.md` on the streaming-HTML clock.
+1. **#208** Media Session reads `getCapabilities()` (seek/gapless now available on the hi-fi path after #219/#220); Cast stays on the streaming `<audio>` backend.
+2. **#209** rooms implement `LISTENING_ROOMS.md` on the streaming-HTML clock.
 
 ## Horizon (not yet ticketed)
 

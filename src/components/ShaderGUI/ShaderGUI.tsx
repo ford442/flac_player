@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { WebGPUVisualizer } from '../../webgpuVisualizer';
+import { WebGPUVisualizer } from '../../visuals/webgpuVisualizer';
 import { WebGL2Visualizer } from '../../visuals/webgl2/WebGL2Visualizer';
 import { CanvasFallbackVisualizer } from '../../visuals/webglFallback';
 import { buildFrameUniforms } from '../../visuals/visualSync';
@@ -10,17 +10,20 @@ import {
 } from '../../visuals/rendererSelection';
 import { setCurrentVisualizer } from '../../visuals/webgl2/global';
 import { cycleDebugMode } from '../../visuals/webgl2/debugModes';
+import { debug } from '../../utils/debug';
 import type { VisualizerBackend } from '../../visuals/types';
 import {
   createVisualizerBootFailure,
+  createVisualizerBootReady,
   probeWebGPU,
-  recordWebGPUFailure,
   type WebGPUProbeBreadcrumb,
 } from '../../visuals/webgpuProbe';
+import { bootWebGPUWithRecovery } from '../../visuals/webgpu/deviceLostRecovery';
+import { buildWebGL2ContextAttributes } from '../../visuals/webgpu/canvasConfig';
 import { adoptVisualizerDevice, releaseVisualizerDevice } from '../../gpu-chores';
 import type { GpuChoreBackend } from '../../gpu-chores';
 import { WaveformOverview } from '../WaveformOverview';
-import { PlaylistTrack } from '../../audioLoader';
+import { PlaylistTrack } from '../../api/audioLoader';
 import { Chassis } from './Chassis';
 import { TopScreen } from './TopScreen';
 import { BottomScreen } from './BottomScreen';
@@ -28,7 +31,8 @@ import { Knob } from './Knob';
 import { Button } from './Button';
 import { VolumeSlider } from './VolumeSlider';
 import { useBeatDetection } from '../../hooks/useBeatDetection';
-import { isLiveGpuFftEnabled, useLiveGpuSpectrum } from '../../hooks/useLiveGpuSpectrum';
+import { useLiveGpuSpectrum } from '../../hooks/useLiveGpuSpectrum';
+import { amplitudesToAnalyserBytes, resolveSpectrumSource } from '../../visuals/spectrumSource';
 import './ShaderGUI.css';
 
 export interface ShaderGUIProps {
@@ -128,8 +132,19 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const [stopFlash, setStopFlash] = useState(0);
   const [visualizerMode, setVisualizerMode] = useState<'gui' | '3D'>('gui');
 
-  const [liveGpuFft] = useState(() => isLiveGpuFftEnabled());
-  const liveSpectrum = useLiveGpuSpectrum(analyser, liveGpuFft && !controlsOnly);
+  // GPU fft_spectrum drives spectrum uniforms + beat only once its golden is trusted;
+  // analyser otherwise (and always under ?no_gpu_compute / ?analyser_fft=1).
+  const [spectrumChoice] = useState(() => resolveSpectrumSource());
+  const { stats: liveSpectrum, frameRef: gpuFrameRef } = useLiveGpuSpectrum(
+    analyser,
+    spectrumChoice.source === 'gpu' && !controlsOnly,
+    analyser?.frequencyBinCount ?? 64,
+  );
+  const gpuSpectrumRef = useRef({
+    seq: -1,
+    smoothed: new Float32Array(0),
+    bytes: new Uint8Array(0) as Uint8Array<ArrayBuffer>,
+  });
 
   // 🎛 HUD: poll GPU pass timings while the panel is open (timestamp-query).
   useEffect(() => {
@@ -143,7 +158,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     return () => window.clearInterval(id);
   }, [showDebugPanel]);
 
-  const { beatPhaseRef, spectrumRef, processFrame } = useBeatDetection();
+  const { beatPhaseRef, spectrumRef, processFrame, processBytes } = useBeatDetection();
   const timeRef = useRef(0);
 
   const destroyAllVisualizers = useCallback(() => {
@@ -177,6 +192,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
           'webgl2-context-failed',
           'canvas.getContext("webgl2") returned null or shader compile failed',
           'webgl2',
+          buildWebGL2ContextAttributes(),
         ));
         return;
       }
@@ -185,6 +201,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         return;
       }
       webgl2Ref.current = visualizer;
+      createVisualizerBootReady('webgl2', visualizer.getContextAttributes());
       setProbeFailure(null);
       setCurrentVisualizer({
         backend: 'webgl2',
@@ -224,66 +241,36 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       return;
     }
 
-    const boot = await probeWebGPU(node, { requestedVisualizer });
-    if (cancelled()) {
-      if (boot.ok) boot.device.destroy();
-      return;
-    }
-    if (!boot.ok) {
-      console.warn('[ShaderGUI] WebGPU boot probe failed:', boot.breadcrumb.reason);
-      setProbeFailure(boot.breadcrumb);
-      setCurrentVisualizer(null);
-      return;
-    }
-
-    const visualizer = new WebGPUVisualizer(node);
-    webgpuRef.current = visualizer;
-
-    visualizer.setOnDeviceLost((reason) => {
-      if (cancelled()) return;
-      const fatal = recordWebGPUFailure(
-        boot.breadcrumb,
-        'webgpu-device-lost',
-        reason,
-      );
-      releaseVisualizerDevice(visualizer.getDevice());
-      visualizer.destroy();
-      webgpuRef.current = null;
-      setCurrentVisualizer(null);
-      setProbeFailure(fatal);
-    });
-
-    try {
-      await visualizer.initialize(audioAnalyser, boot);
-      if (cancelled()) {
-        visualizer.destroy();
+    await bootWebGPUWithRecovery({
+      probe: () => probeWebGPU(node, { requestedVisualizer }),
+      createVisualizer: () => new WebGPUVisualizer(node),
+      analyser: audioAnalyser,
+      cancelled,
+      onReady: (visualizer) => {
+        webgpuRef.current = visualizer;
+        setProbeFailure(null);
+        adoptVisualizerDevice(visualizer.getDevice());
+        setCurrentVisualizer({
+          backend: requiredBackend,
+          readPixels: () => null,
+          getCanvas: () => node,
+          setDebugMode: (mode) => visualizer.setDebugMode(mode),
+          getDebugMode: () => visualizer.getDebugMode(),
+          resize: () => visualizer.resize(),
+          getGpuDevice: () => visualizer.getDevice(),
+        });
+      },
+      onLost: (visualizer) => {
+        releaseVisualizerDevice(visualizer.getDevice());
+        if (webgpuRef.current === visualizer) webgpuRef.current = null;
+        setCurrentVisualizer(null);
+      },
+      onFatal: (breadcrumb) => {
         webgpuRef.current = null;
-        return;
-      }
-      setProbeFailure(null);
-      adoptVisualizerDevice(visualizer.getDevice());
-      setCurrentVisualizer({
-        backend: requiredBackend,
-        readPixels: () => null,
-        getCanvas: () => node,
-        setDebugMode: (mode) => visualizer.setDebugMode(mode),
-        getDebugMode: () => visualizer.getDebugMode(),
-        resize: () => visualizer.resize(),
-        getGpuDevice: () => visualizer.getDevice(),
-      });
-    } catch (err: unknown) {
-      visualizer.destroy();
-      webgpuRef.current = null;
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('[ShaderGUI] WebGPU initialization failed:', msg);
-      if (cancelled()) return;
-      setCurrentVisualizer(null);
-      setProbeFailure(recordWebGPUFailure(
-        boot.breadcrumb,
-        'webgpu-visualizer-initialize-failed',
-        msg,
-      ));
-    }
+        setCurrentVisualizer(null);
+        setProbeFailure(breadcrumb);
+      },
+    });
   }, []);
 
   useEffect(() => subscribeVisualizerPreference(() => {
@@ -320,7 +307,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       e.preventDefault();
       const next = cycleDebugMode(handle.getDebugMode());
       handle.setDebugMode(next);
-      console.log(`[${activeBackend} debug] mode: ${next}`);
+      debug.log(`${activeBackend}:debug`, `mode: ${next}`);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -330,7 +317,30 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   useEffect(() => {
     const loop = () => {
       timeRef.current += 0.016;
-      processFrame(analyser);
+      // One spectrum read per frame feeds both beat detection and the audio bars.
+      let freqData: Uint8Array<ArrayBuffer> | null = null;
+      const gpuFrame = gpuFrameRef.current;
+      if (analyser && gpuFrame?.trusted && gpuFrame.spectrum.length > 0) {
+        const gpu = gpuSpectrumRef.current;
+        if (gpu.bytes.length !== gpuFrame.spectrum.length) {
+          gpu.smoothed = new Float32Array(gpuFrame.spectrum.length);
+          gpu.bytes = new Uint8Array(gpuFrame.spectrum.length);
+        }
+        if (gpu.seq !== gpuFrame.seq) {
+          gpu.seq = gpuFrame.seq;
+          amplitudesToAnalyserBytes(gpuFrame.spectrum, analyser, gpu.smoothed, gpu.bytes);
+          processBytes(gpu.bytes);
+        } else {
+          processBytes(null); // GPU runs at METER_HZ: hold bands between results
+        }
+        freqData = gpu.bytes;
+      } else if (analyser) {
+        freqData = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(freqData);
+        processBytes(freqData);
+      } else {
+        processFrame(null);
+      }
 
       const canvas = canvasRef.current;
       const frameUniforms = buildFrameUniforms({
@@ -350,10 +360,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         volume,
       });
 
-      if (analyser) {
-        const freqData = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteFrequencyData(freqData);
-
+      if (freqData) {
         const webgpu = webgpuRef.current;
         const webgl2 = webgl2Ref.current;
         const canvas2d = canvas2dRef.current;
@@ -387,7 +394,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     animFrameRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animFrameRef.current);
   }, [
-    analyser, processFrame, beatPhaseRef, spectrumRef,
+    analyser, processFrame, processBytes, gpuFrameRef, beatPhaseRef, spectrumRef,
     isPlaying, currentTime, duration, volume, modeNone, modeIR, visualizerMode,
   ]);
 
@@ -483,9 +490,17 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
               {gpuStats.display.toneMapping ? ` · HDR ${gpuStats.display.toneMapping}` : ''}
             </div>
           )}
+          <div className="mt-1 text-[10px] text-gray-300" data-testid="spectrum-source">
+            Spectrum:{' '}
+            <strong className="text-green-300">
+              {liveSpectrum?.trusted ? 'GPU fft_spectrum' : 'AnalyserNode'}
+            </strong>
+            {' '}({spectrumChoice.reason}
+            {spectrumChoice.source === 'gpu' && !liveSpectrum?.trusted ? ', golden warming up' : ''})
+          </div>
           {liveSpectrum && (
             <div className="mt-1 text-[10px] text-gray-300">
-              Live FFT (?gpu_fft): {liveSpectrum.backend} · N={liveSpectrum.fftSize}
+              Live FFT: {liveSpectrum.backend} · N={liveSpectrum.fftSize}
               {' · '}{liveSpectrum.elapsedMs.toFixed(2)} ms
               {' · '}Δgolden {liveSpectrum.goldenMaxDiff === null ? '—' : liveSpectrum.goldenMaxDiff.toExponential(1)}
             </div>

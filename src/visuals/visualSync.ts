@@ -3,7 +3,7 @@
 
 import type { WaveformUniforms } from './waveformContract';
 import { packWaveformUniforms } from './waveformContract';
-import type { ShaderGUIUniforms } from '../webgpuVisualizer';
+import type { ShaderGUIUniforms } from './webgpuVisualizer';
 
 /**
  * Create and configure an AnalyserNode connected to an audio source.
@@ -49,7 +49,7 @@ export function downsampleAudioData(
     const start = Math.floor(i * binRatio);
     const end = Math.floor((i + 1) * binRatio);
     for (let j = start; j < end; j++) {
-      sum += data[j];
+      sum += data[j]!;
     }
     out[i] = sum / ((end - start) * 255);
   }
@@ -87,6 +87,7 @@ export function buildFrameUniforms(params: {
   volume: number;
 }): ShaderGUIUniforms {
   const progress = params.duration > 0 ? params.currentTime / params.duration : 0;
+  const [s0 = 0, s1 = 0, s2 = 0, s3 = 0, s4 = 0] = params.spectrum;
   return {
     resolution: [params.canvasWidth, params.canvasHeight],
     time: params.time,
@@ -94,14 +95,14 @@ export function buildFrameUniforms(params: {
     rsycrb: params.rsycrb,
     fractal: params.fractal,
     pulse: params.pulse,
-    audioLevel: params.spectrum[0] + params.spectrum[1] + params.spectrum[2],
-    audioLevelL: params.spectrum[0],
-    audioLevelR: params.spectrum[1],
-    spectrum0: params.spectrum[0],
-    spectrum1: params.spectrum[1],
-    spectrum2: params.spectrum[2],
-    spectrum3: params.spectrum[3],
-    spectrum4: params.spectrum[4],
+    audioLevel: s0 + s1 + s2,
+    audioLevelL: s0,
+    audioLevelR: s1,
+    spectrum0: s0,
+    spectrum1: s1,
+    spectrum2: s2,
+    spectrum3: s3,
+    spectrum4: s4,
     modeNone: params.modeNone,
     modeIR: params.modeIR,
     isPlaying: params.isPlaying ? 1 : 0,

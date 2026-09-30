@@ -8,7 +8,7 @@ The API backend is **storage.noahcohn.com** (not a local server).
 Songs come from `GET /api/songs` on that host. Audio files are served as static files
 from `https://storage.noahcohn.com/files/audio/music/{filename}`.
 
-## How songs load (audioLoader.ts)
+## How songs load (api/audioLoader.ts)
 
 ```
 fetchLibrary()
@@ -50,7 +50,7 @@ track.url → HTMLAudioElement → MediaElementSource → AudioContextManager �
 
 **Buffered (web-audio, worklet, SDL):**
 ```
-fetch(url) → ArrayBuffer → flacDecoder / audioDecoder → AudioBuffer or worklet ring
+fetch(url) → ArrayBuffer → audio/flacDecoder / audio/audioDecoder → AudioBuffer or worklet ring
            → backend-specific nodes → AudioContextManager → speakers
 ```
 
@@ -69,11 +69,11 @@ AnalyserNode → VisualizerShell
 ## Debug logging
 
 Off by default. Enable with `REACT_APP_DEBUG=true` in `.env` (webpack DefinePlugin).
-Helper: `src/utils/debug.ts` — used by `audioLoader.ts` and `api/songApi.ts`.
+Helper: `src/utils/debug.ts` — used by `api/audioLoader.ts` and `api/songApi.ts`.
 
 ## Key invariants to maintain
 
-- `audioLoader.ts` line ~203: fallback URL is `${API_BASE_URL}/api/music/${item.id}`
+- `api/audioLoader.ts` line ~203: fallback URL is `${API_BASE_URL}/api/music/${item.id}`
   — this only fires when the backend sends a song with no URL (shouldn't happen normally)
 - `loadFromURL()` only handles `http`, `https`, `gs://` schemes — don't pass relative paths
 - The backend must always return absolute `https://` URLs in the `url` field

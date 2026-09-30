@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlaylistTrack } from '../audioLoader';
+import { PlaylistTrack } from '../api/audioLoader';
 import { searchMusicBrainz, MusicBrainzMatch } from '../api/songApi';
 
 interface MusicBrainzPanelProps {

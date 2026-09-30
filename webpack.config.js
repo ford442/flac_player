@@ -5,6 +5,8 @@ const { InjectManifest } = require('workbox-webpack-plugin');
 const webpack = require('webpack');
 const fs = require('fs');
 
+// ts-loader is the only TypeScript pipeline (no Babel). Worklet processors under
+// src/audio/worklets are static JS modules and are not bundled through it.
 require('dotenv').config();
 
 const envVars = {};
@@ -63,16 +65,29 @@ module.exports = (env = {}, argv = {}) => {
     output: {
       path: path.resolve(__dirname, 'dist'),
       filename: 'bundle.[contenthash].js',
+      // Fixed (not 'auto'): the flac-processor worklet chunk has no document or
+      // importScripts to detect it from. The app is served from the root.
+      publicPath: '/',
+      // AudioWorkletGlobalScope has no `self` (dev HMR runtime in the worklet chunk).
+      globalObject: 'globalThis',
       clean: true,
     },
     resolve: {
       extensions: ['.tsx', '.ts', '.js', '.jsx'],
     },
     module: {
+      parser: {
+        javascript: {
+          // `context.audioWorklet.addModule(new URL('…flacProcessor.ts', import.meta.url))`
+          // becomes its own bundled entry, so the processor can import shared modules.
+          worker: ['*context.audioWorklet.addModule()', '...'],
+        },
+      },
       rules: [
         {
           test: /\.tsx?$/,
-          use: 'ts-loader',
+          // tsconfig has noEmit: true (tsc is type-check only); ts-loader must emit.
+          use: { loader: 'ts-loader', options: { compilerOptions: { noEmit: false } } },
           exclude: /node_modules|src\/sdl\/build/,
         },
         {

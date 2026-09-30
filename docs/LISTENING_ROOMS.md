@@ -101,10 +101,10 @@ Phase 2 adds `guest:seek_request` and host approval for co-DJ handoff.
 
 | Environment | REST | WebSocket | Notes |
 |-------------|------|-----------|-------|
-| Local prototype | `app.py` | `app.py` (`/ws/rooms/{id}`) | In-memory room map; good for dev |
+| Local prototype | `server/app.py` | `server/app.py` (`/ws/rooms/{id}`) | In-memory room map; good for dev |
 | Production | `storage.noahcohn.com` | Same host, `wss://` | Requires nginx/WebSocket upgrade + CORS |
 
-Prototype in `app.py` first; port contract to Contabo Storage Manager (`contabo_storage_manager/packages/python-bridge`) before production cutover.
+Prototype in `server/app.py` first; port contract to Contabo Storage Manager (`contabo_storage_manager/packages/python-bridge`) before production cutover.
 
 ### REST endpoints
 
@@ -445,7 +445,7 @@ Static share remains unchanged. Optional later: **"Share playlist"** vs **"Liste
 
 ### Phase 1 — MVP
 
-1. `app.py` in-memory rooms + WebSocket endpoint
+1. `server/app.py` in-memory rooms + WebSocket endpoint
 2. `src/listening/*` client modules + `useListeningRoom`
 3. `/room/{id}` route + `ListeningRoomPanel` UI
 4. Host/guest manual QA + Playwright two-tab test

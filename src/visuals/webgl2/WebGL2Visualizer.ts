@@ -1,10 +1,11 @@
-import type { ShaderGUIUniforms, VisualizerMode } from '../../webgpuVisualizer';
+import type { ShaderGUIUniforms, VisualizerMode } from '../webgpuVisualizer';
 import type { WebGL2DebugConfig, WebGL2DebugMode } from '../types';
 import { compileShader, linkProgram, collectUniforms } from './glUtils';
 import { FULLSCREEN_VERTEX, GUI_FRAGMENT, FLAT_FRAGMENT } from './shaders/waveform';
 import { createDebugConfig, debugModeToUniform } from './debugModes';
 import { downsampleAudioData } from '../visualSync';
 import { DEFAULT_WAVEFORM_UNIFORMS } from '../waveformContract';
+import { buildWebGL2ContextAttributes } from '../webgpu/canvasConfig';
 
 type GLPass = {
   program: WebGLProgram;
@@ -38,6 +39,7 @@ export class WebGL2Visualizer {
   private mode: VisualizerMode = 'flat';
   private time = 0;
   private onTogglePlay: (() => void) | null = null;
+  private contextAttributes: WebGLContextAttributes | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -53,12 +55,16 @@ export class WebGL2Visualizer {
 
   initialize(analyser: AnalyserNode): boolean {
     this.destroy();
-    const gl = this.canvas.getContext('webgl2', {
-      alpha: false,
-      premultipliedAlpha: false,
-      antialias: true,
-    });
+    // antialias stays false: the 3D cube is WebGPU-only, so every GL pass is the
+    // fullscreen ShaderGUI shader, which does its own glow.
+    const requested = buildWebGL2ContextAttributes();
+    let gl = this.canvas.getContext('webgl2', requested);
+    if (!gl && requested.desynchronized) {
+      // desynchronized is a hint; retry without it before failing closed.
+      gl = this.canvas.getContext('webgl2', { ...requested, desynchronized: false });
+    }
     if (!gl) return false;
+    this.contextAttributes = gl.getContextAttributes() ?? requested;
 
     try {
       this.gl = gl;
@@ -117,32 +123,33 @@ export class WebGL2Visualizer {
 
   private bindGuiUniforms(gl: WebGL2RenderingContext, pass: GLPass): void {
     const u = this.guiUniforms;
-    const loc = pass.uniforms;
+    const loc = (name: string): WebGLUniformLocation | null => pass.uniforms[name] ?? null;
 
-    gl.uniform2f(loc.u_resolution, u.resolution[0], u.resolution[1]);
-    gl.uniform1f(loc.u_time, u.time);
-    gl.uniform1f(loc.u_beatPhase, u.beatPhase);
-    gl.uniform1f(loc.u_rsycrb, u.rsycrb);
-    gl.uniform1f(loc.u_fractal, u.fractal);
-    gl.uniform1f(loc.u_pulse, u.pulse);
-    gl.uniform1f(loc.u_audioLevel, u.audioLevel);
-    gl.uniform1f(loc.u_audioLevelL, u.audioLevelL);
-    gl.uniform1f(loc.u_audioLevelR, u.audioLevelR);
-    gl.uniform1f(loc.u_spectrum0, u.spectrum0);
-    gl.uniform1f(loc.u_spectrum1, u.spectrum1);
-    gl.uniform1f(loc.u_spectrum2, u.spectrum2);
-    gl.uniform1f(loc.u_spectrum3, u.spectrum3);
-    gl.uniform1f(loc.u_spectrum4, u.spectrum4);
-    gl.uniform1f(loc.u_modeNone, u.modeNone);
-    gl.uniform1f(loc.u_modeIR, u.modeIR);
-    gl.uniform1f(loc.u_isPlaying, u.isPlaying);
-    gl.uniform1f(loc.u_playbackProgress, u.playbackProgress);
-    gl.uniform1f(loc.u_volume, u.volume);
-    gl.uniform1f(loc.u_colorShift, u.colorShift);
-    gl.uniform1f(loc.u_debugMode, debugModeToUniform(this.debug.mode));
+    gl.uniform2f(loc('u_resolution'), u.resolution[0], u.resolution[1]);
+    gl.uniform1f(loc('u_time'), u.time);
+    gl.uniform1f(loc('u_beatPhase'), u.beatPhase);
+    gl.uniform1f(loc('u_rsycrb'), u.rsycrb);
+    gl.uniform1f(loc('u_fractal'), u.fractal);
+    gl.uniform1f(loc('u_pulse'), u.pulse);
+    gl.uniform1f(loc('u_audioLevel'), u.audioLevel);
+    gl.uniform1f(loc('u_audioLevelL'), u.audioLevelL);
+    gl.uniform1f(loc('u_audioLevelR'), u.audioLevelR);
+    gl.uniform1f(loc('u_spectrum0'), u.spectrum0);
+    gl.uniform1f(loc('u_spectrum1'), u.spectrum1);
+    gl.uniform1f(loc('u_spectrum2'), u.spectrum2);
+    gl.uniform1f(loc('u_spectrum3'), u.spectrum3);
+    gl.uniform1f(loc('u_spectrum4'), u.spectrum4);
+    gl.uniform1f(loc('u_modeNone'), u.modeNone);
+    gl.uniform1f(loc('u_modeIR'), u.modeIR);
+    gl.uniform1f(loc('u_isPlaying'), u.isPlaying);
+    gl.uniform1f(loc('u_playbackProgress'), u.playbackProgress);
+    gl.uniform1f(loc('u_volume'), u.volume);
+    gl.uniform1f(loc('u_colorShift'), u.colorShift);
+    gl.uniform1f(loc('u_debugMode'), debugModeToUniform(this.debug.mode));
 
-    if (loc.u_audioData) {
-      gl.uniform1fv(loc.u_audioData, this.guiAudioData);
+    const audioDataLoc = loc('u_audioData');
+    if (audioDataLoc) {
+      gl.uniform1fv(audioDataLoc, this.guiAudioData);
     }
   }
 
@@ -175,7 +182,7 @@ export class WebGL2Visualizer {
     const temp = new Uint8Array(this.analyser.frequencyBinCount);
     this.analyser.getByteFrequencyData(temp);
     let sum = 0;
-    for (let i = 0; i < temp.length; i++) sum += temp[i];
+    for (let i = 0; i < temp.length; i++) sum += temp[i]!;
     return sum / temp.length / 255.0;
   }
 
@@ -189,9 +196,9 @@ export class WebGL2Visualizer {
 
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.useProgram(pass.program);
-    gl.uniform2f(pass.uniforms.u_resolution, this.canvas.width, this.canvas.height);
-    gl.uniform1f(pass.uniforms.u_time, this.time);
-    gl.uniform1f(pass.uniforms.u_audioLevel, audioLevel);
+    gl.uniform2f(pass.uniforms['u_resolution'] ?? null, this.canvas.width, this.canvas.height);
+    gl.uniform1f(pass.uniforms['u_time'] ?? null, this.time);
+    gl.uniform1f(pass.uniforms['u_audioLevel'] ?? null, audioLevel);
     this.drawFullscreen(gl, pass.program);
   }
 
@@ -214,6 +221,11 @@ export class WebGL2Visualizer {
     return this.canvas;
   }
 
+  /** Attributes the browser actually granted (for the probe breadcrumb / HUD). */
+  getContextAttributes(): WebGLContextAttributes | null {
+    return this.contextAttributes;
+  }
+
   destroy(): void {
     const gl = this.gl;
     if (gl) {
@@ -221,6 +233,7 @@ export class WebGL2Visualizer {
       if (this.flatPass) gl.deleteProgram(this.flatPass.program);
     }
     this.gl = null;
+    this.contextAttributes = null;
     this.guiPass = null;
     this.flatPass = null;
     this.analyser = null;

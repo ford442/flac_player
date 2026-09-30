@@ -108,7 +108,8 @@ struct DspState {
     int sampleRate = 0;
     int channels = 0;
     int channelPos = 0; // interleave position carried across callbacks
-    double limiterEnvDb = 0.0; // current gain reduction (<= 0 dB)
+    double limiterGain = 1.0; // current linear gain (<= 1)
+    double limiterThreshold = 1.0; // linear, 10^(DSP_LIMITER_THRESHOLD_DB / 20)
     double attackCoeff = 0.0;
     double releaseCoeff = 0.0;
 };
@@ -157,7 +158,7 @@ inline void dsp_refresh(DspState& s, int channels, int sampleRate) {
             }
         }
         s.channelPos = 0;
-        s.limiterEnvDb = 0.0;
+        s.limiterGain = 1.0;
         s.appliedResetVersion = resetVersion;
     }
 
@@ -183,6 +184,7 @@ inline void dsp_refresh(DspState& s, int channels, int sampleRate) {
                 gain,
                 (double)sampleRate);
         }
+        s.limiterThreshold = std::pow(10.0, DSP_LIMITER_THRESHOLD_DB / 20.0);
         if (sampleRate > 0) {
             s.attackCoeff = std::exp(-1.0 / (DSP_LIMITER_ATTACK_S * sampleRate));
             s.releaseCoeff = std::exp(-1.0 / (DSP_LIMITER_RELEASE_S * sampleRate));
@@ -193,6 +195,11 @@ inline void dsp_refresh(DspState& s, int channels, int sampleRate) {
 
 // Gain stage: ReplayGain -> channel-linked limiter -> volume. Sequential across
 // channels (one detector), so it stays scalar.
+//
+// The limiter envelope runs in the linear domain: below threshold (the common
+// case) a sample costs a compare and a multiply-add. Only a sample over the
+// threshold pays one std::pow for the ratio-20 static curve,
+// (threshold / peak)^(1 - 1/ratio), which is the dB-domain curve rewritten.
 inline void dsp_gain_stage(DspState& s, float* samples, int numFloats, float volume) {
     const double preGain = g_dspParams.replayGain.load();
     const bool limiter = g_dspParams.limiter.load() != 0;
@@ -205,16 +212,12 @@ inline void dsp_gain_stage(DspState& s, float* samples, int numFloats, float vol
     for (int i = 0; i < numFloats; ++i) {
         double x = samples[i] * preGain;
         const double peak = std::fabs(x);
-        double targetDb = 0.0;
-        if (peak > 1e-9) {
-            const double levelDb = 20.0 * std::log10(peak);
-            const double over = levelDb - DSP_LIMITER_THRESHOLD_DB;
-            if (over > 0.0) targetDb = -over * (1.0 - 1.0 / DSP_LIMITER_RATIO);
-        }
-        const double coeff = targetDb < s.limiterEnvDb ? s.attackCoeff : s.releaseCoeff;
-        s.limiterEnvDb = targetDb + coeff * (s.limiterEnvDb - targetDb);
-        if (s.limiterEnvDb < -1e-6) x *= std::pow(10.0, s.limiterEnvDb / 20.0);
-        samples[i] = (float)(x * vol);
+        const double target = peak > s.limiterThreshold
+            ? std::pow(s.limiterThreshold / peak, 1.0 - 1.0 / DSP_LIMITER_RATIO)
+            : 1.0;
+        const double coeff = target < s.limiterGain ? s.attackCoeff : s.releaseCoeff;
+        s.limiterGain = target + coeff * (s.limiterGain - target);
+        samples[i] = (float)(x * s.limiterGain * vol);
     }
 }
 

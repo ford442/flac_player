@@ -1,6 +1,6 @@
 // Library caching with localStorage persistence and TTL
 
-import { PlaylistTrack, LibraryStats, TagInfo } from '../audioLoader';
+import { PlaylistTrack, LibraryStats, TagInfo } from '../api/audioLoader';
 
 export const LIBRARY_CACHE_KEY = 'flac_player_library_cache';
 export const LIBRARY_CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours

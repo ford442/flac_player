@@ -7,6 +7,8 @@ import {
   destinationChannelCount,
   probeSampleRateSupported,
   relaxContextOptions,
+  renderSizeModeToHint,
+  isRenderSizeMode,
   shouldRecreateContext,
 } from '../src/audio/sampleRatePolicy';
 import { resampleInterleavedLinear } from '../src/audio/linearResampler';
@@ -119,6 +121,35 @@ describe('resampleInterleavedLinear', () => {
 });
 
 describe('context option fallbacks', () => {
+  it('drops renderSizeHint after sinkId and before sampleRate', () => {
+    let o = relaxContextOptions({
+      latencyHint: 'playback', sinkId: 'dac', renderSizeHint: 512, sampleRate: 96000,
+    });
+    expect(o).toEqual({ latencyHint: 'playback', renderSizeHint: 512, sampleRate: 96000 });
+    o = relaxContextOptions(o!);
+    expect(o).toEqual({ latencyHint: 'playback', sampleRate: 96000 });
+    o = relaxContextOptions(o!);
+    expect(o).toEqual({ latencyHint: 'playback' });
+  });
+
+  it('maps render size modes to hints (default omits the option)', () => {
+    expect(renderSizeModeToHint('default')).toBeUndefined();
+    expect(renderSizeModeToHint('hardware')).toBe('hardware');
+    expect(renderSizeModeToHint('256')).toBe(256);
+    expect(renderSizeModeToHint('512')).toBe(512);
+    expect(isRenderSizeMode('512')).toBe(true);
+    expect(isRenderSizeMode('1024')).toBe(false);
+  });
+
+  it('recreates when the render size hint changes', () => {
+    const base = {
+      liveRate: 48000, targetRate: 48000, liveHint: 'playback' as const,
+      nextHint: 'playback' as const, recreateOnMismatch: true,
+    };
+    expect(shouldRecreateContext({ ...base, liveRenderSize: undefined, nextRenderSize: undefined })).toBe(false);
+    expect(shouldRecreateContext({ ...base, liveRenderSize: undefined, nextRenderSize: 512 })).toBe(true);
+  });
+
   it('relaxes numeric hint, then sinkId, then sampleRate', () => {
     let o = relaxContextOptions({ latencyHint: 0.03, sinkId: 'dac', sampleRate: 96000 });
     expect(o).toEqual({ latencyHint: 'interactive', sinkId: 'dac', sampleRate: 96000 });

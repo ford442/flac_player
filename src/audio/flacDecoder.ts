@@ -1,4 +1,4 @@
-// src/flacDecoder.ts
+// src/audio/flacDecoder.ts
 // Off-main-thread FLAC decoder using a Web Worker + WASM.
 // Supports both full-file decode and chunked/streaming decode.
 export interface FlacDecoderResult {
@@ -33,7 +33,7 @@ export class FlacDecoder {
 
   constructor() {
     this.worker = new Worker(
-      new URL('./workers/flacDecoderWorker.ts', import.meta.url),
+      new URL('../workers/flacDecoderWorker.ts', import.meta.url),
       { type: 'module' }
     );
 
@@ -95,7 +95,7 @@ export class FlacDecoder {
       const channelData = audioBuffer.getChannelData(ch);
       for (let i = 0; i < frameCount; i++) {
         channelData[i] =
-          decodedData.interleavedBuffer[i * decodedData.channels + ch];
+          decodedData.interleavedBuffer[i * decodedData.channels + ch]!;
       }
     }
 

@@ -1,4 +1,5 @@
 import type { VisualizerBackend } from './types';
+import { debug } from '../utils/debug';
 import {
   buildCanvasConfiguration,
   buildDeviceDescriptor,
@@ -38,6 +39,14 @@ export interface WebGPUProbeBreadcrumb {
   display?: CanvasDisplayOptions;
   /** Smoothed ShaderGUI GPU pass time (timestamp-query); null until measured / unsupported. */
   gpuTimeMs?: number | null;
+  /** Count of `uncapturederror` events on the visualizer device (validation / OOM / internal). */
+  uncapturedErrors?: number;
+  /** Message of the first uncaptured GPU error (later ones only bump the count). */
+  firstUncapturedError?: string | null;
+  /** Successful device-lost re-probes on this canvas session (0 or 1). */
+  deviceLostRecoveries?: number;
+  /** WebGL2 opt-in: attributes the browser granted (requested ones on failure). */
+  glAttributes?: WebGLContextAttributes;
   timestamp: string;
 }
 
@@ -164,7 +173,7 @@ function breadcrumb(
 
 export function publishWebGPUProbe(value: WebGPUProbeBreadcrumb): WebGPUProbeBreadcrumb {
   if (typeof window !== 'undefined') window.webgpuProbe = value;
-  console.info('[webgpuProbe]', JSON.stringify(value));
+  debug.log('webgpuProbe', JSON.stringify(value));
   return value;
 }
 
@@ -352,7 +361,12 @@ export async function probeWebGPU(
   );
   ready.display = display;
   ready.gpuTimeMs = null;
+  ready.uncapturedErrors = 0;
+  ready.firstUncapturedError = null;
   if (shouldPublish) publishWebGPUProbe(ready);
+  // Report into whatever breadcrumb is live when the error fires (re-probes replace it).
+  watchUncapturedErrors(device, () =>
+    (shouldPublish && typeof window !== 'undefined' ? window.webgpuProbe : ready));
   return { ok: true, adapter, device, context, format, display, breadcrumb: ready };
 }
 
@@ -364,6 +378,36 @@ export function updateWebGPUTiming(gpuTimeMs: number | null): void {
   if (typeof window === 'undefined' || !window.webgpuProbe) return;
   if (window.webgpuProbe.status !== 'ready') return;
   window.webgpuProbe.gpuTimeMs = gpuTimeMs;
+}
+
+/**
+ * Surface GPU validation / OOM / internal errors that nothing captured with
+ * pushErrorScope. Logs the first one to the console; later ones only bump
+ * `window.webgpuProbe.uncapturedErrors` so a per-frame error cannot flood the log.
+ * Returns an unsubscribe.
+ */
+export function watchUncapturedErrors(
+  device: GPUDevice,
+  target: () => WebGPUProbeBreadcrumb | undefined = () =>
+    (typeof window === 'undefined' ? undefined : window.webgpuProbe),
+): () => void {
+  if (typeof device.addEventListener !== 'function') return () => {};
+  let logged = false;
+  const onError = (event: Event) => {
+    const error = (event as GPUUncapturedErrorEvent).error;
+    const message = `${error?.constructor?.name ?? 'GPUError'}: ${error?.message ?? 'unknown'}`;
+    const crumb = target();
+    if (crumb) {
+      crumb.uncapturedErrors = (crumb.uncapturedErrors ?? 0) + 1;
+      if (!crumb.firstUncapturedError) crumb.firstUncapturedError = message;
+    }
+    if (!logged) {
+      logged = true;
+      console.error('[webgpuProbe] uncaptured GPU error (further ones counted on window.webgpuProbe):', message);
+    }
+  };
+  device.addEventListener('uncapturederror', onError);
+  return () => device.removeEventListener('uncapturederror', onError);
 }
 
 export function recordWebGPUFailure(
@@ -385,8 +429,9 @@ export function createVisualizerBootFailure(
   reason: string,
   detail: string | null,
   requestedVisualizer: VisualizerBackend | null,
+  glAttributes?: WebGLContextAttributes,
 ): WebGPUProbeBreadcrumb {
-  return publishWebGPUProbe(breadcrumb(
+  const value = breadcrumb(
     'failed',
     identifyBrowser(),
     requestedVisualizer,
@@ -394,5 +439,25 @@ export function createVisualizerBootFailure(
     reason,
     detail,
     readGpuPowerPreference(),
-  ));
+  );
+  if (glAttributes) value.glAttributes = glAttributes;
+  return publishWebGPUProbe(value);
+}
+
+/** Ready breadcrumb for the opt-in WebGL2 backend (records granted context attributes). */
+export function createVisualizerBootReady(
+  requestedVisualizer: VisualizerBackend | null,
+  glAttributes: WebGLContextAttributes | null,
+): WebGPUProbeBreadcrumb {
+  const value = breadcrumb(
+    'ready',
+    identifyBrowser(),
+    requestedVisualizer,
+    null,
+    null,
+    null,
+    readGpuPowerPreference(),
+  );
+  if (glAttributes) value.glAttributes = glAttributes;
+  return publishWebGPUProbe(value);
 }

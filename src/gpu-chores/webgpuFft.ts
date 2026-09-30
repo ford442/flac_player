@@ -35,7 +35,7 @@ async function getPipelines(device: GPUDevice): Promise<CachedFft> {
   const module = device.createShaderModule({ code: FFT_WGSL, label: 'gpu-chores-fft' });
   const info = await module.getCompilationInfo();
   const errors = info.messages.filter((m) => m.type === 'error');
-  if (errors.length > 0) throw new Error(`gpu-chores-fft-compile: ${errors[0].message}`);
+  if (errors.length > 0) throw new Error(`gpu-chores-fft-compile: ${errors[0]!.message}`);
 
   const layout = device.createBindGroupLayout({
     label: 'gpu-chores-fft-layout',

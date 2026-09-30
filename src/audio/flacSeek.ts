@@ -56,8 +56,8 @@ const MAX_HEADER_BYTES = 16 * 1024 * 1024;
 
 function id3v2Length(bytes: Uint8Array): number {
   if (bytes.length < 10 || bytes[0] !== 0x49 || bytes[1] !== 0x44 || bytes[2] !== 0x33) return 0;
-  const size = ((bytes[6] & 0x7f) << 21) | ((bytes[7] & 0x7f) << 14) | ((bytes[8] & 0x7f) << 7) | (bytes[9] & 0x7f);
-  const footer = (bytes[5] & 0x10) ? 10 : 0;
+  const size = ((bytes[6]! & 0x7f) << 21) | ((bytes[7]! & 0x7f) << 14) | ((bytes[8]! & 0x7f) << 7) | (bytes[9]! & 0x7f);
+  const footer = (bytes[5]! & 0x10) ? 10 : 0;
   return 10 + size + footer;
 }
 
@@ -68,10 +68,10 @@ function readUint64(view: DataView, at: number): number {
 export function parseStreamInfo(body: Uint8Array): FlacStreamInfo {
   if (body.length < 34) throw new Error('STREAMINFO too short');
   const v = new DataView(body.buffer, body.byteOffset, body.byteLength);
-  const sampleRate = (body[10] << 12) | (body[11] << 4) | (body[12] >> 4);
-  const channels = ((body[12] >> 1) & 0x07) + 1;
-  const bitsPerSample = (((body[12] & 0x01) << 4) | (body[13] >> 4)) + 1;
-  const totalSamples = (body[13] & 0x0f) * 2 ** 32 + v.getUint32(14);
+  const sampleRate = (body[10]! << 12) | (body[11]! << 4) | (body[12]! >> 4);
+  const channels = ((body[12]! >> 1) & 0x07) + 1;
+  const bitsPerSample = (((body[12]! & 0x01) << 4) | (body[13]! >> 4)) + 1;
+  const totalSamples = (body[13]! & 0x0f) * 2 ** 32 + v.getUint32(14);
   return {
     minBlockSize: v.getUint16(0),
     maxBlockSize: v.getUint16(2),
@@ -112,9 +112,9 @@ export async function readFlacHeader(reader: ByteReader, signal?: AbortSignal): 
   const seekPoints: FlacSeekPoint[] = [];
   for (;;) {
     await ensure(pos + 4);
-    const last = (buf[pos] & 0x80) !== 0;
-    const type = buf[pos] & 0x7f;
-    const length = (buf[pos + 1] << 16) | (buf[pos + 2] << 8) | buf[pos + 3];
+    const last = (buf[pos]! & 0x80) !== 0;
+    const type = buf[pos]! & 0x7f;
+    const length = (buf[pos + 1]! << 16) | (buf[pos + 2]! << 8) | buf[pos + 3]!;
     pos += 4;
     if (type === 0 || type === 3) {
       await ensure(pos + length);
@@ -158,7 +158,7 @@ const CRC8_TABLE = (() => {
 
 export function crc8(bytes: Uint8Array, start: number, end: number): number {
   let crc = 0;
-  for (let i = start; i < end; i++) crc = CRC8_TABLE[crc ^ bytes[i]];
+  for (let i = start; i < end; i++) crc = CRC8_TABLE[crc ^ bytes[i]!]!;
   return crc;
 }
 
@@ -171,13 +171,13 @@ const BPS_CODES = [0, 8, 12, 0, 16, 20, 24, 32];
  */
 export function parseFrameHeader(bytes: Uint8Array, at: number, info: FlacStreamInfo): number | null {
   if (at + 6 > bytes.length) return null;
-  if (bytes[at] !== 0xff || (bytes[at + 1] & 0xfe) !== 0xf8) return null;
-  const variable = (bytes[at + 1] & 0x01) === 1;
-  const bsCode = bytes[at + 2] >> 4;
-  const srCode = bytes[at + 2] & 0x0f;
-  const chCode = bytes[at + 3] >> 4;
-  const bpsCode = (bytes[at + 3] >> 1) & 0x07;
-  if (bsCode === 0 || srCode === 15 || chCode > 10 || bpsCode === 3 || (bytes[at + 3] & 0x01)) return null;
+  if (bytes[at]! !== 0xff || (bytes[at + 1]! & 0xfe) !== 0xf8) return null;
+  const variable = (bytes[at + 1]! & 0x01) === 1;
+  const bsCode = bytes[at + 2]! >> 4;
+  const srCode = bytes[at + 2]! & 0x0f;
+  const chCode = bytes[at + 3]! >> 4;
+  const bpsCode = (bytes[at + 3]! >> 1) & 0x07;
+  if (bsCode === 0 || srCode === 15 || chCode > 10 || bpsCode === 3 || (bytes[at + 3]! & 0x01)) return null;
 
   const channels = chCode < 8 ? chCode + 1 : 2;
   if (channels !== info.channels) return null;
@@ -186,7 +186,7 @@ export function parseFrameHeader(bytes: Uint8Array, at: number, info: FlacStream
 
   // Coded number: UTF-8-style, up to 7 bytes (36 bits).
   let p = at + 4;
-  const first = bytes[p++];
+  const first = bytes[p++]!;
   let extra: number;
   let value: number;
   if (first < 0x80) { extra = 0; value = first; }
@@ -200,7 +200,7 @@ export function parseFrameHeader(bytes: Uint8Array, at: number, info: FlacStream
   if (!variable && extra > 5) return null;
   if (p + extra > bytes.length) return null;
   for (let i = 0; i < extra; i++) {
-    const b = bytes[p++];
+    const b = bytes[p++]!;
     if ((b & 0xc0) !== 0x80) return null;
     value = value * 64 + (b & 0x3f);
   }
@@ -208,8 +208,8 @@ export function parseFrameHeader(bytes: Uint8Array, at: number, info: FlacStream
   let blockSize: number;
   if (bsCode === 1) blockSize = 192;
   else if (bsCode <= 5) blockSize = 576 << (bsCode - 2);
-  else if (bsCode === 6) { if (p + 1 > bytes.length) return null; blockSize = bytes[p++] + 1; }
-  else if (bsCode === 7) { if (p + 2 > bytes.length) return null; blockSize = ((bytes[p] << 8) | bytes[p + 1]) + 1; p += 2; }
+  else if (bsCode === 6) { if (p + 1 > bytes.length) return null; blockSize = bytes[p++]! + 1; }
+  else if (bsCode === 7) { if (p + 2 > bytes.length) return null; blockSize = ((bytes[p]! << 8) | bytes[p + 1]!) + 1; p += 2; }
   else blockSize = 256 << (bsCode - 8);
   if (info.maxBlockSize > 0 && blockSize > info.maxBlockSize) return null;
 
@@ -226,7 +226,7 @@ export function parseFrameHeader(bytes: Uint8Array, at: number, info: FlacStream
 /** First valid frame header in `bytes` (absolute offset = `base + index`). */
 export function findFrame(bytes: Uint8Array, base: number, info: FlacStreamInfo): FlacFramePosition | null {
   for (let i = 0; i + 1 < bytes.length; i++) {
-    if (bytes[i] !== 0xff || (bytes[i + 1] & 0xfe) !== 0xf8) continue;
+    if (bytes[i]! !== 0xff || (bytes[i + 1]! & 0xfe) !== 0xf8) continue;
     const sample = parseFrameHeader(bytes, i, info);
     if (sample !== null) return { offset: base + i, sample };
   }

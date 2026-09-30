@@ -69,7 +69,7 @@ async function getPipeline(device: GPUDevice): Promise<CachedCompute> {
   const info = await module.getCompilationInfo();
   const errors = info.messages.filter((m) => m.type === 'error');
   if (errors.length > 0) {
-    throw new Error(`gpu-chores-shader-compile: ${errors[0].message}`);
+    throw new Error(`gpu-chores-shader-compile: ${errors[0]!.message}`);
   }
 
   const bindLayout = device.createBindGroupLayout({

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { PlaylistTrack } from '../audioLoader';
+import { PlaylistTrack } from '../api/audioLoader';
 import { formatTime } from '../utils/audioUtils';
 
 /**

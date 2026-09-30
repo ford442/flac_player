@@ -112,7 +112,10 @@ export class GpuPassTimer {
       const times = new BigUint64Array(slot.buffer.getMappedRange().slice(0));
       slot.buffer.unmap();
       slot.busy = false;
-      const ms = timestampDeltaMs(times[0], times[1]);
+      const t0 = times[0];
+      const t1 = times[1];
+      if (t0 === undefined || t1 === undefined) return;
+      const ms = timestampDeltaMs(t0, t1);
       if (ms === null) return;
       this.last = ms;
       this.smoothed = smoothGpuTime(this.smoothed, ms);

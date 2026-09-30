@@ -7,13 +7,17 @@ import {
   destinationChannelCount,
   latencyHintsEqual,
   latencyModeToHint,
+  isRenderSizeHintSupported,
   probeSampleRateSupported,
   relaxContextOptions,
+  renderSizeModeToHint,
   shouldRecreateContext,
   type AudioContextLatencyHint,
   type AudioContextOptionsWithSink,
   type AudioContextOptionsPolicy,
   type LatencyMode,
+  type RenderSizeHint,
+  type RenderSizeMode,
 } from './sampleRatePolicy';
 
 export interface EnsureTrackAudioOptions {
@@ -29,6 +33,10 @@ export interface AudioOutputInfo {
   /** Seconds from graph to the device (`AudioContext.outputLatency`). */
   outputLatency: number | null;
   latencyHint: AudioContextLatencyHint;
+  /** renderSizeHint the live context was built with (undefined = omitted / relaxed away). */
+  renderSizeHint: RenderSizeHint | undefined;
+  /** `AudioContext.renderQuantumSize` when exposed (frames per callback), else null. */
+  renderQuantumSize: number | null;
   channelCount: number;
   /** '' = system default output. */
   sinkId: string;
@@ -77,6 +85,9 @@ export class AudioContextManager {
   private eqGains: number[] = DEFAULT_EQ_BANDS.map(() => 0);
   private policy: AudioContextOptionsPolicy = { ...DEFAULT_AUDIO_CONTEXT_POLICY };
   private appliedLatencyHint: AudioContextLatencyHint = this.policy.latencyHint;
+  private appliedRenderSizeHint: RenderSizeHint | undefined = undefined;
+  /** Set when the constructor rejected renderSizeHint; not retried until the mode changes. */
+  private renderSizeHintRejected = false;
   private graphGeneration = 0;
   private readonly graphListeners = new Set<() => void>();
   private lastTrackChannels: number | undefined;
@@ -112,6 +123,25 @@ export class AudioContextManager {
   }
 
   /**
+   * Render quantum hint. Ignored (omitted) where the browser has no
+   * `renderQuantumSize`; a rejected value is relaxed away at construct time.
+   */
+  async setRenderSizeMode(mode: RenderSizeMode): Promise<void> {
+    const hint = renderSizeModeToHint(mode);
+    if (hint === this.policy.renderSizeHint) return;
+    this.policy.renderSizeHint = hint;
+    this.renderSizeHintRejected = false;
+    if (!this.context) return;
+    if (this.requestedRenderSizeHint() === this.appliedRenderSizeHint) return;
+    await this.recreateGraph(this.context.sampleRate);
+  }
+
+  private requestedRenderSizeHint(): RenderSizeHint | undefined {
+    if (this.renderSizeHintRejected || !isRenderSizeHintSupported()) return undefined;
+    return this.policy.renderSizeHint;
+  }
+
+  /**
    * Create the graph at the device default rate and current latency hint.
    * Does not lock 44.1 kHz. Prefer {@link ensureForTrack} before playback.
    */
@@ -140,6 +170,8 @@ export class AudioContextManager {
       targetRate,
       liveHint: this.appliedLatencyHint,
       nextHint,
+      liveRenderSize: this.appliedRenderSizeHint,
+      nextRenderSize: this.requestedRenderSizeHint(),
       recreateOnMismatch: this.policy.recreateOnSampleRateMismatch,
     })) {
       return this.recreateGraph(targetRate ?? this.context.sampleRate);
@@ -219,6 +251,8 @@ export class AudioContextManager {
       baseLatency: finite(ctx.baseLatency),
       outputLatency: finite(ctx.outputLatency),
       latencyHint: this.appliedLatencyHint,
+      renderSizeHint: this.appliedRenderSizeHint,
+      renderQuantumSize: finite((ctx as { renderQuantumSize?: unknown }).renderQuantumSize),
       channelCount: ctx.destination.channelCount,
       sinkId: this.currentContextSinkId(ctx),
       state: ctx.state,
@@ -288,10 +322,15 @@ export class AudioContextManager {
     if (this.sinkId && isAudioContextSinkSupported()) {
       options.sinkId = this.sinkId;
     }
+    const renderSizeHint = this.requestedRenderSizeHint();
+    if (renderSizeHint !== undefined) {
+      options.renderSizeHint = renderSizeHint;
+    }
 
     const { context, options: applied } = this.constructContext(options);
     this.context = context;
     this.appliedLatencyHint = applied.latencyHint ?? this.policy.latencyHint;
+    this.appliedRenderSizeHint = applied.renderSizeHint;
     this.replayGain = new ReplayGainNode(this.context);
     this.masterGain = this.context.createGain();
     this.eqChain = new EQChain(this.context);
@@ -339,6 +378,9 @@ export class AudioContextManager {
         });
         if (typeof attempt.latencyHint === 'number' && next.latencyHint !== attempt.latencyHint) {
           this.policy.latencyHint = next.latencyHint ?? 'interactive';
+        }
+        if (attempt.renderSizeHint !== undefined && next.renderSizeHint === undefined) {
+          this.renderSizeHintRejected = true;
         }
         if (attempt.sampleRate !== undefined && next.sampleRate === undefined) {
           this.rejectedSampleRates.add(attempt.sampleRate);

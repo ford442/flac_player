@@ -7,8 +7,11 @@
 #   scripts/build-wasm.sh --debug      # -O0 -g ASSERTIONS SAFE_HEAP (combine with target)
 #   scripts/build-wasm.sh --debug --sdl3
 #
-# Do not add -flto until emsdk is pinned in CI and locally (wasm-build uses
-# `emsdk install latest`; LTO codegen is not reproducible across LLVM).
+# Toolchain: emsdk pinned in scripts/emsdk-version (emsdk-env.sh refuses a
+# different emcc). Same pin + same sources → bit-identical public/sdl-audio.*.
+# -flto: not yet. Now that LLVM is pinned it is reproducible, but it needs a
+# measured wasm size + callback CPU comparison before it lands; record the
+# pinned LLVM and numbers here if it does.
 # Do not add --closure 1 (pthread + MODULARIZE glue).
 set -euo pipefail
 
@@ -57,12 +60,17 @@ RELEASE_INITIAL_MEMORY=67108864   # 64 MiB
 DEBUG_INITIAL_MEMORY=33554432     # 32 MiB
 MAXIMUM_MEMORY=536870912          # 512 MiB
 
+# Both profiles: no C++ exceptions / RTTI (Emscripten's default for exceptions,
+# stated explicitly). Allocation failure is handled via malloc → nullptr
+# (create_audio_buffer), never bad_alloc.
+CXX_FLAGS=(-fno-exceptions -fno-rtti)
+
 if [[ "$DEBUG" -eq 1 ]]; then
   OPT_FLAGS=(-O0 -g -s ASSERTIONS=1 -s SAFE_HEAP=1)
   INITIAL_MEMORY="$DEBUG_INITIAL_MEMORY"
   echo "WASM debug profile: -O0 -g ASSERTIONS=1 SAFE_HEAP=1 INITIAL_MEMORY=$INITIAL_MEMORY MAXIMUM_MEMORY=$MAXIMUM_MEMORY"
 else
-  # -DNDEBUG: strips printf behind #ifndef NDEBUG in audio_engine.cpp.
+  # -DNDEBUG: compiles out sdl_log_debug() in audio_engine.cpp.
   # -msimd128: stereo EQ in dsp_chain.h uses f64x2 lanes (scalar fallback
   # when __wasm_simd128__ is undefined, e.g. the --debug profile).
   OPT_FLAGS=(-O3 -DNDEBUG -msimd128)
@@ -99,6 +107,7 @@ build_sdl3() {
     -s MODULARIZE=1 \
     -s EXPORT_NAME="createSdlAudioModule" \
     -s ENVIRONMENT="web,worker" \
+    "${CXX_FLAGS[@]}" \
     "${OPT_FLAGS[@]}" \
     -o "$out_js"
   ls -lh "$OUT_DIR"/sdl-audio.* 2>/dev/null || true

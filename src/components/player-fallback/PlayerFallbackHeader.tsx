@@ -1,5 +1,5 @@
 import React from 'react';
-import { LibraryStats } from '../../audioLoader';
+import { LibraryStats } from '../../api/audioLoader';
 
 export interface PlayerFallbackHeaderProps {
   isSharedPlaylist: boolean;

@@ -86,6 +86,7 @@ export const reorderQueueItem = (
   if (startIndex === endIndex) return queue;
   const next = [...queue];
   const [removed] = next.splice(startIndex, 1);
+  if (removed === undefined) return queue;
   next.splice(endIndex, 0, removed);
   return next;
 };

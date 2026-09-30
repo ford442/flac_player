@@ -1,7 +1,6 @@
 #include <SDL3/SDL.h>
 #include <emscripten.h>
-#include <vector>
-#include <iostream>
+#include <cstdarg>
 #include <cstdio>
 #include <cmath>
 #include <cstdlib>
@@ -10,10 +9,36 @@
 #include "play_ring.h"
 #include "dsp_chain.h"
 
+// Single log helper (no iostream: keeps libc++ streams out of the wasm).
+// Errors always reach stderr (console.error); debug lines compile out under
+// -DNDEBUG (release profile in scripts/build-wasm.sh).
+__attribute__((format(printf, 2, 3)))
+static void sdl_log(FILE* out, const char* fmt, ...) {
+    char line[256];
+    va_list args;
+    va_start(args, fmt);
+    std::vsnprintf(line, sizeof(line), fmt, args);
+    va_end(args);
+    std::fprintf(out, "[C++] %s\n", line);
+}
+#define sdl_log_error(...) sdl_log(stderr, __VA_ARGS__)
+#ifdef NDEBUG
+#define sdl_log_debug(...) ((void)0)
+#else
+#define sdl_log_debug(...) sdl_log(stdout, __VA_ARGS__)
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+// PlayerState lives in the file-scope singleton `g_state`, which is correct
+// because one WASM module instance owns exactly one player. The exported C ABI
+// takes no state handle, so every call operates on that single instance.
+// JS must therefore NOT instantiate two createSdlAudioModule() graphs and drive
+// both: they would each have their own g_state, but any shared JS-side wiring
+// (ring buffers, worklet ports) would assume one. Supporting multiple players
+// needs a second ABI that passes an explicit PlayerState* / handle.
 struct PlayerState {
     SDL_AudioStream* stream = nullptr;
     // Buffered PCM. malloc (not std::vector) so OOM returns nullptr instead of
@@ -69,7 +94,7 @@ static int configure_stream(int channels, int sampleRate) {
 
     g_state.stream = SDL_CreateAudioStream(&spec, &spec);
     if (!g_state.stream) {
-        std::cerr << "[C++] SDL_CreateAudioStream failed: " << SDL_GetError() << std::endl;
+        sdl_log_error("SDL_CreateAudioStream failed: %s", SDL_GetError());
         return 0;
     }
 
@@ -77,7 +102,7 @@ static int configure_stream(int channels, int sampleRate) {
     SDL_SetAudioStreamFrequencyRatio(g_state.stream, g_state.playbackRate);
 
     if (!SDL_BindAudioStream(g_state.deviceId, g_state.stream)) {
-        std::cerr << "[C++] SDL_BindAudioStream failed: " << SDL_GetError() << std::endl;
+        sdl_log_error("SDL_BindAudioStream failed: %s", SDL_GetError());
         destroy_stream();
         return 0;
     }
@@ -142,11 +167,9 @@ void SDLCALL fill_audio_callback(void *userdata, SDL_AudioStream *stream, int ad
 
 EMSCRIPTEN_KEEPALIVE
 int init_audio() {
-#ifndef NDEBUG
-    printf("[C++] init_audio called\n");
-#endif
+    sdl_log_debug("init_audio called");
     if (!SDL_Init(SDL_INIT_AUDIO)) {
-        std::cerr << "[C++] SDL_Init failed: " << SDL_GetError() << std::endl;
+        sdl_log_error("SDL_Init failed: %s", SDL_GetError());
         return 0;
     }
 
@@ -154,16 +177,14 @@ int init_audio() {
     // SDL3 may resample on bind if device != file.
     g_state.deviceId = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL);
     if (g_state.deviceId == 0) {
-        std::cerr << "[C++] SDL_OpenAudioDevice failed: " << SDL_GetError() << std::endl;
+        sdl_log_error("SDL_OpenAudioDevice failed: %s", SDL_GetError());
         return 0;
     }
 
     pcm_ring_init(65536);
     play_ring_init(PLAY_RING_CAPACITY);
-#ifndef NDEBUG
-    printf("[C++] init_audio success. Device ID: %u play_ring=%u floats\n",
-           g_state.deviceId, PLAY_RING_CAPACITY);
-#endif
+    sdl_log_debug("init_audio success. Device ID: %u play_ring=%u floats",
+                  (unsigned)g_state.deviceId, (unsigned)PLAY_RING_CAPACITY);
     return 1;
 }
 
@@ -174,7 +195,7 @@ static constexpr int kMaxBufferedFloats = (384 * 1024 * 1024) / (int)sizeof(floa
 EMSCRIPTEN_KEEPALIVE
 float* create_audio_buffer(int length) {
     if (length <= 0 || length > kMaxBufferedFloats) {
-        std::cerr << "[C++] create_audio_buffer rejected length=" << length << std::endl;
+        sdl_log_error("create_audio_buffer rejected length=%d", length);
         return nullptr;
     }
     g_state.streamMode = false;
@@ -186,7 +207,7 @@ float* create_audio_buffer(int length) {
     // Fragmentation / growth failure inside the cap: nullptr, never an abort.
     float* buf = static_cast<float*>(std::malloc((size_t)length * sizeof(float)));
     if (!buf) {
-        std::cerr << "[C++] create_audio_buffer out of memory length=" << length << std::endl;
+        sdl_log_error("create_audio_buffer out of memory length=%d", length);
         return nullptr;
     }
     g_state.audioBuffer = buf;
@@ -197,7 +218,7 @@ float* create_audio_buffer(int length) {
 EMSCRIPTEN_KEEPALIVE
 int set_audio_data(int length, int channels, int sampleRate) {
     if (!g_state.audioBuffer || g_state.audioLength != (size_t)length) {
-        std::cerr << "[C++] Buffer size mismatch." << std::endl;
+        sdl_log_error("Buffer size mismatch.");
         return 0;
     }
     g_state.streamMode = false;

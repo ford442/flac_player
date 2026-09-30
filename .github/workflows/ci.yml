@@ -22,7 +22,7 @@ jobs:
         # copy-webpack-plugin 14). See AGENTS.md "Dependency audit".
         continue-on-error: true
         run: npm audit --audit-level=high
-      - run: npm run lint
+      - run: npm run lint -- --max-warnings 0
       - run: npm run typecheck
       - run: npm run verify:wasm
       - run: npm run build -- --env skipWasm=true
@@ -63,36 +63,78 @@ jobs:
             playwright-report/
           retention-days: 7
 
-  # Compile WASM when SDL sources change on PRs (validates emsdk build + committed artifacts).
+  # Rebuild WASM on PRs and pushes to main that touch a WASM graph and fail if
+  # committed artifacts differ (a direct push to main can't silently stale them).
+  # Emscripten is pinned (scripts/emsdk-version), so an unchanged graph rebuilds
+  # bit-identically; a pin bump rebuilds all three.
   wasm-build:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
-        id: wasm_changes
+        id: changes
         with:
           filters: |
-            wasm:
+            pin:
+              - 'scripts/emsdk-version'
+            toolchain:
+              - 'scripts/emsdk-version'
+              - 'scripts/emsdk-env.sh'
+              - '.github/workflows/ci.yml'
+            sdl:
               - 'src/sdl/**'
               - 'scripts/build-wasm.sh'
               - 'scripts/wasm-source-hash.sh'
-              - 'scripts/emsdk-env.sh'
-      - name: Install Emscripten
-        if: steps.wasm_changes.outputs.wasm == 'true'
+              - 'scripts/update-wasm-source-hash.sh'
+            resampler:
+              - 'src/resampler/**'
+              - 'scripts/build-resampler-wasm.sh'
+              - 'scripts/resampler-source-hash.sh'
+            projectm:
+              - 'src/projectm/**'
+              - 'scripts/build-projectm-wasm.sh'
+              - 'scripts/projectm-source-hash.sh'
+      - name: Decide targets
+        id: targets
+        env:
+          PIN: ${{ steps.changes.outputs.pin }}
+          TOOLCHAIN: ${{ steps.changes.outputs.toolchain }}
+          SDL: ${{ steps.changes.outputs.sdl }}
+          RESAMPLER: ${{ steps.changes.outputs.resampler }}
+          PROJECTM: ${{ steps.changes.outputs.projectm }}
         run: |
+          any() { for v in "$@"; do [ "$v" = true ] && { echo true; return; }; done; echo false; }
+          echo "sdl=$(any "$TOOLCHAIN" "$SDL")" >> "$GITHUB_OUTPUT"
+          echo "resampler=$(any "$TOOLCHAIN" "$RESAMPLER")" >> "$GITHUB_OUTPUT"
+          # projectM is slow (libprojectM CMake build): only its own sources or a pin bump.
+          echo "projectm=$(any "$PIN" "$PROJECTM")" >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+      - name: Install pinned Emscripten
+        if: steps.targets.outputs.sdl == 'true' || steps.targets.outputs.resampler == 'true' || steps.targets.outputs.projectm == 'true'
+        run: |
+          EMSDK_VERSION="$(tr -d '[:space:]' < scripts/emsdk-version)"
           git clone https://github.com/emscripten-core/emsdk.git --depth 1
           cd emsdk
-          ./emsdk install latest
-          ./emsdk activate latest
-      - name: Build WASM targets
-        if: steps.wasm_changes.outputs.wasm == 'true'
-        run: |
-          source emsdk/emsdk_env.sh
-          npm run build:wasm
+          ./emsdk install "$EMSDK_VERSION"
+          ./emsdk activate "$EMSDK_VERSION"
+      - name: Build SDL3 playback WASM
+        if: steps.targets.outputs.sdl == 'true'
+        run: npm run build:wasm
+      - name: Build SpeexDSP resampler WASM
+        if: steps.targets.outputs.resampler == 'true'
+        run: npm run build:wasm:resampler
+      - name: Build projectM host WASM
+        if: steps.targets.outputs.projectm == 'true'
+        run: npm run build:projectm
       - name: Check for uncommitted WASM output
-        if: steps.wasm_changes.outputs.wasm == 'true'
+        if: steps.targets.outputs.sdl == 'true' || steps.targets.outputs.resampler == 'true' || steps.targets.outputs.projectm == 'true'
         run: |
-          git diff --exit-code public/sdl-audio.js public/sdl-audio.wasm \
-            public/wasm-source.sha256 \
-            || (echo "::error::WASM build produced diffs. Run npm run build:wasm locally and commit public/ artifacts." && exit 1)
+          dirty="$(git status --porcelain -- public/sdl-audio.js public/sdl-audio.wasm public/wasm-source.sha256 \
+            public/speex-resampler.js public/speex-resampler.wasm public/resampler-source.sha256 \
+            public/projectm/)"
+          if [ -n "$dirty" ]; then
+            echo "$dirty"
+            echo "::error::WASM build (emsdk $(cat scripts/emsdk-version)) produced diffs. Rebuild with the pinned emsdk and commit public/ artifacts."
+            exit 1
+          fi
+      - run: npm run verify:wasm

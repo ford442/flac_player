@@ -1,22 +1,22 @@
 // Audio loader for Google Cloud Storage and FTP sources
 // Enhanced with AI track support and library management
 
-import * as songApi from './api/songApi';
-import { debug } from './utils/debug';
+import * as songApi from './songApi';
+import { debug } from '../utils/debug';
 import type {
   CloudPlaylist, LibraryStats, PlaylistTrack, ShareResponse, SortBy, TagInfo
-} from './types/library';
+} from '../types/library';
 
 export type {
   CloudPlaylist, LibraryStats, PlaylistTrack, ShareResponse, SortBy, TagInfo
-} from './types/library';
+} from '../types/library';
 
 // Re-export types and storage utilities
-export type { RepeatMode } from './storage/queueStorage';
-export { QUEUE_STORAGE_KEY, saveQueueToStorage, loadQueueFromStorage, clearQueueStorage } from './storage/queueStorage';
-export type { QueueState } from './storage/queueStorage';
-export { LIBRARY_CACHE_KEY, LIBRARY_CACHE_TTL_MS, getCachedLibrary, setCachedLibrary, clearLibraryCache } from './storage/libraryCache';
-export type { CachedLibrary } from './storage/libraryCache';
+export type { RepeatMode } from '../storage/queueStorage';
+export { QUEUE_STORAGE_KEY, saveQueueToStorage, loadQueueFromStorage, clearQueueStorage } from '../storage/queueStorage';
+export type { QueueState } from '../storage/queueStorage';
+export { LIBRARY_CACHE_KEY, LIBRARY_CACHE_TTL_MS, getCachedLibrary, setCachedLibrary, clearLibraryCache } from '../storage/libraryCache';
+export type { CachedLibrary } from '../storage/libraryCache';
 export {
   probeRemoteAudio,
   fetchByteRange,
@@ -24,7 +24,7 @@ export {
   streamResponseBody,
   type RemoteAudioProbe,
   type RangeFetchProgress,
-} from './utils/rangeFetch';
+} from '../utils/rangeFetch';
 export {
   STREAMING_THRESHOLD_BYTES,
   selectDecodeStrategy,
@@ -32,7 +32,7 @@ export {
   isFlacUrl,
   type DecodeStrategy,
   type PlaybackPathInfo,
-} from './utils/playbackPath';
+} from '../utils/playbackPath';
 
 interface LegacySongFields {
   id: string;
@@ -373,7 +373,7 @@ export class AudioLoader {
 
   /** Probe remote audio URL for size and range-request support. */
   async probeAudioUrl(url: string, signal?: AbortSignal) {
-    const { probeRemoteAudio } = await import('./utils/rangeFetch');
+    const { probeRemoteAudio } = await import('../utils/rangeFetch');
     return probeRemoteAudio(url, signal);
   }
 }

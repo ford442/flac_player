@@ -20,7 +20,7 @@ export function resampleInterleavedLinear(
   if (inFrames === 1) {
     for (let i = 0; i < outFrames; i++) {
       for (let ch = 0; ch < channels; ch++) {
-        output[i * channels + ch] = input[ch];
+        output[i * channels + ch] = input[ch]!;
       }
     }
     return output;
@@ -33,8 +33,8 @@ export function resampleInterleavedLinear(
     const i1 = Math.min(inFrames - 1, i0 + 1);
     const frac = src - i0;
     for (let ch = 0; ch < channels; ch++) {
-      const a = input[i0 * channels + ch];
-      const b = input[i1 * channels + ch];
+      const a = input[i0 * channels + ch]!;
+      const b = input[i1 * channels + ch]!;
       output[i * channels + ch] = a + (b - a) * frac;
     }
   }
@@ -71,8 +71,8 @@ export class LinearStreamResampler {
       const i0 = Math.floor(pos);
       const frac = pos - i0;
       for (let c = 0; c < ch; c++) {
-        const a = i0 < 0 ? this.prev[c] : input[i0 * ch + c];
-        const b = input[(i0 + 1) * ch + c];
+        const a = i0 < 0 ? this.prev[c]! : input[i0 * ch + c]!;
+        const b = input[(i0 + 1) * ch + c]!;
         out[n * ch + c] = a + (b - a) * frac;
       }
       n++;

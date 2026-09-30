@@ -3,7 +3,7 @@ import {
   loadQueueFromStorage,
   AudioLoader, PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo, CloudPlaylist,
   saveQueueToStorage, clearQueueStorage, getCachedLibrary, setCachedLibrary
-} from '../audioLoader';
+} from '../api/audioLoader';
 import { checkBackendHealth } from '../utils/healthCheck';
 import {
   addTrackToQueue, playNextTrack, removeFromQueue as removeFromQueueUtil, reorderQueueIndex
@@ -173,11 +173,16 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
         }
       }
     });
+    // Mount-only initial load: loadLibrary/loadTags/loadStats change with filters/library state, so listing
+    // them would refetch (or loop) on every change; later refreshes are driven explicitly by callers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (isSharedPlaylist) return;
     loadTags(); loadStats();
+    // Mount-only initial fetch; loadTags/loadStats are recreated when addToast changes and must not refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -221,6 +226,7 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
     setQueue(prev => {
       const next = [...prev];
       const [removed] = next.splice(startIndex, 1);
+      if (removed === undefined) return prev;
       next.splice(endIndex, 0, removed);
       return next;
     });

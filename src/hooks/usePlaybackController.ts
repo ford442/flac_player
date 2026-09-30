@@ -14,7 +14,7 @@ import {
   PlaylistTrack,
   selectDecodeStrategy,
   type PlaybackPathInfo,
-} from '../audioLoader';
+} from '../api/audioLoader';
 import { useReplayGainApplication } from './useReplayGainApplication';
 import { parseReplayGainFromCommon, replayGainTagsToTrackFields } from '../utils/replayGain';
 import type { ReplayGainSettings } from '../utils/replayGain';
@@ -270,7 +270,7 @@ export function usePlaybackController({
     } finally {
       setPlayerState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [loader, outputMode, setCurrentTrack, setError, setPlayerState, addToast]);
+  }, [loader, outputMode, setCurrentTrack, setError, setPlayerState, setPlaybackPath, addToast]);
 
   const playTrack = useCallback(async (track: PlaylistTrack, index?: number) => {
     setCurrentTrack(track);
@@ -364,6 +364,9 @@ export function usePlaybackController({
         playerRef.current = null;
       }
     };
+    // Rebuild the backend only when outputMode changes; volume/EQ/etc. are read from the
+    // render that triggered it, and live updates are applied by their own effects.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outputMode, loadLocalFile, advanceQueueIndexOnly]);
 
   useEffect(() => {

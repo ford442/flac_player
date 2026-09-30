@@ -68,20 +68,24 @@ npm test               # both
 If you are developing with the SDL-based audio engine (Emscripten build), build the WASM bundles first:
 
 ```bash
-# One-time: install and activate Emscripten (from repo root)
+# One-time: install and activate the PINNED Emscripten (from repo root).
+# Never `latest`: the version in scripts/emsdk-version is what CI uses, and the
+# build scripts refuse any other emcc (different LLVM → different .wasm bytes).
 git clone https://github.com/emscripten-core/emsdk.git
-cd emsdk && ./emsdk install latest && ./emsdk activate latest
+cd emsdk && ./emsdk install "$(cat ../scripts/emsdk-version)" && ./emsdk activate "$(cat ../scripts/emsdk-version)"
 source ./emsdk_env.sh
 
 # Build SDL3 WASM artifacts into public/
 cd ..   # back to repo root
 npm run build:wasm              # scripts/build-wasm.sh --sdl3
 npm run build:wasm:sdl3         # same as bash src/sdl/build.sh
+npm run build:wasm:resampler    # SpeexDSP HQ resampler
+npm run build:projectm          # optional projectM host (slow: builds libprojectM)
 
 npm start
 ```
 
-**WASM policy:** C++ sources live in `src/sdl/`; compiled `public/sdl-audio.*` is committed to the repo. CI runs `npm run verify:wasm` to ensure the source hash in `public/wasm-source.sha256` matches. PRs that touch SDL sources also run an optional emsdk build job. SDL2 playback was retired (#212); projectM uses a separate `USE_SDL=2` video host.
+**WASM policy:** three WASM graphs are committed prebuilt: SDL3 playback (`src/sdl/` → `public/sdl-audio.*`), the SpeexDSP resampler (`src/resampler/` → `public/speex-resampler.*`), and the projectM host (`src/projectm/` → `public/projectm/`). All are built with the emsdk version in `scripts/emsdk-version`. CI runs `npm run verify:wasm`, which checks each graph's source hash (`public/wasm-source.sha256`, `public/resampler-source.sha256`, `public/projectm/projectm-source.sha256`; every hash also covers the emsdk pin). PRs that touch a graph (or the pin) rebuild it with the pinned emsdk and fail if the committed artifacts differ. To bump the pin, see the header of `scripts/emsdk-env.sh`. SDL2 playback was retired (#212); projectM uses a separate `USE_SDL=2` video host.
 
 **Production webpack build** does not compile WASM (no emsdk required). It copies prebuilt artifacts from `public/`:
 
@@ -127,7 +131,7 @@ For manual URL loading: enter a FLAC/WAV URL, click Load, then play.
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System diagram, data flows |
 | [docs/AUDIO_BACKENDS.md](docs/AUDIO_BACKENDS.md) | When to use each backend |
 | [docs/API.md](docs/API.md) | REST + projectM embed |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Active backlog #193–#197 (foundation before listening rooms) |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Open-issue backlog and shipped foundation |
 
 ### Visualization Backends
 

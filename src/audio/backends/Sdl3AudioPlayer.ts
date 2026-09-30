@@ -1,4 +1,4 @@
-import { decodeAudio } from '../../audioDecoder';
+import { decodeAudio } from '../audioDecoder';
 import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
 import { DEFAULT_EQ_BANDS } from '../EQChain';
 import { SdlPcmModule, sharedSdlPcmBridge } from '../SdlPcmBridge';
@@ -9,6 +9,7 @@ import { BaseAudioBackend } from './BaseAudioBackend';
 import { HifiStreamSession, type HifiTrackSource } from '../hifiStreamPipeline';
 import { describePlaybackPath, type PlaybackPathInfo } from '../../utils/playbackPath';
 import { playRingShouldPause } from '../playRingBackpressure';
+import debug from '../../utils/debug';
 
 interface SdlModule extends SdlPcmModule {
   _init_audio(): number;
@@ -89,6 +90,11 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
   private gaplessSettings: GaplessSettings = { mode: DEFAULT_GAPLESS_MODE, crossfadeMs: DEFAULT_CROSSFADE_MS };
   private nextSource: HifiTrackSource | null = null;
   private limiterEnabled = false;
+  /**
+   * One heap block (play-ring capacity) reused by every push_pcm call so the
+   * decode loop does not malloc/free per chunk. Freed in destroy().
+   */
+  private pushStaging = 0;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
     super();
@@ -105,28 +111,24 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
   }
 
   private async initializeModule() {
-    console.log('[SdlAudioPlayer] Initializing module...');
+    debug.log('SdlAudioPlayer', 'Initializing module');
     if (!window.__sdl_script_processor_shim_loaded) {
-      console.log('[SdlAudioPlayer] Loading script-processor-shim.js...');
       try {
         await loadWasmScript(WASM_ASSETS.scriptProcessorShim);
         window.__sdl_script_processor_shim_loaded = true;
-        console.log('[SdlAudioPlayer] script-processor-shim.js loaded.');
+        debug.log('SdlAudioPlayer', 'script-processor-shim.js loaded');
       } catch {
         console.warn('[SdlAudioPlayer] Script processor shim failed to load; continuing without shim.');
       }
     }
 
     if (!window.createSdlAudioModule) {
-      console.log('[SdlAudioPlayer] Loading sdl-audio.js...');
       await loadWasmScript(WASM_ASSETS.sdl3);
-      console.log('[SdlAudioPlayer] sdl-audio.js loaded.');
+      debug.log('SdlAudioPlayer', 'sdl-audio.js loaded');
     }
 
     try {
-      console.log('[SdlAudioPlayer] Calling createSdlAudioModule()...');
       this.module = await window.createSdlAudioModule();
-      console.log('[SdlAudioPlayer] Module created. Inspecting keys:', Object.keys(this.module));
 
       if (this.destroyed) {
         this.module._cleanup();
@@ -138,7 +140,7 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
       if (!success) {
         console.error('[SdlAudioPlayer] Failed to initialize SDL audio (init_audio returned 0)');
       } else {
-        console.log('[SdlAudioPlayer] SDL Audio initialized successfully.');
+        debug.log('SdlAudioPlayer', 'SDL audio initialized');
         this.isReady = true;
         this.applyNativeEq(this.contextManager.getEQGains());
         this.applyNativeReplayGain();
@@ -159,7 +161,7 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
     try {
       if (m._get_device_format(ptr, ptr + 4) === 1) {
         const heap = new Int32Array(this.heapF32().buffer, ptr, 2);
-        console.log(`[SdlAudioPlayer] SDL device format: ${heap[0]} Hz, ${heap[1]} ch (streams at file rate; SDL resamples on bind)`);
+        debug.log('SdlAudioPlayer', `SDL device format: ${heap[0]} Hz, ${heap[1]} ch (streams at file rate; SDL resamples on bind)`);
       }
     } finally {
       m._free(ptr);
@@ -208,7 +210,7 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
   private checkBoundaries(current: number): void {
     const frameSamples = this.decodedSampleRate * this.decodedChannels;
     if (frameSamples <= 0) return;
-    while (this.boundaries.length > 0 && current * frameSamples >= this.boundaries[0].abs) {
+    while (this.boundaries.length > 0 && current * frameSamples >= this.boundaries[0]!.abs) {
       const b = this.boundaries.shift()!;
       this.segmentOffset = b.abs / frameSamples;
       this.duration = b.duration ?? 0;
@@ -245,29 +247,28 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
         await sleep(8);
         continue;
       }
-      const n = Math.min(interleaved.length - offset, cap - fill);
-      const ptr = module._malloc(n * 4);
+      if (!this.pushStaging) this.pushStaging = module._malloc(cap * 4);
+      const ptr = this.pushStaging;
       if (!ptr) {
         await sleep(8);
         continue;
       }
-      try {
-        this.heapF32().set(interleaved.subarray(offset, offset + n), ptr / 4);
-        const written = module._push_pcm(ptr, n);
-        if (written <= 0) {
-          await sleep(8);
-          continue;
-        }
-        offset += written;
-        this.pushedAbs += written;
-      } finally {
-        module._free(ptr);
+      // No await between staging and push: an overlapping (aborted) run cannot
+      // touch the shared block in between.
+      const n = Math.min(interleaved.length - offset, cap - fill);
+      this.heapF32().set(interleaved.subarray(offset, offset + n), ptr / 4);
+      const written = module._push_pcm(ptr, n);
+      if (written <= 0) {
+        await sleep(8);
+        continue;
       }
+      offset += written;
+      this.pushedAbs += written;
     }
   }
 
   async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
-    console.log('[SdlAudioPlayer] loadAudio called with ArrayBuffer of size:', arrayBuffer.byteLength);
+    debug.log('SdlAudioPlayer', { loadAudio: arrayBuffer.byteLength });
     await this.initialize();
     if (!this.module || !this.isReady) {
       console.warn('[SdlAudioPlayer] Module not ready during loadAudio call.');
@@ -283,9 +284,8 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
     this.notifyStateChange();
 
     try {
-      console.log('[SdlAudioPlayer] Decoding audio...');
       const result = await decodeAudio(arrayBuffer, undefined, filename);
-      console.log('[SdlAudioPlayer] Decoded. Channels:', result.channels, 'SampleRate:', result.sampleRate, 'Duration:', result.duration);
+      debug.log('SdlAudioPlayer', { decoded: { channels: result.channels, sampleRate: result.sampleRate, duration: result.duration } });
 
       this.duration = result.duration;
 
@@ -602,6 +602,8 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
     sharedSdlPcmBridge.disconnect(this.contextManager);
     if (this.pollInterval) clearInterval(this.pollInterval);
     if (this.module) {
+      if (this.pushStaging) this.module._free(this.pushStaging);
+      this.pushStaging = 0;
       this.module._cleanup();
     }
   }

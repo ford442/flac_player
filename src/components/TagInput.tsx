@@ -80,7 +80,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         addTag(inputValue);
       }
     } else if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
-      removeTag(tags[tags.length - 1]);
+      removeTag(tags[tags.length - 1]!);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       setSelectedIndex(prev => (prev + 1) % Math.max(suggestions.length, 1));

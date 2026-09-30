@@ -43,6 +43,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
   private audioContext: AudioContext | null = null;
   private gainNode: GainNode | null = null;
   private workletPlayer: WorkletAudioPlayer | null = null;
+  private playbackRate = 1;
   private activePath: ActivePath | null = null;
 
   // Native <audio> path
@@ -93,6 +94,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
   async initialize(): Promise<void> {
     if (!this.workletPlayer) {
       this.workletPlayer = new WorkletAudioPlayer(this.contextManager);
+      this.workletPlayer.setPlaybackRate(this.playbackRate);
       this.workletPlayer.setStateChangeCallback((state) => this.notifyStateChange(state));
       this.workletPlayer.setOnEndedCallback((event) => this.onEndedCallback?.(event));
       if (this.onPCMBlock) {
@@ -360,7 +362,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
   private _ensureNextGraph(): void {
     if (!this.nextAudioElement || !this.nextTrackUrl) return;
 
-    const { context, gain } = this.attachNativeGraph();
+    const { context } = this.attachNativeGraph();
     if (!this.nextSourceNode) {
       this.nextGainNode = context.createGain();
       this.nextGainNode.gain.value = 0;
@@ -516,11 +518,10 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
 
   setPlaybackRate(rate: number): void {
     const clamped = Math.max(0.25, Math.min(4.0, rate));
-    if (this.activePath === 'native') {
-      this.audioElement.playbackRate = clamped;
-      if (this.nextAudioElement) this.nextAudioElement.playbackRate = clamped;
-      return;
-    }
+    this.playbackRate = clamped;
+    this.audioElement.playbackRate = clamped;
+    if (this.nextAudioElement) this.nextAudioElement.playbackRate = clamped;
+    // Also when native is active: the worklet keeps it for a later hi-fi / buffered load.
     this.workletPlayer?.setPlaybackRate(clamped);
   }
 

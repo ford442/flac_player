@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { AudioLoader, PlaylistTrack, loadQueueFromStorage } from '../audioLoader';
+import { AudioLoader, PlaylistTrack, loadQueueFromStorage } from '../api/audioLoader';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { usePlayerState } from '../hooks/usePlayerState';
 import { useToastNotifications } from '../hooks/useToastNotifications';
@@ -8,6 +8,7 @@ import { useAudioOutputInfo, useOutputDevices } from '../hooks/useAudioOutputInf
 import { usePlayerData } from '../hooks/usePlayerData';
 import { usePlaybackController } from '../hooks/usePlaybackController';
 import { isAudioContextSinkSupported, sharedAudioContextManager } from '../audio/AudioContextManager';
+import { isRenderSizeHintSupported } from '../audio/sampleRatePolicy';
 import type { AudioOutputControls } from './EQPanel';
 import { AudioCapabilitiesContext } from './AudioCapabilitiesContext';
 import { useGpuChoresOverview } from '../hooks/useGpuChoresOverview';
@@ -28,7 +29,8 @@ const getSharedPlaylistId = (): string | null => {
   const queryShareId = params.get('share');
   if (queryShareId) return queryShareId;
   const pathMatch = window.location.pathname.match(/^\/playlist\/([^/]+)$/);
-  return pathMatch ? decodeURIComponent(pathMatch[1]) : null;
+  const pathId = pathMatch?.[1];
+  return pathId ? decodeURIComponent(pathId) : null;
 };
 
 export const Player: React.FC = () => {
@@ -44,6 +46,7 @@ export const Player: React.FC = () => {
     replayGainMode, setReplayGainMode, replayGainLimiter, setReplayGainLimiter,
     replayGainSettings,
     latencyMode, setLatencyMode,
+    renderSizeMode, setRenderSizeMode,
     outputDevice, onSelectOutputDevice,
   } = useAudioSettings();
 
@@ -89,6 +92,10 @@ export const Player: React.FC = () => {
   }, [latencyMode]);
 
   useEffect(() => {
+    void sharedAudioContextManager.setRenderSizeMode(renderSizeMode);
+  }, [renderSizeMode]);
+
+  useEffect(() => {
     let cancelled = false;
     void sharedAudioContextManager.setSinkId(outputDevice.id).then((ok) => {
       if (ok || cancelled) return;
@@ -109,7 +116,15 @@ export const Player: React.FC = () => {
     onSelectOutputDevice,
     info: audioOutputInfo,
     externalPlayback: outputMode === 'sdl',
-  }), [outputDevice, outputDevices, onSelectOutputDevice, audioOutputInfo, outputMode]);
+    renderSize: {
+      mode: renderSizeMode,
+      supported: isRenderSizeHintSupported(),
+      onChange: setRenderSizeMode,
+    },
+  }), [
+    outputDevice, outputDevices, onSelectOutputDevice, audioOutputInfo, outputMode,
+    renderSizeMode, setRenderSizeMode,
+  ]);
 
   const gpuOverview = useGpuChoresOverview({
     trackKey: currentTrack?.id ?? currentTrack?.url ?? null,
@@ -185,10 +200,11 @@ export const Player: React.FC = () => {
       const trackIds = await loader.fetchPlaylistTracks(playlistId);
       if (trackIds.length === 0) { addToast('Playlist is empty or unavailable', 'info'); return; }
       const matchedTracks = trackIds.map(id => library.find(t => t.id === id)).filter(Boolean) as PlaylistTrack[];
-      if (matchedTracks.length === 0) { addToast('No matching tracks found in local library', 'error'); return; }
+      const firstTrack = matchedTracks[0];
+      if (!firstTrack) { addToast('No matching tracks found in local library', 'error'); return; }
       setQueue(matchedTracks);
       setQueueCurrentIndex(0);
-      playTrack(matchedTracks[0], 0);
+      playTrack(firstTrack, 0);
       addToast(`Loaded ${matchedTracks.length}/${trackIds.length} tracks from playlist`, 'success');
     } catch {
       addToast('Failed to load playlist tracks', 'error');
@@ -198,9 +214,11 @@ export const Player: React.FC = () => {
   const playAll = (tracks: PlaylistTrack[], shuffled = false) => {
     if (tracks.length === 0) return;
     const ordered = shuffled ? shuffleArray(tracks) : tracks;
+    const firstTrack = ordered[0];
+    if (!firstTrack) return;
     setQueue(ordered);
     setQueueCurrentIndex(0);
-    playTrack(ordered[0], 0);
+    playTrack(firstTrack, 0);
     addToast(shuffled ? `Shuffling ${ordered.length} tracks` : `Playing ${ordered.length} tracks`, 'success');
   };
 
@@ -382,7 +400,7 @@ export const Player: React.FC = () => {
           volume={volume} muted={muted}
           onPlay={togglePlayback} onStop={stop}
           onSeek={onSeek}
-          onTrackClick={(index) => playTrack(queue[index], index)}
+          onTrackClick={(index) => { const track = queue[index]; if (track) playTrack(track, index); }}
           onVolumeChange={handleVolumeChange} onMute={toggleMute}
           onNext={playNextInQueue} onPrevious={playPreviousInQueue}
           onToggleFallback={() => setShowHtmlFallback(true)}
@@ -445,7 +463,7 @@ export const Player: React.FC = () => {
       overviewReason={gpuOverview.reason}
       onTrackClick={(track) => { addToQueue(track); playTrack(track, queue.length); }}
       onTrackDoubleClick={playNow}
-      onQueueTrackClick={(index) => playTrack(queue[index], index)}
+      onQueueTrackClick={(index) => { const track = queue[index]; if (track) playTrack(track, index); }}
       onPlay={togglePlayback} onStop={stop}
       onSeek={onSeek}
       onVolumeChange={handleVolumeChange} onMute={toggleMute}

@@ -34,7 +34,18 @@ Call from UI/overview code only — **never inside an audio callback**. File ove
 
 The `auto` break-even below applies unchanged; small live windows go CPU unless the caller passes `prefer: 'webgpu'`.
 
-**Live ShaderGUI (opt-in `?gpu_fft=1`):** `useLiveGpuSpectrum` reads the analyser's time-domain window at ≤ `METER_HZ` (30 Hz, main thread, never the audio callback), runs `fft_spectrum` with `prefer: 'webgpu'`, and compares against the CPU golden at ~1 Hz. The result is shown in the 🎛 HUD only. `AnalyserNode` still feeds the shader until the goldens are trusted. The worklet `setPCMCallback` tap is the better input source; it is left for after the shared-graph pause fix.
+**Live ShaderGUI (`?gpu_fft=1`):** `useLiveGpuSpectrum` reads the analyser's time-domain window at ≤ `METER_HZ` (30 Hz, main thread, never the audio callback), runs `fft_spectrum` with `prefer: 'webgpu'` at the analyser's resolution (`frequencyBinCount` bins, N = `fftSize`), and compares against the CPU golden at ~1 Hz.
+
+Promotion (`src/visuals/spectrumSource.ts`): once `GPU_SPECTRUM_TRUST_CHECKS` (3) consecutive golden checks are within `FFT_GPU_EPSILON`, the GPU bins drive ShaderGUI's spectrum uniforms, its 64 audio bars, **and** beat detection. The bins are mapped to `getByteFrequencyData`'s scale first (`amplitudesToAnalyserBytes`: analyser Blackman gain, analyser smoothing and min/max dB), so the shader looks the same. One failed check or chore error sends it back to the analyser immediately. In GPU mode the analyser frequency data is not read at all. The budget is one time-domain read plus one GPU FFT at 30 Hz, and beat detection updates at 30 Hz (its 10-sample bass history covers ~333 ms instead of ~166 ms). The 🎛 HUD shows which source is live.
+
+| URL | Spectrum source |
+|-----|-----------------|
+| (default) | `GPU_SPECTRUM_DEFAULT` — `analyser` until goldens are trusted in the field |
+| `?gpu_fft=1` | GPU once trusted, analyser while warming up |
+| `?analyser_fft=1` | analyser (rollback once GPU becomes the default) |
+| `?no_gpu_compute` | analyser; the kill switch wins over both flags |
+
+Input is still the analyser's time-domain tap. The worklet/SDL SAB PCM (`PcmTapReader`, SDL viz ring) is the planned source once it can have a second consumer next to projectM.
 
 ## Backend order (`prefer: 'auto'`)
 

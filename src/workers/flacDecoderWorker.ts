@@ -17,9 +17,9 @@ function interleave(decoded: {
 
   const interleaved = new Float32Array(samplesDecoded * channels);
   for (let ch = 0; ch < channels; ch++) {
-    const channelSamples = channelData[ch];
+    const channelSamples = channelData[ch]!;
     for (let i = 0; i < samplesDecoded; i++) {
-      interleaved[i * channels + ch] = channelSamples[i];
+      interleaved[i * channels + ch] = channelSamples[i]!;
     }
   }
 

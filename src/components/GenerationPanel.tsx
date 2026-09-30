@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { PlaylistTrack } from '../audioLoader';
+import { PlaylistTrack } from '../api/audioLoader';
 import {
   fetchGenerationJob,
   GenerationApiError,

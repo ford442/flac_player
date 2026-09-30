@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { decodeAudioWithBuffer } from '../src/audioDecoder';
+import { decodeAudioWithBuffer } from '../src/audio/audioDecoder';
 import { AudioContextManager } from '../src/audio/AudioContextManager';
 import { WebAudioPlayer } from '../src/audio/backends/WebAudioPlayer';
 import type { TrackTransitionEvent } from '../src/types/gapless';
@@ -9,7 +9,7 @@ import {
   installRecordingAudioContext,
 } from './helpers/recordingAudioContext';
 
-vi.mock('../src/audioDecoder', () => ({
+vi.mock('../src/audio/audioDecoder', () => ({
   decodeAudioWithBuffer: vi.fn(),
 }));
 

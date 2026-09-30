@@ -1,7 +1,7 @@
 // src/utils/streamingDecoder.ts
 // High-level streaming decoder that feeds chunked FLAC data to the WASM worker
 // and emits decoded PCM chunks via callback. This keeps memory flat for large files.
-import { FlacDecoder, FlacDecoderResult } from '../flacDecoder';
+import { FlacDecoder, FlacDecoderResult } from '../audio/flacDecoder';
 
 export interface StreamingChunk {
   interleavedBuffer: Float32Array;

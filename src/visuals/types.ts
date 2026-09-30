@@ -1,4 +1,4 @@
-import type { ShaderGUIUniforms } from '../webgpuVisualizer';
+import type { ShaderGUIUniforms } from './webgpuVisualizer';
 
 /** Active audio visualization backend. */
 export type VisualizerBackend = 'webgpu' | 'webgl2' | 'canvas2d';

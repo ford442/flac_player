@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo, CloudPlaylist, type PlaybackPathInfo } from '../audioLoader';
+import { PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo, CloudPlaylist, type PlaybackPathInfo } from '../api/audioLoader';
 import { AudioOutputMode } from '../hooks/usePlayerState';
 import { QueuePanel } from './QueuePanel';
 import { ToastContainer, Toast } from './Toast';

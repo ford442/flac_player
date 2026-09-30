@@ -5,6 +5,7 @@
  * via sendProjectMPCM / startProjectMBridge. When an in-app ProjectMEngine is
  * registered, PCM is fed there first — no duplicate decode.
  */
+import { debug } from './debug';
 
 export interface InAppProjectMHost {
   addPCM(buffer: Float32Array, channels: number): void;
@@ -74,7 +75,7 @@ export function sendProjectMPCM(float32Array: Float32Array, channels = 1, sample
       window.parent.postMessage(msg, '*');
     }
   } catch (ex) {
-    console.debug('[projectMBridge] postMessage failed (non-fatal):', ex);
+    debug.log('[projectMBridge] postMessage failed (non-fatal):', ex);
   }
 
   const ch = getPCMChannel();
@@ -82,7 +83,7 @@ export function sendProjectMPCM(float32Array: Float32Array, channels = 1, sample
     try {
       ch.postMessage(msg);
     } catch (ex) {
-      console.debug('[projectMBridge] BroadcastChannel.postMessage failed (non-fatal):', ex);
+      debug.log('[projectMBridge] BroadcastChannel.postMessage failed (non-fatal):', ex);
     }
   }
 }
@@ -97,7 +98,7 @@ export function startProjectMBridge(analyser: AnalyserNode): () => void {
   try {
     channel = new BroadcastChannel('projectm-audio');
   } catch (err) {
-    console.debug('[projectMBridge] BroadcastChannel not available:', err);
+    debug.log('[projectMBridge] BroadcastChannel not available:', err);
   }
 
   if (!hasParent && !channel && !hasInApp) {
@@ -119,13 +120,13 @@ export function startProjectMBridge(analyser: AnalyserNode): () => void {
           window.parent.postMessage({ type: 'pcm', buffer: slice, channels: 1 }, '*');
         }
       } catch (ex) {
-        console.debug('[projectMBridge] postMessage failed (non-fatal):', ex);
+        debug.log('[projectMBridge] postMessage failed (non-fatal):', ex);
       }
       if (channel) {
         try {
           channel.postMessage({ type: 'pcm', buffer: slice, channels: 1 });
         } catch (ex) {
-          console.debug('[projectMBridge] BroadcastChannel.postMessage failed (non-fatal):', ex);
+          debug.log('[projectMBridge] BroadcastChannel.postMessage failed (non-fatal):', ex);
         }
       }
     }

@@ -1,6 +1,6 @@
 # FLAC Player Architecture
 
-Last updated: August 2026
+Last updated: September 2026
 
 ## System overview
 
@@ -26,7 +26,7 @@ flowchart TB
   end
 
   subgraph Load["Loading & library"]
-    Loader["audioLoader.ts"]
+    Loader["api/audioLoader.ts"]
     SongApi["api/songApi.ts"]
     TrackCache["storage/trackCache.ts"]
     LibCache["storage/libraryCache.ts"]
@@ -95,7 +95,7 @@ Destination → speakers
 ```
 fetch(url) → ArrayBuffer
     ↓
-flacDecoder.ts / audioDecoder.ts / flacDecoderWorker.ts
+audio/flacDecoder.ts / audio/audioDecoder.ts / workers/flacDecoderWorker.ts
     ↓
 AudioBuffer (or streaming chunks into worklet ring buffer)
     ↓
@@ -150,7 +150,11 @@ preference webgl2 (opt-in)  → WebGL2Visualizer (WAVEFORM_LAYOUT GLSL)
 DEBUG_VISUALIZER=canvas2d   → CanvasFallbackVisualizer (debug only)
 ```
 
-The boot probe is the **only** `requestAdapter` / `requestDevice` call. It uses `powerPreference: 'high-performance'` (`?gpu=low` → `'low-power'`), intersects optional features (`timestamp-query`, `shader-f16`; never required), and configures the canvas via `buildCanvasConfiguration` in `src/visuals/webgpu/canvasConfig.ts`. `WebGPUVisualizer` adopts that device and reuses the same configure factory on init/resize. Inspect `window.webgpuProbe` for status, reason, browser, adapter (including `isFallbackAdapter`), `powerPreference`, `requestedFeatures`, `display`, and live `gpuTimeMs`.
+The boot probe is the **only** `requestAdapter` / `requestDevice` call. It uses `powerPreference: 'high-performance'` (`?gpu=low` → `'low-power'`), intersects optional features (`timestamp-query`, `shader-f16`; never required), and configures the canvas via `buildCanvasConfiguration` in `src/visuals/webgpu/canvasConfig.ts`. `WebGPUVisualizer` adopts that device and reuses the same configure factory on init/resize. Inspect `window.webgpuProbe` for status, reason, browser, adapter (including `isFallbackAdapter`), `powerPreference`, `requestedFeatures`, `display`, and live `gpuTimeMs`. The device is labelled `flac-player-visualizer`. `requiredLimits` is left out on purpose: the FFT fits the default limits, and requiring more would exclude Intel iGPUs. `uncapturederror` events are counted on `window.webgpuProbe.uncapturedErrors` (the first one is also logged and kept in `firstUncapturedError`).
+
+**Device lost** (`src/visuals/webgpu/deviceLostRecovery.ts`): for any reason other than `'destroyed'`, ShaderGUI releases the chores device and re-runs `probeWebGPU` on the same canvas **once**. On success it re-initializes `WebGPUVisualizer` and gpu-chores adopts the new device (the `webgpuFft.ts` WeakMap caches are keyed by device). If the re-probe fails, or a second loss happens, the fatal panel shows `reason: 'webgpu-device-lost'`. It never auto-starts WebGL2, and audio is never touched. Manual check: open `chrome://gpucrash` in another tab (or end the GPU process in the Chrome task manager) while playing. The visualizer should come back, and `window.webgpuProbe.deviceLostRecoveries` should be `1`.
+
+**WebGL2 opt-in context:** `buildWebGL2ContextAttributes()` in `canvasConfig.ts` sets `powerPreference` from `?gpu=low`, `antialias: false`, `preserveDrawingBuffer: false`, `desynchronized: true` (retried without it if rejected), `failIfMajorPerformanceCaveat` only with `?gl=strict`, and `xrCompatible: false`. The attributes the browser granted go into `window.webgpuProbe.glAttributes`.
 
 `GPUCanvasConfiguration` fields (`resolveCanvasDisplay` → `buildCanvasConfiguration`):
 
@@ -220,7 +224,7 @@ Production API: **`https://storage.noahcohn.com`** (`REACT_APP_API_URL`).
 
 ## Backend API (FastAPI)
 
-Local/dev: `app.py` on port 7860. Production library and static audio files are served from `storage.noahcohn.com`.
+Local/dev: `server/app.py` on port 7860. Production library and static audio files are served from `storage.noahcohn.com`.
 
 Key endpoints: `GET /api/songs`, `POST /api/songs/{id}/play`, `POST /api/share`, `GET /api/share/{id}`. Full contract: [API.md](./API.md).
 

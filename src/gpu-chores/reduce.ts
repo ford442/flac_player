@@ -77,7 +77,7 @@ export function reduceRms(pcm: Float32Array): RmsPeek {
   let sumSq = 0;
   let peak = 0;
   for (let i = 0; i < n; i++) {
-    const s = pcm[i];
+    const s = pcm[i]!;
     sumSq += s * s;
     const abs = s < 0 ? -s : s;
     if (abs > peak) peak = abs;
@@ -94,10 +94,10 @@ export function downsampleMinMaxPairs(minmax: Float32Array): Float32Array {
   for (let i = 0; i < nextBins; i++) {
     const left = i * 2;
     const right = Math.min(i * 2 + 1, bins - 1);
-    const minL = minmax[left * 2];
-    const maxL = minmax[left * 2 + 1];
-    const minR = minmax[right * 2];
-    const maxR = minmax[right * 2 + 1];
+    const minL = minmax[left * 2]!;
+    const maxL = minmax[left * 2 + 1]!;
+    const minR = minmax[right * 2]!;
+    const maxR = minmax[right * 2 + 1]!;
     out[i * 2] = minL < minR ? minL : minR;
     out[i * 2 + 1] = maxL > maxR ? maxL : maxR;
   }
@@ -113,9 +113,11 @@ export function peakPyramid(
   binCount = DEFAULT_SCRUBBER_BINS,
   channels = 1,
 ): Float32Array[] {
-  const levels: Float32Array[] = [reduceMinMax(pcm, binCount, channels)];
-  while (levels[levels.length - 1].length / 2 > 4) {
-    levels.push(downsampleMinMaxPairs(levels[levels.length - 1]));
+  let level = reduceMinMax(pcm, binCount, channels);
+  const levels: Float32Array[] = [level];
+  while (level.length / 2 > 4) {
+    level = downsampleMinMaxPairs(level);
+    levels.push(level);
   }
   return levels;
 }
@@ -169,13 +171,14 @@ export function accumulateOverviewChunk(
   if (frames <= 0 || chunkFrames <= 0) return;
 
   for (let i = 0; i < pcm.length; i++) {
-    const s = pcm[i];
+    const s = pcm[i]!;
     acc.sumSq += s * s;
     const abs = s < 0 ? -s : s;
     if (abs > acc.peak) acc.peak = abs;
   }
   acc.samplesSeen += pcm.length;
 
+  const { mins, maxs } = acc;
   for (let localFrame = 0; localFrame < chunkFrames; localFrame++) {
     const globalFrame = frameOffset + localFrame;
     if (globalFrame < 0 || globalFrame >= frames) continue;
@@ -185,8 +188,8 @@ export function accumulateOverviewChunk(
     );
     for (let c = 0; c < ch; c++) {
       const s = sampleAt(pcm, localFrame, c, ch);
-      if (s < acc.mins[bin]) acc.mins[bin] = s;
-      if (s > acc.maxs[bin]) acc.maxs[bin] = s;
+      if (s < mins[bin]!) mins[bin] = s;
+      if (s > maxs[bin]!) maxs[bin] = s;
     }
   }
 }
@@ -198,8 +201,10 @@ export function finalizeOverview(acc: OverviewAccumulator): {
 } {
   const minmax = new Float32Array(acc.binCount * 2);
   for (let i = 0; i < acc.binCount; i++) {
-    const min = Number.isFinite(acc.mins[i]) ? acc.mins[i] : 0;
-    const max = Number.isFinite(acc.maxs[i]) ? acc.maxs[i] : 0;
+    const lo = acc.mins[i]!;
+    const hi = acc.maxs[i]!;
+    const min = Number.isFinite(lo) ? lo : 0;
+    const max = Number.isFinite(hi) ? hi : 0;
     minmax[i * 2] = min;
     minmax[i * 2 + 1] = max;
   }
@@ -223,8 +228,8 @@ function fftRadix2(re: Float32Array, im: Float32Array): void {
   let j = 0;
   for (let i = 0; i < n; i++) {
     if (i < j) {
-      const tr = re[i]; re[i] = re[j]; re[j] = tr;
-      const ti = im[i]; im[i] = im[j]; im[j] = ti;
+      const tr = re[i]!; re[i] = re[j]!; re[j] = tr;
+      const ti = im[i]!; im[i] = im[j]!; im[j] = ti;
     }
     let m = n >> 1;
     while (m >= 1 && j >= m) {
@@ -243,12 +248,12 @@ function fftRadix2(re: Float32Array, im: Float32Array): void {
         const wi = -Math.sin(angle);
         const even = i + k;
         const odd = even + half;
-        const tr = wr * re[odd] - wi * im[odd];
-        const ti = wr * im[odd] + wi * re[odd];
-        re[odd] = re[even] - tr;
-        im[odd] = im[even] - ti;
-        re[even] += tr;
-        im[even] += ti;
+        const tr = wr * re[odd]! - wi * im[odd]!;
+        const ti = wr * im[odd]! + wi * re[odd]!;
+        re[odd] = re[even]! - tr;
+        im[odd] = im[even]! - ti;
+        re[even] = re[even]! + tr;
+        im[even] = im[even]! + ti;
       }
     }
   }
@@ -286,7 +291,7 @@ export function reduceSpectrum(
   const mags = new Float32Array(nyquist);
   let maxMag = 0;
   for (let i = 0; i < nyquist; i++) {
-    const mag = Math.hypot(re[i], im[i]);
+    const mag = Math.hypot(re[i]!, im[i]!);
     mags[i] = mag;
     if (mag > maxMag) maxMag = mag;
   }
@@ -296,16 +301,18 @@ export function reduceSpectrum(
     const end = Math.floor(((b + 1) * nyquist) / bins);
     let sum = 0;
     const span = Math.max(1, end - start);
-    for (let i = start; i < end; i++) sum += mags[i];
+    for (let i = start; i < end; i++) sum += mags[i]!;
     out[b] = (sum / span) * norm;
   }
   return out;
 }
 
 export function pyramidFromMinMax(minmax: Float32Array): Float32Array[] {
-  const levels: Float32Array[] = [minmax];
-  while (levels[levels.length - 1].length / 2 > 4) {
-    levels.push(downsampleMinMaxPairs(levels[levels.length - 1]));
+  let level = minmax;
+  const levels: Float32Array[] = [level];
+  while (level.length / 2 > 4) {
+    level = downsampleMinMaxPairs(level);
+    levels.push(level);
   }
   return levels;
 }

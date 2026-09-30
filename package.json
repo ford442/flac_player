@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "start": "webpack serve --mode development --open",
+    "start:ci": "webpack serve --mode development",
     "build:wasm": "bash ./scripts/build-wasm.sh --sdl3",
     "build:wasm:sdl3": "bash ./scripts/build-wasm.sh --sdl3",
     "build:wasm:resampler": "bash ./scripts/build-resampler-wasm.sh",
@@ -19,7 +20,7 @@
     "test:decoder": "vitest run --config vitest.decoder.config.ts",
     "test:e2e": "npx playwright test",
     "test:streaming": "vitest run --config vitest.browser.config.ts",
-    "test:visualizer": "vitest run tests/rendererSelection.test.ts tests/waveformContract.test.ts tests/debugModes.test.ts tests/canvasConfig.test.ts",
+    "test:visualizer": "vitest run tests/rendererSelection.test.ts tests/waveformContract.test.ts tests/debugModes.test.ts tests/canvasConfig.test.ts tests/deviceLostRecovery.test.ts tests/spectrumSource.test.ts",
     "test:gpu-chores": "vitest run tests/gpuChores.reduce.test.ts tests/gpuChores.dispatcher.test.ts tests/gpuChores.fft.test.ts",
     "profile:chrome": "lighthouse http://localhost:3000 --view --preset=desktop",
     "test:dsp-golden": "mkdir -p .build && em++ -std=c++17 -O2 -msimd128 tests/native/dsp_simd_golden.cpp -o .build/dsp_simd_golden.js && node .build/dsp_simd_golden.js"
@@ -38,9 +39,6 @@
     "workbox-strategies": "^7.4.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
-    "@babel/preset-react": "^7.22.0",
-    "@babel/preset-typescript": "^7.23.0",
     "@playwright/test": "^1.60.0",
     "@types/node": "^25.3.0",
     "@types/react": "^18.2.0",
@@ -49,7 +47,6 @@
     "@typescript-eslint/parser": "^6.21.0",
     "@vitest/browser-playwright": "^4.1.10",
     "@webgpu/types": "^0.1.38",
-    "babel-loader": "^9.1.3",
     "copy-webpack-plugin": "^11.0.0",
     "css-loader": "^6.8.1",
     "dotenv": "^16.3.1",

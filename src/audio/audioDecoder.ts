@@ -1,4 +1,4 @@
-// src/audioDecoder.ts
+// src/audio/audioDecoder.ts
 // Unified audio decoder that detects FLAC vs native formats and routes accordingly
 import { FlacDecoder, FlacDecoderResult } from './flacDecoder';
 
@@ -94,7 +94,7 @@ export function convertAudioBufferToDecoderResult(
   for (let ch = 0; ch < channels; ch++) {
     const channelData = audioBuffer.getChannelData(ch);
     for (let i = 0; i < frameCount; i++) {
-      interleaved[i * channels + ch] = channelData[i];
+      interleaved[i * channels + ch] = channelData[i]!;
     }
   }
 

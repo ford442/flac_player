@@ -20,8 +20,11 @@ import {
 } from '../utils/replayGain';
 import {
   DEFAULT_LATENCY_MODE,
+  DEFAULT_RENDER_SIZE_MODE,
   isLatencyMode,
+  isRenderSizeMode,
   type LatencyMode,
+  type RenderSizeMode,
 } from '../audio/sampleRatePolicy';
 
 const EQ_STORAGE_KEY = 'flac_player_eq_gains';
@@ -33,6 +36,7 @@ const REPLAYGAIN_MODE_KEY = 'flac_player_replaygain_mode';
 const REPLAYGAIN_LIMITER_KEY = 'flac_player_replaygain_limiter';
 const LATENCY_MODE_KEY = 'flac_player_latency_mode';
 const OUTPUT_DEVICE_KEY = 'flac_player_output_device';
+const RENDER_SIZE_KEY = 'flac_player_render_size';
 
 /** Persisted output sink. `id === ''` is the system default. */
 export interface OutputDeviceSetting {
@@ -117,6 +121,14 @@ function loadStoredLatencyMode(): LatencyMode {
   return DEFAULT_LATENCY_MODE;
 }
 
+function loadStoredRenderSizeMode(): RenderSizeMode {
+  try {
+    const stored = localStorage.getItem(RENDER_SIZE_KEY);
+    if (isRenderSizeMode(stored)) return stored;
+  } catch { /* ignore */ }
+  return DEFAULT_RENDER_SIZE_MODE;
+}
+
 function loadStoredOutputDevice(): OutputDeviceSetting {
   try {
     const raw = localStorage.getItem(OUTPUT_DEVICE_KEY);
@@ -150,6 +162,9 @@ export interface AudioSettingsHook {
   replayGainSettings: ReplayGainSettings;
   latencyMode: LatencyMode;
   setLatencyMode: (mode: LatencyMode) => void;
+  /** AudioContext renderSizeHint (Chromium); ignored where unsupported. */
+  renderSizeMode: RenderSizeMode;
+  setRenderSizeMode: (mode: RenderSizeMode) => void;
   outputDevice: OutputDeviceSetting;
   /**
    * `undefined` opens the browser output picker (`selectAudioOutput`);
@@ -166,6 +181,7 @@ export function useAudioSettings(): AudioSettingsHook {
   const [replayGainMode, setReplayGainModeState] = useState<ReplayGainMode>(loadStoredReplayGainMode);
   const [replayGainLimiter, setReplayGainLimiterState] = useState<boolean>(loadStoredReplayGainLimiter);
   const [latencyMode, setLatencyModeState] = useState<LatencyMode>(loadStoredLatencyMode);
+  const [renderSizeMode, setRenderSizeMode] = useState<RenderSizeMode>(loadStoredRenderSizeMode);
   const [outputDevice, setOutputDevice] = useState<OutputDeviceSetting>(loadStoredOutputDevice);
 
   useEffect(() => {
@@ -198,6 +214,10 @@ export function useAudioSettings(): AudioSettingsHook {
   useEffect(() => {
     try { localStorage.setItem(LATENCY_MODE_KEY, latencyMode); } catch { /* quota */ }
   }, [latencyMode]);
+
+  useEffect(() => {
+    try { localStorage.setItem(RENDER_SIZE_KEY, renderSizeMode); } catch { /* quota */ }
+  }, [renderSizeMode]);
 
   useEffect(() => {
     try { localStorage.setItem(OUTPUT_DEVICE_KEY, JSON.stringify(outputDevice)); } catch { /* quota */ }
@@ -282,6 +302,8 @@ export function useAudioSettings(): AudioSettingsHook {
     replayGainSettings,
     latencyMode,
     setLatencyMode,
+    renderSizeMode,
+    setRenderSizeMode,
     outputDevice,
     onSelectOutputDevice,
   };

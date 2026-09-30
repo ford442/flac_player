@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { type PlaybackPathInfo } from '../../audioLoader';
+import { type PlaybackPathInfo } from '../../api/audioLoader';
 import { AudioOutputMode } from '../../hooks/usePlayerState';
 import { EQPanel, type AudioOutputControls } from '../EQPanel';
 import { CacheStatsPanel } from '../OfflineCache';
 import type { GaplessMode } from '../../types/gapless';
 import type { ReplayGainMode } from '../../utils/replayGain';
 import type { LatencyMode } from '../../audio/sampleRatePolicy';
+import { OUTPUT_MODE_LABELS } from './types';
 import {
   isCompatibilityVisualizerEnabled,
   setCompatibilityVisualizer,
@@ -68,9 +69,9 @@ export const PlayerFallbackSettingsTab: React.FC<PlayerFallbackSettingsTabProps>
           <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Audio Engine</span>
           <select value={outputMode} onChange={(e) => setOutputMode(e.target.value as AudioOutputMode)}
             className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm text-white">
-            <option value="streaming">Streaming (recommended)</option>
-            <option value="worklet">AudioWorklet (buffered)</option>
-            <option value="web-audio">Web Audio (buffered)</option>
+            {Object.entries(OUTPUT_MODE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
           </select>
           {playbackPath && (
             <div className="text-xs text-cyan-300/90 bg-cyan-950/30 border border-cyan-500/20 rounded-lg px-3 py-2" role="status">
@@ -83,6 +84,12 @@ export const PlayerFallbackSettingsTab: React.FC<PlayerFallbackSettingsTabProps>
             Smaller FLAC uses buffered decode. Non-FLAC URLs use native browser streaming.
             Crossfade works in native streaming only.
           </p>
+          {outputMode === 'sdl' && (
+            <p className="text-xs text-amber-300/90">
+              SDL3 is experimental: it needs cross-origin isolation (COOP/COEP headers) and
+              plays through the WASM engine to the speakers, so Web Audio output is muted.
+            </p>
+          )}
         </div>
         <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
           <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Visualizer</span>

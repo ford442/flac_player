@@ -3,7 +3,7 @@ import { DEFAULT_EQ_BANDS } from '../audio/EQChain';
 import type { GaplessMode } from '../types/gapless';
 import { MAX_CROSSFADE_MS, MIN_CROSSFADE_MS } from '../types/gapless';
 import type { ReplayGainMode } from '../utils/replayGain';
-import type { LatencyMode } from '../audio/sampleRatePolicy';
+import type { LatencyMode, RenderSizeMode } from '../audio/sampleRatePolicy';
 import type { AudioOutputInfo } from '../audio/AudioContextManager';
 import type { OutputDeviceOption } from '../hooks/useAudioOutputInfo';
 import { useAudioCapabilities } from './AudioCapabilitiesContext';
@@ -22,6 +22,13 @@ export interface AudioOutputControls {
   info: AudioOutputInfo | null;
   /** SDL owns the device; the Web Audio sink does not apply. */
   externalPlayback: boolean;
+  /** AudioContext renderSizeHint (callback quantum). Omitted → row hidden. */
+  renderSize?: {
+    mode: RenderSizeMode;
+    /** Browser exposes `renderQuantumSize`; otherwise the hint is never sent. */
+    supported: boolean;
+    onChange: (mode: RenderSizeMode) => void;
+  };
 }
 
 function formatMs(seconds: number | null): string {
@@ -68,6 +75,13 @@ const LATENCY_OPTIONS: { mode: LatencyMode; label: string; hint: string }[] = [
   { mode: 'playback', label: 'Playback', hint: 'Higher buffering — library listening and streaming' },
   { mode: 'interactive', label: 'Interactive', hint: 'Lower latency — scrubbing, worklet, projectM' },
   { mode: 'balanced', label: 'Balanced', hint: 'Numeric hint (~30 ms) when the browser supports it' },
+];
+
+const RENDER_SIZE_OPTIONS: { mode: RenderSizeMode; label: string; hint: string }[] = [
+  { mode: 'default', label: '128', hint: 'Web Audio default render quantum (option omitted)' },
+  { mode: 'hardware', label: 'Hardware', hint: 'Match the device callback size — fewer worklet wakeups' },
+  { mode: '256', label: '256', hint: '256-frame quantum' },
+  { mode: '512', label: '512', hint: '512-frame quantum — most headroom for the worklet ring' },
 ];
 
 export const EQPanel: React.FC<EQPanelProps> = ({
@@ -253,9 +267,37 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             </button>
           ))}
         </div>
+        {audioOutput?.renderSize && (
+          <div className="mt-3">
+            <span className="text-xs text-gray-400">Render quantum</span>
+            <div className="flex gap-1 mt-1 flex-wrap">
+              {RENDER_SIZE_OPTIONS.map(({ mode, label, hint }) => (
+                <button
+                  key={mode}
+                  onClick={() => audioOutput.renderSize!.onChange(mode)}
+                  disabled={!audioOutput.renderSize!.supported}
+                  className={`px-2 py-1 rounded text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                    audioOutput.renderSize!.mode === mode
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
+                  }`}
+                  title={hint}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {!audioOutput.renderSize.supported && (
+              <p className="text-xs text-gray-500 mt-1">
+                This browser has no <code>renderSizeHint</code>; the graph always runs 128-frame quanta.
+              </p>
+            )}
+          </div>
+        )}
         <p className="text-xs text-gray-500 mt-2">
-          Recreates the shared AudioContext. Same-rate albums stay gapless; a rate or latency
-          change may produce a brief audible gap.
+          Recreates the shared AudioContext. Same-rate albums stay gapless; a rate, latency or
+          render-quantum change may produce a brief audible gap. SDL3 output ignores these and the
+          output device below (Emscripten opens the default device).
         </p>
         {audioOutput && (
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1 mt-3 text-xs">
@@ -267,6 +309,12 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             <dd className="font-mono text-purple-300">{formatMs(audioOutput.info?.baseLatency ?? null)}</dd>
             <dt className="text-gray-500">Output latency</dt>
             <dd className="font-mono text-purple-300">{formatMs(audioOutput.info?.outputLatency ?? null)}</dd>
+            <dt className="text-gray-500">Render quantum</dt>
+            <dd className="font-mono text-purple-300">
+              {audioOutput.info?.renderQuantumSize != null
+                ? `${audioOutput.info.renderQuantumSize} frames`
+                : '128 frames'}
+            </dd>
             <dt className="text-gray-500">Channels</dt>
             <dd className="font-mono text-purple-300">{audioOutput.info?.channelCount ?? '—'}</dd>
           </dl>

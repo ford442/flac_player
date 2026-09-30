@@ -50,7 +50,7 @@ export class CanvasFallbackVisualizer {
       let sum = 0;
       const start = Math.floor(i * binRatio);
       const end = Math.floor((i + 1) * binRatio);
-      for (let j = start; j < end; j++) sum += this.freqData[j];
+      for (let j = start; j < end; j++) sum += this.freqData[j]!;
       const avg = sum / Math.max(1, end - start) / 255;
 
       const barHeight = avg * height * 0.75;
@@ -72,7 +72,7 @@ export class CanvasFallbackVisualizer {
     const sliceWidth = width / this.waveData.length;
     let x = 0;
     for (let i = 0; i < this.waveData.length; i++) {
-      const v = this.waveData[i] / 128.0;
+      const v = this.waveData[i]! / 128.0;
       const y = (v * height) / 2;
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
