@@ -28,6 +28,7 @@ import { Knob } from './Knob';
 import { Button } from './Button';
 import { VolumeSlider } from './VolumeSlider';
 import { useBeatDetection } from '../../hooks/useBeatDetection';
+import { isLiveGpuFftEnabled, useLiveGpuSpectrum } from '../../hooks/useLiveGpuSpectrum';
 import './ShaderGUI.css';
 
 export interface ShaderGUIProps {
@@ -99,6 +100,9 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const animFrameRef = useRef<number>(0);
   const [probeFailure, setProbeFailure] = useState<WebGPUProbeBreadcrumb | null>(null);
   const [showDebugPanel, setShowDebugPanel] = useState(false);
+  const [gpuStats, setGpuStats] = useState<ReturnType<WebGPUVisualizer['getRenderInfo']> & {
+    gpuTimeMs: number | null;
+  } | null>(null);
   const [activeBackend, setActiveBackend] = useState<VisualizerBackend>('webgpu');
   const [preferenceEpoch, setPreferenceEpoch] = useState(0);
   const [canvasSessionKey, setCanvasSessionKey] = useState(
@@ -123,6 +127,21 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const [modeIR, setModeIR] = useState(0);
   const [stopFlash, setStopFlash] = useState(0);
   const [visualizerMode, setVisualizerMode] = useState<'gui' | '3D'>('gui');
+
+  const [liveGpuFft] = useState(() => isLiveGpuFftEnabled());
+  const liveSpectrum = useLiveGpuSpectrum(analyser, liveGpuFft && !controlsOnly);
+
+  // 🎛 HUD: poll GPU pass timings while the panel is open (timestamp-query).
+  useEffect(() => {
+    if (!showDebugPanel) return undefined;
+    const tick = () => {
+      const vis = webgpuRef.current;
+      setGpuStats(vis ? { ...vis.getRenderInfo(), gpuTimeMs: vis.getGpuTimeMs() } : null);
+    };
+    tick();
+    const id = window.setInterval(tick, 500);
+    return () => window.clearInterval(id);
+  }, [showDebugPanel]);
 
   const { beatPhaseRef, spectrumRef, processFrame } = useBeatDetection();
   const timeRef = useRef(0);
@@ -450,6 +469,27 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             <br />
             DEBUG_VISUALIZER: <code>{window.DEBUG_VISUALIZER ?? 'unset'}</code>
           </div>
+          {gpuStats && (
+            <div className="mt-2 text-[10px] text-gray-300" data-testid="gpu-pass-time">
+              GPU pass:{' '}
+              <strong className="text-green-300">
+                {gpuStats.timestampQuery
+                  ? (gpuStats.gpuTimeMs === null ? 'measuring…' : `${gpuStats.gpuTimeMs.toFixed(3)} ms`)
+                  : 'n/a (no timestamp-query)'}
+              </strong>
+              <br />
+              Shader: {gpuStats.f16 ? 'f16 glow' : 'f32'}
+              {' · '}Color: {gpuStats.display.colorSpace}
+              {gpuStats.display.toneMapping ? ` · HDR ${gpuStats.display.toneMapping}` : ''}
+            </div>
+          )}
+          {liveSpectrum && (
+            <div className="mt-1 text-[10px] text-gray-300">
+              Live FFT (?gpu_fft): {liveSpectrum.backend} · N={liveSpectrum.fftSize}
+              {' · '}{liveSpectrum.elapsedMs.toFixed(2)} ms
+              {' · '}Δgolden {liveSpectrum.goldenMaxDiff === null ? '—' : liveSpectrum.goldenMaxDiff.toExponential(1)}
+            </div>
+          )}
           <div className="mt-2 text-[10px] text-gray-500">
             Handle: <code>window.currentVisualizer</code>
             {' · '}Chores: <code>window.__gpuChores</code>
