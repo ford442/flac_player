@@ -263,6 +263,8 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       } else if (e.data.type === 'position') {
         this.currentTime = e.data.position;
         if (this.isStreaming) this.streamFeeder?.noteConsumed(e.data.consumed);
+        // The UI only learns about playback progress through state callbacks.
+        this.notifyStateChange();
       } else if (e.data.type === 'projectm-pcm') {
         if (this.onPCMBlock) {
           this.onPCMBlock(e.data.buffer, e.data.channels, e.data.sampleRate);
