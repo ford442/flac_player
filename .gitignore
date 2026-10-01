@@ -10,6 +10,7 @@ __pycache__/
 /coverage
 /test-results/
 /playwright-report/
+.playwright-mcp/
 
 # Production
 /build

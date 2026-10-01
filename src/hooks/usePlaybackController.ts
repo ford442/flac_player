@@ -101,6 +101,8 @@ export function usePlaybackController({
   }, []);
   const pendingFilesRef = useRef<File[]>([]);
   const handleAutoAdvanceRef = useRef<() => void>(() => {});
+  const advanceQueueIndexOnlyRef = useRef<() => void>(() => {});
+  const loadLocalFileRef = useRef<(file: File) => Promise<void>>(async () => {});
 
   const preloadNextInQueue = useCallback((fromIndex: number) => {
     if (!isGaplessActive(gaplessSettings)) {
@@ -308,8 +310,11 @@ export function usePlaybackController({
       (track, index) => { void playTrack(track, index); },
       () => playerRef.current?.play()
     );
+  advanceQueueIndexOnlyRef.current = advanceQueueIndexOnly;
+  loadLocalFileRef.current = loadLocalFile;
 
-  // Backend lifecycle
+  // Backend lifecycle — depend only on outputMode. Queue-derived callbacks
+  // stay in refs so track/queue changes do not destroy and recreate the player.
   useEffect(() => {
     let cancelled = false;
     let stopProjectMBridge: (() => void) | null = null;
@@ -328,7 +333,7 @@ export function usePlaybackController({
       });
       player.setOnEndedCallback((event) => {
         if (event?.alreadyPlayingNext) {
-          advanceQueueIndexOnly();
+          advanceQueueIndexOnlyRef.current();
           return;
         }
         handleAutoAdvanceRef.current();
@@ -347,7 +352,7 @@ export function usePlaybackController({
         if (cancelled || pendingFilesRef.current.length === 0) return;
         const files = pendingFilesRef.current;
         pendingFilesRef.current = [];
-        setTimeout(() => files.forEach((file, i) => setTimeout(() => loadLocalFile(file), i * 100)), 0);
+        setTimeout(() => files.forEach((file, i) => setTimeout(() => { void loadLocalFileRef.current(file); }, i * 100)), 0);
       }).catch((err: unknown) => {
         if (!cancelled) setError(err instanceof Error ? err.message : `${outputMode} initialization failed`);
       });
@@ -364,7 +369,7 @@ export function usePlaybackController({
         playerRef.current = null;
       }
     };
-  }, [outputMode, loadLocalFile, advanceQueueIndexOnly]);
+  }, [outputMode]);
 
   useEffect(() => {
     playerRef.current?.setEQGains(eqGains);

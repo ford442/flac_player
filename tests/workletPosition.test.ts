@@ -41,7 +41,7 @@ describe('WorkletAudioPlayer position updates', () => {
     player.setStateChangeCallback((state) => { states.push(state); });
 
     const node = FakeAudioWorkletNode.instances.at(-1)!;
-    node.port.onmessage!({ data: { type: 'position', position: 1.5, consumed: 132300 } } as MessageEvent);
+    node.port.onmessage!({ data: { type: 'position', position: 1.5, consumed: 132300, epoch: 0 } } as MessageEvent);
 
     expect(player.getState().currentTime).toBe(1.5);
     expect(states.at(-1)?.currentTime).toBe(1.5);
