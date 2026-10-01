@@ -6,6 +6,7 @@ import {
   finalizeOverview,
   reduceSpectrum,
 } from './reduce';
+import { reduceFftSpectrum } from './fft';
 import type { GpuChoreKind } from './types';
 import type { WorkerInbound, WorkerOutbound } from './protocol';
 
@@ -15,6 +16,7 @@ interface JobState {
   started: number;
   spectrumPcm: Float32Array | null;
   spectrumOffset: number;
+  fftSize?: number;
 }
 
 const jobs = new Map<number, JobState>();
@@ -37,8 +39,11 @@ self.onmessage = (event: MessageEvent<WorkerInbound>) => {
         kind: data.kind,
         acc: createOverviewAccumulator(data.totalSamples, data.binCount, data.channels),
         started: performance.now(),
-        spectrumPcm: data.kind === 'spectrum_bins' ? new Float32Array(data.totalSamples) : null,
+        spectrumPcm: data.kind === 'spectrum_bins' || data.kind === 'fft_spectrum'
+          ? new Float32Array(data.totalSamples)
+          : null,
         spectrumOffset: 0,
+        fftSize: data.fftSize,
       });
       return;
     }
@@ -76,6 +81,15 @@ self.onmessage = (event: MessageEvent<WorkerInbound>) => {
       if (job.kind === 'reduce_rms') {
         msg.rms = overview.rms;
         msg.peak = overview.peak;
+      } else if (job.kind === 'fft_spectrum') {
+        const spectrum = reduceFftSpectrum(
+          job.spectrumPcm ?? new Float32Array(0),
+          job.acc.binCount,
+          job.acc.channels,
+          job.fftSize,
+        );
+        msg.spectrum = spectrum;
+        transfer.push(spectrum.buffer);
       } else if (job.kind === 'spectrum_bins') {
         const spectrum = reduceSpectrum(
           job.spectrumPcm ?? new Float32Array(0),

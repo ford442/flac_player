@@ -17,7 +17,9 @@ export type GpuChoreKind =
   | 'reduce_minmax'
   | 'peak_pyramid'
   | 'reduce_rms'
-  | 'spectrum_bins';
+  | 'spectrum_bins'
+  /** Welch-averaged Hann FFT magnitudes (absolute scale). Golden: `reduceFftSpectrum`. */
+  | 'fft_spectrum';
 
 export type GpuChorePrefer = 'auto' | 'webgpu' | 'worker' | 'cpu';
 
@@ -31,6 +33,8 @@ export interface GpuChoreJob {
   binCount?: number;
   prefer?: GpuChorePrefer;
   signal?: AbortSignal;
+  /** fft_spectrum only: frames per FFT segment (power of two, 64–16384; default 2048). */
+  fftSize?: number;
 }
 
 export interface GpuChoreResult {
@@ -46,6 +50,8 @@ export interface GpuChoreResult {
   peak?: number;
   /** Optional HUD spectrum magnitudes, length = binCount. */
   spectrum?: Float32Array;
+  /** fft_spectrum only: effective FFT size. */
+  fftSize?: number;
   elapsedMs: number;
   sampleCount: number;
   binCount: number;

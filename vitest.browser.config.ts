@@ -24,7 +24,13 @@ export default defineConfig({
       api: { host: '127.0.0.1' },
       provider: playwright({
         launchOptions: {
-          args: ['--autoplay-policy=no-user-gesture-required'],
+          args: [
+            '--autoplay-policy=no-user-gesture-required',
+            // Software WebGPU (SwiftShader) so tests/browser/gpuFft.test.ts runs headless.
+            '--enable-unsafe-webgpu',
+            '--use-webgpu-adapter=swiftshader',
+            '--enable-features=Vulkan',
+          ],
         },
       }),
       instances: [{ browser: 'chromium' }],

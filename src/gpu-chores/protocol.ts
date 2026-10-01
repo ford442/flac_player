@@ -7,6 +7,7 @@ export interface WorkerStart {
   channels: number;
   binCount: number;
   totalSamples: number;
+  fftSize?: number;
 }
 
 export interface WorkerChunk {

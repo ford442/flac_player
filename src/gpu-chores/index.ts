@@ -14,6 +14,7 @@ export {
   GPU_MAX_UPLOAD_SAMPLES,
   WORKER_MIN_SAMPLES,
   METER_HZ,
+  DEFAULT_FFT_SIZE,
 } from './constants';
 
 export type {
@@ -35,6 +36,14 @@ export {
   downsampleMinMaxPairs,
   pyramidFromMinMax,
 } from './reduce';
+export {
+  reduceFftSpectrum,
+  fftMagnitudes,
+  binFftMagnitudes,
+  stockhamFftReference,
+  clampFftSize,
+  FFT_GPU_EPSILON,
+} from './fft';
 export { isGpuComputeDisabled } from './killSwitch';
 export { gpuEligibility, clampBinCount } from './breakEven';
 export {

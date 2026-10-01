@@ -1,43 +1,7 @@
-import {
-  WAVEFORM_LAYOUT,
-  glslVec2,
-  glslVec3,
-} from '../../waveformContract';
+import { waveformLayoutTokens } from '../../waveformContract';
 
-const L = WAVEFORM_LAYOUT;
-
-function f(n: number): string {
-  if (Number.isInteger(n)) return `${n}.0`;
-  return String(n);
-}
-
-/** GLSL literals injected from WAVEFORM_LAYOUT (single source of truth). */
-const G = {
-  knobRsycrb: glslVec2(L.knobs.rsycrb.center),
-  knobFractal: glslVec2(L.knobs.fractal.center),
-  knobPulse: glslVec2(L.knobs.pulse.center),
-  knobRadius: f(L.knobs.rsycrb.radius),
-  knobScale: f(L.knobIntensityScale),
-  ledNone: glslVec2(L.leds.none.center),
-  ledIR: glslVec2(L.leds.ir.center),
-  ledStop: glslVec2(L.leds.stop.center),
-  ledPlay: glslVec2(L.leds.play.center),
-  ledNoneColor: glslVec3(L.leds.none.color),
-  ledIRColor: glslVec3(L.leds.ir.color),
-  ledStopColor: glslVec3(L.leds.stop.color),
-  ledPlayColor: glslVec3(L.leds.play.color),
-  ledNoneI: f(L.ledIntensity.none),
-  ledIRI: f(L.ledIntensity.ir),
-  ledStopI: f(L.ledIntensity.stop),
-  ledPlayI: f(L.ledIntensity.play),
-  knobGlow: glslVec3(L.colors.knobGlow),
-  wavePrimary: glslVec3(L.colors.wavePrimary),
-  wavePulse: glslVec3(L.colors.wavePulse),
-  gradTop: glslVec3(L.colors.screenGradTop),
-  gradBottom: glslVec3(L.colors.screenGradBottom),
-  audioBins: L.audioBins,
-  aberration: f(L.aberrationScale),
-};
+/** GLSL literals injected from WAVEFORM_LAYOUT (shared table with the WGSL path). */
+const G = waveformLayoutTokens('glsl');
 
 /** Full-screen triangle vertex shader (shared by GUI + flat passes). */
 export const FULLSCREEN_VERTEX = `#version 300 es
@@ -55,7 +19,7 @@ void main() {
 `;
 
 /**
- * GLSL port of src/shaders/waveform.ts (ShaderGUI WGSL).
+ * GLSL port of src/shaders/waveform.wgsl (ShaderGUI WGSL).
  * Knob/LED UVs and palette colors come from WAVEFORM_LAYOUT — edit that file only.
  */
 export const GUI_FRAGMENT = `#version 300 es

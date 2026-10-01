@@ -12,7 +12,7 @@ Decoder (`@wasm-audio-decoders/flac`), playlist, projectM, and waveform **shader
 import { runChore } from '../gpu-chores';
 
 await runChore({
-  kind: 'peak_pyramid', // or 'reduce_minmax' | 'reduce_rms' | 'spectrum_bins'
+  kind: 'peak_pyramid', // or 'reduce_minmax' | 'reduce_rms' | 'spectrum_bins' | 'fft_spectrum'
   pcm,                  // Float32Array (interleaved or mono)
   channels: 2,
   prefer: 'auto',
@@ -20,6 +20,21 @@ await runChore({
 ```
 
 Call from UI/overview code only — **never inside an audio callback**. File overview runs on load (and after a track change). Live meters sample the `AnalyserNode` at ≤ 30 Hz.
+
+## Spectrum kinds
+
+| Kind | Definition | GPU path |
+|------|------------|----------|
+| `spectrum_bins` | Toy HUD binning: one Hann window of ≤ 2048 frames, magnitudes normalized to **their own max** (always 0–1, not comparable across calls) | CPU / Worker only |
+| `fft_spectrum` | Mono mixdown → non-overlapping `fftSize` segments (default 2048, pow2 64–16384) → symmetric Hann → \|X[k]\|·2/Σw → mean over segments → linear-average into `binCount` bins. **Absolute amplitude**: a bin-centered sine of amplitude A reads ≈ A | WebGPU Stockham radix-2 (`src/gpu-chores/fft.wgsl`) |
+
+`fft_spectrum` CPU golden: `reduceFftSpectrum` (`src/gpu-chores/fft.ts`). The WGSL `stage_main` kernel is mirrored line-for-line by `stockhamFftReference` so the algorithm is unit-tested without a GPU. Twiddles and the Hann window are f64 tables uploaded as f32 — WGSL only guarantees `cos`/`sin` to 2⁻¹¹ absolute, which alone would exceed the epsilon.
+
+**Epsilon:** `FFT_GPU_EPSILON = 1e-4` absolute (0–1 amplitude scale), GPU vs CPU golden, per FFT line and per HUD bin. Verified on a real adapter (SwiftShader) by `tests/browser/gpuFft.test.ts` (skips when the browser exposes no WebGPU adapter).
+
+The `auto` break-even below applies unchanged; small live windows go CPU unless the caller passes `prefer: 'webgpu'`.
+
+**Live ShaderGUI (opt-in `?gpu_fft=1`):** `useLiveGpuSpectrum` reads the analyser's time-domain window at ≤ `METER_HZ` (30 Hz, main thread, never the audio callback), runs `fft_spectrum` with `prefer: 'webgpu'`, and compares against the CPU golden at ~1 Hz. The result is shown in the 🎛 HUD only. `AnalyserNode` still feeds the shader until the goldens are trusted. The worklet `setPCMCallback` tap is the better input source; it is left for after the shared-graph pause fix.
 
 ## Backend order (`prefer: 'auto'`)
 
@@ -67,4 +82,4 @@ npm run test:gpu-chores
 # also included in npm run test:unit
 ```
 
-CI does not need a GPU. Goldens live in `tests/gpuChores.reduce.test.ts`.
+CI does not need a GPU. Goldens live in `tests/gpuChores.reduce.test.ts` and `tests/gpuChores.fft.test.ts`. The real-device FFT comparison is `tests/browser/gpuFft.test.ts` (`npm run test:streaming` runs Chromium with the SwiftShader WebGPU adapter).
