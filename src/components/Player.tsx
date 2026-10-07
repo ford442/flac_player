@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AudioLoader, PlaylistTrack, loadQueueFromStorage } from '../audioLoader';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useMediaSession } from '../hooks/useMediaSession';
 import { usePlayerState } from '../hooks/usePlayerState';
 import { useToastNotifications } from '../hooks/useToastNotifications';
 import { isOutputPickerSupported, useAudioSettings } from '../hooks/useAudioSettings';
@@ -279,6 +280,19 @@ export const Player: React.FC = () => {
     onMute: toggleMute,
     onShowHelp: () => setShowHelp(prev => !prev),
     isEnabled: true,
+  });
+
+  useMediaSession({
+    currentTrack,
+    isPlaying: playerState.isPlaying,
+    currentTime: playerState.currentTime,
+    duration: playerState.duration,
+    playbackRate,
+    onPlay: () => { if (!playerState.isPlaying) togglePlayback(); },
+    onPause: () => playback.playerRef.current?.pause(),
+    onNext: playNextInQueue,
+    onPrevious: playPreviousInQueue,
+    onSeek,
   });
 
   useEffect(() => {
