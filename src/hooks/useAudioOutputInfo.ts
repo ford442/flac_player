@@ -26,7 +26,8 @@ function sameInfo(a: AudioOutputInfo | null, b: AudioOutputInfo | null): boolean
     && a.channelCount === b.channelCount
     && a.sinkId === b.sinkId
     && a.state === b.state
-    && a.graphGeneration === b.graphGeneration;
+    && a.graphGeneration === b.graphGeneration
+    && a.dspEngine === b.dspEngine;
 }
 
 /** Polls the manager; `outputLatency` drifts with the device so a subscription is not enough. */

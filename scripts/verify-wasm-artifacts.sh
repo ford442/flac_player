@@ -11,6 +11,8 @@ required=(
   "$PROJECT_ROOT/public/sdl-audio.wasm"
   "$PROJECT_ROOT/public/speex-resampler.js"
   "$PROJECT_ROOT/public/speex-resampler.wasm"
+  "$PROJECT_ROOT/public/dsp-chain.js"
+  "$PROJECT_ROOT/public/dsp-chain.wasm"
 )
 
 for artifact in "${required[@]}"; do
@@ -49,6 +51,21 @@ if [ "$resampler_current" != "$resampler_expected" ]; then
   echo "  expected (committed): $resampler_expected" >&2
   echo "  current  (sources):   $resampler_current" >&2
   echo "Run: npm run build:wasm:resampler && commit public/speex-resampler.* public/resampler-source.sha256" >&2
+  exit 1
+fi
+
+DSP_HASH_FILE="$PROJECT_ROOT/public/dsp-source.sha256"
+if [ ! -f "$DSP_HASH_FILE" ]; then
+  echo "Missing $DSP_HASH_FILE — run: npm run build:wasm:dsp" >&2
+  exit 1
+fi
+dsp_current="$("$SCRIPT_DIR/dsp-source-hash.sh")"
+dsp_expected="$(tr -d '[:space:]' < "$DSP_HASH_FILE")"
+if [ "$dsp_current" != "$dsp_expected" ]; then
+  echo "DSP chain WASM sources changed but public/dsp-source.sha256 is stale." >&2
+  echo "  expected (committed): $dsp_expected" >&2
+  echo "  current  (sources):   $dsp_current" >&2
+  echo "Run: npm run build:wasm:dsp && commit public/dsp-chain.* public/dsp-source.sha256" >&2
   exit 1
 fi
 

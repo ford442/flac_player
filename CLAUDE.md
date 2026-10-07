@@ -48,6 +48,11 @@ track.url → HTMLAudioElement → MediaElementSource → AudioContextManager �
 (crossfade uses a second <audio> element; no full-file download)
 ```
 
+Streaming / web-audio / worklet speaker DSP (ReplayGain → limiter → volume → EQ) is the
+`dsp-chain` AudioWorklet running `src/sdl/dsp_chain.h` as WASM — the same code SDL runs in
+its callback. `EQChain` / `ReplayGainNode` are the fallback when it fails to load
+(`?dsp=webaudio` forces the fallback). Keep `DEFAULT_EQ_BANDS` the single band layout.
+
 **Buffered (web-audio, worklet, SDL):**
 ```
 fetch(url) → ArrayBuffer → flacDecoder / audioDecoder → AudioBuffer or worklet ring
@@ -84,6 +89,7 @@ Helper: `src/utils/debug.ts` — used by `audioLoader.ts` and `api/songApi.ts`.
 ```bash
 npm run build:wasm:sdl3    # or bash src/sdl/build.sh
 npm run build:wasm:resampler  # SpeexDSP HQ resampler (worklet rate mismatch)
+npm run build:wasm:dsp     # dsp_chain.h → public/dsp-chain.wasm (EQ/ReplayGain worklet)
 npm run build:projectm     # optional Milkdrop host
 npm run verify:wasm        # CI artifact check
 ```

@@ -89,8 +89,14 @@ jobs:
               - 'scripts/build-wasm.sh'
               - 'scripts/wasm-source-hash.sh'
               - 'scripts/emsdk-env.sh'
+            dsp:
+              - 'src/sdl/dsp_chain.h'
+              - 'src/dsp/**'
+              - 'scripts/build-dsp-wasm.sh'
+              - 'scripts/dsp-source-hash.sh'
+              - 'scripts/emsdk-env.sh'
       - name: Install Emscripten
-        if: steps.wasm_changes.outputs.wasm == 'true'
+        if: steps.wasm_changes.outputs.wasm == 'true' || steps.wasm_changes.outputs.dsp == 'true'
         run: |
           git clone https://github.com/emscripten-core/emsdk.git --depth 1
           cd emsdk
@@ -107,3 +113,13 @@ jobs:
           git diff --exit-code public/sdl-audio.js public/sdl-audio.wasm \
             public/wasm-source.sha256 \
             || (echo "::error::WASM build produced diffs. Run npm run build:wasm locally and commit public/ artifacts." && exit 1)
+      - name: Build DSP chain WASM
+        if: steps.wasm_changes.outputs.dsp == 'true'
+        run: |
+          source emsdk/emsdk_env.sh
+          npm run build:wasm:dsp
+      - name: Check for uncommitted DSP chain WASM output
+        if: steps.wasm_changes.outputs.dsp == 'true'
+        run: |
+          git diff --exit-code public/dsp-chain.js public/dsp-chain.wasm public/dsp-source.sha256 \
+            || (echo "::error::DSP WASM build produced diffs. Run npm run build:wasm:dsp locally and commit public/ artifacts." && exit 1)
