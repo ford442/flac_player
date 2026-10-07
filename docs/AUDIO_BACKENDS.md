@@ -119,7 +119,7 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 **How it works:**
 
 - **Small files (buffered):** full fetch → decode → `_create_audio_buffer` / `_set_audio_data` (compat path).
-- **Large files (≥ 32 MB) or `forceStream`:** `HifiStreamSession` (`hifiStreamPipeline.ts`) → `_set_stream_format` → `_push_pcm` into a **play ring** (`PLAY_RING_CAPACITY` = 384000 floats, ~2 s stereo f32 @ 96 kHz). JS pauses decode when fill &gt; 75% (`get_play_ring_fill`). The SDL callback drains the play ring into a pre-sized scratch, runs speaker DSP (`dsp_chain.h`) in place, then writes the **viz** ring (`pcm_ring.h`, 65536 floats) for `SdlPcmBridge`.
+- **Large files (≥ 32 MB) or `forceStream`:** `HifiStreamSession` (`hifiStreamPipeline.ts`) → `_set_stream_format` → `_push_pcm` into a **play ring** (`PLAY_RING_CAPACITY` = 384000 floats, ~2 s stereo f32 @ 96 kHz). JS pauses decode when fill &gt; 75% (`get_play_ring_fill`). The SDL callback drains the play ring into a pre-sized scratch, runs speaker DSP (`dsp_chain.h`) in place, then writes the **viz** ring (`pcm_ring.h`, 65536 floats) for `SdlPcmBridge` and the **analysis** ring (`analysis_ring.h`, see [Analysis ring](#analysis-ring-shared-pcm-tap)).
 
 **Stream-mode seek:** `seek(t)` calls `_seek_stream(t)`, which (under the SDL stream lock) clears the SDL stream, play ring, viz ring, DSP history and the ended flag, and sets the clock to `t`; the session then restarts the decoder at the frame containing `t` (HTTP Range). A push loop parked on a full ring belongs to the aborted run and exits on its next check, so a seek never deadlocks `playRingBackpressure`. See [Hi-fi stream seek and gapless](#hi-fi-stream-seek-and-gapless).
 
@@ -230,9 +230,23 @@ Settings → **Output latency** shows which engine is live (**EQ / limiter**: `W
 
 ### DSP worklet (`dsp-chain`)
 
-- **Module:** `scripts/build-dsp-wasm.sh` (`npm run build:wasm:dsp`) compiles `src/dsp/dsp_wasm_entry.cpp` (thin C exports: `scratch_ptr`, `scratch_floats`, `set_eq_band`, `set_replaygain`, `request_reset`, `process`) over the headers-only `dsp_chain.h` — no SDL, no pthread — with the SDL release flags (`-O3 -DNDEBUG -msimd128`, no fast-math, so the float ops are the same as SDL's). `STANDALONE_WASM`, fixed 1 MiB memory, ~19 KiB `.wasm`, **no imports**. `MODULARIZE` / `createDspChainModule` glue (`dsp-chain.js`) ships for tooling; the worklet does not use it.
+- **Module:** `scripts/build-dsp-wasm.sh` (`npm run build:wasm:dsp`) compiles `src/dsp/dsp_wasm_entry.cpp` (thin C exports: `scratch_ptr`, `scratch_floats`, `set_eq_band`, `set_replaygain`, `request_reset`, `process`, plus `fft_spectrum` / `fft_out_ptr` / `fft_lines_ptr` over `dsp_fft.h`) over the headers-only `dsp_chain.h` — no SDL, no pthread — with the SDL release flags (`-O3 -DNDEBUG -msimd128`, no fast-math, so the float ops are the same as SDL's). `STANDALONE_WASM`, fixed 1 MiB memory, ~22 KiB `.wasm`, **no imports**. `MODULARIZE` / `createDspChainModule` glue (`dsp-chain.js`) ships for tooling; the worklet does not use it.
 - **Loading:** `DspChainNode.create()` fetches and compiles `/dsp-chain.wasm` once per page, `addModule`s the processor once per context, and passes the compiled `WebAssembly.Module` (raw bytes if the module is not cloneable) plus the current EQ / ReplayGain / volume in `processorOptions`. The processor instantiates synchronously (empty import object) and applies those settings **before the first render quantum**; later changes are port messages. The node is fixed-width (`channelCount` = destination channels, 2…8, `'explicit'` / `'speakers'`) and is rebuilt when a track changes the destination width.
 - **Wiring:** `AudioContextManager` builds the fallback chain synchronously, then swaps `inputGain` onto the worklet once it reports `ready`. `ensureForTrack` waits up to 1.5 s for that swap so playback starts on the final path. Any failure (no AudioWorklet, 404, compile error, 3 s ready timeout) logs one warning and keeps the fallback — the same pattern as SpeexDSP → linear resampling.
+
+### Analysis ring (shared PCM tap)
+
+One shared-memory tap of the post-DSP PCM the user hears, for every analysis consumer (gpu-chores `fft_spectrum`, the `dsp_fft.h` WASM spectrum; projectM and the ShaderGUI spectrum next — #233). The audio thread only `memcpy`s its block in; analysis runs on the readers' threads at UI rate.
+
+| Backend | Writer | Ring memory |
+|---------|--------|-------------|
+| SDL3 | `fill_audio_callback` → `analysis_ring_write` (`src/sdl/analysis_ring.h`), after `dsp_process` | SDL module's `wasmMemory` (SharedArrayBuffer, `-pthread`); `_get_analysis_ring_state` / `_get_analysis_ring_data` |
+| Streaming / Web Audio / Worklet | `dspChainProcessor.js` copies each processed quantum | `SharedArrayBuffer` from `createAnalysisRingBuffer()` (only when `crossOriginIsolated`) |
+
+- **Layout** (8 × u32 header, shared by `analysis_ring.h`, `src/audio/analysisRing.ts` and the inline writer in `dspChainProcessor.js`): `writePos` (floats since reset), `generation` (bumped on reset / format change), `capacity` (2^17 floats, 512 KiB), `channels`, `sampleRate`. Offsets are checked by `tests/native/analysis_golden.cpp`.
+- **Broadcast, not SPSC:** unlike `pcm_ring.h` nothing is consumed. `AnalysisRingReader.readLatest(frames)` copies the newest whole frames and re-checks `generation` / `writePos` after the copy; a copy the writer reset or lapped is retried, then dropped — never returned torn. Writers copy data before publishing `writePos`, at most `ANALYSIS_RING_MAX_BLOCK` (8192) floats at a time, so readers stay that far behind it (a window is at most 15360 frames at 8 channels, 61440 stereo).
+- **Reset:** SDL `stop` / `seek` / `seek_stream` / format change; worklet `reset` message (seek, new stream).
+- **Active tap:** `getAnalysisTap()` returns SDL's ring while `SdlPcmBridge` is connected (the dsp-chain worklet then only processes silence), else the dsp-chain worklet's; null without SharedArrayBuffer or before the worklet loads, and consumers fall back to the `AnalyserNode`. While SDL is paused its callback stops, so its ring keeps the last window (the worklet keeps writing silence); a consumer that must decay on pause should watch `writePos` advance.
 
 ### A/B tolerance (SDL vs worklet vs fallback)
 
@@ -241,6 +255,7 @@ Settings → **Output latency** shows which engine is live (**EQ / limiter**: `W
 | SDL `dsp_chain.h` vs worklet `dsp-chain.wasm` | **Bit-identical.** `npm run test:dsp-golden` prints an FNV-1a hash of its SIMD output (8 bands, 1 kHz / 440 Hz stereo, ReplayGain 2.5 + limiter, odd chunk sizes); the test replays those vectors through `dsp-chain.wasm` and expects the same hash | `tests/dspChainWasm.test.ts`, `tests/native/dsp_simd_golden.cpp` |
 | `dsp-chain.wasm` vs analytic `BiquadFilterNode` response, 60 Hz–12 kHz tones, all 5 bands non-zero | **< 0.01 dB** | `tests/dspChainWasm.test.ts` |
 | `dsp-chain` worklet vs Chromium `EQChain` (`BiquadFilterNode` × 5), same tones | **< 0.01 dB** (measured ~1e-4 dB) | `tests/browser/dspChain.test.ts` |
+| Analysis ring vs worklet output (Chromium `OfflineAudioContext`) | **Bit-exact** frames | `tests/browser/analysisTap.test.ts` |
 | Limiter: worklet vs fallback `DynamicsCompressorNode` | **Not matched.** The compressor has look-ahead and its own detector. The WASM limiter is the reference; it is what SDL runs. | — |
 
 Flat EQ, unity ReplayGain and volume are a bit-exact pass-through in the worklet.

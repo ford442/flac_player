@@ -7,6 +7,7 @@ import {
   type DspChainSettings,
 } from './DspChainNode';
 import { applyAnalyserPolicy } from './analyserPolicy';
+import { setAnalysisTap } from './analysisRing';
 import { ReplayGainNode } from './ReplayGainNode';
 import {
   DEFAULT_AUDIO_CONTEXT_POLICY,
@@ -381,6 +382,7 @@ export class AudioContextManager {
     }
     const previous = this.dspChain;
     this.dspChain = dsp;
+    setAnalysisTap('dsp-chain', dsp.analysisRing);
     // Settings may have changed while the module loaded; resend (cheap, idempotent).
     const settings = this.dspSettings();
     dsp.setReplayGain(settings.replayGainLinear, settings.limiter);
@@ -489,6 +491,7 @@ export class AudioContextManager {
     this.eqChain?.disconnect();
     this.dspChain?.disconnect();
     this.dspChain = null;
+    setAnalysisTap('dsp-chain', null);
     this.inputGain = null;
     this.context = null;
     this.replayGain = null;

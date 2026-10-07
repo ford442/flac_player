@@ -206,6 +206,10 @@ In-app ProjectMHost OR postMessage / BroadcastChannel('projectm-audio')
 
 Visualizer tap only: lock-free ring in C++ (`src/sdl/pcm_ring.h`, 65536 floats) → AudioWorklet → `AnalyserNode` for SDL3. SDL3 **playback** uses a separate play ring (`src/sdl/play_ring.h`, 384000 floats) fed by `_push_pcm`.
 
+### Analysis ring (`src/audio/analysisRing.ts`)
+
+Broadcast SharedArrayBuffer tap of post-DSP PCM for analysis consumers: written by the SDL callback (`src/sdl/analysis_ring.h`) or the `dsp-chain` worklet, read at UI rate by `AnalysisRingReader` (`getAnalysisTap()` picks the live writer). Feeds the `?gpu_fft=1` live spectrum and its `dsp_fft.h` WASM golden (`src/audio/wasmFft.ts`). See `docs/AUDIO_BACKENDS.md` → Analysis ring.
+
 ## Library & storage (client)
 
 | Module | Role |

@@ -91,6 +91,7 @@ jobs:
               - 'scripts/emsdk-env.sh'
             dsp:
               - 'src/sdl/dsp_chain.h'
+              - 'src/sdl/dsp_fft.h'
               - 'src/dsp/**'
               - 'scripts/build-dsp-wasm.sh'
               - 'scripts/dsp-source-hash.sh'

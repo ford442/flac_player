@@ -72,10 +72,12 @@ flac_player/
 │   ├── sdl/
 │   │   ├── audio_engine.cpp    # SDL3 C++ audio engine
 │   │   ├── pcm_ring.h / play_ring.h
+│   │   ├── analysis_ring.h     # broadcast post-DSP PCM tap (layout shared with src/audio/analysisRing.ts)
+│   │   ├── dsp_fft.h           # fft_spectrum CPU golden (f32 Stockham, wasm SIMD) — built into dsp-chain.wasm
 │   │   ├── dsp_chain.h         # ReplayGain/limiter/volume/EQ — shared by SDL and the dsp-chain worklet
 │   │   └── build.sh            # wrapper -> scripts/build-wasm.sh --sdl3
 │   ├── dsp/
-│   │   └── dsp_wasm_entry.cpp  # C exports over dsp_chain.h -> public/dsp-chain.wasm (scripts/build-dsp-wasm.sh)
+│   │   └── dsp_wasm_entry.cpp  # C exports over dsp_chain.h + dsp_fft.h -> public/dsp-chain.wasm (scripts/build-dsp-wasm.sh)
 │   ├── shaders/
 │   │   ├── waveform.ts         # WGSL shader for ShaderGUI
 │   │   └── waveform.wgsl       # ShaderGUI WGSL source of truth (layout tokens injected by waveform.ts)
@@ -85,6 +87,8 @@ flac_player/
 │   ├── audio/                  # Shared graph + backend factory
 │   │   ├── createAudioBackend.ts
 │   │   ├── AudioContextManager.ts, DspChainNode.ts, EQChain.ts, ReplayGainNode.ts, SdlPcmBridge.ts, analyserPolicy.ts
+│   │   ├── analysisRing.ts     # analysis ring reader / SAB allocation / active-tap registry
+│   │   ├── wasmFft.ts          # main-thread dsp_fft.h (dsp-chain.wasm `fft_spectrum`)
 │   │   ├── worklets/           # flacProcessor.js, sdlPcmTapProcessor.js, dspChainProcessor.js (static AudioWorklet modules, @ts-check)
 │   │   └── backends/           # Four selectable implementations
 │   │       ├── StreamingAudioPlayer.ts   # default — HTMLAudio + range requests
@@ -132,7 +136,7 @@ npm start
 # Build WASM modules (requires Emscripten/emsdk)
 npm run build:wasm              # scripts/build-wasm.sh --sdl3
 npm run build:wasm:sdl3         # equivalent to bash src/sdl/build.sh
-npm run build:wasm:dsp          # dsp_chain.h -> public/dsp-chain.{js,wasm} (EQ/ReplayGain worklet)
+npm run build:wasm:dsp          # dsp_chain.h + dsp_fft.h -> public/dsp-chain.{js,wasm} (EQ/ReplayGain worklet, fft_spectrum)
 npm run build:projectm          # optional projectM Milkdrop host
 npm run verify:wasm             # CI: check committed artifacts match sources
 

@@ -4,7 +4,9 @@
 #   scripts/build-dsp-wasm.sh    → public/dsp-chain.{js,wasm}
 #
 # Compiles the headers-only src/sdl/dsp_chain.h (ReplayGain -> limiter -> volume
-# -> EQ) through the thin C ABI in src/dsp/dsp_wasm_entry.cpp. No SDL, no
+# -> EQ) and src/sdl/dsp_fft.h (the `fft_spectrum` CPU golden, used on the main
+# thread by src/audio/wasmFft.ts) through the thin C ABI in
+# src/dsp/dsp_wasm_entry.cpp. No SDL, no
 # pthread: the same object code SDL runs in its audio callback, here run by
 # src/audio/worklets/dspChainProcessor.js. STANDALONE_WASM keeps export names
 # unminified and the import object empty, so the worklet instantiates the raw
@@ -21,7 +23,7 @@ PROJECT_ROOT="$PROJECT_ROOT" source "$SCRIPT_DIR/emsdk-env.sh"
 
 mkdir -p "$OUT_DIR"
 
-EXPORTS='["_scratch_ptr","_scratch_floats","_set_eq_band","_set_replaygain","_request_reset","_process"]'
+EXPORTS='["_scratch_ptr","_scratch_floats","_set_eq_band","_set_replaygain","_request_reset","_process","_fft_out_ptr","_fft_lines_ptr","_fft_spectrum"]'
 
 echo "Compiling dsp_chain.h -> $OUT_DIR/dsp-chain.js"
 em++ \

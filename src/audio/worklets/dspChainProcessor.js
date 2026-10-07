@@ -8,6 +8,20 @@
 //
 // The module is STANDALONE_WASM with no imports: it is instantiated
 // synchronously here and never touches the network from the audio thread.
+//
+// The processed output is also copied into the analysis ring (header layout in
+// src/audio/analysisRing.ts / src/sdl/analysis_ring.h) when one is passed —
+// a memcpy per quantum; analysis itself runs on the readers' threads.
+
+// analysisRing.ts header words (this static module cannot import TS).
+const RING_WRITE_POS = 0;
+const RING_GENERATION = 1;
+const RING_CAPACITY = 2;
+const RING_CHANNELS = 3;
+const RING_SAMPLE_RATE = 4;
+const RING_HEADER_BYTES = 32;
+/** analysisRing.ts ANALYSIS_RING_MAX_BLOCK: publish writePos at least this often. */
+const RING_MAX_BLOCK = 8192;
 
 /** @typedef {import('./dspChainMessages').DspChainInbound} DspInbound */
 /** @typedef {import('./dspChainMessages').DspChainOutbound} DspOutbound */
@@ -37,6 +51,17 @@ class DspChainProcessor extends AudioWorkletProcessor {
     this.dsp = null;
     /** @type {Float32Array} */
     this.scratch = new Float32Array(0);
+    /** @type {Uint32Array | null} */
+    this.ringHeader = null;
+    /** @type {Float32Array} */
+    this.ringData = new Float32Array(0);
+    if (opts.analysisRing) {
+      this.ringHeader = new Uint32Array(opts.analysisRing, 0, RING_HEADER_BYTES / 4);
+      this.ringData = new Float32Array(opts.analysisRing, RING_HEADER_BYTES, this.ringHeader[RING_CAPACITY]);
+      Atomics.store(this.ringHeader, RING_CHANNELS, this.channels);
+      Atomics.store(this.ringHeader, RING_SAMPLE_RATE, sampleRate);
+      this.resetRing();
+    }
 
     try {
       const module = opts.wasm instanceof WebAssembly.Module ? opts.wasm : new WebAssembly.Module(opts.wasm);
@@ -55,6 +80,42 @@ class DspChainProcessor extends AudioWorkletProcessor {
     }
 
     this.port.onmessage = (/** @type {MessageEvent<DspInbound>} */ e) => this.onMessage(e.data);
+  }
+
+  /** Readers compare generation before and after a copy, so bump it last. */
+  resetRing() {
+    if (!this.ringHeader) return;
+    Atomics.store(this.ringHeader, RING_WRITE_POS, 0);
+    Atomics.add(this.ringHeader, RING_GENERATION, 1);
+  }
+
+  /**
+   * Append the first `count` floats of scratch to the analysis ring. Plain
+   * loops, no views: nothing is allocated on the audio thread.
+   * @param {number} count
+   */
+  writeRing(count) {
+    const header = this.ringHeader;
+    if (!header || count <= 0) return;
+    const data = this.ringData;
+    const scratch = this.scratch;
+    const capacity = data.length;
+    const mask = capacity - 1;
+    const block = Math.max(1, Math.min(RING_MAX_BLOCK, capacity >>> 1));
+    let wp = Atomics.load(header, RING_WRITE_POS);
+    let i = 0;
+    if (count > capacity) {
+      // Keep the newest `capacity` floats; publish the skip first.
+      i = count - capacity;
+      wp = (wp + i) >>> 0;
+      Atomics.store(header, RING_WRITE_POS, wp);
+    }
+    while (i < count) {
+      const end = Math.min(count, i + block);
+      for (; i < end; i++, wp++) data[wp & mask] = scratch[i];
+      wp >>>= 0;
+      Atomics.store(header, RING_WRITE_POS, wp);
+    }
   }
 
   /** @param {DspOutbound} msg */
@@ -78,6 +139,7 @@ class DspChainProcessor extends AudioWorkletProcessor {
         break;
       case 'reset':
         dsp.request_reset();
+        this.resetRing();
         break;
     }
   }
@@ -119,6 +181,7 @@ class DspChainProcessor extends AudioWorkletProcessor {
         }
       }
       dsp.process(k, channels, sampleRate, this.volume);
+      this.writeRing(k);
       k = 0;
       for (let i = start; i < end; i++) {
         for (let ch = 0; ch < channels; ch++) output[ch][i] = scratch[k++];
