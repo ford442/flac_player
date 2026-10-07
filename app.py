@@ -8,10 +8,12 @@ Features:
 - AI-generated track support (generation_model, prompt, version)
 - Advanced filtering, sorting, and search
 - Playlist sharing with URL shortening
+- Synced listening rooms over WebSocket (rooms.py)
 - Async I/O with aiocache for performance
 """
 
 import os
+import asyncio
 import random
 import logging
 import time
@@ -33,6 +35,8 @@ from models import (
 from storage import StorageManager, parse_ai_metadata_from_filename, suggest_tags_from_prompt
 from musicbrainz import MusicBrainzClient, enrich_metadata_from_musicbrainz
 from replaygain import extract_replaygain_from_file
+from rooms import RoomManager, create_rooms_router
+from url_shortener import URLShortener
 
 # =============================================================================
 # Configuration
@@ -54,6 +58,8 @@ GENERATION_API_URL = os.getenv("GENERATION_API_URL", "").rstrip("/")
 GENERATION_API_KEY = os.getenv("GENERATION_API_KEY", "")
 GENERATION_RATE_LIMIT_MAX = int(os.getenv("GENERATION_RATE_LIMIT_MAX", "5"))
 GENERATION_RATE_LIMIT_WINDOW = int(os.getenv("GENERATION_RATE_LIMIT_WINDOW", "3600"))
+# Optional wss:// base for listening-room ws_url when a proxy hides the public host.
+PUBLIC_WS_BASE_URL = os.getenv("PUBLIC_WS_BASE_URL", "").rstrip("/") or None
 
 # Ensure directories exist
 os.makedirs(SONGS_DIR, exist_ok=True)
@@ -67,6 +73,8 @@ os.makedirs(MUSIC_DIR, exist_ok=True)
 STORAGE_MAP = StorageManager(INDEX_FILE)
 SHARES_MAP: Dict[str, Dict[str, Any]] = {}
 GENERATION_REQUESTS: Dict[str, List[float]] = {}
+# In-memory listening rooms: run a single uvicorn worker (see rooms.py).
+ROOMS = RoomManager()
 
 
 # =============================================================================
@@ -77,7 +85,10 @@ GENERATION_REQUESTS: Dict[str, List[float]] = {}
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     await STORAGE_MAP._ensure_loaded()
+    sweeper = asyncio.create_task(ROOMS.run_sweeper())
     yield
+    sweeper.cancel()
+    await ROOMS.shutdown()
 
 
 app = FastAPI(
@@ -95,6 +106,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(create_rooms_router(
+    ROOMS,
+    app_base_url=APP_BASE_URL,
+    allowed_origins=CORS_ALLOWED_ORIGINS,
+    public_ws_base_url=PUBLIC_WS_BASE_URL,
+))
 
 
 # =============================================================================
@@ -119,7 +137,8 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         songs_count=len(songs),
-        timestamp=datetime.now().isoformat()
+        timestamp=datetime.now().isoformat(),
+        rooms_active=ROOMS.active_count(),
     )
 
 

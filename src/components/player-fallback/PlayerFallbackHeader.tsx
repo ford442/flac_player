@@ -1,5 +1,6 @@
 import React from 'react';
 import { LibraryStats } from '../../audioLoader';
+import type { RoomBadge } from './types';
 
 export interface PlayerFallbackHeaderProps {
   isSharedPlaylist: boolean;
@@ -14,13 +15,14 @@ export interface PlayerFallbackHeaderProps {
   setShowHelp: (v: boolean) => void;
   setShowQueue: (v: boolean) => void;
   queueCount: number;
+  room?: RoomBadge;
 }
 
 export const PlayerFallbackHeader: React.FC<PlayerFallbackHeaderProps> = ({
   isSharedPlaylist, sharedPlaylistTitle, stats,
   searchQuery, setSearchQuery, searchInputRef,
   isResyncingLibrary, onTriggerResync, onSetShowHtmlFallback,
-  setShowHelp, setShowQueue, queueCount,
+  setShowHelp, setShowQueue, queueCount, room,
 }) => (
   <header className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0f0f1e]/95 backdrop-blur">
     <div className="flex items-center gap-4">
@@ -30,6 +32,12 @@ export const PlayerFallbackHeader: React.FC<PlayerFallbackHeaderProps> = ({
       <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
         {isSharedPlaylist && sharedPlaylistTitle ? sharedPlaylistTitle : '🎵 FLAC Player'}
       </h1>
+      {room?.role && (
+        <span className="listening-room-chip" data-testid="room-badge">
+          {room.role === 'host' ? '🎧 Hosting' : '🎧 Listening'}
+          {room.role === 'guest' && room.driftMs !== null && ` · ${Math.round(room.driftMs)} ms`}
+        </span>
+      )}
       <div className="hidden md:flex items-center gap-4 text-sm text-gray-400">
         <span>{stats.total_tracks} tracks</span>
         <span className="text-purple-400">{stats.rated_4plus} rated 4+</span>

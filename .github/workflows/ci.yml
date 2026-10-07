@@ -39,6 +39,18 @@ jobs:
       - run: npm run test:unit
       - run: npm run test:decoder
 
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      - run: pip install -r requirements.txt pytest
+      # Listening-room REST/WebSocket server (rooms.py) + ReplayGain tag extraction.
+      - run: python -m pytest tests/test_rooms.py tests/test_replaygain.py -q
+
   e2e-smoke:
     runs-on: ubuntu-latest
     steps:
