@@ -1,11 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo, CloudPlaylist, type PlaybackPathInfo } from '../audioLoader';
+import { PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo, type PlaybackPathInfo } from '../audioLoader';
 import { AudioOutputMode } from '../hooks/usePlayerState';
 import { QueuePanel } from './QueuePanel';
 import { ToastContainer, Toast } from './Toast';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { GenerationPanel } from './GenerationPanel';
 import { ConvertPanel } from './ConvertPanel';
+import type { PlaylistsController } from '../types/playlist';
 import type { GaplessMode } from '../types/gapless';
 import type { ReplayGainMode } from '../utils/replayGain';
 import type { LatencyMode } from '../audio/sampleRatePolicy';
@@ -50,9 +51,7 @@ export interface PlayerFallbackViewProps {
   stats: LibraryStats;
   isLoadingLibrary: boolean;
   fastMirrorCount: number;
-  playlists: CloudPlaylist[];
-  isLoadingPlaylists: boolean;
-  onLoadPlaylists: () => void;
+  playlists: PlaylistsController;
   activeTab: ViewTab;
   setActiveTab: (t: ViewTab) => void;
   libraryViewMode: LibraryViewMode;
@@ -127,7 +126,6 @@ export interface PlayerFallbackViewProps {
   onNotify: (message: string, type: 'success' | 'error' | 'info') => void;
   onUpdateTrack: (id: string, updates: Partial<PlaylistTrack>) => Promise<void>;
   onTrashTrack: (id: string) => Promise<void>;
-  onLoadCloudPlaylist: (id: string) => void;
   onSetShowHtmlFallback: (v: boolean) => void;
   onClearCache: () => void;
   onGenerationCompleted: (songId: string) => Promise<void>;
@@ -140,7 +138,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     isResyncingLibrary, onTriggerResync, currentTrack, currentFile, loadingTrackId,
     isPlaying, isLoading, currentTime, duration,
     library, displayedLibrary, allTags, stats, isLoadingLibrary, fastMirrorCount,
-    playlists, isLoadingPlaylists, onLoadPlaylists,
+    playlists,
     activeTab, setActiveTab, libraryViewMode, setLibraryViewMode,
     searchQuery, setSearchQuery, searchInputRef,
     minRating, setMinRating, selectedTags, setSelectedTags, untaggedOnly, setUntaggedOnly,
@@ -159,7 +157,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     onPlayAll, onAddAllToQueue, onPlayNow, onPlayNext, onAddToQueue,
     onRemoveFromQueue, onClearQueue, onReorderQueue, onSmartMix, onShareQueue, onDownloadQueue,
     hasMoreLibrary, onLoadMoreLibrary, onNotify,
-    onUpdateTrack, onTrashTrack, onLoadCloudPlaylist, onSetShowHtmlFallback, onClearCache,
+    onUpdateTrack, onTrashTrack, onSetShowHtmlFallback, onClearCache,
     onGenerationCompleted,
   } = props;
 
@@ -220,7 +218,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
       <div className="flex-1 flex overflow-hidden">
         <PlayerFallbackSidebar
           activeTab={activeTab} setActiveTab={setActiveTab}
-          libraryCount={library.length} queueCount={queue.length} playlistCount={playlists.length}
+          libraryCount={library.length} queueCount={queue.length} playlistCount={playlists.local.length + playlists.cloud.length}
           minRating={minRating} setMinRating={setMinRating}
           untaggedOnly={untaggedOnly} setUntaggedOnly={setUntaggedOnly}
           sortBy={sortBy} setSortBy={setSortBy}
@@ -265,10 +263,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
           )}
 
           {activeTab === 'playlists' && (
-            <PlayerFallbackPlaylistsTab
-              playlists={playlists} isLoadingPlaylists={isLoadingPlaylists}
-              onLoadPlaylists={onLoadPlaylists} onLoadCloudPlaylist={onLoadCloudPlaylist}
-            />
+            <PlayerFallbackPlaylistsTab playlists={playlists} />
           )}
 
           {activeTab === 'generate' && (

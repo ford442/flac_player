@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   loadQueueFromStorage,
-  AudioLoader, PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo, CloudPlaylist,
+  AudioLoader, PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo,
   saveQueueToStorage, clearQueueStorage, getCachedLibrary, setCachedLibrary
 } from '../audioLoader';
 import { checkBackendHealth } from '../utils/healthCheck';
@@ -30,8 +30,6 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
   const [hasMoreLibrary, setHasMoreLibrary] = useState(false);
   const [isResyncingLibrary, setIsResyncingLibrary] = useState(false);
-  const [playlists, setPlaylists] = useState<CloudPlaylist[]>([]);
-  const [isLoadingPlaylists, setIsLoadingPlaylists] = useState(false);
   const [sharedPlaylistTitle, setSharedPlaylistTitle] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -129,13 +127,6 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
       setIsLoadingLibrary(false);
     }
   }, [isLoadingLibrary, hasMoreLibrary, loader, libraryQuery, library.length, allTags, stats, addToast]);
-
-  const loadPlaylists = useCallback(async () => {
-    setIsLoadingPlaylists(true);
-    try { setPlaylists(await loader.fetchPlaylists()); }
-    catch { addToast('Failed to load playlists', 'error'); }
-    finally { setIsLoadingPlaylists(false); }
-  }, [loader, addToast]);
 
   const triggerLibraryResync = useCallback(async () => {
     if (isResyncingLibrary) return;
@@ -266,7 +257,6 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
   return {
     library, setLibrary, allTags, setAllTags, stats, setStats,
     isLoadingLibrary, isResyncingLibrary, hasMoreLibrary, loadMoreLibrary,
-    playlists, isLoadingPlaylists,
     sharedPlaylistTitle, setSharedPlaylistTitle,
     searchQuery, setSearchQuery, minRating, setMinRating,
     selectedTags, setSelectedTags, untaggedOnly, setUntaggedOnly,
@@ -274,7 +264,7 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
     queue, setQueue, queueCurrentIndex, setQueueCurrentIndex,
     showQueue, setShowQueue, shuffle, setShuffle, repeatMode, setRepeatMode,
     volume, setVolume, muted, setMuted, prevVolumeRef,
-    checkBackend, loadPlaylists, loadLibrary, loadTags, loadStats, triggerLibraryResync,
+    checkBackend, loadLibrary, loadTags, loadStats, triggerLibraryResync,
     addToQueue, addAllToQueue, removeFromQueue, reorderQueue, clearQueue, enqueueNext,
     updateTrack, trashTrack,
   };
