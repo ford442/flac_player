@@ -487,7 +487,10 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             <div className="mt-1 text-[10px] text-gray-300">
               Live FFT (?gpu_fft): {liveSpectrum.backend} · N={liveSpectrum.fftSize}
               {' · '}{liveSpectrum.elapsedMs.toFixed(2)} ms
-              {' · '}Δgolden {liveSpectrum.goldenMaxDiff === null ? '—' : liveSpectrum.goldenMaxDiff.toExponential(1)}
+              <br />
+              PCM: {liveSpectrum.source === 'analyser' ? 'analyser' : `${liveSpectrum.source} ring`}
+              {' · '}Δ{liveSpectrum.golden ?? ''}golden{' '}
+              {liveSpectrum.goldenMaxDiff === null ? '—' : liveSpectrum.goldenMaxDiff.toExponential(1)}
             </div>
           )}
           <div className="mt-2 text-[10px] text-gray-500">

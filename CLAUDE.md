@@ -53,6 +53,12 @@ Streaming / web-audio / worklet speaker DSP (ReplayGain → limiter → volume �
 its callback. `EQChain` / `ReplayGainNode` are the fallback when it fails to load
 (`?dsp=webaudio` forces the fallback). Keep `DEFAULT_EQ_BANDS` the single band layout.
 
+**Analysis ring (shared post-DSP PCM tap):** SDL's callback (`src/sdl/analysis_ring.h`) and the
+dsp-chain worklet (`dspChainProcessor.js`) write the same 8 × u32 header + data layout into a
+SharedArrayBuffer; `src/audio/analysisRing.ts` reads it (`getAnalysisTap()`). Keep the three in
+sync. Writers only memcpy — FFT / analysis runs on reader threads (`src/sdl/dsp_fft.h` via
+`src/audio/wasmFft.ts`, or gpu-chores WebGPU), never in an audio callback.
+
 **Buffered (web-audio, worklet, SDL):**
 ```
 fetch(url) → ArrayBuffer → flacDecoder / audioDecoder → AudioBuffer or worklet ring
@@ -89,7 +95,7 @@ Helper: `src/utils/debug.ts` — used by `audioLoader.ts` and `api/songApi.ts`.
 ```bash
 npm run build:wasm:sdl3    # or bash src/sdl/build.sh
 npm run build:wasm:resampler  # SpeexDSP HQ resampler (worklet rate mismatch)
-npm run build:wasm:dsp     # dsp_chain.h → public/dsp-chain.wasm (EQ/ReplayGain worklet)
+npm run build:wasm:dsp     # dsp_chain.h + dsp_fft.h → public/dsp-chain.wasm (EQ/ReplayGain worklet, fft_spectrum)
 npm run build:projectm     # optional Milkdrop host
 npm run verify:wasm        # CI artifact check
 ```

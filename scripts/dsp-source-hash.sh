@@ -9,5 +9,6 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
     scripts/build-dsp-wasm.sh \
     src/dsp/dsp_wasm_entry.cpp \
     src/sdl/dsp_chain.h \
+    src/sdl/dsp_fft.h \
     | sort | sha256sum | awk '{print $1}'
 )

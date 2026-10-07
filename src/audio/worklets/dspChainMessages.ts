@@ -28,6 +28,11 @@ export interface DspChainOptions {
   wasm: WebAssembly.Module | ArrayBuffer;
   channels: number;
   initial: DspChainInitialState;
+  /**
+   * Analysis ring (src/audio/analysisRing.ts layout, header at 0) the processor
+   * fills with its output each quantum; null when not cross-origin isolated.
+   */
+  analysisRing: SharedArrayBuffer | null;
 }
 
 /** EQ type codes shared with dsp_chain.h (DspEqType) and the SDL `_set_eq_band` export. */

@@ -1,4 +1,5 @@
 import { DEFAULT_EQ_BANDS } from './EQChain';
+import { createAnalysisRingBuffer, readerForRingBuffer, type AnalysisRingReader } from './analysisRing';
 import {
   DSP_CHAIN_PROCESSOR_NAME,
   DSP_EQ_TYPE_CODES,
@@ -15,6 +16,10 @@ import {
  * the backend input and the analyser and keeps ReplayGainNode / EQChain as the
  * fallback when the module or AudioWorklet is unavailable (mirrors SpeexDSP →
  * linear resampling).
+ *
+ * The processor also copies its output into an analysis ring (analysisRing.ts)
+ * when the page is cross-origin isolated — the Web Audio backends' side of the
+ * shared PCM tap that SDL writes from its audio callback.
  */
 
 const DSP_CHAIN_PROCESSOR_URL = new URL('./worklets/dspChainProcessor.js', import.meta.url);
@@ -56,7 +61,8 @@ interface LoadedDspWasm {
 let wasmPromise: Promise<LoadedDspWasm> | null = null;
 const modulesAdded = new WeakMap<BaseAudioContext, Promise<void>>();
 
-function loadDspWasm(): Promise<LoadedDspWasm> {
+/** public/dsp-chain.wasm, fetched and compiled once (also used by wasmFft.ts). */
+export function loadDspWasm(): Promise<LoadedDspWasm> {
   if (!wasmPromise) {
     wasmPromise = (async () => {
       const res = await fetch(DSP_CHAIN_WASM_URL);
@@ -135,6 +141,7 @@ export class DspChainNode {
     };
     const count = Math.max(1, Math.min(DSP_MAX_CHANNELS, Math.floor(channels)));
     const [wasm] = await Promise.all([loadDspWasm(), addProcessorModule(context)]);
+    const analysisRing = createAnalysisRingBuffer();
     const construct = (payload: DspChainOptions['wasm']) => new AudioWorkletNode(context, DSP_CHAIN_PROCESSOR_NAME, {
       numberOfInputs: 1,
       numberOfOutputs: 1,
@@ -143,7 +150,7 @@ export class DspChainNode {
       channelCount: count,
       channelCountMode: 'explicit',
       channelInterpretation: 'speakers',
-      processorOptions: { wasm: payload, channels: count, initial } satisfies DspChainOptions,
+      processorOptions: { wasm: payload, channels: count, initial, analysisRing } satisfies DspChainOptions,
     });
     let node: AudioWorkletNode;
     try {
@@ -160,10 +167,15 @@ export class DspChainNode {
       node.port.close();
       throw err;
     }
-    return new DspChainNode(node, count);
+    return new DspChainNode(node, count, analysisRing ? readerForRingBuffer(analysisRing) : null);
   }
 
-  private constructor(readonly node: AudioWorkletNode, readonly channels: number) {}
+  private constructor(
+    readonly node: AudioWorkletNode,
+    readonly channels: number,
+    /** The processor's output tap; null when SharedArrayBuffer is unavailable. */
+    readonly analysisRing: AnalysisRingReader | null,
+  ) {}
 
   private post(msg: DspChainInbound): void {
     this.node.port.postMessage(msg);
