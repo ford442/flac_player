@@ -1,6 +1,7 @@
 import { decodeAudio } from '../../audioDecoder';
 import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
 import { DEFAULT_EQ_BANDS } from '../EQChain';
+import { DSP_EQ_TYPE_CODES } from '../worklets/dspChainMessages';
 import { SdlPcmModule, sharedSdlPcmBridge } from '../SdlPcmBridge';
 import { WASM_ASSETS, loadWasmScript } from '../wasmLoader';
 import type { AudioBackendCapabilities, AudioPlaybackState, DecodedPcmView } from '../../types/audio';
@@ -52,11 +53,6 @@ declare global {
   }
 }
 
-const EQ_TYPE_CODES: Partial<Record<BiquadFilterType, number>> = {
-  lowshelf: 0,
-  peaking: 1,
-  highshelf: 2,
-};
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -555,7 +551,7 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
   private applyNativeEq(gains: number[]): void {
     if (!this.module || !this.hasNativeDsp()) return;
     DEFAULT_EQ_BANDS.forEach((band, i) => {
-      this.module!._set_eq_band!(i, EQ_TYPE_CODES[band.type] ?? 1, band.frequency, band.Q, gains[i] ?? 0);
+      this.module!._set_eq_band!(i, DSP_EQ_TYPE_CODES[band.type] ?? 1, band.frequency, band.Q, gains[i] ?? 0);
     });
   }
 

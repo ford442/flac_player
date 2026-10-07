@@ -1,4 +1,11 @@
 import { EQChain, DEFAULT_EQ_BANDS } from './EQChain';
+import {
+  DSP_MAX_CHANNELS,
+  DspChainNode,
+  isDspWasmDisabledByUrl,
+  isDspWasmSupported,
+  type DspChainSettings,
+} from './DspChainNode';
 import { applyAnalyserPolicy } from './analyserPolicy';
 import { ReplayGainNode } from './ReplayGainNode';
 import {
@@ -34,7 +41,18 @@ export interface AudioOutputInfo {
   sinkId: string;
   state: AudioContextState;
   graphGeneration: number;
+  /**
+   * Who runs ReplayGain / limiter / volume / EQ for Web Audio backends:
+   * 'wasm' = dsp_chain.h in the `dsp-chain` worklet (same code as SDL),
+   * 'web-audio' = BiquadFilterNode / DynamicsCompressorNode fallback.
+   */
+  dspEngine: DspEngine;
 }
+
+export type DspEngine = 'wasm' | 'web-audio';
+
+/** Longest ensureForTrack waits for the DSP worklet before playing through the fallback. */
+const DSP_ATTACH_WAIT_MS = 1500;
 
 type SinkAudioContext = AudioContext & {
   sinkId?: string | { type: string };
@@ -50,9 +68,11 @@ export function isAudioContextSinkSupported(): boolean {
 /**
  * Owns the application-lifetime Web Audio graph.
  *
- * Web Audio backends connect disposable source/input nodes to `input`; the
- * ReplayGain -> master Gain -> EQ -> Analyser -> destination chain is rebuilt
- * when sample rate or latency hint changes.
+ * Web Audio backends connect disposable source/input nodes via {@link connectInput};
+ * the speaker DSP -> Analyser -> destination chain is rebuilt when sample rate or
+ * latency hint changes. Speaker DSP is the `dsp-chain` worklet (dsp_chain.h in
+ * WASM, identical to SDL) once it loads, else ReplayGain -> master Gain -> EQ
+ * as Web Audio nodes.
  * SDL backends tap PCM into the analyser via {@link connectVisualizerFeed} while
  * {@link setExternalPlaybackActive} mutes Web Audio speakers (SDL owns output and
  * runs its own EQ / ReplayGain in WASM — see docs/AUDIO_BACKENDS.md).
@@ -69,6 +89,10 @@ export class AudioContextManager {
   private eqChain: EQChain | null = null;
   private analyser: AnalyserNode | null = null;
   private speakerGain: GainNode | null = null;
+  /** Unity fan-in for backend sources; routed to the DSP worklet or the fallback chain. */
+  private inputGain: GainNode | null = null;
+  private dspChain: DspChainNode | null = null;
+  private dspAttach: Promise<void> = Promise.resolve();
   private visualizerFeedGain: GainNode | null = null;
   private externalPlaybackActive = false;
   private replayGainLinear = 1;
@@ -131,21 +155,22 @@ export class AudioContextManager {
     );
     const nextHint = this.policy.latencyHint;
 
+    let context: AudioContext;
     if (!this.context) {
-      return this.buildGraph(targetRate);
-    }
-
-    if (shouldRecreateContext({
+      context = this.buildGraph(targetRate);
+    } else if (shouldRecreateContext({
       liveRate: this.context.sampleRate,
       targetRate,
       liveHint: this.appliedLatencyHint,
       nextHint,
       recreateOnMismatch: this.policy.recreateOnSampleRateMismatch,
     })) {
-      return this.recreateGraph(targetRate ?? this.context.sampleRate);
+      context = await this.recreateGraph(targetRate ?? this.context.sampleRate);
+    } else {
+      context = this.context;
     }
-
-    return this.context;
+    await this.waitForDspAttach();
+    return context;
   }
 
   /**
@@ -171,7 +196,12 @@ export class AudioContextManager {
 
   connectInput(node: AudioNode): void {
     this.getContext();
-    node.connect(this.replayGain!.input);
+    node.connect(this.inputGain!);
+  }
+
+  /** Which engine runs speaker DSP for Web Audio backends right now. */
+  getDspEngine(): DspEngine {
+    return this.dspChain ? 'wasm' : 'web-audio';
   }
 
   /** Feed SDL PCM tap worklet into the analyser (parallel to masterGain path). */
@@ -223,6 +253,7 @@ export class AudioContextManager {
       sinkId: this.currentContextSinkId(ctx),
       state: ctx.state,
       graphGeneration: this.graphGeneration,
+      dspEngine: this.getDspEngine(),
     };
   }
 
@@ -249,6 +280,7 @@ export class AudioContextManager {
     if (this.masterGain) {
       this.masterGain.gain.value = this.volume;
     }
+    this.dspChain?.setVolume(this.volume);
   }
 
   getVolume(): number {
@@ -258,6 +290,7 @@ export class AudioContextManager {
   setReplayGainLinear(linear: number): void {
     this.replayGainLinear = Math.max(0, linear);
     this.replayGain?.setGainLinear(this.replayGainLinear);
+    this.dspChain?.setReplayGain(this.replayGainLinear, this.limiterEnabled);
   }
 
   getReplayGainLinear(): number {
@@ -267,11 +300,13 @@ export class AudioContextManager {
   setReplayGainLimiter(enabled: boolean): void {
     this.limiterEnabled = enabled;
     this.replayGain?.setLimiterEnabled(enabled);
+    this.dspChain?.setReplayGain(this.replayGainLinear, this.limiterEnabled);
   }
 
   setEQGains(gains: number[]): void {
     this.eqGains = DEFAULT_EQ_BANDS.map((_, i) => gains[i] ?? 0);
     this.eqChain?.setAllGains(this.eqGains);
+    this.dspChain?.setEQGains(this.eqGains);
   }
 
   getEQGains(): number[] {
@@ -300,7 +335,9 @@ export class AudioContextManager {
     this.speakerGain = this.context.createGain();
     this.visualizerFeedGain = this.context.createGain();
     this.visualizerFeedGain.gain.value = 1;
+    this.inputGain = this.context.createGain();
 
+    this.inputGain.connect(this.replayGain.input);
     this.replayGain.output.connect(this.masterGain);
     this.masterGain.connect(this.eqChain.input);
     this.eqChain.output.connect(this.analyser);
@@ -314,7 +351,69 @@ export class AudioContextManager {
       // Constructor relaxation dropped the sink (e.g. it was the rate that failed); retry live.
       void this.setSinkId(this.sinkId);
     }
+    this.dspAttach = this.attachDspChain(this.context);
     return this.context;
+  }
+
+  /** Graph width for the DSP worklet: the destination's channel count, 2..DSP_MAX_CHANNELS. */
+  private dspChannelCount(ctx: AudioContext): number {
+    const count = destinationChannelCount(this.lastTrackChannels, ctx.destination.maxChannelCount) ?? 2;
+    return Math.max(2, Math.min(DSP_MAX_CHANNELS, count));
+  }
+
+  /**
+   * Load the `dsp-chain` worklet and move the input off the fallback chain onto
+   * it. Never rejects: on failure the BiquadFilterNode / compressor graph stays.
+   */
+  private async attachDspChain(ctx: AudioContext): Promise<void> {
+    if (isDspWasmDisabledByUrl() || !isDspWasmSupported(ctx)) return;
+    const channels = this.dspChannelCount(ctx);
+    let dsp: DspChainNode;
+    try {
+      dsp = await DspChainNode.create(ctx, channels, this.dspSettings());
+    } catch (err) {
+      console.warn('[AudioContextManager] DSP WASM unavailable; using Web Audio EQ / ReplayGain', err);
+      return;
+    }
+    if (this.context !== ctx || !this.inputGain || !this.analyser) {
+      dsp.disconnect();
+      return;
+    }
+    const previous = this.dspChain;
+    this.dspChain = dsp;
+    // Settings may have changed while the module loaded; resend (cheap, idempotent).
+    const settings = this.dspSettings();
+    dsp.setReplayGain(settings.replayGainLinear, settings.limiter);
+    dsp.setVolume(settings.volume);
+    dsp.setEQGains(settings.eqGains);
+    dsp.node.connect(this.analyser);
+    this.inputGain.disconnect();
+    this.inputGain.connect(dsp.node);
+    previous?.disconnect();
+    if (dsp.channels !== this.dspChannelCount(ctx)) {
+      // The track's channel count changed while loading; rebuild at the new width.
+      this.dspAttach = this.attachDspChain(ctx);
+    }
+  }
+
+  private dspSettings(): DspChainSettings {
+    return {
+      eqGains: this.eqGains,
+      replayGainLinear: this.replayGainLinear,
+      limiter: this.limiterEnabled,
+      volume: this.volume,
+    };
+  }
+
+  private async waitForDspAttach(): Promise<void> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    await Promise.race([
+      this.dspAttach,
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, DSP_ATTACH_WAIT_MS);
+      }),
+    ]);
+    clearTimeout(timer);
   }
 
   /**
@@ -358,13 +457,18 @@ export class AudioContextManager {
     if (!ctx) return;
     const destination = ctx.destination;
     const count = destinationChannelCount(this.lastTrackChannels, destination.maxChannelCount);
-    if (count === undefined || destination.channelCount === count) return;
-    try {
-      destination.channelCount = count;
-      destination.channelCountMode = 'explicit';
-      destination.channelInterpretation = 'speakers';
-    } catch (err) {
-      console.warn('[AudioContextManager] destination.channelCount rejected', { count, err });
+    if (count !== undefined && destination.channelCount !== count) {
+      try {
+        destination.channelCount = count;
+        destination.channelCountMode = 'explicit';
+        destination.channelInterpretation = 'speakers';
+      } catch (err) {
+        console.warn('[AudioContextManager] destination.channelCount rejected', { count, err });
+      }
+    }
+    // An attached DSP worklet has a fixed width; rebuild it when the track's differs.
+    if (this.dspChain && this.dspChain.channels !== this.dspChannelCount(ctx)) {
+      this.dspAttach = this.attachDspChain(ctx);
     }
   }
 
@@ -383,6 +487,9 @@ export class AudioContextManager {
   private async recreateGraph(sampleRate: number | undefined): Promise<AudioContext> {
     const previous = this.context;
     this.eqChain?.disconnect();
+    this.dspChain?.disconnect();
+    this.dspChain = null;
+    this.inputGain = null;
     this.context = null;
     this.replayGain = null;
     this.masterGain = null;

@@ -8,6 +8,7 @@
     "build:wasm": "bash ./scripts/build-wasm.sh --sdl3",
     "build:wasm:sdl3": "bash ./scripts/build-wasm.sh --sdl3",
     "build:wasm:resampler": "bash ./scripts/build-resampler-wasm.sh",
+    "build:wasm:dsp": "bash ./scripts/build-dsp-wasm.sh",
     "build:projectm": "bash ./scripts/build-projectm-wasm.sh",
     "verify:wasm": "bash ./scripts/verify-wasm-artifacts.sh",
     "build": "webpack --mode production",

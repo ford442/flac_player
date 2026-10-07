@@ -34,7 +34,7 @@ flowchart TB
 
   subgraph FX["Shared audio graph"]
     ACM["AudioContextManager"]
-    EQ["EQChain (5-band)"]
+    EQ["dsp-chain worklet (dsp_chain.h WASM)<br/>fallback: EQChain + ReplayGainNode"]
     Analyser["AnalyserNode"]
   end
 
@@ -196,7 +196,7 @@ In-app ProjectMHost OR postMessage / BroadcastChannel('projectm-audio')
 ### AudioContextManager (`src/audio/AudioContextManager.ts`)
 
 - Single shared `AudioContext`
-- 5-band EQ via `EQChain.ts`
+- Speaker DSP (ReplayGain → limiter → volume → 5-band EQ) in the `dsp-chain` AudioWorklet: `src/sdl/dsp_chain.h` compiled to `public/dsp-chain.wasm`, the same code SDL runs; `EQChain.ts` / `ReplayGainNode.ts` when it cannot load (see `docs/AUDIO_BACKENDS.md` → Speaker-path DSP)
 - Analyser policy (`fftSize`, smoothing, dB range) set explicitly from `analyserPolicy.ts`
 - Application-lifetime device: backends connect/disconnect sources and never `suspend()` it
 - `connectInput()` / `connectVisualizerFeed()` routing

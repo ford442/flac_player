@@ -38,8 +38,10 @@ describe('WorkletAudioPlayer hi-fi pause', () => {
     await player.startStreaming(2, 44100);
 
     const ctx = RecordingAudioContext.instances.at(-1)!;
-    expect(ctx.addedModules[0]).toMatch(/flacProcessor\.js$/);
-    expect(ctx.addedModules[0]).not.toMatch(/^blob:/);
+    // The shared graph may also register the dsp-chain processor.
+    const flacModule = ctx.addedModules.find((url) => /flacProcessor\.js$/.test(url));
+    expect(flacModule).toBeDefined();
+    expect(flacModule).not.toMatch(/^blob:/);
 
     player.pause();
     expect(ctx.suspendCalls).toBe(0);
