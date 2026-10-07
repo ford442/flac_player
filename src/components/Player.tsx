@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { AudioLoader, PlaylistTrack, loadQueueFromStorage } from '../audioLoader';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useMediaSession } from '../hooks/useMediaSession';
@@ -8,6 +8,7 @@ import { isOutputPickerSupported, useAudioSettings } from '../hooks/useAudioSett
 import { useAudioOutputInfo, useOutputDevices } from '../hooks/useAudioOutputInfo';
 import { usePlayerData } from '../hooks/usePlayerData';
 import { usePlaybackController } from '../hooks/usePlaybackController';
+import { usePlaylists } from '../hooks/usePlaylists';
 import { isAudioContextSinkSupported, sharedAudioContextManager } from '../audio/AudioContextManager';
 import type { AudioOutputControls } from './EQPanel';
 import { AudioCapabilitiesContext } from './AudioCapabilitiesContext';
@@ -52,7 +53,6 @@ export const Player: React.FC = () => {
   const data = usePlayerData({ loader, addToast, setError, setCurrentTrack, isSharedPlaylist });
   const {
     library, allTags, stats, isLoadingLibrary, isResyncingLibrary, hasMoreLibrary, loadMoreLibrary,
-    playlists, isLoadingPlaylists,
     sharedPlaylistTitle, setSharedPlaylistTitle,
     searchQuery, setSearchQuery, minRating, setMinRating,
     selectedTags, setSelectedTags, untaggedOnly, setUntaggedOnly,
@@ -60,7 +60,7 @@ export const Player: React.FC = () => {
     queue, setQueue, queueCurrentIndex, setQueueCurrentIndex,
     showQueue, setShowQueue, shuffle, setShuffle, repeatMode, setRepeatMode,
     volume, setVolume, muted, setMuted, prevVolumeRef,
-    checkBackend, loadPlaylists, loadLibrary, loadStats, triggerLibraryResync,
+    checkBackend, loadLibrary, loadStats, triggerLibraryResync,
     addToQueue, addAllToQueue, removeFromQueue, reorderQueue, clearQueue, enqueueNext,
     updateTrack, trashTrack,
   } = data;
@@ -181,21 +181,6 @@ export const Player: React.FC = () => {
     initializeApp();
   }, [loader, addToast, sharedPlaylistId, setQueue, setQueueCurrentIndex, setShuffle, setRepeatMode, setSharedPlaylistTitle]);
 
-  const loadCloudPlaylist = useCallback(async (playlistId: string) => {
-    try {
-      const trackIds = await loader.fetchPlaylistTracks(playlistId);
-      if (trackIds.length === 0) { addToast('Playlist is empty or unavailable', 'info'); return; }
-      const matchedTracks = trackIds.map(id => library.find(t => t.id === id)).filter(Boolean) as PlaylistTrack[];
-      if (matchedTracks.length === 0) { addToast('No matching tracks found in local library', 'error'); return; }
-      setQueue(matchedTracks);
-      setQueueCurrentIndex(0);
-      playTrack(matchedTracks[0], 0);
-      addToast(`Loaded ${matchedTracks.length}/${trackIds.length} tracks from playlist`, 'success');
-    } catch {
-      addToast('Failed to load playlist tracks', 'error');
-    }
-  }, [loader, library, addToast, setQueue, setQueueCurrentIndex, playTrack]);
-
   const playAll = (tracks: PlaylistTrack[], shuffled = false) => {
     if (tracks.length === 0) return;
     const ordered = shuffled ? shuffleArray(tracks) : tracks;
@@ -204,6 +189,8 @@ export const Player: React.FC = () => {
     playTrack(ordered[0], 0);
     addToast(shuffled ? `Shuffling ${ordered.length} tracks` : `Playing ${ordered.length} tracks`, 'success');
   };
+
+  const playlists = usePlaylists({ loader, library, queue, addToast, onPlayTracks: playAll });
 
   const playNow = (track: PlaylistTrack) => {
     setQueue([track]); setQueueCurrentIndex(0); playTrack(track, 0);
@@ -430,7 +417,7 @@ export const Player: React.FC = () => {
       library={library} displayedLibrary={displayedLibrary}
       allTags={allTags} stats={stats} isLoadingLibrary={isLoadingLibrary}
       fastMirrorCount={fastMirrorCount}
-      playlists={playlists} isLoadingPlaylists={isLoadingPlaylists} onLoadPlaylists={loadPlaylists}
+      playlists={playlists}
       activeTab={activeTab} setActiveTab={setActiveTab}
       libraryViewMode={libraryViewMode} setLibraryViewMode={setLibraryViewMode}
       searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchInputRef={searchInputRef}
@@ -474,7 +461,6 @@ export const Player: React.FC = () => {
       hasMoreLibrary={hasMoreLibrary} onLoadMoreLibrary={loadMoreLibrary}
       onNotify={addToast}
       onUpdateTrack={updateTrack} onTrashTrack={trashTrack}
-      onLoadCloudPlaylist={loadCloudPlaylist}
       onSetShowHtmlFallback={setShowHtmlFallback}
       onClearCache={() => clearTrackCache().then(() => addToast('Offline cache cleared', 'success'))}
       onGenerationCompleted={handleGenerationCompleted}

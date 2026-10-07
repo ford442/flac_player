@@ -33,6 +33,7 @@ from models import (
 from storage import StorageManager, parse_ai_metadata_from_filename, suggest_tags_from_prompt
 from musicbrainz import MusicBrainzClient, enrich_metadata_from_musicbrainz
 from replaygain import extract_replaygain_from_file
+from playlists import PlaylistStore, build_playlist_router
 
 # =============================================================================
 # Configuration
@@ -43,6 +44,7 @@ DATA_DIR = os.getenv("DATA_DIR", "./data")
 SONGS_DIR = os.path.join(DATA_DIR, "songs")
 MUSIC_DIR = os.path.join(DATA_DIR, "music")
 INDEX_FILE = os.path.join(SONGS_DIR, "index.json")
+PLAYLISTS_FILE = os.path.join(DATA_DIR, "playlists", "index.json")
 CACHE_TTL = int(os.getenv("CACHE_TTL", "300"))  # 5 minutes default
 APP_BASE_URL = os.getenv("APP_BASE_URL", "https://flac-player.hf.space")
 CORS_ALLOWED_ORIGINS = [
@@ -66,6 +68,7 @@ os.makedirs(MUSIC_DIR, exist_ok=True)
 # Global storage manager
 STORAGE_MAP = StorageManager(INDEX_FILE)
 SHARES_MAP: Dict[str, Dict[str, Any]] = {}
+PLAYLIST_STORE = PlaylistStore(PLAYLISTS_FILE)
 GENERATION_REQUESTS: Dict[str, List[float]] = {}
 
 
@@ -95,6 +98,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+app.include_router(build_playlist_router(PLAYLIST_STORE))
 
 
 # =============================================================================

@@ -205,12 +205,43 @@ the PATCH body has no `author` field yet.
 - Library edit mode calls `GET /api/songs/{id}/suggest-tags` and shows the results as one-click chips
   under `TagInput`.
 
-### Cloud playlists — known gap
+### Playlists
 
-The Playlists tab reads `GET {REACT_APP_PLAYLIST_API_URL}/api/playlists` (read-only). There is **no**
-create / update / delete playlist endpoint on storage.noahcohn.com, so the app cannot save a playlist
-in-app. Use queue share links (`POST /api/share`) instead; adding `POST /api/playlists` on the backend
-would unblock an in-app save path.
+A **playlist** is a named, editable, persistent list of track ids. It is a different object from a
+**share link** (`POST /api/share`), which stays an immutable, expiring snapshot and is unchanged.
+
+**Local-first (frontend).** The Playlists tab saves playlists in IndexedDB (`flac_player_playlists`,
+`src/storage/playlistStore.ts`, model `{ id, title, description, trackIds, updatedAt, origin: 'local' | 'cloud' }`).
+They work with no backend support: create from the queue, rename, delete, reorder (drag or ▲/▼), replace with
+the queue, and play. Deleting a local playlist never touches the network. Only track ids are stored — audio
+bytes stay in `trackCache` / the Cache API. Tracks no longer in the library are skipped on play.
+
+**REST contract.** Implemented by the local FastAPI reference (`app.py` + `playlists.py`); a host that
+wants cloud playlists (production `storage.noahcohn.com` / contabo_storage_manager) must mirror it exactly:
+
+| Method | Path | Behavior |
+|--------|------|----------|
+| GET | `/api/playlists` | List `{ id, title, description, track_ids, updated_at }` (newest first) |
+| GET | `/api/playlists/{id}` | One playlist (used by `fetchPlaylistTracks`); 404 if unknown |
+| POST | `/api/playlists` | Create from `{ title, description?, track_ids }` → `201` + playlist |
+| PUT / PATCH | `/api/playlists/{id}` | PUT replaces title/description/ids; PATCH changes only the fields sent |
+| DELETE | `/api/playlists/{id}` | Delete → `204` |
+| GET | `/api/playlists/health` | `{ "status": "ok", "writable": true }` — write-support probe |
+
+Titles are trimmed and must be non-empty (≤ 200 chars); `track_ids` ≤ 5000. Data persists in
+`data/playlists/index.json` (next to `data/songs/index.json`). Tested by `tests/test_playlists.py`
+(`pytest tests/test_playlists.py`).
+
+**Client.** `songApi.ts` / `AudioLoader` expose `createCloudPlaylist`, `replaceCloudPlaylist`,
+`deleteCloudPlaylist` and `probePlaylistWriteSupport`. The tab's cloud section only *reads*
+`GET {REACT_APP_PLAYLIST_API_URL}/api/playlists` (loaded when the tab opens); a 404/empty answer just means
+"no cloud playlists" and never affects local ones. **Save copy** imports a cloud playlist as a local one
+(`origin: 'cloud'`).
+
+**Cloud sync (Phase 3 — contract only).** The write client and probe are landed but **not wired to the UI**,
+so nothing syncs yet. When enabled it will require `probePlaylistWriteSupport()` to be true and resolve
+conflicts **last-write-wins on `updatedAt`**. Enabling it also needs the routes above on contabo_storage_manager
+(out of tree).
 
 ## MusicBrainz Auto-Enrichment
 
