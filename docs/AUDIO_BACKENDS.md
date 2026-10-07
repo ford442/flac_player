@@ -266,3 +266,14 @@ Logs appear as `[FLAC:label]` from `src/utils/debug.ts` (used by `audioLoader.ts
 - [API.md](./API.md#projectm-visualizer-integration) — projectM embed contract
 - `src/types/audio.ts` — `AudioBackend` interface
 - `src/types/gapless.ts` — gapless mode types
+
+## Media Session (OS media controls)
+
+`src/hooks/useMediaSession.ts` (wired in `Player.tsx`) adapts the playback controller to
+`navigator.mediaSession`: lock-screen metadata/artwork (`cover_url`, else `/icons/icon-*.png`),
+hardware/Bluetooth play-pause/next/previous, and OS scrubber seek (only when the backend reports
+`capabilities.seek`). Position state is pushed from backend state updates, throttled to ~1 Hz — no
+extra rAF loop. Muted playback still reports `playing`. Handlers and metadata are cleared on unmount.
+
+Support: Chromium and Safari are full; Firefox is partial (metadata + play/pause, seek varies).
+`setPositionState` is only as accurate as the backend clock (see #205 for worklet sample-rate honesty).
