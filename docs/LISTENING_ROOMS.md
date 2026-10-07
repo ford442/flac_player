@@ -1,468 +1,305 @@
-# Synced Listening Rooms — Design Document
+# Synced Listening Rooms
 
-**Status:** Design (pre-implementation)  
-**Tracking:** [#209](https://github.com/ford442/flac_player/issues/209) (design closed as #197; implementation lives here)  
-**Last updated:** July 2026
+**Status:** Implemented (MVP) — prototype server in `app.py` / `rooms.py`; production bridge port pending  
+**Tracking:** [#209](https://github.com/ford442/flac_player/issues/209) (design closed as #197)  
+**Last updated:** October 2026
 
 ## Summary
 
-Playlist sharing today is **static**: `POST /api/share` returns a track list; recipients load it independently with no shared playhead. This document specifies **"Listen together"** mode: a host creates a room, guests join via link, and everyone hears the same track at approximately the same position (target **≤ 500 ms** drift over a 10-minute session).
+Playlist sharing (`POST /api/share`) is **static**: recipients get a track list and play it independently. **Listen together** adds live rooms: a host creates a room, guests open a link, and everyone hears the same track at approximately the same position.
 
-MVP uses a **host-authoritative** model over **WebSocket**, the **streaming** audio backend only, and `HTMLAudioElement.currentTime` as the playback clock.
+MVP: **host-authoritative** over **WebSocket**, **streaming backend only** (native `<audio>` path), clock = `HTMLAudioElement.currentTime` mapped onto an NTP-style estimate of the server clock.
 
----
-
-## Problem statement
-
-| Today (`/api/share`) | Target (listening rooms) |
-|----------------------|--------------------------|
+| Today (`/api/share`) | Listening rooms |
+|----------------------|-----------------|
 | One-time snapshot of `track_ids` | Live, mutable room state |
 | Each client plays independently | Host clock is source of truth |
-| No play/pause/seek propagation | Events propagate in &lt; 1 s |
-| Expires after `expires_in_days` | Room closes when host disconnects |
-
-Existing building blocks:
-
-- **Queue state:** `src/storage/queueStorage.ts` (`tracks`, `currentIndex`, `shuffle`, `repeat`)
-- **Playback state:** `PlayerUIState` / `AudioPlaybackState` (`isPlaying`, `currentTime`, `duration`)
-- **Backend controls:** `AudioBackend.play()`, `.pause()`, `.seek()`, `.getState()` (`src/types/audio.ts`)
-- **Share UX:** `generateShareLink()` in `Player.tsx` → `createShare()` in `src/api/songApi.ts`
-- **Route:** `/playlist/{share_id}` loads a static list on mount (`Player.tsx` init effect)
+| No play/pause/seek propagation | Events propagate in well under 1 s |
+| Expires after `expires_in_days` | Room closes when the host leaves (30 s reconnect grace) |
 
 ---
 
-## Goals and non-goals
+## Acceptance (MVP)
 
-### MVP acceptance criteria
+Measured with two headless Chromium tabs against `app.py` on one machine (11-minute FLAC, 10-minute soak, 119 samples every 5 s):
 
-- [ ] Two browser tabs stay within **500 ms** for a **10-minute** session
-- [ ] Host **pause** propagates to guests within **1 s**
-- [ ] Room **closes gracefully** when the host leaves (guests see ended state, can leave)
-- [ ] Works with **production CORS** on `storage.noahcohn.com`
+- [x] Two browser tabs stay within **500 ms** for **10 minutes** — max |drift| 101 ms, typically 30–100 ms; after seek ≈ 115–180 ms, after a track change < 50 ms
+- [x] Host **pause** propagates to guests within **1 s** — 19–36 ms (resume 35–50 ms) on localhost
+- [x] Room **closes gracefully** when the host leaves — `End room` → guests see "The host ended the session"; tab close → after the grace period
+- [ ] Works with **production CORS** on `storage.noahcohn.com` — needs the bridge port below (WebSocket origin check mirrors `CORS_ALLOWED_ORIGINS`)
+- [x] Unit tests for drift correction and the room protocol (`tests/listeningSync.test.ts`, `tests/listeningRoom.test.ts`, `tests/test_rooms.py`)
 
-### Out of scope (MVP)
+Out of scope (MVP): visualizer/analyser sync, SDL / worklet / web-audio clocks, guest DJ permissions, WebRTC, TinyURL room links.
 
-- Visualizer / analyser sync (local-only by design)
-- SDL, worklet, or web-audio backends (streaming clock only)
-- Guest DJ / permission levels (host-only control)
-- WebRTC data channels (Phase 2)
-- TinyURL integration for room links (Phase 2; reuse existing `url_shortener.py` pattern)
+---
 
-### Phase 2 (future)
+## Using it
 
-- WebRTC data channel for sub-100 ms sync and lower server load
-- Guest roles: listen-only vs co-DJ (seek/queue mutations)
-- Optional TinyURL shortening for `joinUrl`
-- Buffered-backend clock abstraction (worklet ring position, `AudioContext.currentTime` mapping)
+1. Open the queue (fallback view) and click **🎧** (Listen together), or click **🎧 Listen together** in the full-screen player. The current queue (library tracks only) becomes the room queue.
+2. The join link (`{app}/?room={id}`) is copied to the clipboard; the host tab's URL changes to the same link so a reload reclaims the room.
+3. Guests open the link. If the browser blocks autoplay they see **▶ Start listening**; one click starts audio.
+4. Host controls everything (play, pause, seek, next, queue edits). Guest transport buttons show a hint instead; **Resync** asks for a fresh snapshot.
+5. **End room** (host) closes it for everyone; **Leave** (guest) disconnects and reloads the normal player.
+
+While a room is active the backend is locked to **streaming** and the streaming backend is forced onto its **native `<audio>` path** (FLAC included); a host track already playing on the hi-fi/worklet path is reloaded natively at the same position.
 
 ---
 
 ## Architecture
 
-### High-level flow
-
 ```mermaid
 sequenceDiagram
   participant Host as Host Player
-  participant API as Signaling Server
+  participant API as rooms.py
   participant Guest as Guest Player(s)
 
   Host->>API: POST /api/rooms
-  API-->>Host: { roomId, joinUrl, wsUrl }
-  Host->>API: WS connect + JOIN (role=host)
-  Guest->>API: WS connect + JOIN (role=guest)
-  API-->>Guest: STATE_SNAPSHOT (full room state)
+  API-->>Host: { room_id, host_token, join_url, ws_url }
+  Host->>API: WS /ws/rooms/{id} → JOIN {role: host, hostToken}
+  Guest->>API: WS /ws/rooms/{id} → JOIN {role: guest, clientId}
+  API-->>Guest: JOINED, STATE_SNAPSHOT, PRESENCE
+  Guest->>API: TIME_SYNC ×5 (then every 15 s)
+  API-->>Guest: TIME_SYNC (server clock)
 
   loop Playback
-    Host->>API: PLAY / PAUSE / SEEK / QUEUE_UPDATE
-    API-->>Guest: broadcast event + serverTime
-    Note over Host,Guest: Guests apply + drift-correct
-    Host->>API: HEARTBEAT (position, every 5s)
+    Host->>API: TRACK_CHANGE / PLAY / PAUSE / SEEK / QUEUE_UPDATE
+    API-->>Guest: same type, full playback reference + revision
+    Host->>API: HEARTBEAT (every 5 s)
     API-->>Guest: HEARTBEAT
+    Note over Guest: GuestSync: load / play / pause / nudge / seek
   end
 
-  Host--xAPI: WS close (host left)
-  API-->>Guest: ROOM_CLOSED
+  Host->>API: LEAVE (or disconnect + 30 s grace)
+  API-->>Guest: ROOM_CLOSED {reason}
 ```
 
 ### Authority model
 
-- **Host-authoritative:** only the host may emit control messages (`PLAY`, `PAUSE`, `SEEK`, `QUEUE_UPDATE`, `TRACK_CHANGE`). The server rejects control messages from guests in MVP.
-- **Server timestamps:** every outbound message includes `serverTime` (ISO 8601 or Unix ms) so guests can estimate one-way latency and correct position.
-- **Guest read-only:** guests apply state; they may show an **"Out of sync — Resync"** button that requests a fresh `STATE_SNAPSHOT` (not a seek request to the host in MVP).
-
-Phase 2 adds `guest:seek_request` and host approval for co-DJ handoff.
+- **Host-authoritative:** only the host may send `PLAY`, `PAUSE`, `SEEK`, `TRACK_CHANGE`, `QUEUE_UPDATE`, `HEARTBEAT`. Guests get `ERROR {code: "forbidden"}`.
+- **Server-stamped:** every outbound envelope carries `serverTime` (Unix ms). Playback messages also carry `positionUpdatedAt` — the server-clock time at which the host *read* its position.
+- **Guest read-only:** guests apply state; **Resync** sends `RESYNC_REQUEST` and gets a fresh `STATE_SNAPSHOT`.
 
 ---
 
-## Server design
+## Server (`rooms.py`)
 
-### Deployment targets
+`create_rooms_router(manager, app_base_url=…, allowed_origins=…, public_ws_base_url=…)` returns a FastAPI `APIRouter`; `app.py` mounts it and runs `RoomManager.run_sweeper()` in its lifespan. Rooms live in process memory: **run one uvicorn worker** (or move `RoomManager` to Redis).
 
-| Environment | REST | WebSocket | Notes |
-|-------------|------|-----------|-------|
-| Local prototype | `app.py` | `app.py` (`/ws/rooms/{id}`) | In-memory room map; good for dev |
-| Production | `storage.noahcohn.com` | Same host, `wss://` | Requires nginx/WebSocket upgrade + CORS |
+### REST
 
-Prototype in `app.py` first; port contract to Contabo Storage Manager (`contabo_storage_manager/packages/python-bridge`) before production cutover.
+| Method | Path | Notes |
+|--------|------|-------|
+| `POST` | `/api/rooms` | Body `{ title?, track_ids?, expires_in_minutes? (5–1440, default 240) }` → `{ room_id, host_token, join_url, ws_url, expires_at }`. 429 after 10 creates / 10 min per client, 503 past `ROOM_MAX_ACTIVE` rooms. |
+| `GET` | `/api/rooms/{room_id}` | `{ room_id, title, track_count, guest_count, host_connected, expires_at }`; 404 when missing/ended. |
+| `DELETE` | `/api/rooms/{room_id}` | Header `X-Host-Token`; closes the room (`ROOM_CLOSED {reason: "deleted"}`). |
+| `GET` | `/room/{room_id}` | Redirects to `/?room={room_id}` (when `app.py` serves the SPA). |
 
-### REST endpoints
+`host_token` (32 random bytes, URL-safe) is returned once; the client keeps it in **sessionStorage** only. Room ids use `URLShortener.generate_short_id(10)`, like share ids. The client builds its own join link from `window.location`; `join_url` / `ws_url` in the response are informational.
 
-#### `POST /api/rooms`
+### WebSocket `/ws/rooms/{room_id}`
 
-Create a room. Caller becomes host (validated via first WebSocket `JOIN` with matching `hostToken`).
+- **Origin check:** the handshake is rejected (close `1008`) unless `Origin` is in `CORS_ALLOWED_ORIGINS` (`*` allows all). CORSMiddleware does not cover WebSockets.
+- **First message must be `JOIN`** within 10 s: `{ role: "host" | "guest", hostToken?, clientId? }` (query params `role` / `host_token` / `client_id` are accepted as fallbacks). A guest reconnecting with the same `clientId` replaces its old socket instead of taking a new slot.
+- **Envelope:** `{ type, roomId, serverTime, revision?, payload }`.
 
-**Request:**
+| Type | Direction | Payload |
+|------|-----------|---------|
+| `JOIN` | client → server | `{ role, hostToken?, clientId? }` |
+| `JOINED` | server → client | `{ role, clientId, guestCount, hostConnected }` |
+| `STATE_SNAPSHOT` | server → client | `ListeningRoomState` (on join and on `RESYNC_REQUEST`) |
+| `PLAY` / `PAUSE` / `SEEK` / `TRACK_CHANGE` / `HEARTBEAT` | host → server | `{ trackId, trackIndex, position, playing, rate, sampledAt }` |
+| same | server → guests | full `PlaybackReference` + envelope `revision` |
+| `QUEUE_UPDATE` | host → server → guests | `{ trackIds, currentIndex, shuffle, repeat }` |
+| `PRESENCE` | server → all | `{ guestCount, hostConnected }` on every join/leave |
+| `TIME_SYNC` | client → server → client | `{ t0 }` echoed; reply `serverTime` is the server clock |
+| `RESYNC_REQUEST` | any → server | `{}` → `STATE_SNAPSHOT` |
+| `LEAVE` | client → server | `{}`; from the host it ends the room immediately |
+| `ROOM_CLOSED` | server → all | `{ reason: host_left | expired | deleted | server_shutdown }` |
+| `ERROR` | server → client | `{ code, message }` (`forbidden`, `room_not_found`, `room_full`, `rate_limited`, `invalid_payload`, …) |
 
-```json
-{
-  "title": "Friday Night Mix",
-  "track_ids": ["abc123", "def456"],
-  "expires_in_minutes": 240
-}
-```
-
-`track_ids` optional — host may start empty and populate via `QUEUE_UPDATE`.
-
-**Response:**
-
-```json
-{
-  "room_id": "xK9mP2nQ",
-  "host_token": "secret-host-only-string",
-  "join_url": "https://flac-player.example.com/room/xK9mP2nQ",
-  "ws_url": "wss://storage.noahcohn.com/ws/rooms/xK9mP2nQ",
-  "expires_at": "2026-07-22T14:30:00Z"
-}
-```
-
-`host_token` is returned once; store in sessionStorage on the host tab. Never expose in `join_url`.
-
-#### `GET /api/rooms/{room_id}`
-
-Read-only room metadata for join page (title, track count, host present, expired). No playback state (that comes over WS).
-
-#### `DELETE /api/rooms/{room_id}`
-
-Host-only (requires `host_token` header). Explicit room teardown.
-
-### WebSocket: `/ws/rooms/{room_id}`
-
-**Connection:** `wss://{API_HOST}/ws/rooms/{room_id}`
-
-**Query params:**
-
-| Param | Required | Description |
-|-------|----------|-------------|
-| `role` | yes | `host` or `guest` |
-| `host_token` | host only | From `POST /api/rooms` |
-| `client_id` | no | Stable UUID for reconnect; server may resume guest slot |
-
-**CORS / origin:** mirror existing REST policy (`CORS_ALLOWED_ORIGINS`). WebSocket handshake must allow production app origins (e.g. Netlify/Vercel/static host).
-
-### Message envelope
-
-All messages are JSON with a common envelope:
-
-```json
-{
-  "type": "PLAY",
-  "roomId": "xK9mP2nQ",
-  "serverTime": 1721635200123,
-  "payload": { }
-}
-```
-
-### Message types (MVP)
-
-| Type | Direction | Payload | Notes |
-|------|-----------|---------|-------|
-| `JOIN` | client → server | `{ role, hostToken?, clientId? }` | First message after connect |
-| `JOINED` | server → client | `{ role, guestCount }` | Ack |
-| `STATE_SNAPSHOT` | server → client | See [Room state](#room-state) | On join + on resync request |
-| `PLAY` | host → server → all | `{ position, trackId }` | `position` = seconds |
-| `PAUSE` | host → server → all | `{ position, trackId }` | |
-| `SEEK` | host → server → all | `{ position, trackId }` | |
-| `TRACK_CHANGE` | host → server → all | `{ trackId, position, trackIndex }` | New track loaded |
-| `QUEUE_UPDATE` | host → server → all | `{ trackIds, currentIndex, shuffle, repeat }` | IDs only; clients resolve metadata |
-| `HEARTBEAT` | host → server → all | `{ position, playing, trackId }` | Every 5 s + on idle |
-| `RESYNC_REQUEST` | any → server | `{}` | Server replies with `STATE_SNAPSHOT` |
-| `ROOM_CLOSED` | server → all | `{ reason }` | `host_left`, `expired`, `deleted` |
-| `ERROR` | server → client | `{ code, message }` | |
+Close codes (no client reconnect): `4000` room ended, `4001` replaced by a newer connection, `4403` forbidden / bad JOIN, `4404` room not found, `4429` room full, `1008` origin rejected.
 
 ### Room state
 
-Canonical state object (in `STATE_SNAPSHOT` and server memory):
-
 ```typescript
-interface ListeningRoomState {
+interface PlaybackReference {
+  trackId: string | null;
+  trackIndex: number;
+  position: number;           // seconds
+  positionUpdatedAt: number;  // server ms when position was sampled
+  playing: boolean;
+  rate: number;               // host playbackRate
+}
+
+interface ListeningRoomState extends PlaybackReference {
   roomId: string;
   title: string;
   hostConnected: boolean;
-  trackId: string | null;
-  trackIndex: number;
-  position: number;       // seconds
-  playing: boolean;
-  queue: {
-    trackIds: string[];
-    currentIndex: number;
-    shuffle: boolean;
-    repeat: 'off' | 'one' | 'all';
-  };
-  revision: number;       // monotonic; ignore stale events
+  queue: { trackIds: string[]; currentIndex: number; shuffle: boolean; repeat: 'off' | 'one' | 'all' };
+  revision: number;           // monotonic; guests ignore older messages
 }
 ```
 
-Server stores rooms in memory (MVP). Production may add Redis with TTL keyed to `expires_at`.
+The host's `sampledAt` becomes `positionUpdatedAt`, which removes host→server latency from the guest's estimate. Values in the future or older than 10 s fall back to receive time. Positions clamp to `[0, 24 h]`, rates to `[0.25, 4]`, queues to 1000 ids.
 
-### Host lifecycle
+### Lifecycle and limits
 
-1. Host opens WebSocket with `role=host` + `host_token`.
-2. On host disconnect (close code ≠ intentional leave): start **grace period** (e.g. 30 s). If host reconnects with same `host_token`, resume. Otherwise broadcast `ROOM_CLOSED` `{ reason: "host_left" }` and delete room.
-3. Guest connections receive `ROOM_CLOSED` and UI transitions to "Session ended".
-
-### Rate limits (production)
-
-- Max **20 guests** per room (configurable)
-- Max **2 control messages/s** per host (burst OK for seek scrubbing)
-- `HEARTBEAT` minimum interval **3 s**
+- Host disconnect without `LEAVE` starts a **grace period** (`ROOM_HOST_GRACE_SECONDS`, default 30). The host tab reconnects automatically, and a reloaded host tab rejoins from sessionStorage; otherwise guests get `ROOM_CLOSED {reason: "host_left"}`.
+- A second host connection with the token replaces the first (close `4001`).
+- Max **20 guests** (`ROOM_MAX_GUESTS`); host control budget **2 msg/s** with a burst of 8; `HEARTBEAT` at most every **3 s** (extra ones are dropped silently).
+- Expired rooms are swept every 60 s; shutdown closes all rooms with `server_shutdown`.
 
 ---
 
-## Client design
-
-### Route
-
-Add `/room/{room_id}` (parallel to `/playlist/{share_id}`):
-
-- `App.tsx`: treat `/room/:id` like shared playlist (full-screen player, no marketing header)
-- Join URL from API: `{APP_ORIGIN}/room/{room_id}`
-
-Query `?host=1` is **not** used for security; host identity is `host_token` in sessionStorage only.
-
-### Module layout (proposed)
+## Client (`src/listening/`)
 
 ```
-src/
-  listening/
-    types.ts              # ListeningRoomState, WS message types
-    roomApi.ts            # POST/GET /api/rooms
-    roomProtocol.ts       # encode/decode, revision guards
-    syncEngine.ts         # drift detection + apply corrections
-    useListeningRoom.ts   # React hook
-  components/
-    ListeningRoomPanel.tsx  # host badge, guest count, copy link, resync, leave
+src/listening/
+  types.ts                 # wire types (ListeningRoomState, PlaybackReference, messages)
+  roomProtocol.ts          # encode / validated decode / revision guard
+  clockSync.ts             # ServerClock: lowest-RTT TIME_SYNC offset
+  syncEngine.ts            # pure drift math: expectedPosition, decideCorrection, updateSeekLead
+  guestSync.ts             # GuestSync: apply reference + correct drift through an adapter
+  hostPublisher.ts         # HostPublisher: observed playback → room events
+  roomConnection.ts        # WebSocket session: JOIN, clock sync, reconnect with backoff
+  roomApi.ts               # REST client, WS URL derivation
+  roomSession.ts           # ?room= / /room/{id} links, sessionStorage host token, client id
+  useListeningRoom.ts      # React hook owning one session
+  useListeningRoomBridge.ts# glue to usePlaybackController (adapter, track resolution, streaming lock)
+src/components/ListeningRoomPanel.tsx  # badge + actions (both views)
 ```
 
-Keep listening logic **out of** `Player.tsx`; wire room sync through **`usePlaybackController`** callbacks (foundation landed in [#193](https://github.com/ford442/flac_player/issues/193)) via the thin adapter interface below.
+`useListeningRoomBridge` is called in `Player.tsx` right after `usePlaybackController`. `PlayerFallbackView` gets **one** prop, `room?: { role, driftMs, onListenTogether }`, for the header badge and the queue's Listen together button; all room actions live in `ListeningRoomPanel`.
 
-### `useListeningRoom` hook
+### Links and routing
 
-```typescript
-interface UseListeningRoomOptions {
-  roomId: string | null;
-  role: 'host' | 'guest' | null;
-  hostToken?: string;
-  /** Called when remote state should drive the player */
-  onApplyState: (state: ListeningRoomState) => void;
-  /** Poll local playback for host heartbeats */
-  getLocalPlayback: () => {
-    trackId: string | null;
-    position: number;
-    playing: boolean;
-    queue: QueueState;
-  };
-  enabled: boolean;
-}
+Join links use **`?room={id}`** (like `?share=`): the bundle loads with relative asset paths, so a query string works on any static host or subpath. `/room/{id}` is also recognized when the host rewrites it to the SPA (and `app.py` redirects it). `App.tsx` opens room links full-screen. A tab whose sessionStorage holds the room's host token is the host; any other tab is a guest and mounts read-only (no library load, no saved-queue writes).
 
-interface UseListeningRoomResult {
-  connected: boolean;
-  isHost: boolean;
-  guestCount: number;
-  driftMs: number | null;
-  outOfSync: boolean;
-  roomClosedReason: string | null;
-  createRoom: (opts: CreateRoomRequest) => Promise<CreateRoomResponse>;
-  joinRoom: (roomId: string) => void;
-  leaveRoom: () => void;
-  requestResync: () => void;
-  /** Host only: emit after local user actions */
-  publishPlay: (position: number) => void;
-  publishPause: (position: number) => void;
-  publishSeek: (position: number) => void;
-  publishQueueUpdate: (queue: QueueState) => void;
-  publishTrackChange: (trackId: string, index: number, position: number) => void;
-}
-```
+### Playback controller hooks
 
-**Host wiring:** `usePlaybackController` (or a thin `useListeningRoomBridge` wrapper) calls `publish*` from existing handlers (`playTrack`, pause toggle, seek slider, queue mutations).
+`usePlaybackController` exposes:
 
-**Guest wiring:** `onApplyState` loads track if `trackId` changed, seeks if `|localPosition - remotePosition| > threshold`, play/pauses to match.
-
-### Sync algorithm (streaming MVP)
-
-**Clock source:** `StreamingAudioPlayer` on the **native `<audio>` path** only.
-
-- MVP room mode sets `outputMode` to `streaming` and disables hi-fi FLAC worklet sub-path (or documents `getState().currentTime` from worklet as fallback — native path is simpler).
-- Position: `audioElement.currentTime`
-- Playing: `!audioElement.paused && !audioElement.ended`
-
-**Drift correction (guest):**
-
-```
-DRIFT_THRESHOLD_MS = 250   // no correction
-HARD_SYNC_THRESHOLD_MS = 500  // seek immediately
-
-on HEARTBEAT or PLAY/PAUSE/SEEK:
-  expectedPosition = payload.position + (now - serverTime) * (playing ? 1 : 0)
-  drift = (localPosition - expectedPosition) * 1000
-
-  if |drift| > HARD_SYNC_THRESHOLD_MS:
-    seek(expectedPosition)
-  else if |drift| > DRIFT_THRESHOLD_MS:
-    // soft: nudge playbackRate briefly (1.02 or 0.98) for < 2s, then reset
-```
-
-**Periodic sync:** host emits `HEARTBEAT` every **5 s** and on every control event. Guests run drift correction on each.
-
-**Latency budget:**
-
-| Step | Target |
-|------|--------|
-| Host event → server | &lt; 50 ms |
-| Server → guest | &lt; 50 ms |
-| Guest apply (seek/play) | &lt; 100 ms |
-| **Total (pause)** | **&lt; 1 s** (acceptance) |
-
-### UI (MVP)
-
-| Element | Host | Guest |
-|---------|------|-------|
-| Badge | "Hosting · N listening" | "Listening · synced" / "Out of sync" |
-| Copy link | `join_url` (no token) | — |
-| Resync | optional | button → `RESYNC_REQUEST` |
-| Leave | ends room (confirm) | disconnect only |
-| Output mode | locked to streaming | locked to streaming |
-
-Entry point: **"Listen together"** next to existing share control in queue/settings (uses current queue as initial `track_ids`).
-
-### Environment variables
-
-| Variable | Purpose |
-|----------|---------|
-| `REACT_APP_API_URL` | REST base (existing) |
-| `REACT_APP_WS_URL` | Optional WS override; default derive from API host (`https` → `wss`) |
-
-Webpack `DefinePlugin`: add `REACT_APP_WS_URL` alongside existing `REACT_APP_*` keys.
-
----
-
-## Integration with foundation refactors
-
-Foundation work ([#176](https://github.com/ford442/flac_player/issues/176) / [#177](https://github.com/ford442/flac_player/issues/177), shipped as [#193](https://github.com/ford442/flac_player/issues/193)) is **complete**. Listening rooms ([#197](https://github.com/ford442/flac_player/issues/197)) can build on the extension points below.
-
-### Backend consolidation (`src/audio/backends/`) — done
-
-Add optional interface on `ConfigurableAudioBackend`:
+| Hook | Purpose |
+|------|---------|
+| `setListeningSyncMode('off' \| 'host' \| 'guest')` | Any role → `StreamingAudioPlayer.setNativeOnly(true)`. Guest → no queue auto-advance, no gapless preload. |
+| `getSyncClock()` | `SyncClock` of the native `<audio>` path, else `null`. |
+| `playTrack(track, index, { autoplay, restorePosition, startAt })` | Guests load without playing; hosts reload in place. Resolves `true` on success. |
 
 ```typescript
 interface SyncClock {
-  /** Seconds; same semantics as HTMLMediaElement.currentTime */
-  getSyncPosition(): number;
+  getSyncPosition(): number;   // HTMLMediaElement.currentTime
   isSyncPlaying(): boolean;
-}
-
-interface ConfigurableAudioBackend extends AudioBackend {
-  getSyncClock?(): SyncClock | null;  // null = room mode unsupported
+  isSyncEnded(): boolean;
+  isSyncSeeking(): boolean;    // seeking or readyState < HAVE_FUTURE_DATA
+  getSyncRate(): number;
 }
 ```
 
-MVP: implement only on `StreamingBackend` (native path). Other backends return `null`; UI shows "Listening rooms require streaming mode."
+Only `StreamingAudioPlayer` implements `getSyncClock` / `setNativeOnly` (optional on `ConfigurableAudioBackend`).
 
-### Player decomposition — done (`usePlaybackController`)
+### Host publishing
 
-**`usePlaybackController`** exposes stable callbacks for room sync:
+The host does not instrument UI handlers. `HostPublisher.observe()` runs on every playback state change and a 1 s tick, and compares the real clock with what guests would extrapolate from the last event:
 
-| Callback | Room `publish*` |
-|----------|-----------------|
-| `onPlay` | `publishPlay` |
-| `onPause` | `publishPause` |
-| `onSeek` | `publishSeek` |
-| `onTrackChange` | `publishTrackChange` |
-| `onQueueChange` | `publishQueueUpdate` |
+| Observation | Sent |
+|-------------|------|
+| New track id (published as soon as loading starts, at position 0, so guests load in parallel) | `TRACK_CHANGE` |
+| Play/pause edge | `PLAY` / `PAUSE` |
+| Position off by > 0.5 s (seek, scrub, buffering stall) or rate change | `SEEK` (throttled to one per 300 ms) |
+| Nothing for 5 s | `HEARTBEAT` |
 
-`useListeningRoom` mounts in a parent shell (`PlayerShell` or `App`), not inside ShaderGUI/visualizer code.
+Queue edits publish `QUEUE_UPDATE` (debounced 300 ms, deduplicated). After a reconnect the publisher resets and re-sends queue + state. Local files (`local-…` ids) are never published, and dropping files is disabled while in a room.
 
-### #180 — Audio pipeline integration tests
+### Clock sync
 
-Add harness cases:
+`RoomConnection` sends 5 `TIME_SYNC` pings 250 ms apart after JOIN, then one every 15 s. Each reply gives `offset = serverTime − (t0 + t3) / 2`; the lowest-RTT sample of the last 8 wins. Local time is `performance.timeOrigin + performance.now()` (monotonic). Before the first reply, the offset is seeded from the first message's `serverTime`.
 
-- Mock WebSocket server replays `STATE_SNAPSHOT` → guest seek position
-- Two-tab Playwright: host play/pause, assert guest state within 1 s
-- 10-minute soak (CI nightly): assert drift &lt; 500 ms samples every 30 s
+### Guest sync (`GuestSync`)
 
----
+Runs on every reference update and a 1 s tick:
 
-## Security and abuse
+```
+expected = position + (serverNow − positionUpdatedAt) / 1000 × rate     (while playing)
+drift    = (local − expected) × 1000                                     (+ = guest ahead)
 
-- `host_token`: 32+ byte random, required for host WS and `DELETE`
-- Guests cannot seek or change queue (server-enforced)
-- Room IDs: same entropy as share IDs (`URLShortener.generate_short_id`)
-- No PII in room state; track IDs only
-- Expire rooms by `expires_at`; sweep stale rooms on interval
+track differs        → load it (no autoplay); unresolvable → "Track unavailable" (no retry loop)
+host paused          → pause; seek to host position if > 0.25 s off
+host playing, local paused → seek to expected + seekLead if > 250 ms off; play
+                             NotAllowedError / suspended AudioContext → "▶ Start listening"
+seeking / < 1.5 s since our seek → wait
+|drift| > 500 ms     → seek to expected + seekLead          ("Out of sync" badge)
+|drift| > 250 ms     → nudge playbackRate ×0.96 / ×1.04 until |drift| < 60 ms
+otherwise            → playbackRate = host rate
+```
 
----
+`seekLead` (initially 150 ms, 0–1000 ms) compensates seek→audible latency: after each seek, the residual drift once the cooldown ends adjusts it by half. Nudges rely on `preservesPitch` (default on for `<audio>`). A track that ended locally is not restarted while waiting for the host's `TRACK_CHANGE`.
 
-## Operations checklist (production)
+Guest track ids are resolved from the library cache, then one `GET /api/songs?limit=1000` page when many are unknown, then `GET /api/songs/{id}` (at most 25 lookups).
 
-- [ ] nginx `proxy_set_header Upgrade` + `Connection "upgrade"` for `/ws/`
-- [ ] `wss://` TLS on same cert as `storage.noahcohn.com`
-- [ ] Add app origin to `CORS_ALLOWED_ORIGINS` if not wildcard
-- [ ] Health: `GET /api/health` includes `rooms_active` count (optional)
-- [ ] Monitor: WS connection count, room create rate, average guest count
+### Environment variables
 
----
-
-## Migration from static share
-
-Static share remains unchanged. Optional later: **"Share playlist"** vs **"Listen together"** toggle in share dialog.
-
-| Action | Static share | Listening room |
-|--------|--------------|----------------|
-| API | `POST /api/share` | `POST /api/rooms` |
-| Link | `/playlist/{id}` | `/room/{id}` |
-| Data | `track_ids` snapshot | live state over WS |
-| TinyURL | yes | Phase 2 |
+| Variable | Side | Purpose |
+|----------|------|---------|
+| `REACT_APP_ROOMS_API_URL` | client | Rooms REST base; defaults to `REACT_APP_API_URL` |
+| `REACT_APP_WS_URL` | client | WebSocket base override; default derives `https→wss` / `http→ws` from the rooms base |
+| `CORS_ALLOWED_ORIGINS` | server | Also gates the WebSocket handshake |
+| `PUBLIC_WS_BASE_URL` | server | `ws_url` base when a proxy hides the public host |
+| `ROOM_MAX_GUESTS`, `ROOM_MAX_ACTIVE`, `ROOM_HOST_GRACE_SECONDS`, `ROOM_CREATE_RATE_LIMIT_MAX` | server | Limits (defaults 20 / 200 / 30 / 10) |
 
 ---
 
-## Implementation phases
+## Production port (`storage.noahcohn.com`)
 
-### Phase 0 — This document
+`rooms.py` depends only on FastAPI and `url_shortener.py`, so the bridge can mount it unchanged:
 
-- [x] Capture protocol, state shape, sync algorithm
-- [x] Define extension points for backend consolidation / playback controller / #180
+```python
+from rooms import RoomManager, create_rooms_router
 
-### Phase 1 — MVP
+ROOMS = RoomManager()
+app.include_router(create_rooms_router(
+    ROOMS,
+    app_base_url="https://<player origin>",
+    allowed_origins=CORS_ALLOWED_ORIGINS,          # same list as the songs API
+    public_ws_base_url="wss://storage.noahcohn.com",
+))
+# lifespan: asyncio.create_task(ROOMS.run_sweeper()); on shutdown: await ROOMS.shutdown()
+```
 
-1. `app.py` in-memory rooms + WebSocket endpoint
-2. `src/listening/*` client modules + `useListeningRoom`
-3. `/room/{id}` route + `ListeningRoomPanel` UI
-4. Host/guest manual QA + Playwright two-tab test
-5. Port endpoints to production bridge
+Checklist:
 
-### Phase 2 — Latency and permissions
+- [ ] Mount the router in `contabo_storage_manager/packages/python-bridge` (single worker, or Redis-backed manager)
+- [ ] nginx: `proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";` and `proxy_read_timeout ≥ 60s` for `/ws/` (heartbeats and TIME_SYNC keep sockets busy every ≤ 15 s)
+- [ ] `wss://` on the existing certificate
+- [ ] Player origin in `CORS_ALLOWED_ORIGINS` (REST **and** WebSocket)
+- [ ] `GET /api/health` reports `rooms_active` (done in `app.py`)
 
-- WebRTC data channel for sync metadata
-- Co-DJ roles + `guest:seek_request`
-- TinyURL for `join_url`
-- Multi-backend `SyncClock`
+Until then the player shows "Listening rooms are not available on this server yet" when `POST /api/rooms` returns 404, or `REACT_APP_ROOMS_API_URL` can point at an `app.py` deployment while songs stay on `storage.noahcohn.com`.
 
 ---
+
+## Tests
+
+| Test | Covers |
+|------|--------|
+| `tests/listeningSync.test.ts` | `syncEngine` thresholds / hysteresis / seek lead, `clockSync`, protocol decoding, links |
+| `tests/listeningRoom.test.ts` | `GuestSync` apply snapshot + drift correct against a simulated `<audio>` clock, `HostPublisher` event selection, `RoomConnection` JOIN / clock / reconnect / LEAVE |
+| `tests/test_rooms.py` | state transitions, validation, rate limit, origin check, host/guest WebSocket flow, delete, grace expiry, sweep |
+
+Manual two-tab check: run `app.py` with a few long tracks, start the dev server with `REACT_APP_API_URL=http://localhost:7860`, host in one tab, open the join link in another.
+
+---
+
+## Phase 2 and later
+
+- WebRTC data channel for sub-100 ms sync and lower server load
+- Guest roles: listen-only vs co-DJ (`guest:seek_request` + host approval)
+- TinyURL for join links (`url_shortener.py`)
+- Buffered-backend clocks (worklet ring position / `AudioContext.currentTime` mapping) — `SyncClock` is the extension point
+- Studio DSP (separate PR train): Rubber Band tempo on worklet/SDL, LUFS meter, hashed WASM artifacts
 
 ## Related docs
 
-- [API.md](./API.md) — REST catalog (room endpoints marked planned)
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — system diagram (listening layer)
-- [ROADMAP.md](./ROADMAP.md) — #209 tracking
+- [API.md](./API.md) — REST catalog
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — system diagram
 - [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) — why streaming-only for MVP
+- [ROADMAP.md](./ROADMAP.md) — #209 tracking

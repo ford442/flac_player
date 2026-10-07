@@ -18,7 +18,7 @@ import { PlayerFallbackNowPlayingTab } from './player-fallback/PlayerFallbackNow
 import { PlayerFallbackPlaylistsTab } from './player-fallback/PlayerFallbackPlaylistsTab';
 import { PlayerFallbackSettingsTab } from './player-fallback/PlayerFallbackSettingsTab';
 import { PlayerFallbackTransportBar } from './player-fallback/PlayerFallbackTransportBar';
-import { QueuePanelSharedProps, ViewTab, LibraryViewMode } from './player-fallback/types';
+import { QueuePanelSharedProps, RoomBadge, ViewTab, LibraryViewMode } from './player-fallback/types';
 
 export interface PlayerFallbackViewProps {
   toasts: Toast[];
@@ -131,6 +131,7 @@ export interface PlayerFallbackViewProps {
   onSetShowHtmlFallback: (v: boolean) => void;
   onClearCache: () => void;
   onGenerationCompleted: (songId: string) => Promise<void>;
+  room?: RoomBadge;
 }
 
 export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => {
@@ -160,7 +161,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     onRemoveFromQueue, onClearQueue, onReorderQueue, onSmartMix, onShareQueue, onDownloadQueue,
     hasMoreLibrary, onLoadMoreLibrary, onNotify,
     onUpdateTrack, onTrashTrack, onLoadCloudPlaylist, onSetShowHtmlFallback, onClearCache,
-    onGenerationCompleted,
+    onGenerationCompleted, room,
   } = props;
 
   const [generationModelFilter, setGenerationModelFilter] = useState('all');
@@ -189,6 +190,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     queue, currentIndex: queueCurrentIndex, prebufferingNext,
     onTrackClick: onQueueTrackClick, onRemoveTrack: onRemoveFromQueue, onClearQueue,
     onShuffle: () => setShuffle(s => !s), onSmartMix, onShareQueue, onDownloadQueue, onReorderQueue,
+    onListenTogether: room?.role ? undefined : room?.onListenTogether,
     shuffle, repeatMode,
     onToggleRepeat: () => setRepeatMode(m => m === 'off' ? 'all' : m === 'all' ? 'one' : 'off'),
   };
@@ -215,6 +217,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
         isResyncingLibrary={isResyncingLibrary} onTriggerResync={onTriggerResync}
         onSetShowHtmlFallback={onSetShowHtmlFallback}
         setShowHelp={setShowHelp} setShowQueue={setShowQueue} queueCount={queue.length}
+        room={room}
       />
 
       <div className="flex-1 flex overflow-hidden">

@@ -146,27 +146,31 @@ Get a shared playlist by ID.
 #### GET `/playlist/{share_id}`
 Redirect to the main app with the shared playlist loaded.
 
-### Listening rooms (planned — #209)
+### Listening rooms (#209)
 
-> **Not implemented yet.** Static share endpoints above remain the only sharing API in production. See [LISTENING_ROOMS.md](./LISTENING_ROOMS.md) for the full design.
+> **Implemented in `app.py` (`rooms.py`); not yet on `storage.noahcohn.com`.** Port steps and the full protocol: [LISTENING_ROOMS.md](./LISTENING_ROOMS.md). Rooms are in-memory — run a single uvicorn worker.
 
-Synced “listen together” sessions: host creates a room; guests join via `/room/{room_id}` and follow live playback over WebSocket.
+Synced “listen together” sessions: the host creates a room; guests open `{app}/?room={room_id}` and follow live playback over WebSocket.
 
-#### `POST /api/rooms` (planned)
+#### `POST /api/rooms`
 
-Create a room. Response includes `room_id`, `host_token` (host-only), `join_url`, and `ws_url`.
+Body `{ "title"?: string, "track_ids"?: string[], "expires_in_minutes"?: 5–1440 }`. Returns `room_id`, `host_token` (host-only; keep it out of links), `join_url`, `ws_url`, `expires_at`. 429 when one client creates too many rooms, 503 past `ROOM_MAX_ACTIVE`.
 
-#### `GET /api/rooms/{room_id}` (planned)
+#### `GET /api/rooms/{room_id}`
 
-Room metadata for the join page (title, guest count, host connected).
+Room metadata: `title`, `track_count`, `guest_count`, `host_connected`, `expires_at`. 404 when missing or ended.
 
-#### `DELETE /api/rooms/{room_id}` (planned)
+#### `DELETE /api/rooms/{room_id}`
 
-Host teardown (`host_token` required).
+Host teardown; requires header `X-Host-Token`. Guests receive `ROOM_CLOSED {reason: "deleted"}`.
 
-#### `WS /ws/rooms/{room_id}` (planned)
+#### `GET /room/{room_id}`
 
-JSON messages: `JOIN`, `STATE_SNAPSHOT`, `PLAY`, `PAUSE`, `SEEK`, `TRACK_CHANGE`, `QUEUE_UPDATE`, `HEARTBEAT`, `RESYNC_REQUEST`, `ROOM_CLOSED`.
+Redirects to `/?room={room_id}`.
+
+#### `WS /ws/rooms/{room_id}`
+
+Origin-checked against `CORS_ALLOWED_ORIGINS`. First message `JOIN {role, hostToken?, clientId?}`. Envelope `{type, roomId, serverTime, revision?, payload}`. Messages: `JOINED`, `STATE_SNAPSHOT`, `PLAY`, `PAUSE`, `SEEK`, `TRACK_CHANGE`, `QUEUE_UPDATE`, `HEARTBEAT`, `PRESENCE`, `TIME_SYNC`, `RESYNC_REQUEST`, `LEAVE`, `ROOM_CLOSED`, `ERROR`. Only the host may send playback/queue messages.
 
 ### MusicBrainz Integration
 

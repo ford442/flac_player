@@ -252,25 +252,26 @@ npm run test:e2e       # Playwright smoke tests (tests/smoke.spec.ts)
 npm run typecheck && npm run lint
 ```
 
-## Listening rooms (planned — #209)
+## Listening rooms (MVP — #209)
 
 Static playlist share (`POST /api/share`, `/playlist/{id}`) loads a track list once per client. **Synced listening rooms** add a host-authoritative WebSocket layer so guests follow the same track and playhead.
 
 ```
-Host Player                    Signaling (WS)                 Guest Player(s)
-    │  POST /api/rooms                                              │
-    ├─ JOIN (host) ───────────────────────────────────────────────►│
-    ├─ PLAY / PAUSE / SEEK / QUEUE_UPDATE ─────────────────────────►│ apply + drift-correct
-    └─ HEARTBEAT (5s) ───────────────────────────────────────────►│
+Host Player                    rooms.py (WS)                  Guest Player(s)
+ usePlaybackController             │                     usePlaybackController
+   └ SyncClock (<audio>)           │                       └ SyncClock (<audio>)
+ HostPublisher.observe ─ TRACK_CHANGE / PLAY / PAUSE / SEEK ─► GuestSync.reconcile
+                       ─ QUEUE_UPDATE / HEARTBEAT (5 s) ─────►   load · play/pause ·
+                       ◄─ TIME_SYNC (server clock) ──────────►   nudge rate · seek
 ```
 
-MVP: **streaming backend only**, `HTMLAudioElement.currentTime` as clock, target ≤ 500 ms drift. Full protocol, API contract, and foundation refactor hooks: [LISTENING_ROOMS.md](./LISTENING_ROOMS.md).
+`useListeningRoomBridge` mounts next to `usePlaybackController` in `Player.tsx`. Rooms force the streaming backend's native `<audio>` path; measured drift between two tabs is tens of ms. Protocol, server, and production port: [LISTENING_ROOMS.md](./LISTENING_ROOMS.md).
 
 ## Related docs
 
 - [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) — backend selection guide
 - [API.md](./API.md) — REST + projectM embed contract
-- [LISTENING_ROOMS.md](./LISTENING_ROOMS.md) — synced listening rooms design (implement via #209)
+- [LISTENING_ROOMS.md](./LISTENING_ROOMS.md) — synced listening rooms (MVP, #209)
 - [DEVELOPER_CONTEXT.md](./DEVELOPER_CONTEXT.md) — complexity hotspots for agents
 - [GPU_CHORES.md](./GPU_CHORES.md) — display-only peak/RMS reduce (WebGPU / Worker / CPU)
 - [ROADMAP.md](./ROADMAP.md) — current open GitHub issues and priorities

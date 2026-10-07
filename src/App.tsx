@@ -1,14 +1,16 @@
 import React from 'react';
 import './App.css';
 import { Player } from './components/Player';
+import { isRoomRoute } from './listening/roomSession';
 
+/** Shared playlists and listening rooms open the player full-screen. */
 const isSharedPlaylistRoute = (): boolean => {
   const params = new URLSearchParams(window.location.search);
   if (params.get('share')) {
     return true;
   }
 
-  return /^\/playlist\/[^/]+$/.test(window.location.pathname);
+  return /^\/playlist\/[^/]+$/.test(window.location.pathname) || isRoomRoute();
 };
 
 const App: React.FC = () => {

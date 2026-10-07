@@ -91,6 +91,7 @@ flac_player/
 │   │       └── Sdl3AudioPlayer.ts        # SDL3 WASM
 │   ├── hooks/
 │   │   ├── usePlaybackController.ts  # Backend lifecycle, load/play, queue advance
+│   ├── listening/              # Synced listening rooms (#209): protocol, clock sync, GuestSync, HostPublisher, hooks
 │   ├── audioLoader.ts          # Audio fetching + backend API client (~379 lines)
 │   ├── flacDecoder.ts          # FLAC/WAV decoder (Web Audio API)
 │   ├── webgpuVisualizer.ts     # WebGPU visualization engine (~687 lines)
@@ -100,6 +101,7 @@ flac_player/
 │   └── songs/                  # JSON index and metadata
 │       └── index.json          # Library persistence file
 ├── app.py                      # FastAPI backend (~1261 lines)
+├── rooms.py                    # Listening-room REST + WebSocket router (mounted by app.py)
 ├── deploy.py                   # Python SFTP deployment script
 ├── package.json                # NPM dependencies and scripts
 ├── tsconfig.json               # TypeScript configuration (strict mode enabled)
@@ -278,6 +280,7 @@ The FastAPI backend provides the following endpoints (verified from `app.py`):
 - **Trash**: `POST /api/songs/{id}/trash` (sets `rating=0`, adds `trash` tag)
 - **Tag Suggestions**: `GET /api/songs/{id}/suggest-tags`
 - **Share**: `POST /api/share`, `GET /api/share/{share_id}`, `GET /playlist/{share_id}`
+- **Listening rooms** (`rooms.py`): `POST /api/rooms`, `GET`/`DELETE /api/rooms/{room_id}`, `GET /room/{room_id}`, `WS /ws/rooms/{room_id}` — in-memory, single worker; see `docs/LISTENING_ROOMS.md`
 - **MusicBrainz**: `GET /api/musicbrainz/search`
 
 **Storage**: Uses an in-memory cache backed by `data/songs/index.json`. The `data/` directory must be writable at runtime.

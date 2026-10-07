@@ -66,6 +66,19 @@ AnalyserNode → VisualizerShell
   → projectM: optional WASM host (?aesthetic=projectm|split)
 ```
 
+## Listening rooms (#209)
+
+```
+Player.tsx → useListeningRoomBridge (next to usePlaybackController) → useListeningRoom
+  host:  HostPublisher.observe(SyncClock) → WS → rooms.py → guests
+  guest: GuestSync.reconcile → playTrack({autoplay:false}) / play / seek / nudge rate
+```
+
+- Join links are `?room={id}` (relative asset paths break deep `/room/{id}` reloads); host token in sessionStorage only
+- Rooms lock the backend to `streaming` and force its native `<audio>` path (`setNativeOnly`, `getSyncClock`)
+- Server: `rooms.py` router mounted in `app.py` (in-memory → one uvicorn worker); production bridge port pending
+- Details: `docs/LISTENING_ROOMS.md`
+
 ## Debug logging
 
 Off by default. Enable with `REACT_APP_DEBUG=true` in `.env` (webpack DefinePlugin).
@@ -95,4 +108,5 @@ Production webpack (`npm run build`) copies prebuilt artifacts from `public/` �
 - `docs/ARCHITECTURE.md` — system diagram
 - `docs/AUDIO_BACKENDS.md` — backend selection
 - `docs/API.md` — REST + projectM embed
+- `docs/LISTENING_ROOMS.md` — synced listening rooms
 - `AGENTS.md` — full agent reference
