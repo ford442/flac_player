@@ -13,7 +13,7 @@ A high-quality React application for playing FLAC and WAV audio files with WebGP
 - **WebGPU Visualization**: Real-time ShaderGUI hardware panel with audio-reactive WGSL shaders
 - **WebGL2 / Canvas2D**: opt-in compatibility renderers (`?visualizer=webgl2` or the Compatibility toggle); WebGPU fails closed instead of silently falling back (#202)
 - **projectM Milkdrop** (optional): In-app visualizer — `?aesthetic=projectm|split`; build with `npm run build:projectm`
-- **Library management**: Ratings, tags, smart mix, queue, shareable playlists
+- **Library management**: Ratings, tags, smart mix, queue, saved (local-first) and shareable playlists
 - **Multiple Audio Sources**: Load audio from:
   - Google Cloud Storage buckets
   - FTP servers (via HTTP/HTTPS proxy)

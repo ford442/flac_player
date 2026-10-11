@@ -315,7 +315,7 @@ export class AudioLoader {
   // Cloud Playlists (from contabo_storage_manager)
   // =============================================================================
 
-  private PLAYLIST_API_URL = process.env.REACT_APP_PLAYLIST_API_URL || 'https://storage.noahcohn.com';
+  private PLAYLIST_API_URL = songApi.getPlaylistApiUrl();
 
   async fetchPlaylists(): Promise<CloudPlaylist[]> {
     try {
@@ -340,9 +340,10 @@ export class AudioLoader {
         return [];
       }
 
-      const data = await response.json();
+      const data: unknown = await response.json();
+      if (!Array.isArray(data)) return [];
       debug.log('FETCH_PLAYLISTS_PARSED', { count: data.length });
-      return data;
+      return data as CloudPlaylist[];
     } catch (error) {
       debug.error('FETCH_PLAYLISTS_FAILED', {
         message: error instanceof Error ? error.message : String(error)
@@ -370,6 +371,11 @@ export class AudioLoader {
       return [];
     }
   }
+
+  createCloudPlaylist = songApi.createCloudPlaylist;
+  replaceCloudPlaylist = songApi.replaceCloudPlaylist;
+  deleteCloudPlaylist = songApi.deleteCloudPlaylist;
+  probePlaylistWriteSupport = songApi.probePlaylistWriteSupport;
 
   /** Probe remote audio URL for size and range-request support. */
   async probeAudioUrl(url: string, signal?: AbortSignal) {

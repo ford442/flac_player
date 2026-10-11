@@ -34,7 +34,7 @@ flowchart TB
 
   subgraph FX["Shared audio graph"]
     ACM["AudioContextManager"]
-    EQ["EQChain (5-band)"]
+    EQ["dsp-chain worklet (dsp_chain.h WASM)<br/>fallback: EQChain + ReplayGainNode"]
     Analyser["AnalyserNode"]
   end
 
@@ -196,7 +196,7 @@ In-app ProjectMHost OR postMessage / BroadcastChannel('projectm-audio')
 ### AudioContextManager (`src/audio/AudioContextManager.ts`)
 
 - Single shared `AudioContext`
-- 5-band EQ via `EQChain.ts`
+- Speaker DSP (ReplayGain → limiter → volume → 5-band EQ) in the `dsp-chain` AudioWorklet: `src/sdl/dsp_chain.h` compiled to `public/dsp-chain.wasm`, the same code SDL runs; `EQChain.ts` / `ReplayGainNode.ts` when it cannot load (see `docs/AUDIO_BACKENDS.md` → Speaker-path DSP)
 - Analyser policy (`fftSize`, smoothing, dB range) set explicitly from `analyserPolicy.ts`
 - Application-lifetime device: backends connect/disconnect sources and never `suspend()` it
 - `connectInput()` / `connectVisualizerFeed()` routing
@@ -205,6 +205,10 @@ In-app ProjectMHost OR postMessage / BroadcastChannel('projectm-audio')
 ### SDL PCM bridge (`src/audio/SdlPcmBridge.ts`)
 
 Visualizer tap only: lock-free ring in C++ (`src/sdl/pcm_ring.h`, 65536 floats) → AudioWorklet → `AnalyserNode` for SDL3. SDL3 **playback** uses a separate play ring (`src/sdl/play_ring.h`, 384000 floats) fed by `_push_pcm`.
+
+### Analysis ring (`src/audio/analysisRing.ts`)
+
+Broadcast SharedArrayBuffer tap of post-DSP PCM for analysis consumers: written by the SDL callback (`src/sdl/analysis_ring.h`) or the `dsp-chain` worklet, read at UI rate by `AnalysisRingReader` (`getAnalysisTap()` picks the live writer). Feeds the `?gpu_fft=1` live spectrum and its `dsp_fft.h` WASM golden (`src/audio/wasmFft.ts`). See `docs/AUDIO_BACKENDS.md` → Analysis ring.
 
 ## Library & storage (client)
 

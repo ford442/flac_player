@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <algorithm>
 #include "pcm_ring.h"
+#include "analysis_ring.h"
 #include "play_ring.h"
 #include "dsp_chain.h"
 
@@ -60,6 +61,7 @@ static int configure_stream(int channels, int sampleRate) {
     g_state.playHead = 0;
     g_state.isPlaying = false;
     pcm_ring_reset();
+    analysis_ring_set_format(channels, sampleRate);
     dsp_request_reset();
 
     SDL_AudioSpec spec;
@@ -101,12 +103,14 @@ void SDLCALL fill_audio_callback(void *userdata, SDL_AudioStream *stream, int ad
     floatsWanted = std::min(floatsWanted, (int)(sizeof(g_callbackScratch) / sizeof(g_callbackScratch[0])));
 
     // Speaker DSP (ReplayGain -> limiter -> volume -> EQ) runs in place on the
-    // scratch copy; the viz ring receives the processed signal the user hears.
+    // scratch copy; the viz ring and the analysis ring receive the processed
+    // signal the user hears (memcpy only — analysis runs on the readers' threads).
     if (g_state.streamMode) {
         int got = play_ring_read(g_callbackScratch, floatsWanted);
         if (got > 0) {
             dsp_process(g_callbackScratch, got, g_state.channels, g_state.sampleRate, g_state.volume);
             pcm_ring_write(g_callbackScratch, got);
+            analysis_ring_write(g_callbackScratch, got);
             SDL_PutAudioStreamData(stream, g_callbackScratch, got * (int)sizeof(float));
             g_state.playHead += (size_t)got;
         }
@@ -131,6 +135,7 @@ void SDLCALL fill_audio_callback(void *userdata, SDL_AudioStream *stream, int ad
     dsp_process(g_callbackScratch, floatsToPush, g_state.channels, g_state.sampleRate, g_state.volume);
 
     pcm_ring_write(g_callbackScratch, floatsToPush);
+    analysis_ring_write(g_callbackScratch, floatsToPush);
     SDL_PutAudioStreamData(stream, g_callbackScratch, floatsToPush * (int)sizeof(float));
 
     g_state.playHead += (size_t)floatsToPush;
@@ -159,6 +164,7 @@ int init_audio() {
     }
 
     pcm_ring_init(65536);
+    analysis_ring_init(ANALYSIS_RING_CAPACITY);
     play_ring_init(PLAY_RING_CAPACITY);
 #ifndef NDEBUG
     printf("[C++] init_audio success. Device ID: %u play_ring=%u floats\n",
@@ -266,6 +272,7 @@ void stop() {
     g_state.playHead = 0;
     play_ring_reset();
     pcm_ring_reset();
+    analysis_ring_reset();
     dsp_request_reset();
 }
 
@@ -284,6 +291,7 @@ void seek(float time) {
     SDL_ClearAudioStream(g_state.stream);
     g_state.playHead = sampleIndex;
     pcm_ring_reset();
+    analysis_ring_reset();
     dsp_request_reset();
 }
 
@@ -302,6 +310,7 @@ int seek_stream(double seconds) {
     SDL_ClearAudioStream(g_state.stream);
     play_ring_reset(); // also clears the ended flag
     pcm_ring_reset();
+    analysis_ring_reset();
     dsp_request_reset();
     const size_t frame = (size_t)(seconds * (double)g_state.sampleRate);
     g_state.playHead = frame * (size_t)g_state.channels;
@@ -379,6 +388,18 @@ float* get_pcm_ring_data() {
     return pcm_ring_data();
 }
 
+// Analysis ring header (8 x u32, layout in analysis_ring.h) and data, read by
+// src/audio/analysisRing.ts from the shared WASM memory.
+EMSCRIPTEN_KEEPALIVE
+AnalysisRingState* get_analysis_ring_state() {
+    return &g_analysisRing;
+}
+
+EMSCRIPTEN_KEEPALIVE
+float* get_analysis_ring_data() {
+    return analysis_ring_data();
+}
+
 EMSCRIPTEN_KEEPALIVE
 void cleanup() {
     destroy_stream();
@@ -389,6 +410,7 @@ void cleanup() {
     free_audio_buffer();
     play_ring_cleanup();
     pcm_ring_cleanup();
+    analysis_ring_cleanup();
     SDL_Quit();
 }
 

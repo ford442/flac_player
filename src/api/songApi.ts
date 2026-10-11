@@ -1,6 +1,6 @@
 // API client for song/library management endpoints
 
-import type { PlaylistTrack, LibraryStats, TagInfo, ShareResponse, SortBy } from '../types/library';
+import type { CloudPlaylist, PlaylistTrack, LibraryStats, TagInfo, ShareResponse, SortBy } from '../types/library';
 import { debug } from '../utils/debug';
 
 // API Configuration
@@ -519,6 +519,69 @@ export async function createShare(
   const data = await response.json();
   debug.log('CREATE_SHARE_RESPONSE', data);
   return data as ShareResponse;
+}
+
+// =============================================================================
+// Cloud playlists (CRUD contract — see docs/API.md "Playlists")
+//
+// Optional: storage.noahcohn.com may not implement the write routes. Callers treat
+// a failure (404/405/network) as "stay local-only"; nothing here is required for
+// the local IndexedDB playlists to work.
+// =============================================================================
+
+const PLAYLIST_API_URL = process.env.REACT_APP_PLAYLIST_API_URL || 'https://storage.noahcohn.com';
+
+export function getPlaylistApiUrl(): string {
+  return PLAYLIST_API_URL;
+}
+
+export interface CloudPlaylistInput {
+  title: string;
+  description?: string;
+  track_ids: string[];
+}
+
+async function sendPlaylist(method: 'POST' | 'PUT', path: string, input: CloudPlaylistInput): Promise<CloudPlaylist> {
+  const response = await fetch(`${PLAYLIST_API_URL}${path}`, {
+    method,
+    mode: 'cors',
+    credentials: 'omit',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) throw new Error(`Playlist ${method} failed: ${response.status} ${response.statusText}`);
+  return await response.json() as CloudPlaylist;
+}
+
+export function createCloudPlaylist(input: CloudPlaylistInput): Promise<CloudPlaylist> {
+  return sendPlaylist('POST', '/api/playlists', input);
+}
+
+export function replaceCloudPlaylist(id: string, input: CloudPlaylistInput): Promise<CloudPlaylist> {
+  return sendPlaylist('PUT', `/api/playlists/${encodeURIComponent(id)}`, input);
+}
+
+export async function deleteCloudPlaylist(id: string): Promise<void> {
+  const response = await fetch(`${PLAYLIST_API_URL}/api/playlists/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    mode: 'cors',
+    credentials: 'omit',
+  });
+  if (!response.ok) throw new Error(`Playlist DELETE failed: ${response.status} ${response.statusText}`);
+}
+
+/** True only when the host answers `GET /api/playlists/health` with `{ writable: true }`. */
+export async function probePlaylistWriteSupport(signal?: AbortSignal): Promise<boolean> {
+  try {
+    const response = await fetch(`${PLAYLIST_API_URL}/api/playlists/health`, {
+      mode: 'cors', credentials: 'omit', signal,
+    });
+    if (!response.ok) return false;
+    const body: unknown = await response.json();
+    return typeof body === 'object' && body !== null && (body as { writable?: unknown }).writable === true;
+  } catch {
+    return false;
+  }
 }
 
 // =============================================================================

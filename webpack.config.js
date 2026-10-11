@@ -41,6 +41,7 @@ module.exports = (env = {}, argv = {}) => {
     { from: 'public/ffmpeg', to: 'ffmpeg' },
     // HQ resampler (src/audio/resampler.ts); linear fallback when absent.
     { from: 'public/speex-resampler.*', to: '[name][ext]', noErrorOnMissing: true },
+    { from: 'public/dsp-chain.*', to: '[name][ext]', noErrorOnMissing: true },
   ];
 
   if (hasWasm) {

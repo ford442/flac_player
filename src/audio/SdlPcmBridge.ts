@@ -1,10 +1,14 @@
 import { AudioContextManager } from './AudioContextManager';
+import { AnalysisRingReader, setAnalysisTap } from './analysisRing';
 import { SDL_PCM_TAP_NAME, type SdlPcmTapOptions } from './worklets/sdlPcmTapMessages';
 
 /** WASM exports from the SDL3 audio module. */
 export interface SdlPcmModule {
   _get_pcm_ring_state(): number;
   _get_pcm_ring_data(): number;
+  /** analysis_ring.h header / data (absent in modules built before the analysis tap). */
+  _get_analysis_ring_state?(): number;
+  _get_analysis_ring_data?(): number;
   wasmMemory?: WebAssembly.Memory;
 }
 
@@ -14,6 +18,7 @@ const SDL_PCM_TAP_URL = new URL('./worklets/sdlPcmTapProcessor.js', import.meta.
 /**
  * Bridges SDL WASM playback into the shared Web Audio analyser graph.
  * SDL owns speaker output; this worklet feeds the analyser only (speakers muted).
+ * Also publishes SDL's analysis ring (analysis_ring.h) as the active analysis tap.
  */
 export class SdlPcmBridge {
   private workletNode: AudioWorkletNode | null = null;
@@ -30,6 +35,12 @@ export class SdlPcmBridge {
     if (!memoryBuffer) {
       console.warn('[SdlPcmBridge] wasmMemory unavailable; visualizer will stay silent.');
       return;
+    }
+
+    const analysisStatePtr = module._get_analysis_ring_state?.() ?? 0;
+    const analysisDataPtr = module._get_analysis_ring_data?.() ?? 0;
+    if (analysisStatePtr && analysisDataPtr) {
+      setAnalysisTap('sdl', new AnalysisRingReader(memoryBuffer, analysisStatePtr, analysisDataPtr));
     }
 
     const ringStatePtr = module._get_pcm_ring_state();
@@ -81,6 +92,7 @@ export class SdlPcmBridge {
   }
 
   disconnect(contextManager: AudioContextManager): void {
+    setAnalysisTap('sdl', null);
     if (this.workletNode) {
       this.workletNode.disconnect();
       this.workletNode = null;

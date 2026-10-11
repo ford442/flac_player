@@ -9,6 +9,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
   cd "$PROJECT_ROOT"
   sha256sum \
     scripts/build-wasm.sh \
+    src/sdl/analysis_ring.h \
     src/sdl/audio_engine.cpp \
     src/sdl/dsp_chain.h \
     src/sdl/pcm_ring.h \

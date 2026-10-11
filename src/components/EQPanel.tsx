@@ -28,6 +28,12 @@ function formatMs(seconds: number | null): string {
   return seconds === null ? '—' : `${(seconds * 1000).toFixed(1)} ms`;
 }
 
+function formatDspEngine({ info, externalPlayback }: AudioOutputControls): string {
+  if (externalPlayback) return 'SDL WASM';
+  if (!info) return '—';
+  return info.dspEngine === 'wasm' ? 'Worklet WASM' : 'Web Audio nodes';
+}
+
 interface EQPanelProps {
   eqGains: number[];
   onBandChange: (index: number, gainDb: number) => void;
@@ -269,6 +275,13 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             <dd className="font-mono text-purple-300">{formatMs(audioOutput.info?.outputLatency ?? null)}</dd>
             <dt className="text-gray-500">Channels</dt>
             <dd className="font-mono text-purple-300">{audioOutput.info?.channelCount ?? '—'}</dd>
+            <dt className="text-gray-500">EQ / limiter</dt>
+            <dd
+              className="font-mono text-purple-300"
+              title="Who runs EQ, ReplayGain and the limiter. WASM = dsp_chain.h, the same code on SDL and Web Audio."
+            >
+              {formatDspEngine(audioOutput)}
+            </dd>
           </dl>
         )}
       </div>

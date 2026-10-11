@@ -41,7 +41,7 @@ export const PlayerFallbackSidebar: React.FC<PlayerFallbackSidebarProps> = ({
         { id: 'library',     label: '📚 Library',    count: libraryCount },
         { id: 'now-playing', label: '▶️ Now Playing' },
         { id: 'queue',       label: '📋 Queue',      count: queueCount },
-        { id: 'playlists',   label: '☁️ Playlists',  count: playlistCount },
+        { id: 'playlists',   label: '💾 Playlists',  count: playlistCount },
         { id: 'generate',    label: '✨ Generate' },
         { id: 'convert',     label: '🔄 Convert' },
         { id: 'settings',    label: '⚙️ Settings' },
