@@ -67,6 +67,8 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 
 **Gapless API:** `setGaplessSettings()`, `preloadNext({ url, duration? })`, `clearPreload()`.
 
+**Listening rooms:** `setNativeOnly(true)` skips path selection and loads every URL (FLAC included) on the native path; `getSyncClock()` exposes that element's `currentTime` / paused / seeking / rate (null on the hi-fi and buffered paths). Rooms are streaming-only for now — see [LISTENING_ROOMS.md](./LISTENING_ROOMS.md).
+
 **Requirements:** Audio host must send `Access-Control-Allow-Origin` and expose `Accept-Ranges` / `Content-Length` (hi-fi seek also accepts a `206` + `Content-Range` answer to a 1-byte Range GET).
 
 ---

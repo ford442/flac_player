@@ -39,6 +39,17 @@ export interface PlaybackModeState {
   setRepeatMode: React.Dispatch<React.SetStateAction<RepeatMode>>;
 }
 
+/**
+ * Listening-room summary for the fallback view. One prop on purpose: room
+ * actions (copy link, resync, leave) live in ListeningRoomPanel.
+ */
+export interface RoomBadge {
+  role: 'host' | 'guest' | null;
+  driftMs: number | null;
+  /** Start hosting with the current queue; absent when rooms are unavailable here. */
+  onListenTogether?: () => void;
+}
+
 /** Shared subset of QueuePanel's props, common to both the drawer and the queue tab. */
 export interface QueuePanelSharedProps {
   queue: PlaylistTrack[];
@@ -50,6 +61,7 @@ export interface QueuePanelSharedProps {
   onShuffle: () => void;
   onSmartMix: () => void;
   onShareQueue: () => void;
+  onListenTogether?: () => void;
   onDownloadQueue: () => void;
   onReorderQueue: (start: number, end: number) => void;
   shuffle: boolean;

@@ -4,6 +4,7 @@
 // Native path: <audio> element (WAV/MP3 or when WASM/worklet unavailable)
 //
 // Gapless / crossfade is implemented on the native <audio> path (dual elements).
+// Listening rooms force the native path (setNativeOnly) and read its SyncClock.
 
 import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextManager } from '../AudioContextManager';
 import { ensureContextForUrl } from '../ensureContextForSource';
@@ -17,7 +18,7 @@ import {
   type PlaybackPathInfo,
 } from '../../utils/playbackPath';
 import { isTrackCached, getOrFetchTrack } from '../../storage/trackCache';
-import type { AudioBackendCapabilities, AudioPlaybackState, DecodedPcmView } from '../../types/audio';
+import type { AudioBackendCapabilities, AudioPlaybackState, DecodedPcmView, SyncClock } from '../../types/audio';
 import {
   DEFAULT_GAPLESS_MODE,
   DEFAULT_CROSSFADE_MS,
@@ -62,6 +63,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
   private currentTrackDuration: number | null = null;
   private prebufferingNext = false;
   private headerProbeAbort: AbortController | null = null;
+  private nativeOnly = false;
   private readonly unsubscribeGraph: () => void;
 
   private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
@@ -183,6 +185,11 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
 
     if (isGaplessActive(this.gaplessSettings)) {
       void this._refineDurationFromHeader(url);
+    }
+
+    if (this.nativeOnly) {
+      this.activePath = 'native';
+      return this._loadNative(url);
     }
 
     let probe;
@@ -582,6 +589,23 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
       duration: 0,
       isLoading: false,
       prebufferingNext: this.prebufferingNext,
+    };
+  }
+
+  setNativeOnly(enabled: boolean): void {
+    this.nativeOnly = enabled;
+  }
+
+  getSyncClock(): SyncClock | null {
+    if (this.activePath !== 'native' || !this.audioElement.src) return null;
+    // Read through `this` so a gapless handoff (element swap) keeps the clock valid.
+    return {
+      getSyncPosition: () => this.audioElement.currentTime,
+      isSyncPlaying: () => !this.audioElement.paused && !this.audioElement.ended,
+      isSyncEnded: () => this.audioElement.ended,
+      isSyncSeeking: () =>
+        this.audioElement.seeking || this.audioElement.readyState < HTMLMediaElement.HAVE_FUTURE_DATA,
+      getSyncRate: () => this.audioElement.playbackRate,
     };
   }
 

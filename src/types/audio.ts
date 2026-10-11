@@ -40,6 +40,22 @@ export const DEFAULT_AUDIO_BACKEND_CAPABILITIES: AudioBackendCapabilities = {
   sinkId: false,
 };
 
+/**
+ * Playback clock for listening rooms (#209). Same semantics as
+ * HTMLMediaElement.currentTime; only the native `<audio>` streaming path
+ * provides one in the MVP.
+ */
+export interface SyncClock {
+  /** Seconds into the current track. */
+  getSyncPosition(): number;
+  isSyncPlaying(): boolean;
+  /** True once the current track played to its end. */
+  isSyncEnded(): boolean;
+  /** True while seeking or buffering, when the position is not advancing reliably. */
+  isSyncSeeking(): boolean;
+  getSyncRate(): number;
+}
+
 /** Stable contract shared by every selectable audio implementation. */
 export interface AudioBackend {
   initialize(): Promise<void>;
@@ -79,6 +95,10 @@ export interface ConfigurableAudioBackend extends AudioBackend {
    * Streaming/native paths return null — no second decode.
    */
   getDecodedPcm?(): DecodedPcmView | null;
+  /** Room sync clock; null when the active path cannot provide one (rooms need streaming). */
+  getSyncClock?(): SyncClock | null;
+  /** Force the native `<audio>` path on subsequent loads (listening rooms). */
+  setNativeOnly?(enabled: boolean): void;
   loadFromURLStreaming?(
     url: string,
     options?: {

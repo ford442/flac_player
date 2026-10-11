@@ -14,6 +14,7 @@ interface QueuePanelProps {
   onShuffle: () => void;
   onSmartMix: () => void;
   onShareQueue?: () => void;
+  onListenTogether?: () => void;
   onDownloadQueue?: () => void;
   onReorderQueue?: (startIndex: number, endIndex: number) => void;
   shuffle: boolean;
@@ -34,6 +35,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
   onShuffle,
   onSmartMix,
   onShareQueue,
+  onListenTogether,
   onDownloadQueue,
   onReorderQueue,
   shuffle,
@@ -161,6 +163,18 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
             title="Share Queue"
           >
             🔗
+          </button>
+        )}
+        {onListenTogether && (
+          <button
+            type="button"
+            onClick={onListenTogether}
+            disabled={queue.length === 0}
+            aria-label="Listen together"
+            className="px-3 py-1.5 text-sm bg-white/10 text-gray-300 rounded hover:bg-white/20 disabled:opacity-40 transition-colors"
+            title="Listen together — start a synced room with this queue"
+          >
+            🎧
           </button>
         )}
         {onDownloadQueue && (

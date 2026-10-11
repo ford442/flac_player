@@ -7,6 +7,7 @@ import {
   type ConfigurableAudioBackend,
   type AudioPlaybackState,
   type DecodedPcmView,
+  type SyncClock,
 } from '../types/audio';
 import type { AudioOutputMode } from './usePlayerState';
 import {
@@ -24,6 +25,22 @@ import { getPreferredStorageUrls } from '../utils/audioUtils';
 import { createProjectMPCMFeed, notifyInAppProjectMTrackChange } from '../utils/projectMBridge';
 import { getOrFetchTrack } from '../storage/trackCache';
 import type { RepeatMode } from '../storage/queueStorage';
+
+/**
+ * Listening-room role (#209). Any role forces the native streaming path (the
+ * room clock); a guest additionally follows the host instead of advancing
+ * its own queue.
+ */
+export type ListeningSyncMode = 'off' | 'host' | 'guest';
+
+export interface PlayTrackOptions {
+  /** Start playback once loaded (default true). */
+  autoplay?: boolean;
+  /** Resume the position saved in localStorage for this track (default true). */
+  restorePosition?: boolean;
+  /** Seek here after loading (seconds); wins over restorePosition. */
+  startAt?: number;
+}
 
 export interface PlaybackControllerOptions {
   loader: AudioLoader;
@@ -93,6 +110,7 @@ export function usePlaybackController({
   const [graphGeneration, setGraphGeneration] = useState(0);
 
   const playerRef = useRef<ConfigurableAudioBackend | null>(null);
+  const syncModeRef = useRef<ListeningSyncMode>('off');
 
   /** Path and capabilities change together (load / backend swap). */
   const setPlaybackPath = useCallback((path: PlaybackPathInfo | null) => {
@@ -105,7 +123,8 @@ export function usePlaybackController({
   const loadLocalFileRef = useRef<(file: File) => Promise<void>>(async () => {});
 
   const preloadNextInQueue = useCallback((fromIndex: number) => {
-    if (!isGaplessActive(gaplessSettings)) {
+    // Guests never transition on their own; the host's TRACK_CHANGE drives them.
+    if (!isGaplessActive(gaplessSettings) || syncModeRef.current === 'guest') {
       playerRef.current?.clearPreload?.();
       return;
     }
@@ -274,7 +293,12 @@ export function usePlaybackController({
     }
   }, [loader, outputMode, setCurrentTrack, setError, setPlayerState, addToast]);
 
-  const playTrack = useCallback(async (track: PlaylistTrack, index?: number) => {
+  /** Resolves true once the track is loaded (and playing, unless autoplay is false). */
+  const playTrack = useCallback(async (
+    track: PlaylistTrack,
+    index?: number,
+    { autoplay = true, restorePosition = true, startAt }: PlayTrackOptions = {},
+  ): Promise<boolean> => {
     setCurrentTrack(track);
     setLoadingTrackId(track.id);
     if (index !== undefined) setQueueCurrentIndex(index);
@@ -284,18 +308,25 @@ export function usePlaybackController({
       const enriched = await applyReplayGain(playerRef.current, track, queue, replayGainSettings);
       if (enriched !== track) setCurrentTrack(enriched);
       await loadAudioFromUrl(enriched.url, enriched);
-      const maybePromise = playerRef.current?.play();
-      if (maybePromise instanceof Promise) await maybePromise;
-      try {
-        const saved = JSON.parse(localStorage.getItem('flac_position') || 'null');
-        if (saved && saved.trackId === track.id && saved.time > 0) playerRef.current?.seek(saved.time);
-      } catch { /* no-op */ }
+      if (startAt !== undefined && startAt > 0) playerRef.current?.seek(startAt);
+      if (autoplay) {
+        const maybePromise = playerRef.current?.play();
+        if (maybePromise instanceof Promise) await maybePromise;
+      }
+      if (restorePosition && startAt === undefined) {
+        try {
+          const saved = JSON.parse(localStorage.getItem('flac_position') || 'null');
+          if (saved && saved.trackId === track.id && saved.time > 0) playerRef.current?.seek(saved.time);
+        } catch { /* no-op */ }
+      }
       setTimeout(loadStats, 500);
+      return true;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to play track';
       setError(message);
       addToast(`Playback failed: ${message}`, 'error');
       console.error('Failed to play track:', err);
+      return false;
     } finally {
       setLoadingTrackId(undefined);
     }
@@ -332,6 +363,7 @@ export function usePlaybackController({
         setPrebufferingNext(Boolean(state.prebufferingNext));
       });
       player.setOnEndedCallback((event) => {
+        if (syncModeRef.current === 'guest') return;
         if (event?.alreadyPlayingNext) {
           advanceQueueIndexOnlyRef.current();
           return;
@@ -345,6 +377,7 @@ export function usePlaybackController({
       player.setPlaybackRate(playbackRate);
       player.setGaplessSettings?.(gaplessSettings);
       player.setCrossfadeEnabled?.(crossfadeEnabled);
+      player.setNativeOnly?.(syncModeRef.current !== 'off');
 
       stopProjectMBridge = createProjectMPCMFeed(player);
 
@@ -466,6 +499,13 @@ export function usePlaybackController({
   const stop = useCallback(() => playerRef.current?.stop(), []);
   const seek = useCallback((time: number) => playerRef.current?.seek(time), []);
 
+  const setListeningSyncMode = useCallback((mode: ListeningSyncMode) => {
+    syncModeRef.current = mode;
+    playerRef.current?.setNativeOnly?.(mode !== 'off');
+    if (mode === 'guest') playerRef.current?.clearPreload?.();
+  }, []);
+  const getSyncClock = useCallback((): SyncClock | null => playerRef.current?.getSyncClock?.() ?? null, []);
+
   return {
     playerRef,
     currentFile,
@@ -484,5 +524,7 @@ export function usePlaybackController({
     stop,
     seek,
     graphGeneration,
+    setListeningSyncMode,
+    getSyncClock,
   };
 }

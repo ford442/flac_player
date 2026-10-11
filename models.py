@@ -145,6 +145,7 @@ class HealthResponse(BaseModel):
     version: str = "1.1.0"
     songs_count: int
     timestamp: str
+    rooms_active: Optional[int] = None
 
 
 class GenerationRequest(BaseModel):

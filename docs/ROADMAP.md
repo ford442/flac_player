@@ -29,13 +29,13 @@ Matches GitHub open issues as of 2026-09-23. The shared AudioContext / worklet g
 | [#222](https://github.com/ford442/flac_player/issues/222) | Feature: Local-first playlists (IndexedDB) and cloud playlist CRUD contract | **P1** |
 | [#221](https://github.com/ford442/flac_player/issues/221) | WebGPU: timestamp-query/shader-f16, HDR canvas, GPU FFT, WGSL modules | **P2** |
 | [#223](https://github.com/ford442/flac_player/issues/223) | Feature: WebMIDI / HID hardware mapping for ShaderGUI knobs, EQ, and transport | **P2** |
-| [#209](https://github.com/ford442/flac_player/issues/209) | Feature: Synced listening rooms MVP + later studio DSP (Rubber Band / LUFS) | **P2** — streaming-HTML clock for MVP |
+| [#209](https://github.com/ford442/flac_player/issues/209) | Feature: Synced listening rooms MVP + later studio DSP (Rubber Band / LUFS) | **MVP implemented** (`app.py` / `rooms.py`, `src/listening/`); production bridge port + Phase 2/3 open |
 
 ## Foundation before features
 
 1. **#219 / #220** finish WASM stream-seek and hi-fi seek/gapless; the capability flags then light up the seek bar on worklet/SDL.
 2. **#208** Media Session reads `getCapabilities()`; Cast stays on the streaming `<audio>` backend until #220 lands.
-3. **#209** rooms implement `LISTENING_ROOMS.md` on the streaming-HTML clock.
+3. **#209** rooms run on the streaming-HTML clock (MVP shipped in the prototype server); next: port `rooms.py` to the production bridge.
 
 ## Horizon (not yet ticketed)
 
@@ -51,7 +51,7 @@ Ideas validated by the September 2026 audit for a later cycle:
 - [ARCHITECTURE.md](./ARCHITECTURE.md) — system diagram, four backends, visualizer chain
 - [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) — backend selection guide
 - [API.md](./API.md) — REST + projectM embed contract
-- [LISTENING_ROOMS.md](./LISTENING_ROOMS.md) — synced “listen together” rooms (design; implement via #209)
+- [LISTENING_ROOMS.md](./LISTENING_ROOMS.md) — synced “listen together” rooms (MVP; #209)
 - [DEVELOPER_CONTEXT.md](./DEVELOPER_CONTEXT.md) — WASM memory, PCM bridge, shader/CSS coupling
 
 ## Suggested reading order for new contributors
