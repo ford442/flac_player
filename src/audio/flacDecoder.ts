@@ -8,6 +8,8 @@ export interface FlacDecoderResult {
   duration: number;
   bitDepth?: number;
   samplesDecoded?: number;
+  /** Number of libFLAC frame errors reported by the WASM decoder. */
+  errors?: number;
 }
 
 export class FlacDecoder {
