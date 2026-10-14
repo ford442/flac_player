@@ -67,12 +67,13 @@ test.describe('FLAC Player Smoke Tests', () => {
       const OriginalAudioContext = window.AudioContext;
       const destinations = new WeakSet<AudioNode>();
       const analysers: AnalyserNode[] = [];
-      const counters = { contexts: 0, destinationConnections: 0, disconnects: 0 };
+      const contexts: AudioContext[] = [];
+      const counters = { destinationConnections: 0, disconnects: 0 };
 
       class TrackedAudioContext extends OriginalAudioContext {
         constructor(options?: AudioContextOptions) {
           super(options);
-          counters.contexts += 1;
+          contexts.push(this);
           destinations.add(this.destination);
         }
 
@@ -95,13 +96,18 @@ test.describe('FLAC Player Smoke Tests', () => {
         return originalDisconnect.apply(this, args);
       } as AudioNode['disconnect'];
 
-      Object.assign(window, { __audioGraphTest: { counters, analysers } });
+      Object.assign(window, { __audioGraphTest: { counters, analysers, contexts } });
       Object.defineProperty(window, 'AudioContext', { configurable: true, value: TrackedAudioContext });
     });
 
     await mockLibraryApi(page);
+    await mockAudioFixtures(page);
     await page.goto('/');
     await openAdvancedLibrary(page);
+
+    // AudioContextManager creates the context lazily at the track's rate, so play first.
+    await playLibraryTrack(page, 'Track One');
+    await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible({ timeout: 15_000 });
 
     await page.getByRole('button', { name: '⚙️ Settings' }).click();
     const backendSelect = page.locator('select').filter({ has: page.locator('option[value="worklet"]') }).first();
@@ -111,10 +117,16 @@ test.describe('FLAC Player Smoke Tests', () => {
 
     await expect.poll(() => page.evaluate(() => {
       const testState = (window as unknown as {
-        __audioGraphTest: { counters: { contexts: number; destinationConnections: number; disconnects: number }; analysers: AnalyserNode[] };
+        __audioGraphTest: {
+          counters: { destinationConnections: number; disconnects: number };
+          analysers: AnalyserNode[];
+          contexts: AudioContext[];
+        };
       }).__audioGraphTest;
       return {
         ...testState.counters,
+        // probeSampleRateSupported() opens and closes throwaway contexts; only open ones count.
+        contexts: testState.contexts.filter(ctx => ctx.state !== 'closed').length,
         analyserCount: testState.analysers.length,
         analyserIsStable: testState.analysers.every(node => node === testState.analysers[0]),
       };
@@ -181,13 +193,17 @@ test.describe('FLAC Player Smoke Tests', () => {
         configurable: true,
         value: undefined,
       });
-      window.DEBUG_VISUALIZER = 'webgl2';
-      localStorage.setItem('flac_player_visualizer', 'canvas2d');
+      // No visualizer opt-in: the default WebGPU path must fail closed.
+      localStorage.removeItem('flac_player_visualizer');
     });
     await mockLibraryApi(page);
     await mockAudioFixtures(page);
 
     await page.goto('/');
+
+    // The visualizer boots once an analyser exists, i.e. after audio starts; load a file
+    // from the main view so the visualizer slot stays mounted.
+    await page.locator('input[type="file"]').setInputFiles('tests/fixtures/test.flac');
 
     const fatalPanel = page.getByRole('alert', { name: 'WebGPU visualizer unavailable' });
     await expect(fatalPanel).toBeVisible();
@@ -203,7 +219,7 @@ test.describe('FLAC Player Smoke Tests', () => {
       probe: {
         status: 'failed',
         reason: 'webgpu-unsupported',
-        requestedVisualizer: 'webgl2',
+        requestedVisualizer: null,
       },
       handle: null,
     });

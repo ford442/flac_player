@@ -4,6 +4,8 @@ node_modules/
 .pnp.js
 emsdk
 .build/
+# WASM build scratch (scripts/build-wasm.sh); SDL3 comes from the Emscripten port
+/src/sdl/build/
 venv/
 __pycache__/
 # Testing

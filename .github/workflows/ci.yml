@@ -52,6 +52,7 @@ jobs:
 
   e2e-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -69,9 +70,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: playwright-traces
-          path: |
-            test-results/
-            playwright-report/
+          # The HTML report embeds each trace and screenshot; uploading test-results/ too doubled the artifact.
+          path: playwright-report/
           retention-days: 7
 
   # Compile WASM when SDL sources change on PRs (validates emsdk build + committed artifacts).
