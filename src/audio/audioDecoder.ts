@@ -47,8 +47,9 @@ export function readFlacStreamInfoSampleRate(buf: ArrayBuffer): number {
 /**
  * Native fallback for FLAC. Prefers an OfflineAudioContext at the STREAMINFO
  * rate so decodeAudioData does not resample; otherwise uses the given context.
+ * `bytes` is detached by decodeAudioData.
  */
-async function decodeFlacNatively(
+export async function decodeFlacNatively(
   bytes: ArrayBuffer,
   audioContext?: BaseAudioContext
 ): Promise<AudioBuffer> {
