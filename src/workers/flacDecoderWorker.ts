@@ -78,8 +78,9 @@ self.onmessage = async (e: MessageEvent) => {
       const uint8Data = new Uint8Array(data.arrayBuffer);
       const decoded = await decoder.decode(uint8Data);
 
-      if (decoded.samplesDecoded === 0) {
-        // No frames decoded yet (e.g. still parsing headers)
+      if (decoded.samplesDecoded === 0 && !decoded.errors?.length) {
+        // No frames decoded yet (e.g. still parsing headers). Errored chunks
+        // are reported even with 0 samples so the caller can fall back.
         self.postMessage({ id, type: 'chunkDecoded', result: null });
         return;
       }
@@ -97,7 +98,7 @@ self.onmessage = async (e: MessageEvent) => {
 
       const decoded = await decoder.flush();
 
-      if (decoded.samplesDecoded === 0) {
+      if (decoded.samplesDecoded === 0 && !decoded.errors?.length) {
         self.postMessage({ id, type: 'flushed', result: null });
         return;
       }

@@ -12,6 +12,7 @@
 import { describe, it, expect } from 'vitest';
 import { decodeAudio, isUsableFlacDecode } from '../../src/audio/audioDecoder';
 import { FlacDecoder } from '../../src/audio/flacDecoder';
+import { openHifiTrack, runHifiStreamPipeline } from '../../src/audio/hifiStreamPipeline';
 
 const SONGS_BASE = 'https://projectm.1ink.us/songs/';
 
@@ -73,4 +74,56 @@ describe('projectM FLAC decode', () => {
     // fallback in audioDecoder.ts may no longer be needed for these files.
     expect(isUsableFlacDecode(wasmResult)).toBe(false);
   }, 300_000);
+
+  describe('hi-fi streaming pipeline', () => {
+    const url = SONGS_BASE + encodeURIComponent(SONGS[0]!);
+
+    async function stream(opened: Awaited<ReturnType<typeof openHifiTrack>>, startSeconds: number) {
+      let frames = 0;
+      let channels = 0;
+      let sampleRate = 0;
+      let ended = false;
+      let error: Error | null = null;
+      await runHifiStreamPipeline({
+        url,
+        opened,
+        startSeconds,
+        onMetadata: (m) => { channels = m.channels; sampleRate = m.sampleRate; },
+        onPcmChunk: (pcm) => { frames += pcm.length / channels; },
+        onEnded: () => { ended = true; },
+        onError: (e) => { error = e; },
+      });
+      return { frames, channels, sampleRate, ended, error };
+    }
+
+    it('streams Claws of the Angel to the end via the decodeAudioData fallback, then seeks', async (ctx) => {
+      // This host does not expose Content-Range / Accept-Ranges to CORS, so
+      // `opened.reader` is null (non-seekable path); read STREAMINFO directly.
+      let opened;
+      let info;
+      try {
+        opened = await openHifiTrack({ url });
+        const prefix = await fetch(url, { headers: { Range: 'bytes=0-63' } });
+        info = readStreamInfo(await prefix.arrayBuffer());
+      } catch {
+        ctx.skip();
+      }
+
+      const full = await stream(opened!, 0);
+      expect(full.error).toBeNull();
+      expect(full.ended).toBe(true);
+      expect(full.channels).toBe(2);
+      expect(full.sampleRate).toBe(info!.sampleRate);
+      expect(full.frames).toBeGreaterThanOrEqual(info!.totalSamples);
+      expect(full.frames - info!.totalSamples).toBeLessThanOrEqual(info!.maxBlockSize);
+      expect(opened!.wasmUnusable).toBe(true);
+
+      // Seek reuses the cached native decode and starts at the exact sample.
+      const t0 = performance.now();
+      const seeked = await stream(opened!, 100);
+      expect(seeked.ended).toBe(true);
+      expect(seeked.frames).toBe(full.frames - 100 * info!.sampleRate);
+      expect(performance.now() - t0).toBeLessThan(5_000);
+    }, 300_000);
+  });
 });

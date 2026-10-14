@@ -9,6 +9,8 @@ export interface StreamingChunk {
   sampleRate: number;
   duration: number;
   samplesDecoded: number;
+  /** libFLAC frame errors in this chunk; its PCM is incomplete when > 0. */
+  errors: number;
 }
 
 export class StreamingDecoder {
@@ -75,6 +77,7 @@ export class StreamingDecoder {
       sampleRate: result.sampleRate,
       duration: result.duration,
       samplesDecoded: result.samplesDecoded || 0,
+      errors: result.errors || 0,
     });
   }
 
