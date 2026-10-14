@@ -10,10 +10,11 @@ function interleave(decoded: {
   channelData: Float32Array[];
   samplesDecoded: number;
   bitDepth: number;
+  errors?: unknown[];
 }) {
   const { sampleRate, channelData, samplesDecoded, bitDepth } = decoded;
   const channels = channelData.length;
-  const duration = samplesDecoded / sampleRate;
+  const duration = sampleRate > 0 ? samplesDecoded / sampleRate : 0;
 
   const interleaved = new Float32Array(samplesDecoded * channels);
   for (let ch = 0; ch < channels; ch++) {
@@ -30,6 +31,9 @@ function interleave(decoded: {
     duration,
     bitDepth,
     samplesDecoded,
+    // libFLAC frame errors (LOST_SYNC, BAD_HEADER, ...). Non-zero means the
+    // output is missing frames; audioDecoder.ts falls back to native decode.
+    errors: decoded.errors?.length ?? 0,
   };
 }
 
