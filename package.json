@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "start": "webpack serve --mode development --open",
+    "start:ci": "webpack serve --mode development",
     "build:wasm": "bash ./scripts/build-wasm.sh --sdl3",
     "build:wasm:sdl3": "bash ./scripts/build-wasm.sh --sdl3",
     "build:wasm:resampler": "bash ./scripts/build-resampler-wasm.sh",

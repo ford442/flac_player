@@ -51,6 +51,8 @@ test.describe('Local playlists', () => {
     await card.getByRole('button', { name: /Rename/ }).click();
     await page.getByLabel('Rename playlist').fill('Late drive');
     await page.getByLabel('Rename playlist').press('Enter');
+    // State updates only after the IndexedDB write resolves; reloading earlier can drop it.
+    await expect(card).toContainText('Late drive');
 
     await page.reload();
     await openPlaylists(page);

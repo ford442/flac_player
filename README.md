@@ -60,9 +60,11 @@ REACT_APP_DEBUG=true
 ### Tests
 
 ```bash
-npm run test:decoder   # libflac decode unit test
-npm run test:e2e       # Playwright smoke tests (tests/smoke.spec.ts)
-npm test               # both
+npm run test:unit       # Vitest unit tests
+npm run test:decoder    # libflac decode unit test
+npm run test:streaming  # streaming tests in a real browser (Vitest browser mode)
+npm run test:e2e        # Playwright e2e tests (tests/*.spec.ts)
+npm test                # all four, in that order
 ```
 
 If you are developing with the SDL-based audio engine (Emscripten build), build the WASM bundles first:

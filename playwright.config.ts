@@ -10,7 +10,8 @@ export default defineConfig({
   reporter: [['html', { open: 'never' }], ['list']],
   use: {
     baseURL: 'http://localhost:3000',
-    trace: process.env.CI ? 'retain-on-failure' : 'on-first-retry',
+    // One trace per failing test (not one per retry) keeps the CI artifact small.
+    trace: process.env.CI ? 'retain-on-first-failure' : 'on-first-retry',
     screenshot: 'only-on-failure',
   },
   projects: [
@@ -20,7 +21,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm start',
+    command: 'npm run start:ci',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
