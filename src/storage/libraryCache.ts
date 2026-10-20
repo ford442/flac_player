@@ -1,6 +1,7 @@
 // Library caching with localStorage persistence and TTL
 
 import { PlaylistTrack, LibraryStats, TagInfo } from '../api/audioLoader';
+import { clearMetadataCache } from './metadataCache';
 
 export const LIBRARY_CACHE_KEY = 'flac_player_library_cache';
 export const LIBRARY_CACHE_TTL_MS = 1000 * 60 * 60 * 24; // 24 hours
@@ -38,4 +39,5 @@ export function setCachedLibrary(tracks: PlaylistTrack[], tags: TagInfo[], stats
 
 export function clearLibraryCache(): void {
   localStorage.removeItem(LIBRARY_CACHE_KEY);
+  void clearMetadataCache();
 }

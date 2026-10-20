@@ -217,10 +217,28 @@ Visualizer tap only: lock-free ring in C++ (`src/sdl/pcm_ring.h`, 65536 floats) 
 | `api/songApi.ts` | REST client for songs, tags, share, upload, MusicBrainz |
 | `storage/libraryCache.ts` | TTL cache for `/api/songs` responses |
 | `storage/trackCache.ts` | Cache API offline track storage (LRU, 500 MB default) |
+| `storage/metadataCache.ts` | Parsed tags/specs (localStorage) + cover art (Cache API `flac-player-artwork-v1`); 24 h TTL, 300-entry LRU, cleared on library resync |
+| `utils/trackMetadata.ts` | Tag/spec loading via Range reads (FLAC blocks walked, padding/seektable skipped); never downloads the whole file |
+| `hooks/useTrackMetadata.ts` | Memory → persisted → network, in-flight dedupe; feeds `MetadataPanel` and the ShaderGUI top screen |
 | `storage/queueStorage.ts` | Persisted queue + repeat/shuffle |
 | `components/OfflineCache.tsx` | Per-track download / evict UI |
 
 Production API: **`https://storage.noahcohn.com`** (`REACT_APP_API_URL`).
+
+### Track metadata (album, cover art, specs)
+
+```
+useTrackMetadata(track)
+  → memory cache → storage/metadataCache (localStorage + Cache API) → network
+  → local File:  parseBlob (lazy slices)
+  → remote URL:  GET Range 0–128 KiB, then only the tag blocks still needed
+                 (FLAC: STREAMINFO / VORBIS_COMMENT / PICTURE; the rest is skipped unread)
+```
+
+Do not `fetch(url).blob()` to read tags. The `File` the playback controller keeps (`currentFile`) is not cleared
+when a remote track starts, so `ownsFile()` only trusts it for `blob:` URLs. For non-FLAC/WAV remote files
+duration and bitrate are omitted (they would be extrapolated from the truncated window); callers fall back to
+the backend's `duration`. Servers that ignore `Range` are handled: the 200 body is read only up to the needed offset.
 
 ## Backend API (FastAPI)
 

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { routePath } from '../utils/publicPath';
+import { demoTracks, trackFromUrl } from '../utils/remoteTracks';
 import { AudioLoader, PlaylistTrack, loadQueueFromStorage } from '../api/audioLoader';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { usePlayerState } from '../hooks/usePlayerState';
@@ -28,7 +30,7 @@ const getSharedPlaylistId = (): string | null => {
   const params = new URLSearchParams(window.location.search);
   const queryShareId = params.get('share');
   if (queryShareId) return queryShareId;
-  const pathMatch = window.location.pathname.match(/^\/playlist\/([^/]+)$/);
+  const pathMatch = routePath(window.location.pathname).match(/^\/playlist\/([^/]+)$/);
   const pathId = pathMatch?.[1];
   return pathId ? decodeURIComponent(pathId) : null;
 };
@@ -227,6 +229,19 @@ export const Player: React.FC = () => {
     addToast('Playing now: ' + (track.title || track.name), 'info');
   };
 
+  /** Returns an error message for the input form, or null when playback started. */
+  const handleLoadUrl = (raw: string): string | null => {
+    const track = trackFromUrl(raw);
+    if (!track) return 'Enter a full http(s):// link to an audio file.';
+    playNow(track);
+    return null;
+  };
+
+  const handleLoadDemo = () => {
+    playAll(demoTracks());
+    addToast('Demo playlist loaded', 'info');
+  };
+
   const handleSmartMix = async () => {
     if (!currentTrack?.tags) { addToast('No tags to base mix on', 'error'); return; }
     try {
@@ -394,7 +409,7 @@ export const Player: React.FC = () => {
           aesthetic={visualizerAesthetic}
           onAestheticChange={setVisualizerAesthetic}
           analyser={getAnalyser()}
-          currentTrack={currentTrack} queue={queue} queueCurrentIndex={queueCurrentIndex}
+          currentTrack={currentTrack} currentFile={currentFile} queue={queue} queueCurrentIndex={queueCurrentIndex}
           isPlaying={playerState.isPlaying} isLoading={playerState.isLoading}
           currentTime={playerState.currentTime} duration={playerState.duration}
           volume={volume} muted={muted}
@@ -406,6 +421,8 @@ export const Player: React.FC = () => {
           onToggleFallback={() => setShowHtmlFallback(true)}
           showFallbackToggle={!isSharedPlaylist}
           onFileSelect={handleLocalFiles}
+          onLoadUrl={handleLoadUrl}
+          onLoadDemo={handleLoadDemo}
           overviewMinmax={gpuOverview.minmax}
           overviewRms={gpuOverview.rms}
           overviewPeak={gpuOverview.peak}
@@ -469,6 +486,7 @@ export const Player: React.FC = () => {
       onVolumeChange={handleVolumeChange} onMute={toggleMute}
       onNext={playNextInQueue} onPrevious={playPreviousInQueue}
       onFileSelect={handleLocalFiles}
+      onLoadUrl={handleLoadUrl} onLoadDemo={handleLoadDemo}
       onPlayAll={playAll} onAddAllToQueue={addAllToQueue}
       onPlayNow={playNow} onPlayNext={enqueueNext} onAddToQueue={addToQueue}
       onRemoveFromQueue={removeFromQueue} onClearQueue={clearQueue}

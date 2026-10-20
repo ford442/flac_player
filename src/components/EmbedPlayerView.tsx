@@ -150,7 +150,7 @@ export const EmbedPlayerView: React.FC<EmbedPlayerViewProps> = ({
             type="file"
             accept=".flac,.wav,audio/flac,audio/wav,audio/x-flac"
             multiple
-            className="hidden"
+            hidden
             onChange={onFileChange}
           />
         </div>

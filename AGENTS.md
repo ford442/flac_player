@@ -242,12 +242,12 @@ Without these headers:
 - Three modes: `'flat'` (waveform), `'3D'` (rotating cube with screen), `'gui'` (ShaderGUI hardware panel)
 - Requires manual resource cleanup in `destroy()` method
 - Runs at 60fps via `requestAnimationFrame`
-- WebGPU is required for a ShaderGUI visualizer session **unless** the user opts into WebGL2 (`?visualizer=webgl2` or Settings → Compatibility visualizer). `src/visuals/webgpuProbe.ts` is the only `requestDevice()` caller; it uses `powerPreference: 'high-performance'` (`?gpu=low` for low-power) and a shared `buildCanvasConfiguration` factory (`src/visuals/webgpu/canvasConfig.ts`).
+- WebGPU is required for a ShaderGUI visualizer session **unless** the user opts into WebGL2 (`?webgl2=1` or Settings → Compatibility visualizer). `src/visuals/webgpuProbe.ts` is the only `requestDevice()` caller; it uses `powerPreference: 'high-performance'` (`?gpu=low` for low-power) and a shared `buildCanvasConfiguration` factory (`src/visuals/webgpu/canvasConfig.ts`).
 - Probe or initialization failure hard-fails only the visualizer slot with browser/adapter diagnostics; audio playback and decode remain available. Failed WebGPU does **not** auto-start WebGL2.
 
 ### Renderer Selection (`src/visuals/`)
 - **Fail-closed default**: `resolveVisualizerBackend()` returns `'webgpu'` unless the user explicitly chose `'webgl2'`.
-- **Opt-in WebGL2**: `?visualizer=webgl2`, `?renderer=webgl2`, local storage, or Settings “Compatibility visualizer” instantiates `WebGL2Visualizer` (shared `WAVEFORM_LAYOUT`). No WebGPU probe on that canvas (cannot share GL + WebGPU context); gpu-chores stay Worker/CPU.
+- **Opt-in WebGL2**: `?webgl2=1`, `?visualizer=webgl2`, `?renderer=webgl2`, local storage, or Settings “Compatibility visualizer” instantiates `WebGL2Visualizer` (shared `WAVEFORM_LAYOUT`). No WebGPU probe on that canvas (cannot share GL + WebGPU context); gpu-chores stay Worker/CPU. A non-WebGPU renderer is never silent: `getRendererLabel()` (`rendererSelection.ts`) drives both the amber badge in `TopScreen` and `document.title`, which only says “WebGPU” while a WebGPU visualizer is running. GL uniforms are typed from `getActiveUniform` and set via `setUniform()` (`webgl2/glUtils.ts`) after `useProgram`.
 - **Canvas2D**: debug only (`window.DEBUG_VISUALIZER='canvas2d'`). URL/storage `canvas2d` is ignored for creation.
 - **Debug helpers**: `window.webgpuProbe` includes `powerPreference`, `requestedFeatures`, and `adapter.isFallbackAdapter`; `window.DEBUG_VISUALIZER`, `window.currentVisualizer`, Alt+D debug cycling, ShaderGUI debug panel.
 - **Layout contract**: `src/visuals/waveformContract.ts` — single source of truth for knob/LED UVs shared by WGSL and GLSL

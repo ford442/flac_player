@@ -1,0 +1,41 @@
+.url-loader {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.url-loader__form {
+  display: flex;
+  gap: 4px;
+}
+
+.url-loader__input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #2D1B4E;
+  background: #0A0A1A;
+  color: #E8D5F5;
+  font-size: 12px;
+}
+
+.url-loader__btn {
+  padding: 6px 10px;
+  border-radius: 4px;
+  border: 1px solid #2D1B4E;
+  background: #1A0A2E;
+  color: #E8D5F5;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.url-loader__btn:hover:not(:disabled) { background: #2D1B4E; }
+.url-loader__btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.url-loader__error {
+  color: #ff8a8a;
+  font-size: 11px;
+}

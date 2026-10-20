@@ -79,6 +79,13 @@ Helper: `src/utils/debug.ts` — used by `api/audioLoader.ts` and `api/songApi.t
 - The backend must always return absolute `https://` URLs in the `url` field
 - Default output mode is `streaming` (`usePlayerState.ts`)
 
+## Deployment base path
+
+Root-hosted by default. For a subpath (e.g. `https://host/flac-player/`) build with
+`PUBLIC_PATH=/flac-player/ npm run build`. It feeds webpack `publicPath`, the HTML
+template, the SW precache/scope, and runtime asset URLs (`src/utils/publicPath.ts`).
+Server rewrites must serve `<base>/service-worker.js` as JS, not the SPA fallback.
+
 ## WASM builds
 
 ```bash

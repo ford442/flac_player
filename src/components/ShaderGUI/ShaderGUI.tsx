@@ -4,9 +4,11 @@ import { WebGL2Visualizer } from '../../visuals/webgl2/WebGL2Visualizer';
 import { CanvasFallbackVisualizer } from '../../visuals/webglFallback';
 import { buildFrameUniforms } from '../../visuals/visualSync';
 import {
+  getRendererLabel,
   readVisualizerPreference,
   resolveVisualizerBackend,
   subscribeVisualizerPreference,
+  type RendererStatus,
 } from '../../visuals/rendererSelection';
 import { setCurrentVisualizer } from '../../visuals/webgl2/global';
 import { cycleDebugMode } from '../../visuals/webgl2/debugModes';
@@ -23,6 +25,7 @@ import { buildWebGL2ContextAttributes } from '../../visuals/webgpu/canvasConfig'
 import { adoptVisualizerDevice, releaseVisualizerDevice } from '../../gpu-chores';
 import type { GpuChoreBackend } from '../../gpu-chores';
 import { WaveformOverview } from '../WaveformOverview';
+import { UrlLoader } from '../UrlLoader';
 import { PlaylistTrack } from '../../api/audioLoader';
 import { Chassis } from './Chassis';
 import { TopScreen } from './TopScreen';
@@ -32,12 +35,16 @@ import { Button } from './Button';
 import { VolumeSlider } from './VolumeSlider';
 import { useBeatDetection } from '../../hooks/useBeatDetection';
 import { useLiveGpuSpectrum } from '../../hooks/useLiveGpuSpectrum';
+import { ownsFile, useTrackMetadata } from '../../hooks/useTrackMetadata';
+import { formatSpecBadges } from '../../utils/trackMetadata';
 import { amplitudesToAnalyserBytes, resolveSpectrumSource } from '../../visuals/spectrumSource';
 import './ShaderGUI.css';
 
 export interface ShaderGUIProps {
   analyser: AnalyserNode | null;
   currentTrack: PlaylistTrack | null;
+  /** Local file behind `currentTrack` (blob: URL tracks only); used to read tags without fetching. */
+  currentFile?: File;
   queue: PlaylistTrack[];
   queueCurrentIndex: number;
   isPlaying: boolean;
@@ -57,6 +64,8 @@ export interface ShaderGUIProps {
   onToggleFallback?: () => void;
   showFallbackToggle?: boolean;
   onFileSelect?: (files: File[]) => void;
+  onLoadUrl?: (url: string) => string | null;
+  onLoadDemo?: () => void;
   /** Hide GPU visualizer; keep transport/queue controls (projectM-only mode). */
   controlsOnly?: boolean;
   /** Scrubber peaks from gpu-chores (null while streaming / not yet reduced). */
@@ -70,6 +79,7 @@ export interface ShaderGUIProps {
 export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   analyser,
   currentTrack,
+  currentFile,
   queue,
   queueCurrentIndex,
   isPlaying,
@@ -89,6 +99,8 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   onToggleFallback,
   showFallbackToggle = false,
   onFileSelect,
+  onLoadUrl,
+  onLoadDemo,
   controlsOnly = false,
   overviewMinmax = null,
   overviewRms = null,
@@ -97,7 +109,19 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   overviewReason = null,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const trackMeta = useTrackMetadata(
+    !controlsOnly && currentTrack
+      ? {
+          cacheKey: currentTrack.id || currentTrack.url,
+          url: currentTrack.url,
+          file: ownsFile(currentTrack.url, currentFile) ? currentFile : undefined,
+        }
+      : null
+  );
+  const trackAlbum = trackMeta.metadata?.tags.album;
+  const trackYear = trackMeta.metadata?.tags.year;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showUrlLoader, setShowUrlLoader] = useState(false);
   const webgpuRef = useRef<WebGPUVisualizer | null>(null);
   const webgl2Ref = useRef<WebGL2Visualizer | null>(null);
   const canvas2dRef = useRef<CanvasFallbackVisualizer | null>(null);
@@ -107,7 +131,13 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const [gpuStats, setGpuStats] = useState<ReturnType<WebGPUVisualizer['getRenderInfo']> & {
     gpuTimeMs: number | null;
   } | null>(null);
-  const [activeBackend, setActiveBackend] = useState<VisualizerBackend>('webgpu');
+  // Start from the selected backend (not a hardcoded 'webgpu') so an opted-in renderer is
+  // labeled before the first track creates an analyser.
+  const [activeBackend, setActiveBackend] = useState<VisualizerBackend>(
+    () => resolveVisualizerBackend(readVisualizerPreference()),
+  );
+  // True only while a visualizer of `activeBackend` is actually running.
+  const [rendererReady, setRendererReady] = useState(false);
   const [preferenceEpoch, setPreferenceEpoch] = useState(0);
   const [canvasSessionKey, setCanvasSessionKey] = useState(
     () => resolveVisualizerBackend(readVisualizerPreference()),
@@ -170,6 +200,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     canvas2dRef.current?.destroy();
     canvas2dRef.current = null;
     setCurrentVisualizer(null);
+    setRendererReady(false);
   }, []);
 
   const initVisualizer = useCallback(async (
@@ -203,6 +234,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       webgl2Ref.current = visualizer;
       createVisualizerBootReady('webgl2', visualizer.getContextAttributes());
       setProbeFailure(null);
+      setRendererReady(true);
       setCurrentVisualizer({
         backend: 'webgl2',
         readPixels: () => visualizer.readPixels(),
@@ -224,6 +256,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         }
         canvas2dRef.current = visualizer;
         setProbeFailure(null);
+        setRendererReady(true);
         setCurrentVisualizer({
           backend: 'canvas2d',
           readPixels: () => null,
@@ -249,6 +282,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       onReady: (visualizer) => {
         webgpuRef.current = visualizer;
         setProbeFailure(null);
+        setRendererReady(true);
         adoptVisualizerDevice(visualizer.getDevice());
         setCurrentVisualizer({
           backend: requiredBackend,
@@ -264,6 +298,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         releaseVisualizerDevice(visualizer.getDevice());
         if (webgpuRef.current === visualizer) webgpuRef.current = null;
         setCurrentVisualizer(null);
+        setRendererReady(false);
       },
       onFatal: (breadcrumb) => {
         webgpuRef.current = null;
@@ -274,9 +309,23 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   }, []);
 
   useEffect(() => subscribeVisualizerPreference(() => {
-    setCanvasSessionKey(resolveVisualizerBackend(readVisualizerPreference()));
+    const selected = resolveVisualizerBackend(readVisualizerPreference());
+    setCanvasSessionKey(selected);
+    setActiveBackend(selected);
     setPreferenceEpoch((n) => n + 1);
   }), []);
+
+  // Title and badge describe the renderer actually in use, never an assumed WebGPU.
+  const rendererStatus: RendererStatus = probeFailure ? 'failed' : rendererReady ? 'ready' : 'pending';
+  const rendererLabel = getRendererLabel(activeBackend, rendererStatus);
+  useEffect(() => {
+    if (controlsOnly) return undefined;
+    const original = document.title;
+    return () => { document.title = original; };
+  }, [controlsOnly]);
+  useEffect(() => {
+    if (!controlsOnly) document.title = rendererLabel.title;
+  }, [controlsOnly, rendererLabel.title]);
 
   // Default is fail-closed WebGPU. WebGL2 / Canvas2D only when the user opted in.
   useEffect(() => {
@@ -528,7 +577,11 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             canvasSessionKey={canvasSessionKey}
             artist={currentTrack?.author}
             title={currentTrack?.title || currentTrack?.name}
+            album={trackAlbum ? (trackYear ? `${trackAlbum} (${trackYear})` : trackAlbum) : undefined}
+            artworkUrl={trackMeta.artworkUrl ?? currentTrack?.cover_url ?? null}
+            specs={formatSpecBadges(trackMeta.metadata?.specs)}
             activeBackend={activeBackend}
+            rendererBadge={rendererLabel.badge}
             probeFailure={probeFailure}
             onCanvasResize={() => {
               webgpuRef.current?.resize();
@@ -579,6 +632,32 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             <Button type="next" active={false} onClick={() => onNext?.()} />
           </div>
 
+          {onLoadUrl && onLoadDemo && (
+            <div className="shader-url-wrap">
+              <button
+                onClick={() => setShowUrlLoader(v => !v)}
+                className="shader-button"
+                title="Load from URL / demo playlist"
+                aria-label="Load from URL"
+                aria-expanded={showUrlLoader}
+              >
+                <span className="button-icon">🔗</span>
+              </button>
+              {showUrlLoader && (
+                <div className="shader-url-panel">
+                  <UrlLoader
+                    onLoadUrl={(url) => {
+                      const err = onLoadUrl(url);
+                      if (!err) setShowUrlLoader(false);
+                      return err;
+                    }}
+                    onLoadDemo={() => { onLoadDemo(); setShowUrlLoader(false); }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {onFileSelect && (
             <button
               onClick={handleOpenFiles}
@@ -623,7 +702,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       multiple
       accept=".flac,.wav,.mp3,audio/flac,audio/wav,audio/x-wav,audio/mpeg"
       onChange={handleFileInput}
-      className="hidden"
+      hidden
       aria-hidden="true"
     />
     </div>
