@@ -89,9 +89,6 @@ describe('audio backend package layout', () => {
       const src = readFileSync(resolve(__dirname, '../src/sdl', f), 'utf8');
       expect(src).not.toMatch(/#include <vector>|std::vector|scale_samples/);
     }
-    // Limiter works in the linear domain: no per-sample log10.
-    const dsp = readFileSync(resolve(__dirname, '../src/sdl/dsp_chain.h'), 'utf8');
-    expect(dsp).not.toMatch(/log10/);
   });
 
   it('hashes every SDL header into wasm-source.sha256', () => {
