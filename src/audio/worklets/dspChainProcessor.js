@@ -112,7 +112,7 @@ class DspChainProcessor extends AudioWorkletProcessor {
     }
     while (i < count) {
       const end = Math.min(count, i + block);
-      for (; i < end; i++, wp++) data[wp & mask] = scratch[i];
+      for (; i < end; i++, wp++) data[wp & mask] = /** @type {number} */ (scratch[i]);
       wp >>>= 0;
       Atomics.store(header, RING_WRITE_POS, wp);
     }
@@ -152,19 +152,20 @@ class DspChainProcessor extends AudioWorkletProcessor {
     const input = inputs[0];
     const output = outputs[0];
     if (!output || output.length === 0) return true;
-    const frames = output[0].length;
+    const frames = /** @type {Float32Array} */ (output[0]).length;
     const outChannels = output.length;
     const dsp = this.dsp;
 
     if (!input || input.length === 0) {
-      for (let ch = 0; ch < outChannels; ch++) output[ch].fill(0);
+      for (let ch = 0; ch < outChannels; ch++) /** @type {Float32Array} */ (output[ch]).fill(0);
       return true;
     }
     if (!dsp) {
       // Never reached in practice (the node is only wired after 'ready'); pass through.
       for (let ch = 0; ch < outChannels; ch++) {
-        if (ch < input.length) output[ch].set(input[ch]);
-        else output[ch].fill(0);
+        const dst = /** @type {Float32Array} */ (output[ch]);
+        if (ch < input.length) dst.set(/** @type {Float32Array} */ (input[ch]));
+        else dst.fill(0);
       }
       return true;
     }
@@ -177,17 +178,17 @@ class DspChainProcessor extends AudioWorkletProcessor {
       let k = 0;
       for (let i = start; i < end; i++) {
         for (let ch = 0; ch < channels; ch++) {
-          scratch[k++] = ch < input.length ? input[ch][i] : 0;
+          scratch[k++] = ch < input.length ? /** @type {number} */ (/** @type {Float32Array} */ (input[ch])[i]) : 0;
         }
       }
       dsp.process(k, channels, sampleRate, this.volume);
       this.writeRing(k);
       k = 0;
       for (let i = start; i < end; i++) {
-        for (let ch = 0; ch < channels; ch++) output[ch][i] = scratch[k++];
+        for (let ch = 0; ch < channels; ch++) /** @type {Float32Array} */ (output[ch])[i] = /** @type {number} */ (scratch[k++]);
       }
     }
-    for (let ch = channels; ch < outChannels; ch++) output[ch].fill(0);
+    for (let ch = channels; ch < outChannels; ch++) /** @type {Float32Array} */ (output[ch]).fill(0);
     return true;
   }
 }

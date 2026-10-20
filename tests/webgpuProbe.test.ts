@@ -169,6 +169,7 @@ describe('WebGPU boot probe', () => {
 
     expect(gpu.requestAdapter).toHaveBeenCalledWith({ powerPreference: 'high-performance' });
     expect(requestDevice).toHaveBeenCalledWith({
+      label: 'flac-player-visualizer',
       requiredFeatures: ['timestamp-query'],
     });
     expect(window.webgpuProbe).toMatchObject({
@@ -255,5 +256,36 @@ describe('WebGPU boot probe', () => {
       usage: CANVAS_RENDER_ATTACHMENT,
     });
     expect(result.breadcrumb.gpuTimeMs).toBeNull();
+  });
+
+  it('counts uncaptured GPU errors on the breadcrumb and logs only the first', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const listeners: Array<(e: Event) => void> = [];
+    const device = {
+      destroy: vi.fn(),
+      addEventListener: vi.fn((_: string, cb: (e: Event) => void) => listeners.push(cb)),
+      removeEventListener: vi.fn(),
+    } as unknown as GPUDevice;
+    const adapter = fakeAdapter({ requestDevice: vi.fn(async () => device) });
+    const context = { configure: vi.fn() } as unknown as GPUCanvasContext;
+
+    const result = await probeWebGPU(
+      { getContext: vi.fn(() => context) } as unknown as HTMLCanvasElement,
+      { gpu: fakeGpu(adapter), browser: chrome },
+    );
+    expect(result.ok).toBe(true);
+    expect(device.addEventListener).toHaveBeenCalledWith('uncapturederror', expect.any(Function));
+    expect(window.webgpuProbe).toMatchObject({ uncapturedErrors: 0, firstUncapturedError: null });
+
+    const fire = (message: string) =>
+      listeners.forEach((cb) => cb({ error: { message } } as unknown as Event));
+    fire('bad bind group');
+    fire('bad bind group again');
+
+    expect(window.webgpuProbe).toMatchObject({
+      uncapturedErrors: 2,
+      firstUncapturedError: expect.stringContaining('bad bind group'),
+    });
+    expect(error).toHaveBeenCalledOnce();
   });
 });

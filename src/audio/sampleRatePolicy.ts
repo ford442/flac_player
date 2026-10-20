@@ -9,8 +9,18 @@ export type LatencyMode = 'playback' | 'interactive' | 'balanced';
 
 export type AudioContextLatencyHint = AudioContextLatencyCategory | number;
 
+/**
+ * Render quantum hint (Chromium `AudioContextOptions.renderSizeHint`).
+ * 'default' omits the option (128-frame quantum).
+ */
+export type RenderSizeMode = 'default' | 'hardware' | '256' | '512';
+
+export type RenderSizeHint = 'default' | 'hardware' | number;
+
 export interface AudioContextOptionsPolicy {
   latencyHint: AudioContextLatencyHint;
+  /** Undefined = omit from the constructor. */
+  renderSizeHint?: RenderSizeHint;
   /** Preferred constructor rate. Undefined = omit (device default / first-track native). */
   sampleRate?: number;
   recreateOnSampleRateMismatch: boolean;
@@ -32,6 +42,25 @@ export function latencyModeToHint(mode: LatencyMode): AudioContextLatencyHint {
   if (mode === 'interactive') return 'interactive';
   if (mode === 'balanced') return BALANCED_LATENCY_SECONDS;
   return 'playback';
+}
+
+export const DEFAULT_RENDER_SIZE_MODE: RenderSizeMode = 'default';
+
+export function isRenderSizeMode(value: string | null | undefined): value is RenderSizeMode {
+  return value === 'default' || value === 'hardware' || value === '256' || value === '512';
+}
+
+export function renderSizeModeToHint(mode: RenderSizeMode): RenderSizeHint | undefined {
+  if (mode === 'hardware') return 'hardware';
+  if (mode === '256') return 256;
+  if (mode === '512') return 512;
+  return undefined;
+}
+
+/** True when the browser exposes `AudioContext.renderQuantumSize` (and so reads renderSizeHint). */
+export function isRenderSizeHintSupported(): boolean {
+  const Ctor = globalThis.AudioContext as { prototype?: object } | undefined;
+  return !!Ctor?.prototype && 'renderQuantumSize' in Ctor.prototype;
 }
 
 export function latencyHintsEqual(
@@ -57,8 +86,11 @@ export function shouldRecreateContext(options: {
   liveHint: AudioContextLatencyHint;
   nextHint: AudioContextLatencyHint;
   recreateOnMismatch: boolean;
+  liveRenderSize?: RenderSizeHint;
+  nextRenderSize?: RenderSizeHint;
 }): boolean {
   if (!latencyHintsEqual(options.liveHint, options.nextHint)) return true;
+  if (options.liveRenderSize !== options.nextRenderSize) return true;
   if (options.targetRate === undefined) return false;
   if (options.liveRate === options.targetRate) return false;
   return options.recreateOnMismatch;
@@ -90,14 +122,16 @@ export function probeSampleRateSupported(rate: number): boolean {
   }
 }
 
-/** `AudioContextOptions` plus `sinkId` (Chromium 110+; not yet in lib.dom). */
+/** `AudioContextOptions` plus `sinkId` / `renderSizeHint` (Chromium; not yet in lib.dom). */
 export interface AudioContextOptionsWithSink extends AudioContextOptions {
   sinkId?: string;
+  renderSizeHint?: RenderSizeHint;
 }
 
 /**
  * Next, less demanding constructor options after `new AudioContext(options)` threw.
- * Order: numeric latencyHint → 'interactive', then drop sinkId, then drop sampleRate.
+ * Order: numeric latencyHint → 'interactive', then drop sinkId, then drop
+ * renderSizeHint, then drop sampleRate (native rate is the last thing given up).
  * Returns null when nothing is left to relax (caller rethrows).
  */
 export function relaxContextOptions(
@@ -109,6 +143,11 @@ export function relaxContextOptions(
   if (options.sinkId !== undefined) {
     const rest = { ...options };
     delete rest.sinkId;
+    return rest;
+  }
+  if (options.renderSizeHint !== undefined) {
+    const rest = { ...options };
+    delete rest.renderSizeHint;
     return rest;
   }
   if (options.sampleRate !== undefined) {

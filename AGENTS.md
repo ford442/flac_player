@@ -24,17 +24,17 @@ FLAC Player is a high-fidelity audio player web application with a **React/TypeS
 | Frontend | React 18, TypeScript, CSS3 (Tailwind-like utility classes in `Player.css` and `ShaderGUI.css`) |
 | Build System | Webpack 5, Babel, ESLint |
 | Audio (Native) | Web Audio API (`AudioContext`, `AnalyserNode`, `BufferSourceNode`) |
-| Audio (Worklet) | `AudioWorkletNode` with inline processor blob, ScriptProcessor fallback |
+| Audio (Worklet) | `AudioWorkletNode` running `flacProcessor.ts` (bundled worklet entry); SharedArrayBuffer play + tap rings, `chunk` message fallback; AudioWorklet required |
 | Audio (WASM) | SDL3 compiled via Emscripten |
 | Visualization | WebGPU API with WGSL shaders |
 | Backend | FastAPI, Pydantic v2, aiocache, httpx, uvicorn |
 | Storage | JSON file persistence (`data/songs/index.json`) |
-| Deployment | Static hosting, Netlify, Vercel, Python SFTP script (`deploy.py`) |
+| Deployment | Static hosting, Netlify, Vercel, Python bundle-upload script (`scripts/deploy.py`) |
 
 **Configuration Files:**
 - Frontend: `package.json` (npm scripts & dependencies), `tsconfig.json`, `webpack.config.js`, `.eslintrc.json`
-- Backend: `requirements.txt` (Python dependencies), `app.py` (single-file FastAPI app), `.env` / `.env.example`
-- Deployment: `netlify.toml`, `vercel.json`, `deploy.py`
+- Backend (optional local dev server, see `server/README.md`): `server/requirements.txt`, `server/app.py` (single-file FastAPI app); env in `.env` / `.env.example`
+- Deployment: `netlify.toml`, `vercel.json`, `scripts/deploy.py`
 - There is **no** `pyproject.toml`, `setup.py`, `Cargo.toml`, or similar.
 
 ## Project Structure
@@ -45,8 +45,8 @@ flac_player/
 │   ├── index.html              # HTML template
 │   ├── sdl-audio.js            # SDL3 WASM module (generated via Emscripten)
 │   ├── sdl-audio.wasm          # SDL3 WASM binary (generated)
-│   ├── script-processor-shim.js     # AudioWorklet fallback shim
-│   └── script-processor-processor.js # AudioWorklet processor
+│   ├── script-processor-shim.js     # createScriptProcessor polyfill for SDL3 (Emscripten audio)
+│   └── script-processor-processor.js # its AudioWorklet processor
 ├── src/
 │   ├── components/
 │   │   ├── Player.tsx          # Main player UI component (~446 lines)
@@ -86,30 +86,28 @@ flac_player/
 │   ├── index.tsx               # React entry point (StrictMode)
 │   ├── audio/                  # Shared graph + backend factory
 │   │   ├── createAudioBackend.ts
+│   │   ├── flacDecoder.ts, audioDecoder.ts   # decode (worker: src/workers/flacDecoderWorker.ts)
 │   │   ├── AudioContextManager.ts, DspChainNode.ts, EQChain.ts, ReplayGainNode.ts, SdlPcmBridge.ts, analyserPolicy.ts
 │   │   ├── analysisRing.ts     # analysis ring reader / SAB allocation / active-tap registry
 │   │   ├── wasmFft.ts          # main-thread dsp_fft.h (dsp-chain.wasm `fft_spectrum`)
-│   │   ├── worklets/           # flacProcessor.js, sdlPcmTapProcessor.js, dspChainProcessor.js (static AudioWorklet modules, @ts-check)
+│   │   ├── worklets/           # flacProcessor.ts (bundled worklet entry) + playRingSAB.ts / flacProcessorMessages.ts shared with the main thread; sdlPcmTapProcessor.js, dspChainProcessor.js (static, @ts-check)
 │   │   └── backends/           # Four selectable implementations
 │   │       ├── StreamingAudioPlayer.ts   # default — HTMLAudio + range requests
 │   │       ├── WebAudioPlayer.ts         # buffered Web Audio API
 │   │       ├── WorkletAudioPlayer.ts     # re-export of worklet/WorkletAudioPlayer
-│   │       ├── worklet/                  # AudioWorklet orchestration, hi-fi feeder, ScriptProcessor fallback
+│   │       ├── worklet/                  # AudioWorklet orchestration, hi-fi ring feeder, projectM tap reader
 │   │       └── Sdl3AudioPlayer.ts        # SDL3 WASM
 │   ├── hooks/
 │   │   ├── usePlaybackController.ts  # Backend lifecycle, load/play, queue advance
 │   ├── listening/              # Synced listening rooms (#209): protocol, clock sync, GuestSync, HostPublisher, hooks
-│   ├── audioLoader.ts          # Audio fetching + backend API client (~379 lines)
-│   ├── flacDecoder.ts          # FLAC/WAV decoder (Web Audio API)
-│   ├── webgpuVisualizer.ts     # WebGPU visualization engine (~687 lines)
-│   └── math.ts                 # 3D math utilities (Vec3, Mat4)
-├── data/                        # Runtime data directories (must be writable)
-│   ├── music/                  # Audio file storage
-│   └── songs/                  # JSON index and metadata
-│       └── index.json          # Library persistence file
-├── app.py                      # FastAPI backend (~1261 lines)
-├── rooms.py                    # Listening-room REST + WebSocket router (mounted by app.py)
-├── deploy.py                   # Python SFTP deployment script
+│   ├── api/                    # songApi.ts + audioLoader.ts (library fetch, URL resolution, queue types)
+│   └── visuals/                # webgpuVisualizer.ts, math.ts (Vec3/Mat4, cube path), probe, webgl2/, webgpu/
+├── server/                     # Optional local FastAPI dev backend (see server/README.md)
+│   ├── app.py, models.py, storage.py, musicbrainz.py, replaygain.py, url_shortener.py
+│   ├── rooms.py, playlists.py  # Listening-room REST + WebSocket router, playlist CRUD (mounted by app.py)
+│   ├── requirements.txt
+│   ├── tests/                  # pytest: test_rooms.py, test_playlists.py, test_replaygain.py
+│   └── data/                   # Runtime data (gitignored): music/, songs/index.json
 ├── package.json                # NPM dependencies and scripts
 ├── tsconfig.json               # TypeScript configuration (strict mode enabled)
 ├── webpack.config.js           # Webpack build configuration
@@ -117,7 +115,7 @@ flac_player/
 ├── netlify.toml                # Netlify deployment config
 ├── vercel.json                 # Vercel deployment config
 ├── .env.example                # Environment variable documentation
-└── requirements.txt            # Python dependencies
+└── docs/archive/               # Historical blobs (song suggestion lists, generator script)
 ```
 
 ## Build Commands
@@ -127,20 +125,22 @@ flac_player/
 npm install
 
 # Install backend dependencies
-pip install -r requirements.txt
+pip install -r server/requirements.txt
 
 # Development server (http://localhost:3000)
 # - Webpack dev server with hot reload
 # - Proxies /api to http://localhost:7860
 # - Automatic COOP/COEP headers for cross-origin isolation
-npm start
+npm start                       # opens a browser tab; use `npm run start:ci` for headless/CI
 
-# Build WASM modules (requires Emscripten/emsdk)
+# Build WASM modules (requires the emsdk pinned in scripts/emsdk-version;
+# install that exact version, never `latest`: build scripts refuse other emcc)
 npm run build:wasm              # scripts/build-wasm.sh --sdl3
 npm run build:wasm:sdl3         # equivalent to bash src/sdl/build.sh
 npm run build:wasm:dsp          # dsp_chain.h + dsp_fft.h -> public/dsp-chain.{js,wasm} (EQ/ReplayGain worklet, fft_spectrum)
+npm run build:wasm:resampler    # SpeexDSP resampler
 npm run build:projectm          # optional projectM Milkdrop host
-npm run verify:wasm             # CI: check committed artifacts match sources
+npm run verify:wasm             # CI: SDL + resampler + DSP chain + projectM source hashes (incl. emsdk pin)
 
 # Production build (webpack copies prebuilt public/sdl-*.wasm; no emsdk)
 npm run build
@@ -155,9 +155,9 @@ npm run lint
 npm run typecheck
 
 # Run the FastAPI backend (default port 7860)
-python app.py
+cd server && python app.py
 # or
-uvicorn app:app --host 0.0.0.0 --port 7860
+cd server && uvicorn app:app --host 0.0.0.0 --port 7860
 ```
 
 ## Environment Variables
@@ -191,7 +191,7 @@ Copy `.env.example` to `.env` for local development.
 
 ### Naming Conventions
 - Components: PascalCase (e.g., `Player.tsx`, `LibraryView.tsx`)
-- Utilities: camelCase (e.g., `audioLoader.ts`, `flacDecoder.ts`)
+- Utilities: camelCase (e.g., `api/audioLoader.ts`, `audio/flacDecoder.ts`)
 - CSS classes: Tailwind-like utility classes are used inside `Player.css` and `ShaderGUI.css` (e.g., `bg-white/10`, `flex`, `gap-2`)
 - Interfaces: PascalCase with descriptive names (e.g., `PlayerUIState`, `AudioPlaybackState`, `FlacDecoderResult`)
 
@@ -214,7 +214,7 @@ advance — and selects one of four backends via `createAudioBackend()` (lazy dy
 just calls into the hook; it does not choose the backend itself:
 1. **Streaming** (`audio/backends/StreamingAudioPlayer.ts`) - Default. HTMLAudioElement + HTTP range requests; crossfade support
 2. **Web Audio** (`audio/backends/WebAudioPlayer.ts`) - Full fetch + decode; buffered `BufferSourceNode`
-3. **AudioWorklet** (`audio/backends/WorkletAudioPlayer.ts`) - Low-latency worklet; `setPCMCallback` for projectM PCM tap
+3. **AudioWorklet** (`audio/backends/WorkletAudioPlayer.ts`) - Low-latency worklet; SAB play ring (hi-fi), varispeed playback rate, `setPCMCallback` for projectM PCM tap
 4. **SDL3** (`audio/backends/Sdl3AudioPlayer.ts`) - C++ SDL3 compiled to WASM; PCM ring → `SdlPcmBridge` → analyser
 
 See `docs/AUDIO_BACKENDS.md` for selection guidance.
@@ -245,20 +245,19 @@ Cross-Origin-Embedder-Policy: require-corp
 - **Production**: Must be configured on hosting server (see `netlify.toml`/`vercel.json`)
 
 Without these headers:
-- AudioWorklet will fail to load
-- SharedArrayBuffer will be undefined
+- SharedArrayBuffer will be undefined (the worklet hi-fi path falls back to `chunk` messages)
 - SDL WASM backends may fall back to ScriptProcessor or fail
 
 ### WebGPU Visualizer
 - Three modes: `'flat'` (waveform), `'3D'` (rotating cube with screen), `'gui'` (ShaderGUI hardware panel)
 - Requires manual resource cleanup in `destroy()` method
 - Runs at 60fps via `requestAnimationFrame`
-- WebGPU is required for a ShaderGUI visualizer session **unless** the user opts into WebGL2 (`?visualizer=webgl2` or Settings → Compatibility visualizer). `src/visuals/webgpuProbe.ts` is the only `requestDevice()` caller; it uses `powerPreference: 'high-performance'` (`?gpu=low` for low-power) and a shared `buildCanvasConfiguration` factory (`src/visuals/webgpu/canvasConfig.ts`).
+- WebGPU is required for a ShaderGUI visualizer session **unless** the user opts into WebGL2 (`?webgl2=1` or Settings → Compatibility visualizer). `src/visuals/webgpuProbe.ts` is the only `requestDevice()` caller; it uses `powerPreference: 'high-performance'` (`?gpu=low` for low-power) and a shared `buildCanvasConfiguration` factory (`src/visuals/webgpu/canvasConfig.ts`).
 - Probe or initialization failure hard-fails only the visualizer slot with browser/adapter diagnostics; audio playback and decode remain available. Failed WebGPU does **not** auto-start WebGL2.
 
 ### Renderer Selection (`src/visuals/`)
 - **Fail-closed default**: `resolveVisualizerBackend()` returns `'webgpu'` unless the user explicitly chose `'webgl2'`.
-- **Opt-in WebGL2**: `?visualizer=webgl2`, `?renderer=webgl2`, local storage, or Settings “Compatibility visualizer” instantiates `WebGL2Visualizer` (shared `WAVEFORM_LAYOUT`). No WebGPU probe on that canvas (cannot share GL + WebGPU context); gpu-chores stay Worker/CPU.
+- **Opt-in WebGL2**: `?webgl2=1`, `?visualizer=webgl2`, `?renderer=webgl2`, local storage, or Settings “Compatibility visualizer” instantiates `WebGL2Visualizer` (shared `WAVEFORM_LAYOUT`). No WebGPU probe on that canvas (cannot share GL + WebGPU context); gpu-chores stay Worker/CPU. A non-WebGPU renderer is never silent: `getRendererLabel()` (`rendererSelection.ts`) drives both the amber badge in `TopScreen` and `document.title`, which only says “WebGPU” while a WebGPU visualizer is running. GL uniforms are typed from `getActiveUniform` and set via `setUniform()` (`webgl2/glUtils.ts`) after `useProgram`.
 - **Canvas2D**: debug only (`window.DEBUG_VISUALIZER='canvas2d'`). URL/storage `canvas2d` is ignored for creation.
 - **Debug helpers**: `window.webgpuProbe` includes `powerPreference`, `requestedFeatures`, and `adapter.isFallbackAdapter`; `window.DEBUG_VISUALIZER`, `window.currentVisualizer`, Alt+D debug cycling, ShaderGUI debug panel.
 - **Layout contract**: `src/visuals/waveformContract.ts` — single source of truth for knob/LED UVs shared by WGSL and GLSL
@@ -276,8 +275,8 @@ The `ShaderGUI` component (`src/components/ShaderGUI/ShaderGUI.tsx`) is a hardwa
 **Critical Note — Shader-to-CSS Alignment:**
 Knob/LED glow UV coordinates and palette colors live in **`src/visuals/waveformContract.ts`** (`WAVEFORM_LAYOUT`). Both the WGSL and GLSL waveform shaders inject these values at build time. If you modify `.shader-gui-layout`, `.shader-gui-top-right`, knob positions, or button positions in `ShaderGUI.css`, update `WAVEFORM_LAYOUT` once — do not hardcode UVs in either shader file.
 
-### Backend API (`app.py`)
-The FastAPI backend provides the following endpoints (verified from `app.py`):
+### Backend API (`server/app.py`)
+The local FastAPI dev backend provides the following endpoints (verified from `server/app.py`); production is `contabo_storage_manager`:
 
 - **Health**: `GET /`, `GET /api/health`
 - **Library**: `GET /api/songs` (filtering, sorting, pagination), `GET /api/library/songs`
@@ -288,7 +287,7 @@ The FastAPI backend provides the following endpoints (verified from `app.py`):
 - **Trash**: `POST /api/songs/{id}/trash` (sets `rating=0`, adds `trash` tag)
 - **Tag Suggestions**: `GET /api/songs/{id}/suggest-tags`
 - **Share**: `POST /api/share`, `GET /api/share/{share_id}`, `GET /playlist/{share_id}`
-- **Listening rooms** (`rooms.py`): `POST /api/rooms`, `GET`/`DELETE /api/rooms/{room_id}`, `GET /room/{room_id}`, `WS /ws/rooms/{room_id}` — in-memory, single worker; see `docs/LISTENING_ROOMS.md`
+- **Listening rooms** (`server/rooms.py`): `POST /api/rooms`, `GET`/`DELETE /api/rooms/{room_id}`, `GET /room/{room_id}`, `WS /ws/rooms/{room_id}` — in-memory, single worker; see `docs/LISTENING_ROOMS.md`
 - **MusicBrainz**: `GET /api/musicbrainz/search`
 
 **Storage**: Uses an in-memory cache backed by `data/songs/index.json`. The `data/` directory must be writable at runtime.
@@ -297,7 +296,7 @@ The FastAPI backend provides the following endpoints (verified from `app.py`):
 ```
 User selects track
     ↓
-audioLoader / songApi → absolute https:// URL from storage.noahcohn.com
+api/audioLoader / songApi → absolute https:// URL from storage.noahcohn.com
     ↓
 createAudioBackend(mode) — streaming (default) | web-audio | worklet | sdl
     ↓
@@ -379,9 +378,9 @@ The FastAPI backend already adds `CORSMiddleware` with `allow_origins=["*"]`.
 Due to SharedArrayBuffer usage, the app must be served over HTTPS (except localhost).
 
 ### Deployment Credentials
-`deploy.py` reads `DEPLOY_TOKEN` from the environment only (`export DEPLOY_TOKEN="..."`) and fails
+`scripts/deploy.py` reads `DEPLOY_TOKEN` from the environment only (`export DEPLOY_TOKEN="..."`) and fails
 fast if it's unset — never hardcode a token value in the file. `deploy_old.py` (plaintext SFTP
-password, superseded by `deploy.py`'s bundle-upload flow) has been removed.
+password, superseded by `scripts/deploy.py`'s bundle-upload flow) has been removed.
 
 ## Known Issues & Limitations
 
@@ -391,25 +390,34 @@ password, superseded by `deploy.py`'s bundle-upload flow) has been removed.
 4. **Memory Constraints**: WASM heap grows from a 64 MiB floor up to **512 MiB** (`MAXIMUM_MEMORY`). Large files use the play ring, not a full-buffer vector.
 5. **Shader-to-CSS layout**: Knob/LED UVs live in `src/visuals/waveformContract.ts`. Changing CSS layout requires updating that contract once (both GPU shaders inject it).
 
+## Commit & PR Conventions
+
+- Commit subjects are imperative and say what changed, scoped where useful: `audio: fix worklet ring underrun on seek`, `ci: pin emsdk`. Never `push fix` / `update` / `wip`.
+- One logical change per commit; WASM artifacts (`public/*.wasm`, `*.sha256`) go in the same commit as the C++ change that produced them.
+- Don't add scripts that blind-`git add . && git commit`; review `git status` before staging.
+- Logging: no `console.log`/`info`/`debug` in `src/` — use `src/utils/debug.ts` (`REACT_APP_DEBUG=true`). `console.warn`/`error` are allowed.
+- Type strictness: `noUncheckedIndexedAccess` is on. In hot loops with provably in-bounds indices use `!`; otherwise guard.
+- `react-hooks/exhaustive-deps` is `warn`; an intentional omission needs `// eslint-disable-next-line react-hooks/exhaustive-deps -- <reason>`.
+
 ## Development Workflow
 
-1. **Setup**: `npm install` and `pip install -r requirements.txt`
-2. **Data directories**: Ensure `data/music/` and `data/songs/` exist and are writable
-3. **Backend**: `python app.py` (runs on port 7860 by default)
+1. **Setup**: `npm install` and `pip install -r server/requirements.txt`
+2. **Data directories**: `server/data/` is created on first run (`DATA_DIR` overrides)
+3. **Backend** (optional): `cd server && python app.py` (port 7860 by default)
 4. **WASM Build** (if modifying C++): `npm run build:wasm`, commit `public/sdl-audio.*` and `public/wasm-source.sha256`
 5. **Development**: `npm start` — opens at http://localhost:3000 with hot reload
-6. **Lint**: `npm run lint` — must pass before committing
+6. **Lint**: `npm run lint -- --max-warnings 0` — CI enforces zero warnings; `npm run typecheck` and `npm run test:unit` must pass too
 7. **Build**: `npm run build` — outputs production bundle to `dist/`
-8. **Deploy**: Use `deploy.py` for SFTP, or configure Netlify/Vercel as needed
+8. **Deploy**: Use `scripts/deploy.py` (bundle upload), or configure Netlify/Vercel as needed
 
 ## File Dependencies
 
 Key module dependencies:
-- `Player.tsx` → `usePlaybackController`, `audio/backends/*`, `audioLoader.ts`, `webgpuVisualizer.ts`, `useKeyboardShortcuts.ts`, `LibraryView.tsx`, `QueuePanel.tsx`, `StarRating.tsx`, `ShaderGUI.tsx`
+- `Player.tsx` → `usePlaybackController`, `audio/backends/*`, `api/audioLoader.ts`, `visuals/webgpuVisualizer.ts`, `useKeyboardShortcuts.ts`, `LibraryView.tsx`, `QueuePanel.tsx`, `StarRating.tsx`, `ShaderGUI.tsx`
 - `ShaderGUI.tsx` → `WebGPUVisualizer`, `useBeatDetection`, `TopScreen`, `BottomScreen`, `Knob`, `Button`, `VolumeSlider`, `Chassis`
-- `WebAudioPlayer.ts` / `WorkletAudioPlayer.ts` / `Sdl3AudioPlayer.ts` → `flacDecoder.ts`
-- `webgpuVisualizer.ts` → `math.ts`, `waveform.ts`
-- `app.py` → `data/songs/index.json` (runtime)
+- `WebAudioPlayer.ts` / `WorkletAudioPlayer.ts` / `Sdl3AudioPlayer.ts` → `audio/flacDecoder.ts`
+- `visuals/webgpuVisualizer.ts` → `visuals/math.ts`, `waveform.ts`
+- `server/app.py` → `server/data/songs/index.json` (runtime)
 
 ## External APIs
 
@@ -430,10 +438,10 @@ Key module dependencies:
 Dependencies (npm + pip) are installed automatically by the startup update script. Standard commands live in the **Build Commands** / **Testing Instructions** sections above; the notes below are the non-obvious cloud caveats only.
 
 - **The frontend talks to the REMOTE backend by default.** The committed `.env` / `.env.production` set `REACT_APP_API_URL=https://storage.noahcohn.com`, so `npm start` alone yields a fully working library (~351 tracks) and streaming playback with no local backend. This requires network egress to `storage.noahcohn.com`.
-- **The local backend serves an EMPTY library.** `python3 app.py` (port 7860) starts healthy but `data/` is empty, so `/api/health` reports `songs_count: 0`. Running it is optional — only needed for offline/self-hosted testing, and then you must set `REACT_APP_API_URL=http://localhost:7860` and seed `data/music/` + `data/songs/index.json`.
+- **The local backend serves an EMPTY library.** `cd server && python3 app.py` (port 7860) starts healthy but `server/data/` is empty, so `/api/health` reports `songs_count: 0`. Running it is optional — only needed for offline/self-hosted testing, and then you must set `REACT_APP_API_URL=http://localhost:7860` and seed `data/music/` + `data/songs/index.json`.
 - **The webpack `/api → localhost:7860` proxy is bypassed** whenever `REACT_APP_API_URL` is non-empty (the committed default), so the local backend is not reached even if running.
-- **Python console scripts install to `~/.local/bin`** (not on PATH). Run the backend with `python3 app.py` or `python3 -m uvicorn app:app --host 0.0.0.0 --port 7860`.
+- **Python console scripts install to `~/.local/bin`** (not on PATH). Run the backend from `server/` with `python3 app.py` or `python3 -m uvicorn app:app --host 0.0.0.0 --port 7860`.
 - **Playwright browsers are not part of `npm install`.** For `npm run test:e2e`, first run `npx playwright install chromium` (add `--with-deps` for system libs).
 - **WebGPU may be unavailable in headless Chrome**, so ShaderGUI shows the expected WebGPU fatal panel and does not start WebGL2/Canvas2D. Audio playback tests still work because the failure is isolated to the visualizer slot.
-- **WASM builds need Emscripten/emsdk, which is NOT installed.** Prebuilt `public/sdl-audio.*` is committed, so `npm start`, `npm run build`, and all default (streaming) playback work without emsdk. Only `npm run build:wasm*` requires the toolchain.
+- **WASM builds need Emscripten/emsdk, which is NOT installed.** Prebuilt `public/sdl-audio.*` is committed, so `npm start`, `npm run build`, and all default (streaming) playback work without emsdk. Only `npm run build:wasm*` / `build:projectm` require the toolchain, and it must be the version in `scripts/emsdk-version` (`scripts/emsdk-env.sh` errors on any other emcc; `WASM_ALLOW_EMSDK_MISMATCH=1` for throwaway builds only).
 - `npm start` uses `--open`; there is no desktop browser auto-launch in the VM, but the dev server still serves on `http://localhost:3000`.

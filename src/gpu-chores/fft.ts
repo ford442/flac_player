@@ -79,8 +79,8 @@ export function fftInterleaved(data: Float32Array): void {
   const n = data.length >> 1;
   for (let i = 0, j = 0; i < n; i++) {
     if (i < j) {
-      const tr = data[i * 2]; data[i * 2] = data[j * 2]; data[j * 2] = tr;
-      const ti = data[i * 2 + 1]; data[i * 2 + 1] = data[j * 2 + 1]; data[j * 2 + 1] = ti;
+      const tr = data[i * 2]!; data[i * 2] = data[j * 2]!; data[j * 2] = tr;
+      const ti = data[i * 2 + 1]!; data[i * 2 + 1] = data[j * 2 + 1]!; data[j * 2 + 1] = ti;
     }
     let m = n >> 1;
     while (m >= 1 && j >= m) { j -= m; m >>= 1; }
@@ -95,12 +95,12 @@ export function fftInterleaved(data: Float32Array): void {
         const wi = Math.sin(step * k);
         const e = (i + k) * 2;
         const o = (i + k + half) * 2;
-        const tr = wr * data[o] - wi * data[o + 1];
-        const ti = wr * data[o + 1] + wi * data[o];
-        data[o] = data[e] - tr;
-        data[o + 1] = data[e + 1] - ti;
-        data[e] += tr;
-        data[e + 1] += ti;
+        const tr = wr * data[o]! - wi * data[o + 1]!;
+        const ti = wr * data[o + 1]! + wi * data[o]!;
+        data[o] = data[e]! - tr;
+        data[o + 1] = data[e + 1]! - ti;
+        data[e] = data[e]! + tr;
+        data[e + 1] = data[e + 1]! + ti;
       }
     }
   }
@@ -132,12 +132,12 @@ export function stockhamFftReference(input: Float32Array): Float32Array {
     for (let j = 0; j < half; j++) {
       const k = j % ns;
       const t = k * (n / (2 * ns));
-      const wr = twiddles[t * 2];
-      const wi = twiddles[t * 2 + 1];
-      const v0r = src[j * 2];
-      const v0i = src[j * 2 + 1];
-      const v1r0 = src[(j + half) * 2];
-      const v1i0 = src[(j + half) * 2 + 1];
+      const wr = twiddles[t * 2]!;
+      const wi = twiddles[t * 2 + 1]!;
+      const v0r = src[j * 2]!;
+      const v0i = src[j * 2 + 1]!;
+      const v1r0 = src[(j + half) * 2]!;
+      const v1i0 = src[(j + half) * 2 + 1]!;
       const v1r = v1r0 * wr - v1i0 * wi;
       const v1i = v1r0 * wi + v1i0 * wr;
       const idx = Math.floor(j / ns) * ns * 2 + k;
@@ -160,11 +160,11 @@ export function binFftMagnitudes(mags: Float32Array, binCount: number): Float32A
     const start = Math.min(lines - 1, Math.floor((b * lines) / binCount));
     const end = Math.floor(((b + 1) * lines) / binCount);
     if (end <= start) {
-      out[b] = mags[start];
+      out[b] = mags[start]!;
       continue;
     }
     let sum = 0;
-    for (let i = start; i < end; i++) sum += mags[i];
+    for (let i = start; i < end; i++) sum += mags[i]!;
     out[b] = sum / (end - start);
   }
   return out;
@@ -186,11 +186,11 @@ export function fftMagnitudes(
     let data = windowedSegment(pcm, plan, seg);
     if (kernel === 'stockham') data = stockhamFftReference(data);
     else fftInterleaved(data);
-    for (let k = 0; k < lines; k++) acc[k] += Math.hypot(data[k * 2], data[k * 2 + 1]);
+    for (let k = 0; k < lines; k++) acc[k] = acc[k]! + Math.hypot(data[k * 2]!, data[k * 2 + 1]!);
   }
   const mags = new Float32Array(lines);
   const scale = plan.norm / plan.segments;
-  for (let k = 0; k < lines; k++) mags[k] = acc[k] * scale;
+  for (let k = 0; k < lines; k++) mags[k] = acc[k]! * scale;
   return mags;
 }
 

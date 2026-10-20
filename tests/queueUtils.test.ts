@@ -80,6 +80,22 @@ describe('getPreviousQueueIndex', () => {
   it('steps back sequentially when repeat is off', () => {
     expect(getPreviousQueueIndex(3, 2, 'off')).toBe(1);
   });
+
+  it('goes to the last track when there is no current track (repeat off)', () => {
+    expect(getPreviousQueueIndex(3, -1, 'off')).toBe(2);
+  });
+
+  it('goes to the last track when there is no current track (repeat all)', () => {
+    expect(getPreviousQueueIndex(3, -1, 'all')).toBe(2);
+  });
+
+  it('treats an out-of-range current index as no current track (repeat off)', () => {
+    expect(getPreviousQueueIndex(3, 5, 'off')).toBe(2);
+  });
+
+  it('treats an out-of-range current index as no current track (repeat all)', () => {
+    expect(getPreviousQueueIndex(3, 5, 'all')).toBe(2);
+  });
 });
 
 describe('handleQueueAutoAdvance', () => {

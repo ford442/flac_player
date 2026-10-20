@@ -2,13 +2,34 @@
 # Emscripten build of the SpeexDSP resampler (HQ sample-rate conversion for the
 # worklet backend when the AudioContext cannot open the file's native rate).
 #
-#   scripts/build-resampler-wasm.sh    → public/speex-resampler.{js,wasm}
+#   scripts/build-resampler-wasm.sh            → public/speex-resampler.{js,wasm}
+#   scripts/build-resampler-wasm.sh --debug    # -O0 -g ASSERTIONS SAFE_HEAP, scalar
 #
 # Source: SpeexDSP 1.2.1 release tarball (BSD-3-Clause), pinned by SHA-256 and
 # unpacked under .build/. Only libspeexdsp/resample.c is compiled; the ABI is
 # src/resampler/speex_resampler_wasm.c. src/audio/resampler.ts falls back to
 # linear interpolation when this module fails to load.
+#
+# Heap: 4 MiB initial, 16 MiB MAXIMUM_MEMORY. Quality-10 state is < 1 MiB even
+# for 8 ch / 4:1 downsampling, and resampler.ts stages at most ~1 MiB of
+# in+out per rs_process slice, so growth past 16 MiB means a caller bug.
+# rs_create rejects > 8 channels. No pthread (runs on the main/worklet thread).
+#
+# -msimd128 (release): LLVM vectorizes inner_product_single. Measured with
+# emsdk 6.0.9 in Node at quality 10: 44.1→48 kHz 1.3×, 96→48 kHz 1.85×,
+# 44.1→96 kHz 1.25× vs scalar, output bit-identical (SpeexDSP's scalar
+# inner product already sums in 4 lanes). resample_sse.h via -msse -DUSE_SSE
+# was not consistently faster, so it is not used.
 set -euo pipefail
+
+DEBUG=0
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --debug) DEBUG=1 ;;
+    *) echo "Usage: $0 [--debug]" >&2; exit 1 ;;
+  esac
+  shift
+done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -45,6 +66,14 @@ typedef uint32_t spx_uint32_t;
 #endif
 H
 
+if [[ "$DEBUG" -eq 1 ]]; then
+  OPT_FLAGS=(-O0 -g -s ASSERTIONS=1 -s SAFE_HEAP=1)
+  echo "Resampler debug profile: -O0 -g ASSERTIONS=1 SAFE_HEAP=1 (scalar)"
+else
+  OPT_FLAGS=(-O3 -DNDEBUG -msimd128)
+  echo "Resampler release profile: -O3 -DNDEBUG -msimd128"
+fi
+
 EXPORTS='["_rs_create","_rs_process","_rs_last_consumed","_rs_input_latency","_rs_reset","_rs_destroy","_malloc","_free"]'
 
 echo "Compiling SpeexDSP resampler -> $OUT_DIR/speex-resampler.js"
@@ -53,12 +82,13 @@ emcc \
   "$PROJECT_ROOT/src/resampler/speex_resampler_wasm.c" \
   -I"$SRC_DIR/include" -I"$SRC_DIR/libspeexdsp" \
   -DFLOATING_POINT -DEXPORT= \
-  -O3 -DNDEBUG \
+  "${OPT_FLAGS[@]}" \
   -s WASM=1 \
   -s EXPORTED_FUNCTIONS="$EXPORTS" \
   -s EXPORTED_RUNTIME_METHODS='["HEAPF32"]' \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=4194304 \
+  -s MAXIMUM_MEMORY=16777216 \
   -s MODULARIZE=1 \
   -s EXPORT_NAME="createSpeexResamplerModule" \
   -s ENVIRONMENT="web,worker,node" \

@@ -1,26 +1,17 @@
-import type { ShaderGUIUniforms, VisualizerMode } from '../../webgpuVisualizer';
+import type { ShaderGUIUniforms, VisualizerMode } from '../webgpuVisualizer';
 import type { WebGL2DebugConfig, WebGL2DebugMode } from '../types';
-import { compileShader, linkProgram, collectUniforms } from './glUtils';
+import { compileShader, linkProgram, collectUniforms, setUniform, type UniformInfo } from './glUtils';
 import { FULLSCREEN_VERTEX, GUI_FRAGMENT, FLAT_FRAGMENT } from './shaders/waveform';
 import { createDebugConfig, debugModeToUniform } from './debugModes';
 import { downsampleAudioData } from '../visualSync';
 import { DEFAULT_WAVEFORM_UNIFORMS } from '../waveformContract';
+import { buildWebGL2ContextAttributes } from '../webgpu/canvasConfig';
 
 type GLPass = {
   program: WebGLProgram;
-  uniforms: Record<string, WebGLUniformLocation | null>;
+  /** Uniforms of this program only, typed from the GLSL declarations. */
+  uniforms: Record<string, UniformInfo>;
 };
-
-const GUI_UNIFORM_NAMES = [
-  'u_resolution', 'u_time', 'u_beatPhase',
-  'u_rsycrb', 'u_fractal', 'u_pulse',
-  'u_audioLevel', 'u_audioLevelL', 'u_audioLevelR',
-  'u_spectrum0', 'u_spectrum1', 'u_spectrum2', 'u_spectrum3', 'u_spectrum4',
-  'u_modeNone', 'u_modeIR', 'u_isPlaying', 'u_playbackProgress',
-  'u_volume', 'u_colorShift', 'u_audioData', 'u_debugMode',
-];
-
-const FLAT_UNIFORM_NAMES = ['u_resolution', 'u_time', 'u_audioLevel'];
 
 /**
  * WebGL2 reference renderer for ShaderGUI waveform effects.
@@ -38,6 +29,7 @@ export class WebGL2Visualizer {
   private mode: VisualizerMode = 'flat';
   private time = 0;
   private onTogglePlay: (() => void) | null = null;
+  private contextAttributes: WebGLContextAttributes | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -53,18 +45,22 @@ export class WebGL2Visualizer {
 
   initialize(analyser: AnalyserNode): boolean {
     this.destroy();
-    const gl = this.canvas.getContext('webgl2', {
-      alpha: false,
-      premultipliedAlpha: false,
-      antialias: true,
-    });
+    // antialias stays false: the 3D cube is WebGPU-only, so every GL pass is the
+    // fullscreen ShaderGUI shader, which does its own glow.
+    const requested = buildWebGL2ContextAttributes();
+    let gl = this.canvas.getContext('webgl2', requested);
+    if (!gl && requested.desynchronized) {
+      // desynchronized is a hint; retry without it before failing closed.
+      gl = this.canvas.getContext('webgl2', { ...requested, desynchronized: false });
+    }
     if (!gl) return false;
+    this.contextAttributes = gl.getContextAttributes() ?? requested;
 
     try {
       this.gl = gl;
       this.analyser = analyser;
-      this.guiPass = this.createPass(gl, FULLSCREEN_VERTEX, GUI_FRAGMENT, 'gui', GUI_UNIFORM_NAMES);
-      this.flatPass = this.createPass(gl, FULLSCREEN_VERTEX, FLAT_FRAGMENT, 'flat', FLAT_UNIFORM_NAMES);
+      this.guiPass = this.createPass(gl, FULLSCREEN_VERTEX, GUI_FRAGMENT, 'gui');
+      this.flatPass = this.createPass(gl, FULLSCREEN_VERTEX, FLAT_FRAGMENT, 'flat');
       gl.disable(gl.DEPTH_TEST);
       gl.disable(gl.BLEND);
       return true;
@@ -80,14 +76,13 @@ export class WebGL2Visualizer {
     vsSrc: string,
     fsSrc: string,
     label: string,
-    uniformNames: string[],
   ): GLPass {
     const vs = compileShader(gl, gl.VERTEX_SHADER, vsSrc, `${label}-vs`);
     const fs = compileShader(gl, gl.FRAGMENT_SHADER, fsSrc, `${label}-fs`);
     const program = linkProgram(gl, vs, fs, label);
     gl.deleteShader(vs);
     gl.deleteShader(fs);
-    return { program, uniforms: collectUniforms(gl, program, uniformNames) };
+    return { program, uniforms: collectUniforms(gl, program, label) };
   }
 
   setUniforms(data: ShaderGUIUniforms): void {
@@ -117,33 +112,33 @@ export class WebGL2Visualizer {
 
   private bindGuiUniforms(gl: WebGL2RenderingContext, pass: GLPass): void {
     const u = this.guiUniforms;
-    const loc = pass.uniforms;
+    // Uniform locations belong to one program; set them on that program, not whichever was last bound.
+    gl.useProgram(pass.program);
+    const set = (name: string, value: number | number[] | Float32Array): void =>
+      setUniform(gl, pass.uniforms[name], value);
 
-    gl.uniform2f(loc.u_resolution, u.resolution[0], u.resolution[1]);
-    gl.uniform1f(loc.u_time, u.time);
-    gl.uniform1f(loc.u_beatPhase, u.beatPhase);
-    gl.uniform1f(loc.u_rsycrb, u.rsycrb);
-    gl.uniform1f(loc.u_fractal, u.fractal);
-    gl.uniform1f(loc.u_pulse, u.pulse);
-    gl.uniform1f(loc.u_audioLevel, u.audioLevel);
-    gl.uniform1f(loc.u_audioLevelL, u.audioLevelL);
-    gl.uniform1f(loc.u_audioLevelR, u.audioLevelR);
-    gl.uniform1f(loc.u_spectrum0, u.spectrum0);
-    gl.uniform1f(loc.u_spectrum1, u.spectrum1);
-    gl.uniform1f(loc.u_spectrum2, u.spectrum2);
-    gl.uniform1f(loc.u_spectrum3, u.spectrum3);
-    gl.uniform1f(loc.u_spectrum4, u.spectrum4);
-    gl.uniform1f(loc.u_modeNone, u.modeNone);
-    gl.uniform1f(loc.u_modeIR, u.modeIR);
-    gl.uniform1f(loc.u_isPlaying, u.isPlaying);
-    gl.uniform1f(loc.u_playbackProgress, u.playbackProgress);
-    gl.uniform1f(loc.u_volume, u.volume);
-    gl.uniform1f(loc.u_colorShift, u.colorShift);
-    gl.uniform1f(loc.u_debugMode, debugModeToUniform(this.debug.mode));
-
-    if (loc.u_audioData) {
-      gl.uniform1fv(loc.u_audioData, this.guiAudioData);
-    }
+    set('u_resolution', [u.resolution[0], u.resolution[1]]);
+    set('u_time', u.time);
+    set('u_beatPhase', u.beatPhase);
+    set('u_rsycrb', u.rsycrb);
+    set('u_fractal', u.fractal);
+    set('u_pulse', u.pulse);
+    set('u_audioLevel', u.audioLevel);
+    set('u_audioLevelL', u.audioLevelL);
+    set('u_audioLevelR', u.audioLevelR);
+    set('u_spectrum0', u.spectrum0);
+    set('u_spectrum1', u.spectrum1);
+    set('u_spectrum2', u.spectrum2);
+    set('u_spectrum3', u.spectrum3);
+    set('u_spectrum4', u.spectrum4);
+    set('u_modeNone', u.modeNone);
+    set('u_modeIR', u.modeIR);
+    set('u_isPlaying', u.isPlaying);
+    set('u_playbackProgress', u.playbackProgress);
+    set('u_volume', u.volume);
+    set('u_colorShift', u.colorShift);
+    set('u_debugMode', debugModeToUniform(this.debug.mode));
+    set('u_audioData', this.guiAudioData);
   }
 
   private drawFullscreen(gl: WebGL2RenderingContext, program: WebGLProgram): void {
@@ -175,7 +170,7 @@ export class WebGL2Visualizer {
     const temp = new Uint8Array(this.analyser.frequencyBinCount);
     this.analyser.getByteFrequencyData(temp);
     let sum = 0;
-    for (let i = 0; i < temp.length; i++) sum += temp[i];
+    for (let i = 0; i < temp.length; i++) sum += temp[i]!;
     return sum / temp.length / 255.0;
   }
 
@@ -189,9 +184,9 @@ export class WebGL2Visualizer {
 
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.useProgram(pass.program);
-    gl.uniform2f(pass.uniforms.u_resolution, this.canvas.width, this.canvas.height);
-    gl.uniform1f(pass.uniforms.u_time, this.time);
-    gl.uniform1f(pass.uniforms.u_audioLevel, audioLevel);
+    setUniform(gl, pass.uniforms['u_resolution'], [this.canvas.width, this.canvas.height]);
+    setUniform(gl, pass.uniforms['u_time'], this.time);
+    setUniform(gl, pass.uniforms['u_audioLevel'], audioLevel);
     this.drawFullscreen(gl, pass.program);
   }
 
@@ -214,6 +209,11 @@ export class WebGL2Visualizer {
     return this.canvas;
   }
 
+  /** Attributes the browser actually granted (for the probe breadcrumb / HUD). */
+  getContextAttributes(): WebGLContextAttributes | null {
+    return this.contextAttributes;
+  }
+
   destroy(): void {
     const gl = this.gl;
     if (gl) {
@@ -221,6 +221,7 @@ export class WebGL2Visualizer {
       if (this.flatPass) gl.deleteProgram(this.flatPass.program);
     }
     this.gl = null;
+    this.contextAttributes = null;
     this.guiPass = null;
     this.flatPass = null;
     this.analyser = null;

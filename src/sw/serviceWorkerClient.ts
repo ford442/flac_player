@@ -3,6 +3,8 @@ import {
   type SWClientMessage,
   type SWServerMessage,
 } from './swMessages';
+import { assetUrl, PUBLIC_PATH } from '../utils/publicPath';
+import { debug } from '../utils/debug';
 
 type MessageHandler = (message: SWServerMessage) => void;
 
@@ -38,7 +40,9 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   }
 
   try {
-    registration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+    registration = await navigator.serviceWorker.register(assetUrl('service-worker.js'), {
+      scope: PUBLIC_PATH,
+    });
 
     navigator.serviceWorker.addEventListener('message', (event: MessageEvent) => {
       dispatchMessage(event.data);
@@ -66,7 +70,8 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 
     return registration;
   } catch (err) {
-    console.warn('[SW] Registration failed:', err);
+    // Offline support is optional; a failed registration must not surface as an app error.
+    debug.warn('SW_REGISTRATION_FAILED', err);
     return null;
   }
 }

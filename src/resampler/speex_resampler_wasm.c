@@ -7,9 +7,18 @@
 
 static spx_uint32_t g_last_consumed = 0;
 
-// quality 0..10 (SPEEX_RESAMPLER_QUALITY_MAX). Returns 0 on failure.
+// FLAC tops out at 8 channels. Rates beyond 768 kHz are caller bugs.
+#define RS_MAX_CHANNELS 8
+#define RS_MAX_RATE 768000
+
+// quality 0..10 (SPEEX_RESAMPLER_QUALITY_MAX). Returns 0 on failure, including
+// out-of-range arguments: the module is capped at 16 MiB (MAXIMUM_MEMORY in
+// scripts/build-resampler-wasm.sh), so fail closed rather than grow toward it.
+// resampler.ts falls back to linear interpolation on 0.
 EMSCRIPTEN_KEEPALIVE
 SpeexResamplerState* rs_create(int channels, int in_rate, int out_rate, int quality) {
+    if (channels < 1 || channels > RS_MAX_CHANNELS) return 0;
+    if (in_rate <= 0 || in_rate > RS_MAX_RATE || out_rate <= 0 || out_rate > RS_MAX_RATE) return 0;
     int err = 0;
     SpeexResamplerState* st = speex_resampler_init((spx_uint32_t)channels, (spx_uint32_t)in_rate,
                                                    (spx_uint32_t)out_rate, quality, &err);

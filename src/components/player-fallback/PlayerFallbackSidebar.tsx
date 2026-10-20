@@ -1,6 +1,7 @@
 import React from 'react';
-import { SortBy, TagInfo } from '../../audioLoader';
+import { SortBy, TagInfo } from '../../api/audioLoader';
 import { FileDropZone } from '../FileDropZone';
+import { UrlLoader } from '../UrlLoader';
 import { FAST_STORAGE_HOST } from '../../utils/audioUtils';
 import { ViewTab } from './types';
 
@@ -26,6 +27,8 @@ export interface PlayerFallbackSidebarProps {
   selectedTags: string[];
   setSelectedTags: React.Dispatch<React.SetStateAction<string[]>>;
   onFileSelect: (files: File[]) => void;
+  onLoadUrl: (url: string) => string | null;
+  onLoadDemo: () => void;
 }
 
 export const PlayerFallbackSidebar: React.FC<PlayerFallbackSidebarProps> = ({
@@ -33,7 +36,7 @@ export const PlayerFallbackSidebar: React.FC<PlayerFallbackSidebarProps> = ({
   minRating, setMinRating, untaggedOnly, setUntaggedOnly,
   sortBy, setSortBy, storageSourceFilter, setStorageSourceFilter, fastMirrorCount,
   generationModelFilter, setGenerationModelFilter, generationModels,
-  allTags, selectedTags, setSelectedTags, onFileSelect,
+  allTags, selectedTags, setSelectedTags, onFileSelect, onLoadUrl, onLoadDemo,
 }) => (
   <aside className="w-64 border-r border-white/10 bg-[#0a0a18] flex flex-col">
     <nav className="p-4 space-y-1">
@@ -114,6 +117,11 @@ export const PlayerFallbackSidebar: React.FC<PlayerFallbackSidebarProps> = ({
     <div className="p-4 border-t border-white/10">
       <label className="text-xs text-gray-500 uppercase block mb-2">Local Files</label>
       <FileDropZone onFiles={onFileSelect} />
+    </div>
+
+    <div className="p-4 border-t border-white/10">
+      <label className="text-xs text-gray-500 uppercase block mb-2">From URL</label>
+      <UrlLoader onLoadUrl={onLoadUrl} onLoadDemo={onLoadDemo} />
     </div>
   </aside>
 );

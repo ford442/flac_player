@@ -1,4 +1,4 @@
-import { AudioLoader } from '../audioLoader';
+import { AudioLoader } from '../api/audioLoader';
 
 export const checkBackendHealth = async (loader: AudioLoader): Promise<boolean> => {
   try {

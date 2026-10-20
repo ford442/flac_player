@@ -2,6 +2,7 @@ import React from 'react';
 import './App.css';
 import { Player } from './components/Player';
 import { isRoomRoute } from './listening/roomSession';
+import { routePath } from './utils/publicPath';
 
 /** Shared playlists and listening rooms open the player full-screen. */
 const isSharedPlaylistRoute = (): boolean => {
@@ -10,7 +11,7 @@ const isSharedPlaylistRoute = (): boolean => {
     return true;
   }
 
-  return /^\/playlist\/[^/]+$/.test(window.location.pathname) || isRoomRoute();
+  return /^\/playlist\/[^/]+$/.test(routePath(window.location.pathname)) || isRoomRoute();
 };
 
 const App: React.FC = () => {
@@ -21,7 +22,7 @@ const App: React.FC = () => {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>FLAC Player with WebGPU</h1>
+        <h1>FLAC Player</h1>
         <p>High-quality audio playback with shader visualization</p>
       </header>
       <main className="App-main">

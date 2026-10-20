@@ -10,16 +10,17 @@ function interleave(decoded: {
   channelData: Float32Array[];
   samplesDecoded: number;
   bitDepth: number;
+  errors?: unknown[];
 }) {
   const { sampleRate, channelData, samplesDecoded, bitDepth } = decoded;
   const channels = channelData.length;
-  const duration = samplesDecoded / sampleRate;
+  const duration = sampleRate > 0 ? samplesDecoded / sampleRate : 0;
 
   const interleaved = new Float32Array(samplesDecoded * channels);
   for (let ch = 0; ch < channels; ch++) {
-    const channelSamples = channelData[ch];
+    const channelSamples = channelData[ch]!;
     for (let i = 0; i < samplesDecoded; i++) {
-      interleaved[i * channels + ch] = channelSamples[i];
+      interleaved[i * channels + ch] = channelSamples[i]!;
     }
   }
 
@@ -30,6 +31,9 @@ function interleave(decoded: {
     duration,
     bitDepth,
     samplesDecoded,
+    // libFLAC frame errors (LOST_SYNC, BAD_HEADER, ...). Non-zero means the
+    // output is missing frames; audioDecoder.ts falls back to native decode.
+    errors: decoded.errors?.length ?? 0,
   };
 }
 
@@ -74,8 +78,9 @@ self.onmessage = async (e: MessageEvent) => {
       const uint8Data = new Uint8Array(data.arrayBuffer);
       const decoded = await decoder.decode(uint8Data);
 
-      if (decoded.samplesDecoded === 0) {
-        // No frames decoded yet (e.g. still parsing headers)
+      if (decoded.samplesDecoded === 0 && !decoded.errors?.length) {
+        // No frames decoded yet (e.g. still parsing headers). Errored chunks
+        // are reported even with 0 samples so the caller can fall back.
         self.postMessage({ id, type: 'chunkDecoded', result: null });
         return;
       }
@@ -93,7 +98,7 @@ self.onmessage = async (e: MessageEvent) => {
 
       const decoded = await decoder.flush();
 
-      if (decoded.samplesDecoded === 0) {
+      if (decoded.samplesDecoded === 0 && !decoded.errors?.length) {
         self.postMessage({ id, type: 'flushed', result: null });
         return;
       }
