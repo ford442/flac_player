@@ -479,7 +479,7 @@ export const Player: React.FC = () => {
           aesthetic={visualizerAesthetic}
           onAestheticChange={setVisualizerAesthetic}
           analyser={getAnalyser()}
-          currentTrack={currentTrack} queue={queue} queueCurrentIndex={queueCurrentIndex}
+          currentTrack={currentTrack} currentFile={currentFile} queue={queue} queueCurrentIndex={queueCurrentIndex}
           isPlaying={playerState.isPlaying} isLoading={playerState.isLoading}
           currentTime={playerState.currentTime} duration={playerState.duration}
           volume={volume} muted={muted}

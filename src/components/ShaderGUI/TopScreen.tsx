@@ -8,6 +8,12 @@ interface TopScreenProps {
   canvasSessionKey?: string;
   artist?: string;
   title?: string;
+  /** Album (and year) line shown over the bottom of the screen. */
+  album?: string;
+  /** Cover art URL (embedded art, or the backend's cover_url fallback). */
+  artworkUrl?: string | null;
+  /** Spec badges, e.g. ['FLAC', '44.1 kHz', '16-bit', 'Stereo']. */
+  specs?: string[];
   activeBackend?: VisualizerBackend;
   /** Loud label shown whenever a non-WebGPU (opt-in) renderer is selected; null for WebGPU. */
   rendererBadge?: string | null;
@@ -22,6 +28,9 @@ export const TopScreen: React.FC<TopScreenProps> = ({
   canvasSessionKey = 'webgpu',
   artist,
   title,
+  album,
+  artworkUrl,
+  specs,
   activeBackend,
   rendererBadge = null,
   probeFailure,
@@ -139,6 +148,21 @@ export const TopScreen: React.FC<TopScreenProps> = ({
           </div>
         )}
       </div>}
+      {!probeFailure && !isLoading && (album || artworkUrl || (specs && specs.length > 0)) && (
+        <div className="track-meta-overlay" data-testid="track-meta-overlay">
+          {artworkUrl && (
+            <img
+              className="track-meta-art"
+              src={artworkUrl}
+              alt={`${album || title || 'Track'} cover art`}
+            />
+          )}
+          <div className="track-meta-text">
+            {album && <div className="track-meta-album">{album}</div>}
+            {specs && specs.length > 0 && <div className="track-meta-specs">{specs.join(' · ')}</div>}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

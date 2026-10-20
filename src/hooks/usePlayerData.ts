@@ -5,6 +5,7 @@ import {
   saveQueueToStorage, clearQueueStorage, getCachedLibrary, setCachedLibrary
 } from '../api/audioLoader';
 import { checkBackendHealth } from '../utils/healthCheck';
+import { clearMetadataCache } from '../storage/metadataCache';
 import {
   addTrackToQueue, playNextTrack, removeFromQueue as removeFromQueueUtil, reorderQueueIndex
 } from '../utils/queueUtils';
@@ -139,6 +140,7 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
           : 'Library rescan completed. Refreshing catalog...',
         'success'
       );
+      void clearMetadataCache(); // files may have been retagged; re-read tags on next play
       const healthy = await checkBackend();
       if (healthy) await Promise.all([loadLibrary(), loadTags(), loadStats()]);
       else addToast('Rescan initiated, but catalog refresh failed - backend is currently unreachable', 'info');

@@ -253,7 +253,8 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
 
           {activeTab === 'now-playing' && (
             <PlayerFallbackNowPlayingTab
-              analyser={analyser} currentTrack={currentTrack} queue={queue} queueCurrentIndex={queueCurrentIndex}
+              analyser={analyser} currentTrack={currentTrack} currentFile={currentFile}
+              queue={queue} queueCurrentIndex={queueCurrentIndex}
               transportState={transportState} transportControls={transportControls} overview={overview}
               onQueueTrackClick={onQueueTrackClick} onFileSelect={onFileSelect}
             />

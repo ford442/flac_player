@@ -34,12 +34,16 @@ import { Button } from './Button';
 import { VolumeSlider } from './VolumeSlider';
 import { useBeatDetection } from '../../hooks/useBeatDetection';
 import { useLiveGpuSpectrum } from '../../hooks/useLiveGpuSpectrum';
+import { ownsFile, useTrackMetadata } from '../../hooks/useTrackMetadata';
+import { formatSpecBadges } from '../../utils/trackMetadata';
 import { amplitudesToAnalyserBytes, resolveSpectrumSource } from '../../visuals/spectrumSource';
 import './ShaderGUI.css';
 
 export interface ShaderGUIProps {
   analyser: AnalyserNode | null;
   currentTrack: PlaylistTrack | null;
+  /** Local file behind `currentTrack` (blob: URL tracks only); used to read tags without fetching. */
+  currentFile?: File;
   queue: PlaylistTrack[];
   queueCurrentIndex: number;
   isPlaying: boolean;
@@ -72,6 +76,7 @@ export interface ShaderGUIProps {
 export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   analyser,
   currentTrack,
+  currentFile,
   queue,
   queueCurrentIndex,
   isPlaying,
@@ -99,6 +104,17 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   overviewReason = null,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const trackMeta = useTrackMetadata(
+    !controlsOnly && currentTrack
+      ? {
+          cacheKey: currentTrack.id || currentTrack.url,
+          url: currentTrack.url,
+          file: ownsFile(currentTrack.url, currentFile) ? currentFile : undefined,
+        }
+      : null
+  );
+  const trackAlbum = trackMeta.metadata?.tags.album;
+  const trackYear = trackMeta.metadata?.tags.year;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const webgpuRef = useRef<WebGPUVisualizer | null>(null);
   const webgl2Ref = useRef<WebGL2Visualizer | null>(null);
@@ -558,6 +574,9 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             canvasSessionKey={canvasSessionKey}
             artist={currentTrack?.author}
             title={currentTrack?.title || currentTrack?.name}
+            album={trackAlbum ? (trackYear ? `${trackAlbum} (${trackYear})` : trackAlbum) : undefined}
+            artworkUrl={trackMeta.artworkUrl ?? currentTrack?.cover_url ?? null}
+            specs={formatSpecBadges(trackMeta.metadata?.specs)}
             activeBackend={activeBackend}
             rendererBadge={rendererLabel.badge}
             probeFailure={probeFailure}
