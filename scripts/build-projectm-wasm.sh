@@ -122,6 +122,9 @@ fi
 PM_MAXIMUM_MEMORY=268435456   # 256 MiB
 
 echo "Compiling projectm_host.cpp -> $OUT_DIR/projectm-host.js"
+# Link from $OUT_DIR with a relative -o: the file packager bakes the .data path
+# into the glue (PACKAGE_NAME), and an absolute one differs per checkout.
+cd "$OUT_DIR"
 em++ "$HOST_CPP" \
   -I"$LIB_BUILD/src/api/include" \
   -I"$LIB_BUILD/src/playlist/include" \
@@ -143,7 +146,8 @@ em++ "$HOST_CPP" \
   -s EXPORTED_RUNTIME_METHODS='["HEAPF32","HEAPU8","wasmMemory"]' \
   $( [ -d "$PRESETS_DIR" ] && echo "--preload-file ${PRESETS_DIR}@/presets" ) \
   "${PM_OPT_FLAGS[@]}" \
-  -o "$OUT_DIR/projectm-host.js"
+  -o projectm-host.js
+cd "$PROJECT_ROOT"
 
 if [ "$PROJECTM_TAG" = "$PROJECTM_DEFAULT_TAG" ]; then
   "$SCRIPT_DIR/projectm-source-hash.sh" > "$OUT_DIR/projectm-source.sha256"
