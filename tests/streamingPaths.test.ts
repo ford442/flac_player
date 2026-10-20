@@ -132,6 +132,19 @@ describe('StreamingAudioPlayer keeps one path audible (#258)', () => {
     player.destroy();
   });
 
+  it('stop() cancels a native load that is waiting for canplay', async () => {
+    const { player, element } = await setup();
+    const load = player.loadFromURL('https://music.test/a.mp3');
+    const outcome = load.then(() => 'resolved', (err: unknown) => (err as DOMException).name);
+    // Microtasks only: the element has its src, its canplay timer has not fired yet.
+    for (let i = 0; i < 20 && !element().src; i++) await Promise.resolve();
+    expect(element().src).toBe('https://music.test/a.mp3');
+    player.stop();
+    expect(element().hasAttribute('src')).toBe(false);
+    expect(await outcome).toBe('AbortError');
+    player.destroy();
+  });
+
   it("a replaced element's 'ended' does not advance the queue after a graph rebuild", async () => {
     const { player, element, recreateGraph } = await setup();
     const onEnded = vi.fn();

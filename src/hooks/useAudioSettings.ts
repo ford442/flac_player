@@ -3,7 +3,7 @@
  * and output-device state.
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   DEFAULT_EQ_BANDS,
 } from '../audio/EQChain';
@@ -279,8 +279,12 @@ export function useAudioSettings(): AudioSettingsHook {
     }
   }, []);
 
-  const gaplessSettings: GaplessSettings = { mode: gaplessMode, crossfadeMs };
-  const replayGainSettings: ReplayGainSettings = { mode: replayGainMode, limiterEnabled: replayGainLimiter };
+  // Stable objects: the engine receives them in an effect keyed on identity.
+  const gaplessSettings = useMemo<GaplessSettings>(() => ({ mode: gaplessMode, crossfadeMs }), [gaplessMode, crossfadeMs]);
+  const replayGainSettings = useMemo<ReplayGainSettings>(
+    () => ({ mode: replayGainMode, limiterEnabled: replayGainLimiter }),
+    [replayGainMode, replayGainLimiter],
+  );
 
   return {
     eqGains,

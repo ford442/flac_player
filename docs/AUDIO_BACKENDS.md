@@ -1,6 +1,6 @@
 # Audio Backends Guide
 
-Choose the output mode in the player footer `<select>` (session-only in `usePlayerState`; not persisted). Default: **`streaming`**.
+Choose the output mode in the player footer `<select>` (session-only in the player store, `src/player/playerStore.ts`; not persisted). Switching resumes the loaded track on the new backend. Default: **`streaming`**.
 
 Factory entry point: `src/audio/createAudioBackend.ts`.
 
@@ -330,7 +330,7 @@ Enable verbose loader/API logs:
 REACT_APP_DEBUG=true
 ```
 
-Logs appear as `[FLAC:label]` from `src/utils/debug.ts` (used by `api/audioLoader.ts` and `api/songApi.ts`). Off by default in production builds.
+Logs appear as `[FLAC:label]` from `src/utils/debug.ts` (used by `api/http.ts` and `api/songApi.ts`). Off by default in production builds.
 
 ## Further reading
 

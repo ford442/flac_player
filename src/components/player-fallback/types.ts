@@ -1,6 +1,3 @@
-import React from 'react';
-import { PlaylistTrack, RepeatMode } from '../../api/audioLoader';
-import type { GpuChoreBackend } from '../../gpu-chores';
 import type { AudioOutputMode } from '../../types/audio';
 
 /**
@@ -18,40 +15,6 @@ export const OUTPUT_MODE_LABELS: Readonly<Record<AudioOutputMode, string>> = {
 export type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'convert' | 'settings';
 export type LibraryViewMode = 'grid' | 'list';
 
-export interface TransportState {
-  isPlaying: boolean;
-  isLoading: boolean;
-  currentTime: number;
-  duration: number;
-  volume: number;
-  muted: boolean;
-}
-
-export interface TransportControls {
-  onPlay: () => void;
-  onStop: () => void;
-  onSeek?: (t: number) => void;
-  onVolumeChange: (v: number) => void;
-  onMute: () => void;
-  onNext: () => void;
-  onPrevious: () => void;
-}
-
-export interface OverviewData {
-  minmax?: Float32Array | null;
-  rms?: number | null;
-  peak?: number | null;
-  backend?: GpuChoreBackend | null;
-  reason?: string | null;
-}
-
-export interface PlaybackModeState {
-  shuffle: boolean;
-  setShuffle: React.Dispatch<React.SetStateAction<boolean>>;
-  repeatMode: RepeatMode;
-  setRepeatMode: React.Dispatch<React.SetStateAction<RepeatMode>>;
-}
-
 /**
  * Listening-room summary for the fallback view. One prop on purpose: room
  * actions (copy link, resync, leave) live in ListeningRoomPanel.
@@ -61,23 +24,4 @@ export interface RoomBadge {
   driftMs: number | null;
   /** Start hosting with the current queue; absent when rooms are unavailable here. */
   onListenTogether?: () => void;
-}
-
-/** Shared subset of QueuePanel's props, common to both the drawer and the queue tab. */
-export interface QueuePanelSharedProps {
-  queue: PlaylistTrack[];
-  currentIndex: number;
-  prebufferingNext: boolean;
-  onTrackClick: (index: number) => void;
-  onRemoveTrack: (index: number) => void;
-  onClearQueue: () => void;
-  onShuffle: () => void;
-  onSmartMix: () => void;
-  onShareQueue: () => void;
-  onListenTogether?: () => void;
-  onDownloadQueue: () => void;
-  onReorderQueue: (start: number, end: number) => void;
-  shuffle: boolean;
-  repeatMode: RepeatMode;
-  onToggleRepeat: () => void;
 }

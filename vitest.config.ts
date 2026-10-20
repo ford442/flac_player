@@ -4,7 +4,7 @@ import path from 'path';
 export default defineConfig({
   test: {
     environment: 'jsdom',
-    include: ['tests/**/*.test.ts'],
+    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
     exclude: ['tests/decoder.test.ts', 'tests/decoderChunks.test.ts', 'tests/flacSeek.test.ts', 'tests/resampler.test.ts', 'tests/browser/**'],
     globals: true,
     setupFiles: ['./tests/setup.ts'],

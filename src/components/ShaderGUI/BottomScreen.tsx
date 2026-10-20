@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlaylistTrack } from '../../api/audioLoader';
+import type { PlaylistTrack } from '../../types/library';
 import './ShaderGUI.css';
 
 interface BottomScreenProps {

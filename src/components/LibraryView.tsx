@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { PlaylistTrack, TagInfo, LibraryStats } from '../api/audioLoader';
+import type { PlaylistTrack, TagInfo, LibraryStats } from '../types/library';
 import { hasReplayGainMetadata } from '../utils/replayGain';
 import { StarRating } from './StarRating';
 import { TagInput } from './TagInput';

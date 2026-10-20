@@ -204,8 +204,11 @@ the PATCH body has no `author` field yet.
 
 ### Library pagination & tag suggestions (frontend)
 
-- `usePlayerData` fetches `GET /api/songs?limit=200&offset=N` (`LIBRARY_PAGE_SIZE`). "Load more"
+- `useLibraryCatalog` (`src/api/library.ts`, TanStack Query) fetches `GET /api/songs?limit=200&offset=N`
+  (`LIBRARY_PAGE_SIZE`). The filters are the query key: changing one refetches page 0; "Load more"
   requests the next offset with the same filters and appends; it is shown while the last page was full.
+- Responses are validated with valibot (`src/api/schemas.ts`); a mistyped optional field reads as
+  undefined and an invalid row is dropped rather than failing the page.
 - Library edit mode calls `GET /api/songs/{id}/suggest-tags` and shows the results as one-click chips
   under `TagInput`.
 
@@ -236,7 +239,7 @@ Titles are trimmed and must be non-empty (≤ 200 chars); `track_ids` ≤ 5000. 
 `data/playlists/index.json` (next to `data/songs/index.json`). Tested by `tests/test_playlists.py`
 (`pytest tests/test_playlists.py`).
 
-**Client.** `songApi.ts` / `AudioLoader` expose `createCloudPlaylist`, `replaceCloudPlaylist`,
+**Client.** `songApi.ts` exposes `createCloudPlaylist`, `replaceCloudPlaylist`,
 `deleteCloudPlaylist` and `probePlaylistWriteSupport`. The tab's cloud section only *reads*
 `GET {REACT_APP_PLAYLIST_API_URL}/api/playlists` (loaded when the tab opens); a 404/empty answer just means
 "no cloud playlists" and never affects local ones. **Save copy** imports a cloud playlist as a local one

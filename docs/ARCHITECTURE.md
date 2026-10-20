@@ -1,6 +1,6 @@
 # FLAC Player Architecture
 
-Last updated: September 2026
+Last updated: October 2026
 
 ## System overview
 
@@ -10,7 +10,7 @@ The app is a React/TypeScript single-page player with a **four-backend audio eng
 flowchart TB
   subgraph UI["React UI"]
     Player["Player.tsx"]
-    Controller["usePlaybackController"]
+    Engine["PlaybackEngine + player store<br/>(player/, #258)"]
     Library["LibraryView"]
     Queue["QueuePanel"]
     Shell["VisualizerShell"]
@@ -26,7 +26,7 @@ flowchart TB
   end
 
   subgraph Load["Loading & library"]
-    Loader["api/audioLoader.ts"]
+    Http["api/http.ts (apiFetch, resolveTrackUrl)<br/>api/library.ts (TanStack Query)"]
     SongApi["api/songApi.ts"]
     TrackCache["storage/trackCache.ts"]
     LibCache["storage/libraryCache.ts"]
@@ -45,14 +45,14 @@ flowchart TB
     Fatal["Fatal visualizer panel"]
   end
 
-  Player --> Controller
-  Controller --> Audio
+  Player --> Engine
+  Engine --> Audio
   Player --> Shell
   Shell --> ShaderGUI
   Shell --> ProjectM
-  Player --> Loader
-  Loader --> SongApi
-  Loader --> TrackCache
+  Player --> SongApi
+  SongApi --> Http
+  Engine --> TrackCache
   SongApi --> LibCache
 
   Streaming --> ACM
@@ -75,7 +75,7 @@ flowchart TB
 ```
 User selects track in LibraryView / QueuePanel
     ↓
-Player.tsx → usePlaybackController → createAudioBackend()
+Player.tsx / views → useActions() → PlaybackEngine.load(track) (token, abort, one active path)
     ↓
 GET https://storage.noahcohn.com/api/songs  (or REACT_APP_API_URL)
     ↓
@@ -127,7 +127,7 @@ No full-file download before playback starts. Requires CORS + `Accept-Ranges` on
 
 Backend factory: `src/audio/createAudioBackend.ts` (dynamic `import()` — WASM chunks load lazily).
 
-Shared lifecycle guards (destroyed checks, volume/ReplayGain, state callbacks) live in `src/audio/backends/BaseAudioBackend.ts`. Playback lifecycle and queue advance are owned by `src/hooks/usePlaybackController.ts`; `Player.tsx` composes hooks + views only.
+Shared lifecycle guards (destroyed checks, volume/ReplayGain, state callbacks) live in `src/audio/backends/BaseAudioBackend.ts`. Playback lifecycle, load tokens, queue advance and the clock are owned by `src/player/PlaybackEngine.ts` (plain TS), which writes a zustand store (`src/player/playerStore.ts`). Views read it through selectors (`src/player/selectors.ts`); only the scrubber, time readouts and the Media Session bridge subscribe to the 4 Hz clock. `Player.tsx` wires settings, rooms and persistence and lays out the views.
 
 See [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) for selection guidance.
 
@@ -284,14 +284,14 @@ Static playlist share (`POST /api/share`, `/playlist/{id}`) loads a track list o
 
 ```
 Host Player                    rooms.py (WS)                  Guest Player(s)
- usePlaybackController             │                     usePlaybackController
+ PlaybackEngine                    │                     PlaybackEngine
    └ SyncClock (<audio>)           │                       └ SyncClock (<audio>)
  HostPublisher.observe ─ TRACK_CHANGE / PLAY / PAUSE / SEEK ─► GuestSync.reconcile
                        ─ QUEUE_UPDATE / HEARTBEAT (5 s) ─────►   load · play/pause ·
                        ◄─ TIME_SYNC (server clock) ──────────►   nudge rate · seek
 ```
 
-`useListeningRoomBridge` mounts next to `usePlaybackController` in `Player.tsx`. Rooms force the streaming backend's native `<audio>` path; measured drift between two tabs is tens of ms. Protocol, server, and production port: [LISTENING_ROOMS.md](./LISTENING_ROOMS.md).
+`useListeningRoomBridge({ engine, store })` is called from `Player.tsx`. Rooms force the streaming backend's native `<audio>` path; measured drift between two tabs is tens of ms. Protocol, server, and production port: [LISTENING_ROOMS.md](./LISTENING_ROOMS.md).
 
 ## Related docs
 

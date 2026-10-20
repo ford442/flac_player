@@ -536,6 +536,11 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
 
   stop(): void {
     this._cancelTransition();
+    // A stop while a native load is pending cancels it: nothing keeps loading after stop.
+    if (this.abortNativeLoad) {
+      this.abortNativeLoad();
+      releaseElement(this.audioElement);
+    }
     if (this.activePath === 'native') {
       this.audioElement.pause();
       this.audioElement.currentTime = 0;
