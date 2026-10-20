@@ -13,7 +13,7 @@ import {
   downloadTrackViaSW,
   cancelBackgroundDownload,
 } from '../sw/serviceWorkerClient';
-import { PlaylistTrack } from '../api/audioLoader';
+import type { PlaylistTrack } from '../types/library';
 
 interface OfflineBadgeProps {
   track: PlaylistTrack;

@@ -1,6 +1,6 @@
 // Queue storage management for localStorage persistence
 
-import { PlaylistTrack } from '../api/audioLoader';
+import type { PlaylistTrack } from '../types/library';
 
 export type RepeatMode = 'off' | 'one' | 'all';
 

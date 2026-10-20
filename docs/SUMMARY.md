@@ -42,8 +42,9 @@ flac_player/
 │   ├── components/       Player, LibraryView, QueuePanel, ShaderGUI, VisualizerShell, ProjectMHost
 │   ├── audio/            createAudioBackend, AudioContextManager, EQChain, SdlPcmBridge, flacDecoder, audioDecoder
 │   │   └── backends/     BaseAudioBackend + Streaming, WebAudio, Worklet, Sdl3
-│   ├── hooks/            usePlaybackController, usePlayerState, useAudioSettings
-│   ├── api/              songApi.ts, audioLoader.ts
+│   ├── player/           PlaybackEngine, zustand store, selectors, persistence
+│   ├── hooks/            usePlayerActions, useLibraryState, useAudioSettings
+│   ├── api/              http.ts, schemas.ts, songApi.ts, library.ts
 │   ├── storage/          libraryCache, trackCache, queueStorage
 │   ├── visuals/          WebGPU probe + canvas policy; opt-in WebGL2; gpu resource modules, webgpuVisualizer, math
 │   └── projectm/         ProjectMEngine, projectm_host.cpp

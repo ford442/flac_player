@@ -1,31 +1,23 @@
-// API client for song/library management endpoints
+// API client for song/library management endpoints. Every request goes through
+// apiFetch (status check + valibot validation, see ./http.ts).
 
 import type { CloudPlaylist, PlaylistTrack, LibraryStats, TagInfo, ShareResponse, SortBy } from '../types/library';
 import { debug } from '../utils/debug';
-
-// API Configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || (typeof window !== 'undefined' ? window.location.origin : 'https://storage.noahcohn.com');
-
-type CatalogSong = Omit<PlaylistTrack, 'url'> & { url?: string };
-
-function isCatalogSong(value: unknown): value is CatalogSong {
-  if (typeof value !== 'object' || value === null) return false;
-  const candidate = value as Record<string, unknown>;
-  return typeof candidate.id === 'string' && typeof candidate.name === 'string';
-}
+import { API_BASE_URL, PLAYLIST_API_URL, ApiError, apiFetch, apiRequest, resolveTrackUrl } from './http';
+import {
+  CloudPlaylistListSchema, CloudPlaylistSchema, LibraryStatsSchema, MusicBrainzSearchSchema, PlaylistHealthSchema,
+  PlaylistTrackIdsSchema, ShareResponseSchema, SharedPlaylistSchema, SongListSchema, SuggestTagsSchema,
+  TagsResponseSchema, CatalogSongSchema, type CatalogSong,
+} from './schemas';
 
 const SYNC_MUSIC_ENDPOINTS = [
   {
-    url: `${API_BASE_URL}/api/admin/sync-music?type=music`,
+    path: '/api/admin/sync-music?type=music',
     init: { method: 'POST' as const }
   },
   {
-    url: `${API_BASE_URL}/api/admin/sync-music`,
-    init: {
-      method: 'POST' as const,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'music' })
-    }
+    path: '/api/admin/sync-music',
+    init: { method: 'POST' as const, json: { type: 'music' } }
   }
 ] as const;
 
@@ -45,188 +37,90 @@ export function getApiBaseUrl(): string {
   return API_BASE_URL;
 }
 
+/** Library filters for `GET /api/songs`. */
+export interface SongQuery {
+  limit?: number;
+  offset?: number;
+  ratingGte?: number;
+  ratingLt?: number;
+  tags?: string[];
+  tagsMatch?: number;
+  untagged?: boolean;
+  search?: string;
+  sortBy?: SortBy;
+  sortDesc?: boolean;
+  excludeId?: string;
+  generationModel?: string;
+}
+
+function toLibraryTrack(song: CatalogSong): PlaylistTrack {
+  return { ...song, source: 'library', url: resolveTrackUrl(song.url, song.id) };
+}
+
 // =============================================================================
 // Songs / Library
 // =============================================================================
 
 export async function fetchSongs(
-  options: {
-    limit?: number;
-    offset?: number;
-    ratingGte?: number;
-    ratingLt?: number;
-    tags?: string[];
-    tagsMatch?: number;
-    untagged?: boolean;
-    search?: string;
-    sortBy?: SortBy;
-    sortDesc?: boolean;
-    excludeId?: string;
-    generationModel?: string;
-  } = {}
+  options: SongQuery = {},
+  signal?: AbortSignal,
 ): Promise<{ tracks: PlaylistTrack[]; total: number }> {
+  const params = new URLSearchParams();
+
+  if (options.limit) params.append('limit', options.limit.toString());
+  if (options.offset) params.append('offset', options.offset.toString());
+  if (options.ratingGte !== undefined) params.append('rating_gte', options.ratingGte.toString());
+  if (options.ratingLt !== undefined) params.append('rating_lt', options.ratingLt.toString());
+  if (options.tags?.length) params.append('tags', options.tags.join(','));
+  if (options.tagsMatch) params.append('tags_match', options.tagsMatch.toString());
+  if (options.untagged) params.append('untagged', 'true');
+  if (options.search) params.append('search', options.search);
+  if (options.sortBy) params.append('sort_by', options.sortBy);
+  if (options.sortDesc !== undefined) params.append('sort_desc', options.sortDesc.toString());
+  if (options.excludeId) params.append('exclude_id', options.excludeId);
+  if (options.generationModel) params.append('generation_model', options.generationModel);
+
+  const songs = await apiFetch(`/api/songs?${params}`, SongListSchema, { signal });
+  debug.log('FETCH_LIBRARY_PARSED', { trackCount: songs.length });
+  const tracks = songs.map(toLibraryTrack);
+  return { tracks, total: tracks.length };
+}
+
+export async function fetchSong(songId: string, signal?: AbortSignal): Promise<PlaylistTrack> {
   try {
-    const params = new URLSearchParams();
-
-    if (options.limit) params.append('limit', options.limit.toString());
-    if (options.offset) params.append('offset', options.offset.toString());
-    if (options.ratingGte !== undefined) params.append('rating_gte', options.ratingGte.toString());
-    if (options.ratingLt !== undefined) params.append('rating_lt', options.ratingLt.toString());
-    if (options.tags?.length) params.append('tags', options.tags.join(','));
-    if (options.tagsMatch) params.append('tags_match', options.tagsMatch.toString());
-    if (options.untagged) params.append('untagged', 'true');
-    if (options.search) params.append('search', options.search);
-    if (options.sortBy) params.append('sort_by', options.sortBy);
-    if (options.sortDesc !== undefined) params.append('sort_desc', options.sortDesc.toString());
-    if (options.excludeId) params.append('exclude_id', options.excludeId);
-    if (options.generationModel) params.append('generation_model', options.generationModel);
-
-    const url = `${API_BASE_URL}/api/songs?${params}`;
-    debug.log('FETCH_LIBRARY_REQUEST', { url, apiBase: API_BASE_URL, params: Object.fromEntries(params) });
-
-    const startTime = performance.now();
-    const response = await fetch(url, {
-      mode: 'cors',
-      credentials: 'omit'
-    });
-    const endTime = performance.now();
-
-    debug.log('FETCH_LIBRARY_RESPONSE', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-      contentType: response.headers.get('content-type'),
-      corsOrigin: response.headers.get('access-control-allow-origin'),
-      responseUrl: response.url,
-      duration: `${(endTime - startTime).toFixed(2)}ms`
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      debug.error('FETCH_LIBRARY_ERROR_BODY', { text, status: response.status });
-      throw new Error(`Failed to fetch library: ${response.status} ${response.statusText}`);
-    }
-
-    const rawTracks: unknown = await response.json();
-    if (!Array.isArray(rawTracks)) throw new Error('Library response is not an array');
-    const tracks = rawTracks.filter(isCatalogSong);
-    debug.log('FETCH_LIBRARY_PARSED', { trackCount: tracks.length });
-
-    const tracksWithUrls: PlaylistTrack[] = tracks.map((item) => ({
-      ...item,
-      url: item.url ? (item.url.startsWith('http') ? item.url : `${API_BASE_URL}${item.url}`) : `${API_BASE_URL}/api/music/${item.id}`
-    }));
-
-    return { tracks: tracksWithUrls, total: tracks.length };
+    return toLibraryTrack(await apiFetch(`/api/songs/${encodeURIComponent(songId)}`, CatalogSongSchema, { signal }));
   } catch (error) {
-    debug.error('FETCH_LIBRARY_FAILED', {
-      message: error instanceof Error ? error.message : String(error),
-      type: error instanceof TypeError ? 'TypeError (network-level)' : error instanceof Error ? error.constructor.name : 'unknown',
-      apiBase: API_BASE_URL,
-      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3) : undefined
-    });
+    if (error instanceof ApiError && error.status === 404) {
+      throw new Error(`Track ${songId} is not available in the library (404)`);
+    }
     throw error;
   }
 }
 
-export async function fetchSong(songId: string): Promise<PlaylistTrack> {
-  const response = await fetch(`${API_BASE_URL}/api/songs/${encodeURIComponent(songId)}`, {
-    mode: 'cors',
-    credentials: 'omit'
+/** Tracks sharing up to three of `trackTags` (at least two), excluding the seed track. */
+export async function findSimilarTracks(
+  trackId: string,
+  trackTags: string[],
+  minRating: number = 4,
+  limit: number = 20
+): Promise<PlaylistTrack[]> {
+  const { tracks } = await fetchSongs({
+    tags: trackTags.slice(0, 3),
+    tagsMatch: 2,
+    ratingGte: minRating,
+    excludeId: trackId,
+    limit,
+    sortBy: 'random'
   });
-  if (!response.ok) throw new Error(`Generated track is not available in the library (${response.status})`);
-  const item = await response.json() as PlaylistTrack;
-  return {
-    ...item,
-    url: item.url
-      ? (item.url.startsWith('http') ? item.url : `${API_BASE_URL}${item.url}`)
-      : `${API_BASE_URL}/api/music/${item.id}`
-  };
+  return tracks;
 }
 
-export async function fetchTags(): Promise<TagInfo[]> {
-  try {
-    const url = `${API_BASE_URL}/api/songs/tags`;
-    debug.log('FETCH_TAGS_REQUEST', { url, apiBase: API_BASE_URL });
-
-    const startTime = performance.now();
-    const response = await fetch(url, {
-      mode: 'cors',
-      credentials: 'omit'
-    });
-    const endTime = performance.now();
-
-    debug.log('FETCH_TAGS_RESPONSE', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-      contentType: response.headers.get('content-type'),
-      corsOrigin: response.headers.get('access-control-allow-origin'),
-      corsAllowMethods: response.headers.get('access-control-allow-methods'),
-      responseUrl: response.url,
-      duration: `${(endTime - startTime).toFixed(2)}ms`
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      debug.error('FETCH_TAGS_ERROR_BODY', { text, status: response.status, statusText: response.statusText });
-      throw new Error(`Failed to fetch tags: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    debug.log('FETCH_TAGS_PARSED', { tagCount: data.tags?.length || 0 });
-    return data.tags || [];
-  } catch (error) {
-    debug.error('FETCH_TAGS_FAILED', {
-      message: error instanceof Error ? error.message : String(error),
-      type: error instanceof TypeError ? 'TypeError (network-level)' : error instanceof Error ? error.constructor.name : 'unknown',
-      apiBase: API_BASE_URL,
-      url: `${API_BASE_URL}/api/songs/tags`,
-      stack: error instanceof Error ? error.stack?.split('\n').slice(0, 3) : undefined
-    });
-    throw error;
-  }
+export function fetchTags(signal?: AbortSignal): Promise<TagInfo[]> {
+  return apiFetch('/api/songs/tags', TagsResponseSchema, { signal });
 }
 
-export async function fetchStats(): Promise<LibraryStats> {
-  try {
-    const url = `${API_BASE_URL}/api/songs/stats`;
-    debug.log('FETCH_STATS_REQUEST', { url, apiBase: API_BASE_URL });
-
-    const startTime = performance.now();
-    const response = await fetch(url, {
-      mode: 'cors',
-      credentials: 'omit'
-    });
-    const endTime = performance.now();
-
-    debug.log('FETCH_STATS_RESPONSE', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok,
-      contentType: response.headers.get('content-type'),
-      corsOrigin: response.headers.get('access-control-allow-origin'),
-      responseUrl: response.url,
-      duration: `${(endTime - startTime).toFixed(2)}ms`
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      debug.error('FETCH_STATS_ERROR_BODY', { text, status: response.status });
-      throw new Error(`Failed to fetch stats: ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    debug.log('FETCH_STATS_PARSED', { totalTracks: data.total_tracks });
-    return data;
-  } catch (error) {
-    debug.error('FETCH_STATS_FAILED', {
-      message: error instanceof Error ? error.message : String(error),
-      type: error instanceof TypeError ? 'TypeError (network-level)' : error instanceof Error ? error.constructor.name : 'unknown',
-      apiBase: API_BASE_URL
-    });
-    throw error;
-  }
+export function fetchStats(signal?: AbortSignal): Promise<LibraryStats> {
+  return apiFetch('/api/songs/stats', LibraryStatsSchema, { signal });
 }
 
 export async function triggerMusicResync(maxAttempts: number = 3): Promise<MusicResyncResult> {
@@ -241,14 +135,9 @@ export async function triggerMusicResync(maxAttempts: number = 3): Promise<Music
       const timeout = setTimeout(() => controller.abort(), SYNC_REQUEST_TIMEOUT_MS);
 
       try {
-        debug.log('SYNC_MUSIC_REQUEST', { endpoint: endpoint.url, attempt, attempts });
+        debug.log('SYNC_MUSIC_REQUEST', { endpoint: endpoint.path, attempt, attempts });
 
-        const response = await fetch(endpoint.url, {
-          mode: 'cors',
-          credentials: 'omit',
-          signal: controller.signal,
-          ...endpoint.init
-        });
+        const response = await apiRequest(endpoint.path, { ...endpoint.init, signal: controller.signal });
 
         clearTimeout(timeout);
 
@@ -264,9 +153,9 @@ export async function triggerMusicResync(maxAttempts: number = 3): Promise<Music
 
         const isAcceptedOrRunning = acceptedStatuses.has(response.status);
         if (response.ok || isAcceptedOrRunning) {
-          debug.log('SYNC_MUSIC_SUCCESS', { endpoint: endpoint.url, status: response.status });
+          debug.log('SYNC_MUSIC_SUCCESS', { endpoint: endpoint.path, status: response.status });
           return {
-            endpoint: endpoint.url,
+            endpoint: `${API_BASE_URL}${endpoint.path}`,
             status: response.status,
             statusText: response.statusText,
             payload,
@@ -277,7 +166,7 @@ export async function triggerMusicResync(maxAttempts: number = 3): Promise<Music
         // Retry transient server failures and rate limits, but do not retry 4xx request errors.
         const shouldRetrySameEndpoint = response.status >= 500 || response.status === 429;
         debug.warn('SYNC_MUSIC_FAILED_RESPONSE', {
-          endpoint: endpoint.url,
+          endpoint: endpoint.path,
           status: response.status,
           attempt,
           shouldRetrySameEndpoint
@@ -293,7 +182,7 @@ export async function triggerMusicResync(maxAttempts: number = 3): Promise<Music
         clearTimeout(timeout);
         lastError = error;
         debug.warn('SYNC_MUSIC_REQUEST_ERROR', {
-          endpoint: endpoint.url,
+          endpoint: endpoint.path,
           attempt,
           message: error instanceof Error ? error.message : String(error)
         });
@@ -314,22 +203,10 @@ export async function triggerMusicResync(maxAttempts: number = 3): Promise<Music
 // Track CRUD
 // =============================================================================
 
+/** Best effort: a failed play count never interrupts playback. */
 export async function recordPlay(musicId: string): Promise<void> {
   try {
-    const url = `${API_BASE_URL}/api/songs/${musicId}/play`;
-    debug.log('RECORD_PLAY_REQUEST', { url, musicId });
-
-    const response = await fetch(url, {
-      method: 'POST',
-      mode: 'cors',
-      credentials: 'omit'
-    });
-
-    debug.log('RECORD_PLAY_RESPONSE', { status: response.status, ok: response.ok });
-
-    if (!response.ok) {
-      debug.warn('RECORD_PLAY_ERROR', { status: response.status, musicId });
-    }
+    await apiFetch(`/api/songs/${encodeURIComponent(musicId)}/play`, null, { method: 'POST' });
   } catch (error) {
     debug.warn('RECORD_PLAY_FAILED', {
       message: error instanceof Error ? error.message : String(error),
@@ -338,7 +215,7 @@ export async function recordPlay(musicId: string): Promise<void> {
   }
 }
 
-export async function updateSampleMetadata(
+export function updateSampleMetadata(
   musicId: string,
   updates: {
     name?: string;
@@ -353,77 +230,16 @@ export async function updateSampleMetadata(
     prompt?: string;
   }
 ): Promise<void> {
-  try {
-    const url = `${API_BASE_URL}/api/songs/${musicId}`;
-    debug.log('UPDATE_METADATA_REQUEST', { url, musicId, updatesKeys: Object.keys(updates) });
-
-    const response = await fetch(url, {
-      method: 'PATCH',
-      mode: 'cors',
-      credentials: 'omit',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates)
-    });
-
-    debug.log('UPDATE_METADATA_RESPONSE', { status: response.status, ok: response.ok, musicId });
-
-    if (!response.ok) {
-      const text = await response.text();
-      debug.error('UPDATE_METADATA_ERROR_BODY', { text, status: response.status });
-      throw new Error(`Failed to update metadata: ${response.status} ${response.statusText}`);
-    }
-  } catch (error) {
-    debug.error('UPDATE_METADATA_FAILED', {
-      message: error instanceof Error ? error.message : String(error),
-      musicId
-    });
-    throw error;
-  }
+  return apiFetch(`/api/songs/${encodeURIComponent(musicId)}`, null, { method: 'PATCH', json: updates });
 }
 
-export async function trashTrack(musicId: string): Promise<void> {
-  try {
-    const url = `${API_BASE_URL}/api/songs/${musicId}/trash`;
-    debug.log('TRASH_TRACK_REQUEST', { url, musicId });
-
-    const response = await fetch(url, {
-      method: 'POST',
-      mode: 'cors',
-      credentials: 'omit'
-    });
-
-    debug.log('TRASH_TRACK_RESPONSE', { status: response.status, ok: response.ok, musicId });
-
-    if (!response.ok) {
-      throw new Error(`Failed to trash track: ${response.status}`);
-    }
-  } catch (error) {
-    debug.error('TRASH_TRACK_FAILED', {
-      message: error instanceof Error ? error.message : String(error),
-      musicId
-    });
-    throw error;
-  }
+export function trashTrack(musicId: string): Promise<void> {
+  return apiFetch(`/api/songs/${encodeURIComponent(musicId)}/trash`, null, { method: 'POST' });
 }
 
 export async function suggestTags(musicId: string): Promise<{ suggestions: string[]; source: string }> {
   try {
-    const url = `${API_BASE_URL}/api/songs/${musicId}/suggest-tags`;
-    debug.log('SUGGEST_TAGS_REQUEST', { url, musicId });
-
-    const response = await fetch(url, {
-      mode: 'cors',
-      credentials: 'omit'
-    });
-
-    debug.log('SUGGEST_TAGS_RESPONSE', { status: response.status, ok: response.ok, musicId });
-
-    if (!response.ok) {
-      throw new Error(`Failed to get suggestions: ${response.status}`);
-    }
-    const data = await response.json();
-    debug.log('SUGGEST_TAGS_PARSED', { suggestionCount: data.suggestions?.length });
-    return data;
+    return await apiFetch(`/api/songs/${encodeURIComponent(musicId)}/suggest-tags`, SuggestTagsSchema);
   } catch (error) {
     debug.error('SUGGEST_TAGS_FAILED', {
       message: error instanceof Error ? error.message : String(error),
@@ -450,75 +266,31 @@ export interface MusicBrainzMatch {
 export async function searchMusicBrainz(query: string, artist?: string): Promise<MusicBrainzMatch | null> {
   const params = new URLSearchParams({ query });
   if (artist) params.append('artist', artist);
-  const url = `${API_BASE_URL}/api/musicbrainz/search?${params}`;
-  debug.log('MUSICBRAINZ_REQUEST', { url });
-  const response = await fetch(url, { mode: 'cors', credentials: 'omit' });
-  if (!response.ok) throw new Error(`MusicBrainz search failed: ${response.status}`);
-  const data = await response.json();
-  if (!data?.found || !data.data) return null;
-  return { ...data.data, tags: Array.isArray(data.data.tags) ? data.data.tags : [] };
+  const body = await apiFetch(`/api/musicbrainz/search?${params}`, MusicBrainzSearchSchema);
+  return body.found && body.data ? body.data : null;
 }
 
 // =============================================================================
 // Sharing
 // =============================================================================
 
-export async function fetchSharedPlaylist(shareId: string): Promise<{ title: string; tracks: PlaylistTrack[] }> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/share/${shareId}`);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch shared playlist: ${response.status}`);
-    }
-
-    const data = await response.json() as { title: string; tracks: PlaylistTrack[] };
-
-    const tracksWithUrls = data.tracks.map((item) => ({
-      ...item,
-      url: item.url || `${API_BASE_URL}/api/music/${item.id}`
-    }));
-
-    return { title: data.title, tracks: tracksWithUrls };
-  } catch (error) {
-    console.error('Error fetching shared playlist:', error);
-    throw error;
-  }
+export async function fetchSharedPlaylist(shareId: string, signal?: AbortSignal): Promise<{ title: string; tracks: PlaylistTrack[] }> {
+  const data = await apiFetch(`/api/share/${encodeURIComponent(shareId)}`, SharedPlaylistSchema, { signal });
+  return { title: data.title, tracks: data.tracks.map(toLibraryTrack) };
 }
 
-export async function createShare(
+export function createShare(
   trackIds: string[],
   title: string = 'Shared Playlist',
   expiresInDays: number = 30
 ): Promise<ShareResponse> {
   if (!trackIds || trackIds.length === 0) {
-    throw new Error('No tracks available to share');
+    return Promise.reject(new Error('No tracks available to share'));
   }
-
-  const payload = {
-    track_ids: trackIds,
-    title,
-    expires_in_days: expiresInDays,
-  };
-
-  const url = `${API_BASE_URL}/api/share`;
-  debug.log('CREATE_SHARE_REQUEST', { url, payload });
-
-  const response = await fetch(url, {
+  return apiFetch('/api/share', ShareResponseSchema, {
     method: 'POST',
-    mode: 'cors',
-    credentials: 'omit',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    json: { track_ids: trackIds, title, expires_in_days: expiresInDays },
   });
-
-  if (!response.ok) {
-    const text = await response.text();
-    debug.error('CREATE_SHARE_ERROR_BODY', { text, status: response.status });
-    throw new Error(`Failed to create share: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  debug.log('CREATE_SHARE_RESPONSE', data);
-  return data as ShareResponse;
 }
 
 // =============================================================================
@@ -528,8 +300,6 @@ export async function createShare(
 // a failure (404/405/network) as "stay local-only"; nothing here is required for
 // the local IndexedDB playlists to work.
 // =============================================================================
-
-const PLAYLIST_API_URL = process.env.REACT_APP_PLAYLIST_API_URL || 'https://storage.noahcohn.com';
 
 export function getPlaylistApiUrl(): string {
   return PLAYLIST_API_URL;
@@ -541,16 +311,26 @@ export interface CloudPlaylistInput {
   track_ids: string[];
 }
 
-async function sendPlaylist(method: 'POST' | 'PUT', path: string, input: CloudPlaylistInput): Promise<CloudPlaylist> {
-  const response = await fetch(`${PLAYLIST_API_URL}${path}`, {
-    method,
-    mode: 'cors',
-    credentials: 'omit',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
-  if (!response.ok) throw new Error(`Playlist ${method} failed: ${response.status} ${response.statusText}`);
-  return await response.json() as CloudPlaylist;
+/** Read-only `GET /api/playlists`; an unavailable host reads as no playlists. */
+export async function fetchPlaylists(): Promise<CloudPlaylist[]> {
+  try {
+    return await apiFetch('/api/playlists', CloudPlaylistListSchema, { base: PLAYLIST_API_URL });
+  } catch (error) {
+    debug.error('FETCH_PLAYLISTS_FAILED', { message: error instanceof Error ? error.message : String(error) });
+    return [];
+  }
+}
+
+export async function fetchPlaylistTracks(playlistId: string): Promise<string[]> {
+  try {
+    return await apiFetch(`/api/playlists/${encodeURIComponent(playlistId)}`, PlaylistTrackIdsSchema, { base: PLAYLIST_API_URL });
+  } catch {
+    return [];
+  }
+}
+
+function sendPlaylist(method: 'POST' | 'PUT', path: string, input: CloudPlaylistInput): Promise<CloudPlaylist> {
+  return apiFetch(path, CloudPlaylistSchema, { method, json: input, base: PLAYLIST_API_URL });
 }
 
 export function createCloudPlaylist(input: CloudPlaylistInput): Promise<CloudPlaylist> {
@@ -561,24 +341,15 @@ export function replaceCloudPlaylist(id: string, input: CloudPlaylistInput): Pro
   return sendPlaylist('PUT', `/api/playlists/${encodeURIComponent(id)}`, input);
 }
 
-export async function deleteCloudPlaylist(id: string): Promise<void> {
-  const response = await fetch(`${PLAYLIST_API_URL}/api/playlists/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
-    mode: 'cors',
-    credentials: 'omit',
-  });
-  if (!response.ok) throw new Error(`Playlist DELETE failed: ${response.status} ${response.statusText}`);
+export function deleteCloudPlaylist(id: string): Promise<void> {
+  return apiFetch(`/api/playlists/${encodeURIComponent(id)}`, null, { method: 'DELETE', base: PLAYLIST_API_URL });
 }
 
 /** True only when the host answers `GET /api/playlists/health` with `{ writable: true }`. */
 export async function probePlaylistWriteSupport(signal?: AbortSignal): Promise<boolean> {
   try {
-    const response = await fetch(`${PLAYLIST_API_URL}/api/playlists/health`, {
-      mode: 'cors', credentials: 'omit', signal,
-    });
-    if (!response.ok) return false;
-    const body: unknown = await response.json();
-    return typeof body === 'object' && body !== null && (body as { writable?: unknown }).writable === true;
+    const body = await apiFetch('/api/playlists/health', PlaylistHealthSchema, { base: PLAYLIST_API_URL, signal });
+    return body.writable;
   } catch {
     return false;
   }
@@ -614,14 +385,9 @@ export async function healthCheck(): Promise<{
 
   for (const endpoint of endpoints) {
     try {
-      const url = `${API_BASE_URL}${endpoint.path}`;
       const startTime = performance.now();
 
-      const response = await fetch(url, {
-        method: endpoint.method,
-        mode: 'cors',
-        credentials: 'omit'
-      });
+      const response = await apiRequest(endpoint.path, { method: endpoint.method });
 
       const endTime = performance.now();
       const duration = endTime - startTime;

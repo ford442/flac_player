@@ -22,7 +22,7 @@ Fixes #
 ### Audio backends (when touching playback)
 - [ ] Streaming default still starts promptly
 - [ ] streaming, web-audio, worklet and SDL3 each play a 44.1 kHz and a 96 kHz FLAC
-- [ ] The backend is not recreated on queue edits (`tests/backendLifecycle.test.ts`)
+- [ ] The backend is not recreated on queue edits (`tests/playbackEngine.test.ts`)
 
 ### Deploy (when touching paths, the service worker or the manifest)
 - [ ] `PUBLIC_PATH=/flac-player/ npm run build` served under `/flac-player/`: SW scope, manifest and Media Session artwork resolve there

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { PlaylistTrack } from '../api/audioLoader';
 import { formatTime } from '../utils/audioUtils';
+import { selectIsLoading, selectIsPlaying, useClock, useTransport } from '../player/selectors';
+import { useActions } from './PlayerActionsContext';
 
 /**
  * Compact, audio-only transport UI for Project-M embed mode (?projectm=1).
@@ -9,36 +10,20 @@ import { formatTime } from '../utils/audioUtils';
  * IS_PROJECTM_EMBED is true. Because ShaderGUI (the WebGPU spectrum/pattern
  * visualizer) is never mounted in this path, no WebGPU device is acquired and
  * the GPU budget is left free for the Project-M visualizer in the host page.
- * Audio still flows to Project-M via utils/projectMBridge.ts, which is wired up
- * inside the Player engine effect independently of this view.
+ * Audio still flows to Project-M via utils/projectMBridge.ts, which the
+ * PlaybackEngine wires to every backend independently of this view.
+ *
+ * Reads the player store directly; it is a time readout, so it subscribes to
+ * the (4 Hz) clock.
  */
-export interface EmbedPlayerViewProps {
-  currentTrack: PlaylistTrack | null;
-  isPlaying: boolean;
-  isLoading: boolean;
-  currentTime: number;
-  duration: number;
-  onPlay: () => void;
-  onStop: () => void;
-  onSeek?: (time: number) => void;
-  onNext?: () => void;
-  onPrevious?: () => void;
-  onFileSelect?: (files: File[]) => void;
-}
-
-export const EmbedPlayerView: React.FC<EmbedPlayerViewProps> = ({
-  currentTrack,
-  isPlaying,
-  isLoading,
-  currentTime,
-  duration,
-  onPlay,
-  onStop,
-  onSeek,
-  onNext,
-  onPrevious,
-  onFileSelect,
-}) => {
+export const EmbedPlayerView: React.FC = () => {
+  const currentTrack = useTransport((t) => t.currentTrack);
+  const isPlaying = useTransport(selectIsPlaying);
+  const isLoading = useTransport(selectIsLoading);
+  const { position: currentTime, duration } = useClock();
+  const {
+    togglePlay: onPlay, stop: onStop, seek: onSeek, next: onNext, previous: onPrevious, addFiles: onFileSelect,
+  } = useActions();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Hint that this tab is acting as an audio feeder for Project-M.
