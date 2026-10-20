@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { routePath } from '../utils/publicPath';
 import { AudioLoader, PlaylistTrack, loadQueueFromStorage } from '../api/audioLoader';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useMediaSession } from '../hooks/useMediaSession';
@@ -34,7 +35,7 @@ const getSharedPlaylistId = (): string | null => {
   const params = new URLSearchParams(window.location.search);
   const queryShareId = params.get('share');
   if (queryShareId) return queryShareId;
-  const pathMatch = window.location.pathname.match(/^\/playlist\/([^/]+)$/);
+  const pathMatch = routePath(window.location.pathname).match(/^\/playlist\/([^/]+)$/);
   const pathId = pathMatch?.[1];
   return pathId ? decodeURIComponent(pathId) : null;
 };

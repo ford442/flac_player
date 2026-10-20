@@ -35,6 +35,26 @@ Copy the contents of the `dist/` directory to your web server's document root.
 </IfModule>
 ```
 
+**Subpath deploy (e.g. `https://go.1ink.us/flac-player/`):** build with
+`PUBLIC_PATH=/flac-player/ npm run build`, upload `dist/` so `index.html` lands at
+`<docroot>/flac-player/index.html`, and put this `.htaccess` next to it. Point
+`ErrorDocument` at a file that exists under the same docroot (a missing target is what
+produces the "misconfigured ErrorDocument" 404 page), and make sure
+`/flac-player/service-worker.js` is served as JavaScript, not the SPA fallback.
+```apache
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /flac-player/
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /flac-player/index.html [L]
+</IfModule>
+ErrorDocument 404 /flac-player/index.html
+```
+`scripts/deploy.py` uploads `dist/` to the storage manager folder `flac-player`
+(requires `DEPLOY_TOKEN`); confirm that folder is the one served at `/flac-player/`.
+
 **Nginx configuration example:**
 ```nginx
 server {

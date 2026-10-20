@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { PlaylistTrack } from '../api/audioLoader';
+import { assetUrl } from '../utils/publicPath';
 
 /**
  * Thin adapter from the playback controller to `navigator.mediaSession`
@@ -26,8 +27,8 @@ export interface MediaSessionOptions {
 }
 
 const FALLBACK_ARTWORK: MediaImage[] = [
-  { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-  { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' },
+  { src: assetUrl('icons/icon-192.png'), sizes: '192x192', type: 'image/png' },
+  { src: assetUrl('icons/icon-512.png'), sizes: '512x512', type: 'image/png' },
 ];
 const DEFAULT_SEEK_OFFSET = 10;
 const POSITION_UPDATE_INTERVAL_MS = 1000;

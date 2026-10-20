@@ -46,9 +46,13 @@ precacheAndRoute(self.__WB_MANIFEST, {
 // ─── Runtime caching ─────────────────────────────────────────────────────────
 
 /** API host used in production builds (injected at compile time). */
-const API_HOST: string = process.env.REACT_APP_API_URL
-  ? new URL(process.env.REACT_APP_API_URL).host
-  : '';
+const API_HOST: string = (() => {
+  try {
+    return process.env.REACT_APP_API_URL ? new URL(process.env.REACT_APP_API_URL).host : '';
+  } catch {
+    return ''; // malformed build-time value must not fail SW evaluation
+  }
+})();
 
 function isSongsApiRequest(url: URL): boolean {
   if (!url.pathname.startsWith('/api/songs')) return false;

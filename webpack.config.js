@@ -5,11 +5,21 @@ const { InjectManifest } = require('workbox-webpack-plugin');
 const webpack = require('webpack');
 const fs = require('fs');
 
+// Deployment base path ("/" at a domain root, "/flac-player/" under a subpath).
+// Keep normalization in sync with src/utils/publicPath.ts.
+function normalizePublicPath(raw) {
+  const trimmed = (raw || '').trim();
+  if (trimmed === '' || trimmed === '/') return '/';
+  const p = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? new URL(trimmed).pathname : trimmed;
+  return `/${p.replace(/^\/+|\/+$/g, '')}/`;
+}
+
 // ts-loader is the only TypeScript pipeline (no Babel). Worklet processors under
 // src/audio/worklets are static JS modules and are not bundled through it.
 require('dotenv').config();
 
-const envVars = {};
+const PUBLIC_PATH = normalizePublicPath(process.env.PUBLIC_PATH);
+const envVars = { 'process.env.PUBLIC_PATH': JSON.stringify(PUBLIC_PATH) };
 ['REACT_APP_API_URL', 'REACT_APP_PLAYLIST_API_URL', 'REACT_APP_ROOMS_API_URL', 'REACT_APP_WS_URL', 'REACT_APP_GA_ID', 'REACT_APP_MIXPANEL_TOKEN', 'REACT_APP_DEBUG'].forEach(key => {
   envVars[`process.env.${key}`] = JSON.stringify(process.env[key] || '');
 });
@@ -67,8 +77,8 @@ module.exports = (env = {}, argv = {}) => {
       path: path.resolve(__dirname, 'dist'),
       filename: 'bundle.[contenthash].js',
       // Fixed (not 'auto'): the flac-processor worklet chunk has no document or
-      // importScripts to detect it from. The app is served from the root.
-      publicPath: '/',
+      // importScripts to detect it from. Set PUBLIC_PATH for subpath deployments.
+      publicPath: PUBLIC_PATH,
       // AudioWorkletGlobalScope has no `self` (dev HMR runtime in the worklet chunk).
       globalObject: 'globalThis',
       clean: true,
@@ -106,6 +116,7 @@ module.exports = (env = {}, argv = {}) => {
       new HtmlWebpackPlugin({
         template: './public/index.html',
         filename: 'index.html',
+        templateParameters: { publicPath: PUBLIC_PATH },
       }),
       new webpack.DefinePlugin(envVars),
       new CopyPlugin({ patterns: copyPatterns }),
@@ -122,9 +133,9 @@ module.exports = (env = {}, argv = {}) => {
             // add-to-cache-list-conflicting-entries throw on SW install.
             exclude: [/^icons\//, /^manifest\.json$/],
             additionalManifestEntries: [
-              { url: '/manifest.json', revision: null },
-              { url: '/icons/icon-192.png', revision: null },
-              { url: '/icons/icon-512.png', revision: null },
+              { url: `${PUBLIC_PATH}manifest.json`, revision: null },
+              { url: `${PUBLIC_PATH}icons/icon-192.png`, revision: null },
+              { url: `${PUBLIC_PATH}icons/icon-512.png`, revision: null },
             ],
           }),
         ]
