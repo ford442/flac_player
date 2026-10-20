@@ -1,7 +1,7 @@
 import React from 'react';
 import { PlaylistTrack, RepeatMode } from '../../api/audioLoader';
 import type { GpuChoreBackend } from '../../gpu-chores';
-import type { AudioOutputMode } from '../../hooks/usePlayerState';
+import type { AudioOutputMode } from '../../types/audio';
 
 /**
  * Audio engine choices. The transport bar and the Settings tab both render this

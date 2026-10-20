@@ -1,6 +1,6 @@
 import React from 'react';
 import { PlaylistTrack } from '../../api/audioLoader';
-import { AudioOutputMode } from '../../hooks/usePlayerState';
+import type { AudioOutputMode } from '../../types/audio';
 import { MetadataPanel } from '../MetadataPanel';
 import { WaveformOverview } from '../WaveformOverview';
 import { getNextQueueIndex, getPreviousQueueIndex } from '../../utils/queueUtils';

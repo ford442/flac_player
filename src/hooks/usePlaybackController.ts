@@ -9,7 +9,7 @@ import {
   type DecodedPcmView,
   type SyncClock,
 } from '../types/audio';
-import type { AudioOutputMode } from './usePlayerState';
+import type { AudioOutputMode } from '../types/audio';
 import {
   AudioLoader,
   PlaylistTrack,
@@ -25,6 +25,15 @@ import { getPreferredStorageUrls } from '../utils/audioUtils';
 import { createProjectMPCMFeed, notifyInAppProjectMTrackChange } from '../utils/projectMBridge';
 import { getOrFetchTrack } from '../storage/trackCache';
 import type { RepeatMode } from '../storage/queueStorage';
+import { LOCAL_TRACK_ID_PREFIX, isLibraryTrack } from '../types/track';
+
+/** localStorage key of the resume position (`{ trackId, time }`). */
+export const POSITION_STORAGE_KEY = 'flac_position';
+const POSITION_SAVE_INTERVAL_MS = 5000;
+
+function isAbortError(err: unknown): boolean {
+  return err instanceof DOMException && err.name === 'AbortError';
+}
 
 /**
  * Listening-room role (#209). Any role forces the native streaming path (the
@@ -167,7 +176,8 @@ export function usePlaybackController({
         const meta = await parseBlob(file);
         const rgFields = replayGainTagsToTrackFields(parseReplayGainFromCommon(meta.common));
         track = {
-          id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          id: `${LOCAL_TRACK_ID_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          source: 'local',
           name: file.name,
           title: (meta.common.title as string) || file.name.replace(/\.[^/.]+$/, ''),
           author: (meta.common.artist as string) || 'Unknown Artist',
@@ -177,7 +187,8 @@ export function usePlaybackController({
         };
       } catch {
         track = {
-          id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          id: `${LOCAL_TRACK_ID_PREFIX}${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          source: 'local',
           name: file.name,
           title: file.name.replace(/\.[^/.]+$/, ''),
           author: 'Unknown Artist',
@@ -272,7 +283,10 @@ export function usePlaybackController({
           }
           loaded = true;
           break;
-        } catch (err) { lastError = err; }
+        } catch (err) {
+          if (isAbortError(err)) throw err;
+          lastError = err;
+        }
       }
       if (!loaded) {
         const msg = `Failed to load audio from any source: ${candidateUrls.join(', ')}`;
@@ -280,13 +294,12 @@ export function usePlaybackController({
       }
       if (track) {
         setCurrentTrack(track);
-        if (track.id) {
-          await loader.recordPlay(track.id);
-          addToast('Playing: ' + (track.title || track.name), 'info');
-        }
+        // Only catalog rows have a play counter; never wait on it to start playback (#258).
+        if (isLibraryTrack(track)) void loader.recordPlay(track.id);
+        addToast('Playing: ' + (track.title || track.name), 'info');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load audio');
+      if (!isAbortError(err)) setError(err instanceof Error ? err.message : 'Failed to load audio');
       throw err;
     } finally {
       setPlayerState(prev => ({ ...prev, isLoading: false }));
@@ -315,13 +328,15 @@ export function usePlaybackController({
       }
       if (restorePosition && startAt === undefined) {
         try {
-          const saved = JSON.parse(localStorage.getItem('flac_position') || 'null');
+          const saved = JSON.parse(localStorage.getItem(POSITION_STORAGE_KEY) || 'null');
           if (saved && saved.trackId === track.id && saved.time > 0) playerRef.current?.seek(saved.time);
         } catch { /* no-op */ }
       }
       setTimeout(loadStats, 500);
       return true;
     } catch (err) {
+      // A newer load replaced this one; that load reports its own outcome.
+      if (isAbortError(err)) return false;
       const message = err instanceof Error ? err.message : 'Failed to play track';
       setError(message);
       addToast(`Playback failed: ${message}`, 'error');
@@ -430,17 +445,26 @@ export function usePlaybackController({
     preloadNextInQueue(queueCurrentIndex);
   }, [gaplessSettings, outputMode, queue, queueCurrentIndex, shuffle, repeatMode, preloadNextInQueue]);
 
+  // Resume position. The timer reads a ref: with currentTime in its deps it was
+  // torn down on every timeupdate and never fired (#258).
+  const positionRef = useRef({ trackId: '', time: 0, duration: 0 });
+  positionRef.current = { trackId: currentTrack?.id ?? '', time: playerState.currentTime, duration: playerState.duration };
   useEffect(() => {
     if (isSharedPlaylist) return;
-    const interval = setInterval(() => {
-      if (currentTrack && playerState.currentTime > 0 && playerState.duration > 0) {
-        try {
-          localStorage.setItem('flac_position', JSON.stringify({ trackId: currentTrack.id, time: playerState.currentTime }));
-        } catch { /* no-op */ }
-      }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [isSharedPlaylist, currentTrack, playerState.currentTime, playerState.duration]);
+    const save = () => {
+      const { trackId, time, duration } = positionRef.current;
+      if (!trackId || !(time > 0) || !(duration > 0)) return;
+      try {
+        localStorage.setItem(POSITION_STORAGE_KEY, JSON.stringify({ trackId, time }));
+      } catch { /* no-op */ }
+    };
+    const interval = setInterval(save, POSITION_SAVE_INTERVAL_MS);
+    window.addEventListener('pagehide', save);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('pagehide', save);
+    };
+  }, [isSharedPlaylist]);
 
   const playNextInQueue = useCallback(() => {
     const nextIndex = getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode);

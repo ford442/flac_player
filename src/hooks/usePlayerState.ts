@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import type { PlayerUIState } from '../types/player';
 import type { PlaylistTrack } from '../types/library';
+import type { AudioOutputMode } from '../types/audio';
 
-export type AudioOutputMode = 'streaming' | 'web-audio' | 'worklet' | 'sdl';
+export type { AudioOutputMode };
 
 export interface UsePlayerStateResult {
   playerState: PlayerUIState;

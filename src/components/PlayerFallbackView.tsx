@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo, type PlaybackPathInfo } from '../api/audioLoader';
-import { AudioOutputMode } from '../hooks/usePlayerState';
+import type { AudioOutputMode } from '../types/audio';
 import { QueuePanel } from './QueuePanel';
 import { ToastContainer, Toast } from './Toast';
 import { KeyboardHelpModal } from './KeyboardHelpModal';

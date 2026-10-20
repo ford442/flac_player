@@ -114,6 +114,7 @@ export async function fetchSongs(
 
     const tracksWithUrls: PlaylistTrack[] = tracks.map((item) => ({
       ...item,
+      source: 'library',
       url: item.url ? (item.url.startsWith('http') ? item.url : `${API_BASE_URL}${item.url}`) : `${API_BASE_URL}/api/music/${item.id}`
     }));
 
@@ -138,6 +139,7 @@ export async function fetchSong(songId: string): Promise<PlaylistTrack> {
   const item = await response.json() as PlaylistTrack;
   return {
     ...item,
+    source: 'library',
     url: item.url
       ? (item.url.startsWith('http') ? item.url : `${API_BASE_URL}${item.url}`)
       : `${API_BASE_URL}/api/music/${item.id}`
@@ -316,7 +318,7 @@ export async function triggerMusicResync(maxAttempts: number = 3): Promise<Music
 
 export async function recordPlay(musicId: string): Promise<void> {
   try {
-    const url = `${API_BASE_URL}/api/songs/${musicId}/play`;
+    const url = `${API_BASE_URL}/api/songs/${encodeURIComponent(musicId)}/play`;
     debug.log('RECORD_PLAY_REQUEST', { url, musicId });
 
     const response = await fetch(url, {
@@ -354,7 +356,7 @@ export async function updateSampleMetadata(
   }
 ): Promise<void> {
   try {
-    const url = `${API_BASE_URL}/api/songs/${musicId}`;
+    const url = `${API_BASE_URL}/api/songs/${encodeURIComponent(musicId)}`;
     debug.log('UPDATE_METADATA_REQUEST', { url, musicId, updatesKeys: Object.keys(updates) });
 
     const response = await fetch(url, {
@@ -383,7 +385,7 @@ export async function updateSampleMetadata(
 
 export async function trashTrack(musicId: string): Promise<void> {
   try {
-    const url = `${API_BASE_URL}/api/songs/${musicId}/trash`;
+    const url = `${API_BASE_URL}/api/songs/${encodeURIComponent(musicId)}/trash`;
     debug.log('TRASH_TRACK_REQUEST', { url, musicId });
 
     const response = await fetch(url, {
@@ -408,7 +410,7 @@ export async function trashTrack(musicId: string): Promise<void> {
 
 export async function suggestTags(musicId: string): Promise<{ suggestions: string[]; source: string }> {
   try {
-    const url = `${API_BASE_URL}/api/songs/${musicId}/suggest-tags`;
+    const url = `${API_BASE_URL}/api/songs/${encodeURIComponent(musicId)}/suggest-tags`;
     debug.log('SUGGEST_TAGS_REQUEST', { url, musicId });
 
     const response = await fetch(url, {
@@ -465,15 +467,16 @@ export async function searchMusicBrainz(query: string, artist?: string): Promise
 
 export async function fetchSharedPlaylist(shareId: string): Promise<{ title: string; tracks: PlaylistTrack[] }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/share/${shareId}`);
+    const response = await fetch(`${API_BASE_URL}/api/share/${encodeURIComponent(shareId)}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch shared playlist: ${response.status}`);
     }
 
     const data = await response.json() as { title: string; tracks: PlaylistTrack[] };
 
-    const tracksWithUrls = data.tracks.map((item) => ({
+    const tracksWithUrls = data.tracks.map((item): PlaylistTrack => ({
       ...item,
+      source: 'library',
       url: item.url || `${API_BASE_URL}/api/music/${item.id}`
     }));
 

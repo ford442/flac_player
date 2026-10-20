@@ -129,3 +129,28 @@ export const removeFromQueue = (
 ): PlaylistTrack[] => queue.filter((_, i) => i !== index);
 
 export const clearQueue = (): PlaylistTrack[] => [];
+
+/**
+ * Where to play `track` from: its existing queue slot, else appended. `addTrackToQueue`
+ * dedupes by id, so `queue.length` is the wrong index for a track already queued (#258).
+ */
+export const queueTrackForPlayback = (
+  queue: PlaylistTrack[],
+  track: PlaylistTrack
+): { queue: PlaylistTrack[]; index: number } => {
+  const existing = queue.findIndex(t => t.id === track.id);
+  if (existing >= 0) return { queue, index: existing };
+  return { queue: [...queue, track], index: queue.length };
+};
+
+/** Like {@link queueTrackForPlayback}, but a new track goes right after the current one. */
+export const insertTrackNextForPlayback = (
+  queue: PlaylistTrack[],
+  track: PlaylistTrack,
+  queueCurrentIndex: number
+): { queue: PlaylistTrack[]; index: number } => {
+  const existing = queue.findIndex(t => t.id === track.id);
+  if (existing >= 0) return { queue, index: existing };
+  const { queue: next, insertAt } = playNextTrack(queue, track, queueCurrentIndex);
+  return { queue: next, index: insertAt };
+};

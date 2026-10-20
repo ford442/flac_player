@@ -7,13 +7,14 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { AudioLoader, PlaylistTrack } from '../api/audioLoader';
 import type { RepeatMode } from '../storage/queueStorage';
-import type { AudioOutputMode } from '../hooks/usePlayerState';
+import type { AudioOutputMode } from '../types/audio';
 import type { PlayTrackOptions } from '../hooks/usePlaybackController';
 import type { ConfigurableAudioBackend, SyncClock } from '../types/audio';
 import { sharedAudioContextManager } from '../audio/AudioContextManager';
 import { useListeningRoom, type ListeningRoomPlayer, type UseListeningRoomResult } from './useListeningRoom';
 import type { HostSample } from './hostPublisher';
 import type { RoomQueueState, RoomRole } from './types';
+import { trackSource } from '../types/track';
 
 /** Above this many unknown ids, one library page beats per-track lookups. */
 const BULK_RESOLVE_THRESHOLD = 8;
@@ -22,9 +23,9 @@ const LIBRARY_RESOLVE_LIMIT = 1000;
 /** How long to wait for AudioContext.resume() before asking for a click. */
 const RESUME_TIMEOUT_MS = 500;
 
-/** Local files (`local-…`) have no catalog id and cannot be shared. */
+/** Only library tracks have a catalog id a guest can resolve; local files and URL tracks do not. */
 export function isShareableTrackId(id: string | undefined | null): id is string {
-  return !!id && !id.startsWith('local-');
+  return !!id && trackSource({ id }) === 'library';
 }
 
 export interface ListeningRoomBridgeOptions {

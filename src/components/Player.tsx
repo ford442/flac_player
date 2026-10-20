@@ -22,6 +22,8 @@ import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { PlayerFallbackView } from './PlayerFallbackView';
 import { EmbedPlayerView } from './EmbedPlayerView';
 import { shuffleArray, isFastMirrorEligible } from '../utils/audioUtils';
+import { insertTrackNextForPlayback, queueTrackForPlayback } from '../utils/queueUtils';
+import { isLibraryTrack } from '../types/track';
 import { IS_PROJECTM_EMBED } from '../utils/embedMode';
 import { getInitialVisualizerAesthetic, VisualizerAesthetic } from '../utils/visualizerMode';
 import { clearTrackCache, downloadForOffline, isTrackCached } from '../storage/trackCache';
@@ -285,7 +287,11 @@ export const Player: React.FC = () => {
   const handleLoadUrl = (raw: string): string | null => {
     const track = trackFromUrl(raw);
     if (!track) return 'Enter a full http(s):// link to an audio file.';
-    playNow(track);
+    // Play it next to the current track; a pasted link must not wipe the queue (#258).
+    const { queue: nextQueue, index } = insertTrackNextForPlayback(queue, track, queueCurrentIndex);
+    setQueue(nextQueue);
+    roomPlayTrack(track, index);
+    addToast('Playing now: ' + (track.title || track.name), 'info');
     return null;
   };
 
@@ -295,6 +301,7 @@ export const Player: React.FC = () => {
   };
 
   const handleSmartMix = async () => {
+    if (currentTrack && !isLibraryTrack(currentTrack)) { addToast('Smart mix needs a library track', 'info'); return; }
     if (!currentTrack?.tags) { addToast('No tags to base mix on', 'error'); return; }
     try {
       const similar = await loader.findSimilarTracks(currentTrack.id, currentTrack.tags, 4, 20);
@@ -329,8 +336,11 @@ export const Player: React.FC = () => {
 
   const generateShareLink = async () => {
     if (queue.length === 0) { addToast('Add tracks to the queue first.', 'info'); return; }
-    const trackIds = queue.map(t => t.id).filter(Boolean);
-    if (trackIds.length === 0) { addToast('No valid tracks to share.', 'info'); return; }
+    // Recipients resolve ids against the catalog: links and local files would not load.
+    const trackIds = queue.filter(isLibraryTrack).map(t => t.id);
+    if (trackIds.length === 0) { addToast('Only library tracks can be shared.', 'info'); return; }
+    const omitted = queue.length - trackIds.length;
+    if (omitted > 0) addToast(`Left out ${omitted} non-library track${omitted === 1 ? '' : 's'} (links or local files)`, 'info');
     try {
       const shareResponse = await loader.createShare(trackIds, 'Shared Playlist', 30);
       await navigator.clipboard.writeText(shareResponse.short_url || shareResponse.full_url);
@@ -563,7 +573,11 @@ export const Player: React.FC = () => {
       overviewPeak={gpuOverview.peak}
       overviewBackend={gpuOverview.backend}
       overviewReason={gpuOverview.reason}
-      onTrackClick={(track) => { addToQueue(track); roomPlayTrack(track, queue.length); }}
+      onTrackClick={(track) => {
+        const { queue: nextQueue, index } = queueTrackForPlayback(queue, track);
+        if (nextQueue !== queue) addToQueue(track);
+        roomPlayTrack(track, index);
+      }}
       onTrackDoubleClick={playNow}
       onQueueTrackClick={(index) => { const track = queue[index]; if (track) roomPlayTrack(track, index); }}
       onPlay={transportToggle} onStop={transportStop}

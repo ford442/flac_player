@@ -1,5 +1,6 @@
 // Tracks that come from a user-supplied URL or the built-in demo set (no backend row).
 import type { PlaylistTrack } from '../types/library';
+import { URL_TRACK_ID_PREFIX } from '../types/track';
 
 export const DEMO_BASE_URL = 'https://projectm.1ink.us/songs/';
 
@@ -26,7 +27,7 @@ export function trackFromUrl(raw: string): PlaylistTrack | null {
   try { url = new URL(raw.trim()); } catch { return null; }
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
   const title = titleFromUrl(url);
-  return { id: `url:${url.href}`, name: title, title, url: url.href, type: 'music' };
+  return { id: `${URL_TRACK_ID_PREFIX}${url.href}`, source: 'url', name: title, title, url: url.href, type: 'music' };
 }
 
 export function demoTracks(): PlaylistTrack[] {

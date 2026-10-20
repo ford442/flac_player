@@ -354,7 +354,7 @@ export class AudioLoader {
 
   async fetchPlaylistTracks(playlistId: string): Promise<string[]> {
     try {
-      const url = `${this.PLAYLIST_API_URL}/api/playlists/${playlistId}`;
+      const url = `${this.PLAYLIST_API_URL}/api/playlists/${encodeURIComponent(playlistId)}`;
 
       const response = await fetch(url, {
         mode: 'cors',

@@ -1,4 +1,4 @@
-import type { AudioOutputMode } from '../hooks/usePlayerState';
+import type { AudioOutputMode } from '../types/audio';
 import { AudioContextManager, sharedAudioContextManager } from './AudioContextManager';
 import type { ConfigurableAudioBackend } from '../types/audio';
 

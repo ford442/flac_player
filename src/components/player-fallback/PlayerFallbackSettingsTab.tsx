@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { type PlaybackPathInfo } from '../../api/audioLoader';
-import { AudioOutputMode } from '../../hooks/usePlayerState';
+import type { AudioOutputMode } from '../../types/audio';
 import { EQPanel, type AudioOutputControls } from '../EQPanel';
 import { CacheStatsPanel } from '../OfflineCache';
 import type { GaplessMode } from '../../types/gapless';
