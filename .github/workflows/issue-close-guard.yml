@@ -1,0 +1,74 @@
+name: Issue close guard
+
+# An issue closed as "completed" must be closed by a merged PR or a commit on the
+# default branch. Otherwise it is reopened with a comment (#257: ten issues were closed
+# with the code only on a side branch or in an uncommitted working tree).
+# Closing as "not planned" is never touched. Label `no-code-needed` for issues whose
+# fix lives outside this repo (deploy, hosting, upstream service).
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  issues: write
+
+jobs:
+  guard:
+    if: github.event.issue.state_reason == 'completed' && !contains(github.event.issue.labels.*.name, 'no-code-needed')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const number = context.payload.issue.number;
+            const { repository } = await github.graphql(`
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  defaultBranchRef { name }
+                  issue(number: $number) {
+                    closedByPullRequestsReferences(first: 20, includeClosedPrs: true) {
+                      nodes { number merged baseRefName }
+                    }
+                    timelineItems(itemTypes: [CLOSED_EVENT], last: 1) {
+                      nodes {
+                        ... on ClosedEvent {
+                          closer {
+                            __typename
+                            ... on PullRequest { number merged baseRefName }
+                            ... on Commit { oid }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }`, { owner, repo, number });
+
+            const main = repository.defaultBranchRef.name;
+            const issue = repository.issue;
+            const mergedPr = issue.closedByPullRequestsReferences.nodes
+              .find((pr) => pr.merged && pr.baseRefName === main);
+            const closer = issue.timelineItems.nodes[0]?.closer;
+            // GitHub only closes from a commit when it lands on the default branch.
+            const closedByCode = mergedPr
+              || closer?.__typename === 'Commit'
+              || (closer?.__typename === 'PullRequest' && closer.merged && closer.baseRefName === main);
+
+            if (closedByCode) {
+              core.info(`#${number}: closed by ${mergedPr ? `PR #${mergedPr.number}` : closer.__typename}`);
+              return;
+            }
+
+            await github.rest.issues.update({ owner, repo, issue_number: number, state: 'open' });
+            await github.rest.issues.createComment({
+              owner, repo, issue_number: number,
+              body: [
+                `Reopened: closed as completed without code on \`${main}\`.`,
+                '',
+                `Close it through a PR with \`Fixes #${number}\` once the acceptance list holds on \`${main}\`,`,
+                'close it as "not planned", or add the `no-code-needed` label if the fix lives outside this repo.',
+              ].join('\n'),
+            });
+            core.notice(`#${number} reopened: no merged PR or commit on ${main}`);

@@ -16,13 +16,20 @@ function normalizePublicPath(raw) {
 
 // ts-loader is the only TypeScript pipeline (no Babel). Worklet processors under
 // src/audio/worklets are static JS modules and are not bundled through it.
-require('dotenv').config();
 
-const PUBLIC_PATH = normalizePublicPath(process.env.PUBLIC_PATH);
-const envVars = { 'process.env.PUBLIC_PATH': JSON.stringify(PUBLIC_PATH) };
-['REACT_APP_API_URL', 'REACT_APP_PLAYLIST_API_URL', 'REACT_APP_ROOMS_API_URL', 'REACT_APP_WS_URL', 'REACT_APP_GA_ID', 'REACT_APP_MIXPANEL_TOKEN', 'REACT_APP_DEBUG'].forEach(key => {
-  envVars[`process.env.${key}`] = JSON.stringify(process.env[key] || '');
-});
+// `.env.<mode>` then `.env`. dotenv never overrides a variable that is already set, so
+// precedence is shell > .env.<mode> > .env.
+function loadEnv(mode) {
+  const dotenv = require('dotenv');
+  dotenv.config({ path: path.resolve(__dirname, `.env.${mode}`) });
+  dotenv.config({ path: path.resolve(__dirname, '.env') });
+  const publicPath = normalizePublicPath(process.env.PUBLIC_PATH);
+  const envVars = { 'process.env.PUBLIC_PATH': JSON.stringify(publicPath) };
+  ['REACT_APP_API_URL', 'REACT_APP_PLAYLIST_API_URL', 'REACT_APP_ROOMS_API_URL', 'REACT_APP_WS_URL', 'REACT_APP_GA_ID', 'REACT_APP_MIXPANEL_TOKEN', 'REACT_APP_DEBUG'].forEach(key => {
+    envVars[`process.env.${key}`] = JSON.stringify(process.env[key] || '');
+  });
+  return { PUBLIC_PATH: publicPath, envVars };
+}
 
 const SDL_ARTIFACTS = [
   'sdl-audio.js',
@@ -34,6 +41,7 @@ function wasmArtifactsPresent(publicDir) {
 }
 
 module.exports = (env = {}, argv = {}) => {
+  const { PUBLIC_PATH, envVars } = loadEnv(argv.mode === 'production' ? 'production' : 'development');
   const skipWasm = env.skipWasm === true || env.skipWasm === 'true';
   const publicDir = path.resolve(__dirname, 'public');
   const hasWasm = wasmArtifactsPresent(publicDir);

@@ -76,18 +76,21 @@ If you are developing with the SDL-based audio engine (Emscripten build), build 
 git clone https://github.com/emscripten-core/emsdk.git
 cd emsdk && ./emsdk install "$(cat ../scripts/emsdk-version)" && ./emsdk activate "$(cat ../scripts/emsdk-version)"
 source ./emsdk_env.sh
+# scripts/emsdk-env.sh tries $EMSDK before ./emsdk: if $EMSDK points at an older
+# release the build refuses with "emcc X != pinned Y" — `export EMSDK=$PWD` here.
 
 # Build SDL3 WASM artifacts into public/
 cd ..   # back to repo root
 npm run build:wasm              # scripts/build-wasm.sh --sdl3
 npm run build:wasm:sdl3         # same as bash src/sdl/build.sh
 npm run build:wasm:resampler    # SpeexDSP HQ resampler
+npm run build:wasm:dsp          # dsp_chain.h + dsp_fft.h → public/dsp-chain.* (speaker DSP worklet)
 npm run build:projectm          # optional projectM host (slow: builds libprojectM)
 
 npm start
 ```
 
-**WASM policy:** three WASM graphs are committed prebuilt: SDL3 playback (`src/sdl/` → `public/sdl-audio.*`), the SpeexDSP resampler (`src/resampler/` → `public/speex-resampler.*`), and the projectM host (`src/projectm/` → `public/projectm/`). All are built with the emsdk version in `scripts/emsdk-version`. CI runs `npm run verify:wasm`, which checks each graph's source hash (`public/wasm-source.sha256`, `public/resampler-source.sha256`, `public/projectm/projectm-source.sha256`; every hash also covers the emsdk pin). PRs that touch a graph (or the pin) rebuild it with the pinned emsdk and fail if the committed artifacts differ. To bump the pin, see the header of `scripts/emsdk-env.sh`. SDL2 playback was retired (#212); projectM uses a separate `USE_SDL=2` video host.
+**WASM policy:** four WASM graphs are committed prebuilt: SDL3 playback (`src/sdl/` → `public/sdl-audio.*`), the SpeexDSP resampler (`src/resampler/` → `public/speex-resampler.*`), the speaker DSP chain (`src/dsp/` + `src/sdl/dsp_chain.h` → `public/dsp-chain.*`), and the projectM host (`src/projectm/` → `public/projectm/`). SDL3 and the DSP chain compile the same `dsp_chain.h`, so rebuild both when it changes. All are built with the emsdk version in `scripts/emsdk-version`. CI runs `npm run verify:wasm`, which checks each graph's source hash (`public/wasm-source.sha256`, `public/resampler-source.sha256`, `public/dsp-source.sha256`, `public/projectm/projectm-source.sha256`; every hash also covers the emsdk pin). PRs that touch a graph (or the pin) rebuild it with the pinned emsdk and fail if the committed artifacts differ. To bump the pin, see the header of `scripts/emsdk-env.sh`. SDL2 playback was retired (#212); projectM uses a separate `USE_SDL=2` video host.
 
 **Production webpack build** does not compile WASM (no emsdk required). It copies prebuilt artifacts from `public/`:
 
