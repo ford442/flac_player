@@ -144,9 +144,9 @@ export async function isTrackCached(url: string): Promise<boolean> {
  * The returned Response is a clone so callers can read it without affecting
  * the stored copy.
  */
-export async function getOrFetchTrack(url: string): Promise<Response> {
+export async function getOrFetchTrack(url: string, signal?: AbortSignal): Promise<Response> {
   if (!isCacheAvailable()) {
-    return fetch(url);
+    return fetch(url, { signal });
   }
 
   const cache = await caches.open(CACHE_NAME);
@@ -157,7 +157,7 @@ export async function getOrFetchTrack(url: string): Promise<Response> {
     return cached.clone();
   }
 
-  const response = await fetch(url);
+  const response = await fetch(url, { signal });
   if (!response.ok) throw new Error(`Network error: ${response.status} ${response.statusText}`);
 
   // Clone before storing so we can return a readable copy
