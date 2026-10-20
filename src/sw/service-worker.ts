@@ -2,8 +2,8 @@
 
 import { clientsClaim } from 'workbox-core';
 import { ExpirationPlugin } from 'workbox-expiration';
-import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
-import { registerRoute } from 'workbox-routing';
+import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching';
+import { NavigationRoute, registerRoute } from 'workbox-routing';
 import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import {
@@ -13,6 +13,7 @@ import {
   type SWClientMessage,
   type SWServerMessage,
 } from './swMessages';
+import { CACHED_AUDIO_RE, createRangedResponse } from './rangeResponse';
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -42,6 +43,20 @@ cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST, {
   ignoreURLParametersMatching: [/^utm_/, /^fbclid$/],
 });
+
+// SPA deep links (e.g. <base>/playlist/{id}) load the precached shell when offline.
+// The shell URL derives from the SW scope so the app works from any base path. A
+// throw here would fail script evaluation (and the whole registration), so a
+// missing precache entry just skips the offline-navigation route.
+try {
+  const scopePath = new URL(self.registration.scope).pathname;
+  const escapedScope = scopePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  registerRoute(new NavigationRoute(createHandlerBoundToURL(`${scopePath}index.html`), {
+    denylist: [new RegExp(`^${escapedScope}(api|files)/`), /\.[a-z0-9]+$/i],
+  }));
+} catch (err) {
+  console.warn('[SW] Offline navigation route disabled:', err);
+}
 
 // ─── Runtime caching ─────────────────────────────────────────────────────────
 
@@ -89,6 +104,21 @@ registerRoute(
       corpPlugin,
     ],
   }),
+);
+
+/**
+ * Offline tracks – serve flac-player-tracks-v1 entries (written by trackCache /
+ * background downloads) to the native <audio> path, honouring Range. Misses go
+ * straight to the network; this route never writes to the cache.
+ */
+registerRoute(
+  ({ url, request }) => request.method === 'GET' && CACHED_AUDIO_RE.test(url.pathname),
+  async ({ request }) => {
+    const cache = await caches.open(TRACK_CACHE_NAME);
+    const cached = await cache.match(request.url, { ignoreVary: true });
+    if (!cached) return fetch(request);
+    return createRangedResponse(cached, request.headers.get('range'));
+  },
 );
 
 // ─── Background track downloads (shared Cache API store) ───────────────────
