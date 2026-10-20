@@ -3,6 +3,10 @@ import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // Mirrors webpack's DefinePlugin for src/utils/debug.ts (no `process` in the browser).
+  define: {
+    'process.env.REACT_APP_DEBUG': JSON.stringify(process.env.REACT_APP_DEBUG ?? 'false'),
+  },
   optimizeDeps: {
     include: ['@wasm-audio-decoders/flac'],
   },

@@ -291,7 +291,7 @@ export function usePlaybackController({
     } finally {
       setPlayerState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [loader, outputMode, setCurrentTrack, setError, setPlayerState, addToast]);
+  }, [loader, outputMode, setCurrentTrack, setError, setPlayerState, setPlaybackPath, addToast]);
 
   /** Resolves true once the track is loaded (and playing, unless autoplay is false). */
   const playTrack = useCallback(async (
@@ -402,6 +402,10 @@ export function usePlaybackController({
         playerRef.current = null;
       }
     };
+    // Rebuild the backend only when outputMode changes (#236). Queue callbacks go through
+    // refs; volume/EQ/etc. are read from the render that triggered it, and live updates
+    // are applied by their own effects.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [outputMode]);
 
   useEffect(() => {

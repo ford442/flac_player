@@ -10,6 +10,7 @@ import { usePlayerData } from '../hooks/usePlayerData';
 import { usePlaybackController } from '../hooks/usePlaybackController';
 import { usePlaylists } from '../hooks/usePlaylists';
 import { isAudioContextSinkSupported, sharedAudioContextManager } from '../audio/AudioContextManager';
+import { isRenderSizeHintSupported } from '../audio/sampleRatePolicy';
 import type { AudioOutputControls } from './EQPanel';
 import { AudioCapabilitiesContext } from './AudioCapabilitiesContext';
 import { useGpuChoresOverview } from '../hooks/useGpuChoresOverview';
@@ -34,7 +35,8 @@ const getSharedPlaylistId = (): string | null => {
   const queryShareId = params.get('share');
   if (queryShareId) return queryShareId;
   const pathMatch = window.location.pathname.match(/^\/playlist\/([^/]+)$/);
-  return pathMatch ? decodeURIComponent(pathMatch[1]) : null;
+  const pathId = pathMatch?.[1];
+  return pathId ? decodeURIComponent(pathId) : null;
 };
 
 export const Player: React.FC = () => {
@@ -53,6 +55,7 @@ export const Player: React.FC = () => {
     replayGainMode, setReplayGainMode, replayGainLimiter, setReplayGainLimiter,
     replayGainSettings,
     latencyMode, setLatencyMode,
+    renderSizeMode, setRenderSizeMode,
     outputDevice, onSelectOutputDevice,
   } = useAudioSettings();
 
@@ -153,6 +156,10 @@ export const Player: React.FC = () => {
   }, [latencyMode]);
 
   useEffect(() => {
+    void sharedAudioContextManager.setRenderSizeMode(renderSizeMode);
+  }, [renderSizeMode]);
+
+  useEffect(() => {
     let cancelled = false;
     void sharedAudioContextManager.setSinkId(outputDevice.id).then((ok) => {
       if (ok || cancelled) return;
@@ -173,7 +180,15 @@ export const Player: React.FC = () => {
     onSelectOutputDevice,
     info: audioOutputInfo,
     externalPlayback: outputMode === 'sdl',
-  }), [outputDevice, outputDevices, onSelectOutputDevice, audioOutputInfo, outputMode]);
+    renderSize: {
+      mode: renderSizeMode,
+      supported: isRenderSizeHintSupported(),
+      onChange: setRenderSizeMode,
+    },
+  }), [
+    outputDevice, outputDevices, onSelectOutputDevice, audioOutputInfo, outputMode,
+    renderSizeMode, setRenderSizeMode,
+  ]);
 
   const gpuOverview = useGpuChoresOverview({
     trackKey: currentTrack?.id ?? currentTrack?.url ?? null,
@@ -249,9 +264,11 @@ export const Player: React.FC = () => {
   const playAll = (tracks: PlaylistTrack[], shuffled = false) => {
     if (tracks.length === 0) return;
     const ordered = shuffled ? shuffleArray(tracks) : tracks;
+    const firstTrack = ordered[0];
+    if (!firstTrack) return;
     setQueue(ordered);
     setQueueCurrentIndex(0);
-    roomPlayTrack(ordered[0], 0);
+    roomPlayTrack(firstTrack, 0);
     addToast(shuffled ? `Shuffling ${ordered.length} tracks` : `Playing ${ordered.length} tracks`, 'success');
   };
 
@@ -467,7 +484,7 @@ export const Player: React.FC = () => {
           volume={volume} muted={muted}
           onPlay={transportToggle} onStop={transportStop}
           onSeek={onSeek}
-          onTrackClick={(index) => roomPlayTrack(queue[index], index)}
+          onTrackClick={(index) => { const track = queue[index]; if (track) roomPlayTrack(track, index); }}
           onVolumeChange={handleVolumeChange} onMute={toggleMute}
           onNext={transportNext} onPrevious={transportPrevious}
           onToggleFallback={() => setShowHtmlFallback(true)}
@@ -531,7 +548,7 @@ export const Player: React.FC = () => {
       overviewReason={gpuOverview.reason}
       onTrackClick={(track) => { addToQueue(track); roomPlayTrack(track, queue.length); }}
       onTrackDoubleClick={playNow}
-      onQueueTrackClick={(index) => roomPlayTrack(queue[index], index)}
+      onQueueTrackClick={(index) => { const track = queue[index]; if (track) roomPlayTrack(track, index); }}
       onPlay={transportToggle} onStop={transportStop}
       onSeek={onSeek}
       onVolumeChange={handleVolumeChange} onMute={toggleMute}

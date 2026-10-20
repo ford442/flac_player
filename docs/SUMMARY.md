@@ -1,6 +1,6 @@
 # FLAC Player - Implementation Summary
 
-Last updated: July 2026
+Last updated: September 2026
 
 ## Project Overview
 
@@ -24,7 +24,7 @@ A React/TypeScript high-fidelity audio player with **four interchangeable audio 
 
 ### Visualization
 - **ShaderGUI** — hardware-panel WebGPU shader (waveform, knobs, queue screen)
-- **Renderer policy:** WebGPU required; probe failure produces a fatal visualizer panel while audio continues. GL/2D fallback is disabled pending a later issue.
+- **Renderer policy:** WebGPU is the default and fails closed: probe failure produces a fatal visualizer panel while audio continues (no automatic GL ladder, #202). WebGL2 is **opt-in** (`?visualizer=webgl2` / Compatibility toggle).
 - **projectM** — optional in-app Milkdrop WASM (`?aesthetic=projectm|split`)
 - Beat-sync preset switching, `.milk` import
 
@@ -40,14 +40,13 @@ A React/TypeScript high-fidelity audio player with **four interchangeable audio 
 flac_player/
 ├── src/
 │   ├── components/       Player, LibraryView, QueuePanel, ShaderGUI, VisualizerShell, ProjectMHost
-│   ├── audio/            createAudioBackend, AudioContextManager, EQChain, SdlPcmBridge
+│   ├── audio/            createAudioBackend, AudioContextManager, EQChain, SdlPcmBridge, flacDecoder, audioDecoder
 │   │   └── backends/     BaseAudioBackend + Streaming, WebAudio, Worklet, Sdl3
 │   ├── hooks/            usePlaybackController, usePlayerState, useAudioSettings
-│   ├── api/              songApi.ts
+│   ├── api/              songApi.ts, audioLoader.ts
 │   ├── storage/          libraryCache, trackCache, queueStorage
-│   ├── visuals/          WebGPU probe + canvas policy; opt-in WebGL2; gpu resource modules
-│   ├── projectm/         ProjectMEngine, projectm_host.cpp
-│   └── audioLoader.ts
+│   ├── visuals/          WebGPU probe + canvas policy; opt-in WebGL2; gpu resource modules, webgpuVisualizer, math
+│   └── projectm/         ProjectMEngine, projectm_host.cpp
 ├── scripts/              build-wasm.sh, build-projectm-wasm.sh, verify-wasm-artifacts.sh
 ├── docs/                 ARCHITECTURE.md, AUDIO_BACKENDS.md, API.md
 └── tests/                smoke.spec.ts (Playwright)
@@ -77,7 +76,7 @@ Live against **`https://storage.noahcohn.com`**:
 - **Gapless / ReplayGain** — shipped on shared graph; SDL gapless still unsupported
 - **Uploads** — storage admin → FLAC conversion → `songs.json` index
 
-Foundation refactor ([#193](https://github.com/ford442/flac_player/issues/193)) is **done**: playback backends live under `src/audio/backends/` with shared `BaseAudioBackend`, and playback lifecycle is owned by `usePlaybackController`. Native-rate `AudioContext` ([#194](https://github.com/ford442/flac_player/issues/194)) is **done**. WASM dual-backend hardening ([#212](https://github.com/ford442/flac_player/issues/212)) is **done** (512 MiB heap cap, configure ABI, SDL2 playback retired). See [ROADMAP.md](./ROADMAP.md).
+Foundation refactor ([#193](https://github.com/ford442/flac_player/issues/193)) is **done**: playback backends live under `src/audio/backends/` with shared `BaseAudioBackend`, and playback lifecycle is owned by `usePlaybackController`. Native-rate `AudioContext` ([#194](https://github.com/ford442/flac_player/issues/194)) is **done**. WASM dual-backend hardening ([#212](https://github.com/ford442/flac_player/issues/212)) is **done** (512 MiB heap cap, configure ABI, SDL2 playback retired). Stream-seek ABI, SIMD DSP and SDL playback rate ([#219](https://github.com/ford442/flac_player/issues/219)) and hi-fi seek/gapless ([#220](https://github.com/ford442/flac_player/issues/220)) are **done**, as is the GPU FFT / WebGPU pass work ([#221](https://github.com/ford442/flac_player/issues/221)). See [ROADMAP.md](./ROADMAP.md).
 - **Shareable playlists** — `?share=<id>` loads from `/api/share/<id>`
 - **Four audio backends** — user-selectable; lazy-loaded SDL3 WASM chunk
 - **Visualizer** — required WebGPU ShaderGUI + optional projectM split mode
@@ -99,7 +98,7 @@ Foundation refactor ([#193](https://github.com/ford442/flac_player/issues/193)) 
 | [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) | When to use each backend |
 | [API.md](./API.md) | REST endpoints + projectM embed |
 | [DEVELOPER_CONTEXT.md](./DEVELOPER_CONTEXT.md) | Agent-oriented complexity notes |
-| [ROADMAP.md](./ROADMAP.md) | Foundation audit backlog (#194–#197) |
+| [ROADMAP.md](./ROADMAP.md) | Open-issue backlog and shipped foundation |
 
 ## Deployment
 

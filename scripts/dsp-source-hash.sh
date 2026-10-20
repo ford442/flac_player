@@ -7,6 +7,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
   cd "$PROJECT_ROOT"
   sha256sum \
     scripts/build-dsp-wasm.sh \
+    scripts/emsdk-version \
     src/dsp/dsp_wasm_entry.cpp \
     src/sdl/dsp_chain.h \
     src/sdl/dsp_fft.h \

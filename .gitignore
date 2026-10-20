@@ -41,3 +41,4 @@ yarn-error.log*
 .playwright-mcp/
 .vitest-attachments/
 npm_output.log
+tests/browser/__screenshots__/

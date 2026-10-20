@@ -191,7 +191,7 @@ export class WebGPUVisualizer {
       const tempData = new Uint8Array(this.analyser.frequencyBinCount);
       this.analyser.getByteFrequencyData(tempData);
       let sum = 0;
-      for (let i = 0; i < tempData.length; i++) sum += tempData[i];
+      for (let i = 0; i < tempData.length; i++) sum += tempData[i]!;
       audioLevel = sum / tempData.length / 255.0;
     }
     this.time += 0.016;
@@ -330,7 +330,7 @@ export class WebGPUVisualizer {
       const start = Math.floor(i * binRatio);
       const end = Math.floor((i + 1) * binRatio);
       for (let j = start; j < end; j++) {
-        sum += data[j];
+        sum += data[j]!;
       }
       this.guiAudioData[i] = sum / ((end - start) * 255);
     }

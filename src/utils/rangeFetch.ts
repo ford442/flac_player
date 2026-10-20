@@ -206,7 +206,7 @@ export async function confirmRangeSupport(probe: RemoteAudioProbe, signal?: Abor
     const match = /\/(\d+)\s*$/.exec(response.headers.get('content-range') || '');
     void response.body?.cancel();
     if (response.status === 206 && match) {
-      return { ...probe, acceptsRanges: true, contentLength: parseInt(match[1], 10) };
+      return { ...probe, acceptsRanges: true, contentLength: parseInt(match[1]!, 10) };
     }
   } catch (err) {
     if (signal?.aborted) throw err;

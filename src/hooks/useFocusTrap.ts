@@ -26,9 +26,9 @@ export function useFocusTrap<T extends HTMLElement>(onClose?: () => void) {
       }
       if (e.key !== 'Tab') return;
       const items = focusables();
-      if (items.length === 0) { e.preventDefault(); return; }
       const first = items[0];
       const last = items[items.length - 1];
+      if (!first || !last) { e.preventDefault(); return; }
       if (e.shiftKey && (document.activeElement === first || !root.contains(document.activeElement))) {
         e.preventDefault(); last.focus();
       } else if (!e.shiftKey && (document.activeElement === last || !root.contains(document.activeElement))) {

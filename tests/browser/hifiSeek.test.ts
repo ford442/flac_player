@@ -4,79 +4,24 @@
 // its absolute sample index, so positions are checked exactly, not by ear.
 // Served by the vitest dev server with HTTP Range support → the real Range path.
 import { describe, expect, it } from 'vitest';
-import { AudioContextManager } from '../../src/audio/AudioContextManager';
-import { createAudioBackend } from '../../src/audio/createAudioBackend';
 import type { ConfigurableAudioBackend } from '../../src/types/audio';
-import type { AudioOutputMode } from '../../src/hooks/usePlayerState';
-import { sampleIndexAt } from '../helpers/indexCodedPcm';
+import {
+  RATE,
+  UI_TOLERANCE_S,
+  firstFrameNear,
+  fixtureUrl,
+  indicesOf,
+  recordWorkletTap,
+  sleep,
+  waitFor,
+  withBackend,
+} from '../helpers/hifiHarness';
 
-const RATE = 44100;
-const seekUrl = new URL('/tests/fixtures/seek-index-40s.flac', window.location.origin).href;
-const gaplessA = new URL('/tests/fixtures/gapless-a.flac', window.location.origin).href;
-const gaplessB = new URL('/tests/fixtures/gapless-b.flac', window.location.origin).href;
-const gapless48k = new URL('/tests/fixtures/gapless-48k.flac', window.location.origin).href;
-/** Acceptance bound (docs/AUDIO_BACKENDS.md). */
-const UI_TOLERANCE_S = 0.1;
+const seekUrl = fixtureUrl('seek-index-40s.flac');
+const gaplessA = fixtureUrl('gapless-a.flac');
+const gaplessB = fixtureUrl('gapless-b.flac');
+const gapless48k = fixtureUrl('gapless-48k.flac');
 const GAPLESS_MAX_GAP_FRAMES = Math.round(0.02 * RATE);
-
-const sleep = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
-
-async function waitFor<T>(probe: () => T | null | undefined | false, timeoutMs = 8000): Promise<T> {
-  const deadline = performance.now() + timeoutMs;
-  for (;;) {
-    const v = probe();
-    if (v) return v;
-    if (performance.now() > deadline) throw new Error('waitFor timed out');
-    await sleep(20);
-  }
-}
-
-async function withBackend(
-  mode: AudioOutputMode,
-  run: (backend: ConfigurableAudioBackend, manager: AudioContextManager) => Promise<void>
-): Promise<void> {
-  const manager = new AudioContextManager();
-  const backend = await createAudioBackend(mode, manager);
-  try {
-    await backend.initialize();
-    await run(backend, manager);
-  } finally {
-    backend.destroy();
-    if (manager.hasContext()) {
-      const context = manager.getContext();
-      if (context.state !== 'closed') await context.close();
-    }
-  }
-}
-
-/** Absolute indices of non-silent frames (index-coded silence would be (0, 0)). */
-function indicesOf(pcm: Float32Array, channels: number): number[] {
-  const out: number[] = [];
-  for (let i = 0; i + channels <= pcm.length; i += channels) {
-    if (pcm[i] === 0 && pcm[i + 1] === 0) out.push(-1);
-    else out.push(sampleIndexAt(pcm[i], pcm[i + 1]));
-  }
-  return out;
-}
-
-/** Worklet: record every projectM tap block (the exact samples sent to the speakers). */
-function recordWorkletTap(backend: ConfigurableAudioBackend) {
-  const frames: number[] = [];
-  let rate = 0;
-  backend.setPCMCallback!((buffer, channels, sampleRate) => {
-    rate = sampleRate;
-    for (const n of indicesOf(buffer, channels)) frames.push(n);
-  });
-  return { frames, get rate() { return rate; }, clear() { frames.length = 0; } };
-}
-
-/** First frame after a seek that lands in [target − 50 ms, target + 1 s] (older frames are pre-seek). */
-function firstFrameNear(frames: number[], targetSample: number): number | null {
-  for (const n of frames) {
-    if (n >= 0 && n >= targetSample - RATE * 0.05 && n <= targetSample + RATE) return n;
-  }
-  return null;
-}
 
 interface SdlInternals {
   module: {
