@@ -3,20 +3,20 @@ import {
   DEFAULT_WAVEFORM_UNIFORMS,
   packWaveformUniforms,
   type WaveformUniforms,
-} from './visuals/waveformContract';
-import type { WebGL2DebugMode } from './visuals/types';
-import { createDebugConfig, debugModeToUniform } from './visuals/webgl2/debugModes';
-import type { WebGL2DebugConfig } from './visuals/types';
-import { updateWebGPUTiming, type WebGPUProbeSuccess } from './visuals/webgpuProbe';
+} from './waveformContract';
+import type { WebGL2DebugMode } from './types';
+import { createDebugConfig, debugModeToUniform } from './webgl2/debugModes';
+import type { WebGL2DebugConfig } from './types';
+import { updateWebGPUTiming, type WebGPUProbeSuccess } from './webgpuProbe';
 import {
   buildCanvasConfiguration,
   DEFAULT_CANVAS_DISPLAY,
   type CanvasDisplayOptions,
-} from './visuals/webgpu/canvasConfig';
-import { GpuPassTimer } from './visuals/webgpu/gpuPassTimer';
-import { createWaveformResources, type WaveformGpuResources } from './visuals/webgpu/waveformResources';
-import { createGuiResources, type GuiGpuResources } from './visuals/webgpu/guiResources';
-import { createCubeResources, type CubeGpuResources } from './visuals/webgpu/cubeResources';
+} from './webgpu/canvasConfig';
+import { GpuPassTimer } from './webgpu/gpuPassTimer';
+import { createWaveformResources, type WaveformGpuResources } from './webgpu/waveformResources';
+import { createGuiResources, type GuiGpuResources } from './webgpu/guiResources';
+import { createCubeResources, type CubeGpuResources } from './webgpu/cubeResources';
 
 export type VisualizerMode = 'flat' | '3D';
 

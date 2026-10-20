@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { type PlaybackPathInfo } from '../../audioLoader';
+import { type PlaybackPathInfo } from '../../api/audioLoader';
 import { AudioOutputMode } from '../../hooks/usePlayerState';
 import { EQPanel, type AudioOutputControls } from '../EQPanel';
 import { CacheStatsPanel } from '../OfflineCache';

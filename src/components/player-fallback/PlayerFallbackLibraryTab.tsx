@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlaylistTrack, LibraryStats, TagInfo } from '../../audioLoader';
+import { PlaylistTrack, LibraryStats, TagInfo } from '../../api/audioLoader';
 import { LibraryView } from '../LibraryView';
 import { LibraryViewMode } from './types';
 

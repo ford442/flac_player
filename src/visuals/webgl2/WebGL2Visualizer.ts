@@ -1,4 +1,4 @@
-import type { ShaderGUIUniforms, VisualizerMode } from '../../webgpuVisualizer';
+import type { ShaderGUIUniforms, VisualizerMode } from '../webgpuVisualizer';
 import type { WebGL2DebugConfig, WebGL2DebugMode } from '../types';
 import { compileShader, linkProgram, collectUniforms } from './glUtils';
 import { FULLSCREEN_VERTEX, GUI_FRAGMENT, FLAT_FRAGMENT } from './shaders/waveform';

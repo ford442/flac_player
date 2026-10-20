@@ -1,4 +1,4 @@
-import { decodeAudio } from '../../audioDecoder';
+import { decodeAudio } from '../audioDecoder';
 import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
 import { DEFAULT_EQ_BANDS } from '../EQChain';
 import { DSP_EQ_TYPE_CODES } from '../worklets/dspChainMessages';

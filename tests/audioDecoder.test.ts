@@ -4,11 +4,11 @@ import {
   isFlacByExtension,
   decodeAudio,
   convertAudioBufferToDecoderResult,
-} from '../src/audioDecoder';
+} from '../src/audio/audioDecoder';
 
 const flacMagic = new Uint8Array([0x66, 0x4c, 0x61, 0x43]).buffer;
 
-vi.mock('../src/flacDecoder', () => ({
+vi.mock('../src/audio/flacDecoder', () => ({
   FlacDecoder: class MockFlacDecoder {
     init = vi.fn().mockResolvedValue(undefined);
     decode = vi.fn().mockResolvedValue({

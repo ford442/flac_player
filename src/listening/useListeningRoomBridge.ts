@@ -5,7 +5,7 @@
 // while a room is active (MVP: streaming backend only).
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import type { AudioLoader, PlaylistTrack } from '../audioLoader';
+import type { AudioLoader, PlaylistTrack } from '../api/audioLoader';
 import type { RepeatMode } from '../storage/queueStorage';
 import type { AudioOutputMode } from '../hooks/usePlayerState';
 import type { PlayTrackOptions } from '../hooks/usePlaybackController';

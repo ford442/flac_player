@@ -47,8 +47,9 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
-      - run: pip install -r requirements.txt pytest
-      - run: python -m pytest tests/test_playlists.py tests/test_rooms.py tests/test_replaygain.py -q
+      - run: pip install -r server/requirements.txt pytest
+      - run: python -m pytest tests -q
+        working-directory: server
 
   e2e-smoke:
     runs-on: ubuntu-latest

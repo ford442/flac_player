@@ -3,7 +3,7 @@
 
 import type { WaveformUniforms } from './waveformContract';
 import { packWaveformUniforms } from './waveformContract';
-import type { ShaderGUIUniforms } from '../webgpuVisualizer';
+import type { ShaderGUIUniforms } from './webgpuVisualizer';
 
 /**
  * Create and configure an AnalyserNode connected to an audio source.

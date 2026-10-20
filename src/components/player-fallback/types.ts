@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlaylistTrack, RepeatMode } from '../../audioLoader';
+import { PlaylistTrack, RepeatMode } from '../../api/audioLoader';
 import type { GpuChoreBackend } from '../../gpu-chores';
 
 export type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'convert' | 'settings';

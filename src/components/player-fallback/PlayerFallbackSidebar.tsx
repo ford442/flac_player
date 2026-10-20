@@ -1,5 +1,5 @@
 import React from 'react';
-import { SortBy, TagInfo } from '../../audioLoader';
+import { SortBy, TagInfo } from '../../api/audioLoader';
 import { FileDropZone } from '../FileDropZone';
 import { FAST_STORAGE_HOST } from '../../utils/audioUtils';
 import { ViewTab } from './types';

@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlaylistTrack } from '../../audioLoader';
+import { PlaylistTrack } from '../../api/audioLoader';
 import { ShaderGUI } from '../ShaderGUI/ShaderGUI';
 import { OverviewData, TransportControls, TransportState } from './types';
 

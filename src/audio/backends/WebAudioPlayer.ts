@@ -1,5 +1,5 @@
 // Buffered Web Audio API player with gapless queue scheduling.
-import { decodeAudioWithBuffer } from '../../audioDecoder';
+import { decodeAudioWithBuffer } from '../audioDecoder';
 import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextManager } from '../AudioContextManager';
 import { ensureContextForBuffer } from '../ensureContextForSource';
 import { getOrFetchTrack } from '../../storage/trackCache';

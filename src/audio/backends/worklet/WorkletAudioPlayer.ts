@@ -2,7 +2,7 @@
 // streaming playback. Falls back to ScriptProcessorNode for buffered playback
 // when AudioWorklet is unavailable. The shared AudioContext is never suspended
 // here: pause is a message to the processor.
-import { decodeAudio } from '../../../audioDecoder';
+import { decodeAudio } from '../../audioDecoder';
 import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextManager } from '../../AudioContextManager';
 import { ensureContextForBuffer, ensureContextForUrl } from '../../ensureContextForSource';
 import { createStreamResampler, resampleInterleaved, type StreamResampler } from '../../resampler';

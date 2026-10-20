@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { PlaylistTrack } from '../audioLoader';
+import type { PlaylistTrack } from '../api/audioLoader';
 
 /**
  * Thin adapter from the playback controller to `navigator.mediaSession`

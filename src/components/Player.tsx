@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { AudioLoader, PlaylistTrack, loadQueueFromStorage } from '../audioLoader';
+import { AudioLoader, PlaylistTrack, loadQueueFromStorage } from '../api/audioLoader';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useMediaSession } from '../hooks/useMediaSession';
 import { usePlayerState } from '../hooks/usePlayerState';

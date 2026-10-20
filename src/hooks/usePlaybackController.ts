@@ -15,7 +15,7 @@ import {
   PlaylistTrack,
   selectDecodeStrategy,
   type PlaybackPathInfo,
-} from '../audioLoader';
+} from '../api/audioLoader';
 import { useReplayGainApplication } from './useReplayGainApplication';
 import { parseReplayGainFromCommon, replayGainTagsToTrackFields } from '../utils/replayGain';
 import type { ReplayGainSettings } from '../utils/replayGain';

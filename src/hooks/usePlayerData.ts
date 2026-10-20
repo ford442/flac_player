@@ -3,7 +3,7 @@ import {
   loadQueueFromStorage,
   AudioLoader, PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo,
   saveQueueToStorage, clearQueueStorage, getCachedLibrary, setCachedLibrary
-} from '../audioLoader';
+} from '../api/audioLoader';
 import { checkBackendHealth } from '../utils/healthCheck';
 import {
   addTrackToQueue, playNextTrack, removeFromQueue as removeFromQueueUtil, reorderQueueIndex

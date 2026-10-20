@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { WebGPUVisualizer } from '../../webgpuVisualizer';
+import { WebGPUVisualizer } from '../../visuals/webgpuVisualizer';
 import { WebGL2Visualizer } from '../../visuals/webgl2/WebGL2Visualizer';
 import { CanvasFallbackVisualizer } from '../../visuals/webglFallback';
 import { buildFrameUniforms } from '../../visuals/visualSync';
@@ -20,7 +20,7 @@ import {
 import { adoptVisualizerDevice, releaseVisualizerDevice } from '../../gpu-chores';
 import type { GpuChoreBackend } from '../../gpu-chores';
 import { WaveformOverview } from '../WaveformOverview';
-import { PlaylistTrack } from '../../audioLoader';
+import { PlaylistTrack } from '../../api/audioLoader';
 import { Chassis } from './Chassis';
 import { TopScreen } from './TopScreen';
 import { BottomScreen } from './BottomScreen';

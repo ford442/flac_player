@@ -1,5 +1,5 @@
 import React from 'react';
-import { PlaylistTrack } from '../../audioLoader';
+import { PlaylistTrack } from '../../api/audioLoader';
 import { AudioOutputMode } from '../../hooks/usePlayerState';
 import { MetadataPanel } from '../MetadataPanel';
 import { WaveformOverview } from '../WaveformOverview';
