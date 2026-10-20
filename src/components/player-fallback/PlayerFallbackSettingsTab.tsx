@@ -105,7 +105,7 @@ export const PlayerFallbackSettingsTab: React.FC<PlayerFallbackSettingsTabProps>
               <span className="block text-xs text-gray-500 mt-1">
                 Use WebGL2 ShaderGUI when WebGPU is missing (Safari / some Firefox).
                 Default remains WebGPU or a fatal visualizer panel — this does not auto-fall through.
-                Also available as <code>?visualizer=webgl2</code>.
+                While active, the visualizer shows a “WebGL2 compatibility renderer — not WebGPU” badge. Also available as <code>?webgl2=1</code>.
               </span>
             </span>
           </label>

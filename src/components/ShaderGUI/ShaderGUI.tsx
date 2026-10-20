@@ -4,9 +4,11 @@ import { WebGL2Visualizer } from '../../visuals/webgl2/WebGL2Visualizer';
 import { CanvasFallbackVisualizer } from '../../visuals/webglFallback';
 import { buildFrameUniforms } from '../../visuals/visualSync';
 import {
+  getRendererLabel,
   readVisualizerPreference,
   resolveVisualizerBackend,
   subscribeVisualizerPreference,
+  type RendererStatus,
 } from '../../visuals/rendererSelection';
 import { setCurrentVisualizer } from '../../visuals/webgl2/global';
 import { cycleDebugMode } from '../../visuals/webgl2/debugModes';
@@ -107,7 +109,13 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const [gpuStats, setGpuStats] = useState<ReturnType<WebGPUVisualizer['getRenderInfo']> & {
     gpuTimeMs: number | null;
   } | null>(null);
-  const [activeBackend, setActiveBackend] = useState<VisualizerBackend>('webgpu');
+  // Start from the selected backend (not a hardcoded 'webgpu') so an opted-in renderer is
+  // labeled before the first track creates an analyser.
+  const [activeBackend, setActiveBackend] = useState<VisualizerBackend>(
+    () => resolveVisualizerBackend(readVisualizerPreference()),
+  );
+  // True only while a visualizer of `activeBackend` is actually running.
+  const [rendererReady, setRendererReady] = useState(false);
   const [preferenceEpoch, setPreferenceEpoch] = useState(0);
   const [canvasSessionKey, setCanvasSessionKey] = useState(
     () => resolveVisualizerBackend(readVisualizerPreference()),
@@ -170,6 +178,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     canvas2dRef.current?.destroy();
     canvas2dRef.current = null;
     setCurrentVisualizer(null);
+    setRendererReady(false);
   }, []);
 
   const initVisualizer = useCallback(async (
@@ -203,6 +212,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       webgl2Ref.current = visualizer;
       createVisualizerBootReady('webgl2', visualizer.getContextAttributes());
       setProbeFailure(null);
+      setRendererReady(true);
       setCurrentVisualizer({
         backend: 'webgl2',
         readPixels: () => visualizer.readPixels(),
@@ -224,6 +234,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         }
         canvas2dRef.current = visualizer;
         setProbeFailure(null);
+        setRendererReady(true);
         setCurrentVisualizer({
           backend: 'canvas2d',
           readPixels: () => null,
@@ -249,6 +260,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       onReady: (visualizer) => {
         webgpuRef.current = visualizer;
         setProbeFailure(null);
+        setRendererReady(true);
         adoptVisualizerDevice(visualizer.getDevice());
         setCurrentVisualizer({
           backend: requiredBackend,
@@ -264,6 +276,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         releaseVisualizerDevice(visualizer.getDevice());
         if (webgpuRef.current === visualizer) webgpuRef.current = null;
         setCurrentVisualizer(null);
+        setRendererReady(false);
       },
       onFatal: (breadcrumb) => {
         webgpuRef.current = null;
@@ -274,9 +287,23 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   }, []);
 
   useEffect(() => subscribeVisualizerPreference(() => {
-    setCanvasSessionKey(resolveVisualizerBackend(readVisualizerPreference()));
+    const selected = resolveVisualizerBackend(readVisualizerPreference());
+    setCanvasSessionKey(selected);
+    setActiveBackend(selected);
     setPreferenceEpoch((n) => n + 1);
   }), []);
+
+  // Title and badge describe the renderer actually in use, never an assumed WebGPU.
+  const rendererStatus: RendererStatus = probeFailure ? 'failed' : rendererReady ? 'ready' : 'pending';
+  const rendererLabel = getRendererLabel(activeBackend, rendererStatus);
+  useEffect(() => {
+    if (controlsOnly) return undefined;
+    const original = document.title;
+    return () => { document.title = original; };
+  }, [controlsOnly]);
+  useEffect(() => {
+    if (!controlsOnly) document.title = rendererLabel.title;
+  }, [controlsOnly, rendererLabel.title]);
 
   // Default is fail-closed WebGPU. WebGL2 / Canvas2D only when the user opted in.
   useEffect(() => {
@@ -532,6 +559,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             artist={currentTrack?.author}
             title={currentTrack?.title || currentTrack?.name}
             activeBackend={activeBackend}
+            rendererBadge={rendererLabel.badge}
             probeFailure={probeFailure}
             onCanvasResize={() => {
               webgpuRef.current?.resize();

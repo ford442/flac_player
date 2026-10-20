@@ -11,7 +11,7 @@ A high-quality React application for playing FLAC and WAV audio files with WebGP
 - **Offline track cache**: Download tracks for offline playback via Cache API (`OfflineCache` UI)
 - **Convert (MP3 ↔ FLAC)**: Client-side convert & download in the **Convert** tab (ffmpeg.wasm; files never leave the browser)
 - **WebGPU Visualization**: Real-time ShaderGUI hardware panel with audio-reactive WGSL shaders
-- **WebGL2 / Canvas2D**: opt-in compatibility renderers (`?visualizer=webgl2` or the Compatibility toggle); WebGPU fails closed instead of silently falling back (#202)
+- **WebGL2 / Canvas2D**: opt-in compatibility renderers (`?webgl2=1` or the Compatibility toggle), always labeled with an on-screen badge and in the page title; WebGPU fails closed instead of silently falling back (#202)
 - **projectM Milkdrop** (optional): In-app visualizer — `?aesthetic=projectm|split`; build with `npm run build:projectm`
 - **Library management**: Ratings, tags, smart mix, queue, saved (local-first) and shareable playlists
 - **Multiple Audio Sources**: Load audio from:
@@ -142,12 +142,13 @@ ShaderGUI is **fail-closed on WebGPU** by default (fatal visualizer panel; audio
 | Backend | When used | Debug |
 |---------|-----------|-------|
 | `webgpu` | Default | Alt+D; `window.webgpuProbe`; `?gpu=low` for low-power adapter |
-| `webgl2` | Opt-in: `?visualizer=webgl2` or Settings → Compatibility visualizer | Alt+D; same `WAVEFORM_LAYOUT` as WGSL |
+| `webgl2` | Opt-in: `?webgl2=1` (or `?visualizer=webgl2`) or Settings → Compatibility visualizer. Shows a “WebGL2 compatibility renderer — not WebGPU” badge | Alt+D; same `WAVEFORM_LAYOUT` as WGSL |
 | `canvas2d` | Debug only (`window.DEBUG_VISUALIZER='canvas2d'`) | Basic bars + waveform |
 
 **Force WebGL2:**
 
 ```
+?webgl2=1
 ?visualizer=webgl2
 ?renderer=webgl2          # alias (sibling-project compat)
 ```

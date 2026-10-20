@@ -138,6 +138,34 @@
   color: #a7f3d0;
 }
 
+/* Opt-in (non-WebGPU) renderer: a full-width strip so it can't be mistaken for the default path. */
+.renderer-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 3px 16px;
+  border-radius: 6px 6px 0 0;
+  color: #1c1203;
+  background: #fbbf24;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+/* Keep the scrolling artist/title clear of the badge strip. */
+.top-screen--badged .artist-title-overlay {
+  top: 28px;
+}
+
 /* Seek bar row below top screen */
 .shader-seek-row {
   display: flex;

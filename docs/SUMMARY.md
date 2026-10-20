@@ -24,7 +24,7 @@ A React/TypeScript high-fidelity audio player with **four interchangeable audio 
 
 ### Visualization
 - **ShaderGUI** — hardware-panel WebGPU shader (waveform, knobs, queue screen)
-- **Renderer policy:** WebGPU is the default and fails closed: probe failure produces a fatal visualizer panel while audio continues (no automatic GL ladder, #202). WebGL2 is **opt-in** (`?visualizer=webgl2` / Compatibility toggle).
+- **Renderer policy:** WebGPU is the default and fails closed: probe failure produces a fatal visualizer panel while audio continues (no automatic GL ladder, #202). WebGL2 is **opt-in** (`?webgl2=1` / Compatibility toggle) and always badged + reflected in the page title.
 - **projectM** — optional in-app Milkdrop WASM (`?aesthetic=projectm|split`)
 - Beat-sync preset switching, `.milk` import
 

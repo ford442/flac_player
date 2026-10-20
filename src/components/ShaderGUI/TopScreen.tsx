@@ -9,6 +9,8 @@ interface TopScreenProps {
   artist?: string;
   title?: string;
   activeBackend?: VisualizerBackend;
+  /** Loud label shown whenever a non-WebGPU (opt-in) renderer is selected; null for WebGPU. */
+  rendererBadge?: string | null;
   probeFailure?: WebGPUProbeBreadcrumb | null;
   onCanvasResize?: () => void;
   onCanvasDoubleClick?: () => void;
@@ -21,6 +23,7 @@ export const TopScreen: React.FC<TopScreenProps> = ({
   artist,
   title,
   activeBackend,
+  rendererBadge = null,
   probeFailure,
   onCanvasResize,
   onCanvasDoubleClick,
@@ -63,7 +66,10 @@ export const TopScreen: React.FC<TopScreenProps> = ({
   }, [canvasRef, canvasSessionKey, onCanvasResize]);
 
   return (
-    <div ref={containerRef} className="shader-screen top-screen">
+    <div
+      ref={containerRef}
+      className={`shader-screen top-screen${rendererBadge && !probeFailure ? ' top-screen--badged' : ''}`}
+    >
       {/* The canvas remains mounted so probe failures can be shown in this slot. */}
       <canvas
         key={canvasSessionKey}
@@ -117,6 +123,11 @@ export const TopScreen: React.FC<TopScreenProps> = ({
             <div className="webgpu-fatal-panel__detail">{probeFailure.detail}</div>
           )}
           <div className="webgpu-fatal-panel__playback">Audio playback remains available.</div>
+        </div>
+      )}
+      {rendererBadge && !probeFailure && (
+        <div className="renderer-badge" role="status" data-testid="renderer-badge">
+          {rendererBadge}
         </div>
       )}
       {!probeFailure && <div className="artist-title-overlay">

@@ -22,7 +22,7 @@ const App: React.FC = () => {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>FLAC Player with WebGPU</h1>
+        <h1>FLAC Player</h1>
         <p>High-quality audio playback with shader visualization</p>
       </header>
       <main className="App-main">
