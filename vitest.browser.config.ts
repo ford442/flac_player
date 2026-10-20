@@ -16,6 +16,8 @@ export default defineConfig({
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
     },
+    // A repo-local emsdk (README setup) is ~100k files; watching it exhausts inotify (ENOSPC).
+    watch: { ignored: ['**/emsdk/**', '**/.build/**', '**/server/**'] },
   },
   test: {
     include: ['tests/browser/**/*.test.ts'],
