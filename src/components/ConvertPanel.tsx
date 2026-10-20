@@ -220,7 +220,7 @@ export const ConvertPanel: React.FC = () => {
           multiple
           accept=".mp3,.flac,audio/mpeg,audio/mp3,audio/flac,audio/x-flac"
           onChange={onFileInput}
-          className="hidden"
+          hidden
           aria-hidden="true"
         />
       </div>

@@ -25,6 +25,7 @@ import { buildWebGL2ContextAttributes } from '../../visuals/webgpu/canvasConfig'
 import { adoptVisualizerDevice, releaseVisualizerDevice } from '../../gpu-chores';
 import type { GpuChoreBackend } from '../../gpu-chores';
 import { WaveformOverview } from '../WaveformOverview';
+import { UrlLoader } from '../UrlLoader';
 import { PlaylistTrack } from '../../api/audioLoader';
 import { Chassis } from './Chassis';
 import { TopScreen } from './TopScreen';
@@ -63,6 +64,8 @@ export interface ShaderGUIProps {
   onToggleFallback?: () => void;
   showFallbackToggle?: boolean;
   onFileSelect?: (files: File[]) => void;
+  onLoadUrl?: (url: string) => string | null;
+  onLoadDemo?: () => void;
   /** Hide GPU visualizer; keep transport/queue controls (projectM-only mode). */
   controlsOnly?: boolean;
   /** Scrubber peaks from gpu-chores (null while streaming / not yet reduced). */
@@ -96,6 +99,8 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   onToggleFallback,
   showFallbackToggle = false,
   onFileSelect,
+  onLoadUrl,
+  onLoadDemo,
   controlsOnly = false,
   overviewMinmax = null,
   overviewRms = null,
@@ -116,6 +121,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const trackAlbum = trackMeta.metadata?.tags.album;
   const trackYear = trackMeta.metadata?.tags.year;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showUrlLoader, setShowUrlLoader] = useState(false);
   const webgpuRef = useRef<WebGPUVisualizer | null>(null);
   const webgl2Ref = useRef<WebGL2Visualizer | null>(null);
   const canvas2dRef = useRef<CanvasFallbackVisualizer | null>(null);
@@ -629,6 +635,32 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             <Button type="next" active={false} onClick={() => onNext?.()} />
           </div>
 
+          {onLoadUrl && onLoadDemo && (
+            <div className="shader-url-wrap">
+              <button
+                onClick={() => setShowUrlLoader(v => !v)}
+                className="shader-button"
+                title="Load from URL / demo playlist"
+                aria-label="Load from URL"
+                aria-expanded={showUrlLoader}
+              >
+                <span className="button-icon">🔗</span>
+              </button>
+              {showUrlLoader && (
+                <div className="shader-url-panel">
+                  <UrlLoader
+                    onLoadUrl={(url) => {
+                      const err = onLoadUrl(url);
+                      if (!err) setShowUrlLoader(false);
+                      return err;
+                    }}
+                    onLoadDemo={() => { onLoadDemo(); setShowUrlLoader(false); }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           {onFileSelect && (
             <button
               onClick={handleOpenFiles}
@@ -673,7 +705,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       multiple
       accept=".flac,.wav,.mp3,audio/flac,audio/wav,audio/x-wav,audio/mpeg"
       onChange={handleFileInput}
-      className="hidden"
+      hidden
       aria-hidden="true"
     />
     </div>

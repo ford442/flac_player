@@ -258,8 +258,23 @@
   overflow: hidden;
 }
 
+/* Hidden copy used to measure the unclipped title width. */
+.artist-title-measure {
+  position: absolute;
+  visibility: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Soft fade at both edges so glyphs are not chopped mid-stroke while scrolling. */
+.artist-title-overlay--scrolling {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+}
+
 .artist-title-marquee {
   display: inline-block;
+  margin-left: 12px;
   animation: marquee-scroll 10s linear infinite;
 }
 
@@ -738,4 +753,22 @@
 .shader-gui-overlay {
   position: relative;
   z-index: 1;
+}
+
+/* Load-from-URL popover (opens below the 🔗 button) */
+.shader-url-wrap {
+  position: relative;
+}
+
+.shader-url-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  width: 260px;
+  padding: 8px;
+  border-radius: 6px;
+  background: #120824;
+  border: 1px solid #2D1B4E;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
 }

@@ -189,6 +189,7 @@ export const EQPanel: React.FC<EQPanelProps> = ({
           className="w-full disabled:opacity-40"
           style={{ accentColor: '#a78bfa' }}
           aria-label="Playback speed"
+          title={rateDisabled ? 'Speed control is unavailable in this output mode' : undefined}
         />
 
         <div className="flex gap-1 mt-1 flex-wrap">
@@ -207,11 +208,6 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             </button>
           ))}
         </div>
-        {rateDisabled && (
-          <p className="text-xs text-gray-500 mt-2">
-            The current output mode cannot change speed. Switch to Streaming or Web Audio.
-          </p>
-        )}
       </div>
 
       {/* ReplayGain / Loudness */}

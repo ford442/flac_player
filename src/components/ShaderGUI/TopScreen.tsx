@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import type { VisualizerBackend } from '../../visuals/types';
 import type { WebGPUProbeBreadcrumb } from '../../visuals/webgpuProbe';
 import './ShaderGUI.css';
@@ -42,6 +42,24 @@ export const TopScreen: React.FC<TopScreenProps> = ({
   const displayText = isLoading
     ? 'LOADING...'
     : (title ? (artist ? `${artist} — ${title}` : title) : 'No track loaded');
+
+  // Scroll only when the title is wider than its box; otherwise show it whole and still.
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [scrollSeconds, setScrollSeconds] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const overlay = overlayRef.current;
+    const measure = measureRef.current;
+    if (!overlay || !measure) return;
+    const update = () => {
+      const textWidth = measure.offsetWidth;
+      setScrollSeconds(textWidth > overlay.clientWidth ? Math.max(6, textWidth / 40) : null);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(overlay);
+    return () => observer.disconnect();
+  }, [displayText, probeFailure, isLoading]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -139,14 +157,20 @@ export const TopScreen: React.FC<TopScreenProps> = ({
           {rendererBadge}
         </div>
       )}
-      {!probeFailure && <div className="artist-title-overlay">
+      {!probeFailure && <div
+        ref={overlayRef}
+        className={`artist-title-overlay${scrollSeconds !== null && !isLoading ? ' artist-title-overlay--scrolling' : ''}`}
+      >
         {isLoading ? (
           <div className="loading-text">{displayText}</div>
-        ) : (
-          <div className="artist-title-marquee">
+        ) : scrollSeconds !== null ? (
+          <div className="artist-title-marquee" style={{ animationDuration: `${scrollSeconds}s` }}>
             {displayText}&nbsp;&nbsp;&nbsp;&nbsp;{displayText}&nbsp;&nbsp;&nbsp;&nbsp;
           </div>
+        ) : (
+          <div className="artist-title-static">{displayText}</div>
         )}
+        <span ref={measureRef} className="artist-title-measure" aria-hidden="true">{displayText}</span>
       </div>}
       {!probeFailure && !isLoading && (album || artworkUrl || (specs && specs.length > 0)) && (
         <div className="track-meta-overlay" data-testid="track-meta-overlay">

@@ -110,6 +110,8 @@ export interface PlayerFallbackViewProps {
   onNext: () => void;
   onPrevious: () => void;
   onFileSelect: (files: File[]) => void;
+  onLoadUrl: (url: string) => string | null;
+  onLoadDemo: () => void;
   onPlayAll: (tracks: PlaylistTrack[], shuffled?: boolean) => void;
   onAddAllToQueue: (tracks: PlaylistTrack[]) => void;
   onPlayNow: (track: PlaylistTrack) => void;
@@ -154,7 +156,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     isSharedPlaylist, sharedPlaylistTitle, analyser,
     overviewMinmax, overviewRms, overviewPeak, overviewBackend, overviewReason,
     onTrackClick, onTrackDoubleClick, onQueueTrackClick,
-    onPlay, onStop, onSeek, onVolumeChange, onMute, onNext, onPrevious, onFileSelect,
+    onPlay, onStop, onSeek, onVolumeChange, onMute, onNext, onPrevious, onFileSelect, onLoadUrl, onLoadDemo,
     onPlayAll, onAddAllToQueue, onPlayNow, onPlayNext, onAddToQueue,
     onRemoveFromQueue, onClearQueue, onReorderQueue, onSmartMix, onShareQueue, onDownloadQueue,
     hasMoreLibrary, onLoadMoreLibrary, onNotify,
@@ -231,6 +233,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
           generationModels={generationModels}
           allTags={allTags} selectedTags={selectedTags} setSelectedTags={setSelectedTags}
           onFileSelect={onFileSelect}
+          onLoadUrl={onLoadUrl} onLoadDemo={onLoadDemo}
         />
 
         <main className="flex-1 flex flex-col overflow-hidden">
