@@ -196,26 +196,30 @@ export function useListeningRoomBridge(options: ListeningRoomBridgeOptions): Use
   const role = room.endedReason ? null : room.role;
 
   // Room clock = native <audio>; guests also stop advancing their own queue.
+  // Re-applied when capabilities change (the backend was recreated).
+  const { setListeningSyncMode, capabilities: playbackCapabilities } = options.playback;
   useEffect(() => {
-    options.playback.setListeningSyncMode(role ?? 'off');
-  }, [role, options.playback.setListeningSyncMode, options.playback.capabilities]);
+    setListeningSyncMode(role ?? 'off');
+  }, [role, setListeningSyncMode, playbackCapabilities]);
 
   // MVP rooms run on the streaming backend only.
   useEffect(() => {
     if (!role || options.outputMode === 'streaming') return;
-    const state = options.playback.playerRef.current?.getState();
-    if (role === 'host' && currentTrack && state && state.duration > 0) {
-      resumeAfterSwitchRef.current = { trackId: currentTrack.id, position: state.currentTime, playing: state.isPlaying };
+    const { playback, currentTrack: track, setOutputMode, addToast } = latest.current;
+    const state = playback.playerRef.current?.getState();
+    if (role === 'host' && track && state && state.duration > 0) {
+      resumeAfterSwitchRef.current = { trackId: track.id, position: state.currentTime, playing: state.isPlaying };
     }
-    options.setOutputMode('streaming');
-    options.addToast('Listening rooms use the streaming backend', 'info');
+    setOutputMode('streaming');
+    addToast('Listening rooms use the streaming backend', 'info');
   }, [role, options.outputMode]);
 
   // Host: a track playing on the hi-fi/worklet path has no room clock — reload it natively in place.
   useEffect(() => {
-    const { playback, loadingTrackId, isLoading } = options;
+    // Triggers are the deps below; everything else is read from the latest render.
+    const { playback, loadingTrackId, isLoading, outputMode, queueCurrentIndex: index } = latest.current;
     if (role !== 'host' || !currentTrack || !isShareableTrackId(currentTrack.id)) return;
-    if (loadingTrackId || isLoading || options.outputMode !== 'streaming') return;
+    if (loadingTrackId || isLoading || outputMode !== 'streaming') return;
     const backend = playback.playerRef.current;
     if (!backend || playback.getSyncClock() || reloadedForRef.current === currentTrack.id) return;
 
@@ -225,7 +229,7 @@ export function useListeningRoomBridge(options: ListeningRoomBridgeOptions): Use
     reloadedForRef.current = currentTrack.id;
     resumeAfterSwitchRef.current = null;
     suppressHostSampleRef.current = true;
-    void playback.playTrack(currentTrack, queueCurrentIndex, {
+    void playback.playTrack(currentTrack, index, {
       autoplay: resume ? resume.playing : state.isPlaying,
       restorePosition: false,
       startAt: resume ? resume.position : state.currentTime,

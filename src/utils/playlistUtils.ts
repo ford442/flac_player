@@ -4,7 +4,7 @@ import type { PlaylistTrack } from '../types/library';
 export function moveItem<T>(items: readonly T[], from: number, to: number): T[] {
   const next = [...items];
   if (from === to || from < 0 || from >= next.length || to < 0 || to >= next.length) return next;
-  const [moved] = next.splice(from, 1);
+  const [moved] = next.splice(from, 1) as [T];
   next.splice(to, 0, moved);
   return next;
 }
@@ -24,7 +24,7 @@ export async function resolveTracksById(
   let cursor = 0;
   const worker = async () => {
     while (cursor < missing.length) {
-      const id = missing[cursor++];
+      const id = missing[cursor++]!;
       try { resolved.set(id, await fetchById(id)); } catch { /* unavailable track: skipped */ }
     }
   };

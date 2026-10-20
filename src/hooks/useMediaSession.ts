@@ -41,7 +41,7 @@ function getMediaSession(): MediaSession | null {
 }
 
 function guessImageType(url: string): string | undefined {
-  const ext = url.split('?')[0].split('.').pop()?.toLowerCase();
+  const ext = url.split('?')[0]?.split('.').pop()?.toLowerCase();
   if (ext === 'png') return 'image/png';
   if (ext === 'webp') return 'image/webp';
   if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
