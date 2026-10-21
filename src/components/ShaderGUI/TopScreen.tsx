@@ -3,6 +3,13 @@ import type { VisualizerBackend } from '../../visuals/types';
 import type { WebGPUProbeBreadcrumb } from '../../visuals/webgpuProbe';
 import './ShaderGUI.css';
 
+/** Backing-store pixels per CSS pixel are capped: a 3× phone draws the fullscreen shader at 2×. */
+export const MAX_CANVAS_DPR = 2;
+
+function canvasPixelRatio(): number {
+  return Math.min(window.devicePixelRatio || 1, MAX_CANVAS_DPR);
+}
+
 interface TopScreenProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   canvasSessionKey?: string;
@@ -87,36 +94,56 @@ export const TopScreen: React.FC<TopScreenProps> = ({
     return () => observer.disconnect();
   }, [displayText, probeFailure, isLoading]);
 
+  // Size the backing store in device pixels (capped at MAX_CANVAS_DPR). The observer
+  // watches the canvas's device-pixel content box, so a DPR change (window moved to
+  // another monitor, browser zoom) resizes it too. Resizing never reconfigures WebGPU.
+  const onCanvasResizeRef = useRef(onCanvasResize);
+  onCanvasResizeRef.current = onCanvasResize;
   useEffect(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
     if (!container || !canvas) return;
 
-    const dpr = window.devicePixelRatio || 1;
-
-    const resize = () => {
-      const rect = container.getBoundingClientRect();
-      const width = Math.max(1, Math.floor(rect.width * dpr));
-      const height = Math.max(1, Math.floor(rect.height * dpr));
+    const apply = (deviceWidth: number, deviceHeight: number) => {
+      const width = Math.max(1, Math.round(deviceWidth));
+      const height = Math.max(1, Math.round(deviceHeight));
       if (canvas.width !== width || canvas.height !== height) {
         canvas.width = width;
         canvas.height = height;
-        onCanvasResize?.();
+        onCanvasResizeRef.current?.();
       }
     };
+    const fromLayout = () => {
+      const rect = container.getBoundingClientRect();
+      const dpr = canvasPixelRatio();
+      apply(rect.width * dpr, rect.height * dpr);
+    };
 
-    resize();
+    fromLayout();
 
-    const observer = new ResizeObserver(resize);
-    observer.observe(container);
+    const observer = new ResizeObserver((entries) => {
+      const box = entries[entries.length - 1]?.devicePixelContentBoxSize?.[0];
+      if (!box) {
+        fromLayout();
+        return;
+      }
+      const scale = canvasPixelRatio() / (window.devicePixelRatio || 1);
+      apply(box.inlineSize * scale, box.blockSize * scale);
+    });
+    try {
+      observer.observe(canvas, { box: 'device-pixel-content-box' });
+    } catch {
+      // Safari: no device-pixel-content-box; CSS px × DPR from layout instead.
+      observer.observe(canvas);
+    }
 
-    window.addEventListener('resize', resize);
+    window.addEventListener('resize', fromLayout);
 
     return () => {
       observer.disconnect();
-      window.removeEventListener('resize', resize);
+      window.removeEventListener('resize', fromLayout);
     };
-  }, [canvasRef, canvasSessionKey, onCanvasResize]);
+  }, [canvasRef, canvasSessionKey]);
 
   return (
     <div

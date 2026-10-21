@@ -89,9 +89,13 @@ export class WebGL2Visualizer {
     this.guiUniforms = data;
   }
 
+  /** Swap the spectrum source (graph rebuilt at another rate) without touching GL. */
+  setAnalyser(analyser: AnalyserNode | null): void {
+    this.analyser = analyser;
+  }
+
   setAudioData(data: Uint8Array | Float32Array): void {
-    const sampled = downsampleAudioData(data, 64);
-    this.guiAudioData.set(sampled);
+    downsampleAudioData(data, 64, this.analyser?.context?.sampleRate, this.guiAudioData);
   }
 
   setDebugConfig(partial: Partial<WebGL2DebugConfig>): void {

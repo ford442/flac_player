@@ -105,8 +105,6 @@ export interface CanvasDisplayEnvironment {
   search?: string;
   /** `matchMedia('(color-gamut: p3)').matches` */
   displayP3?: boolean;
-  /** `matchMedia('(dynamic-range: high)').matches` */
-  highDynamicRange?: boolean;
   /** GPUCanvasContext exposes getConfiguration() (ships with toneMapping in Chromium). */
   toneMappingSupported?: boolean;
 }
@@ -133,20 +131,23 @@ export function readCanvasDisplayEnvironment(): CanvasDisplayEnvironment {
   return {
     search: typeof window !== 'undefined' ? window.location.search : '',
     displayP3: mediaMatches('(color-gamut: p3)'),
-    highDynamicRange: mediaMatches('(dynamic-range: high)'),
     toneMappingSupported: !!ctor && 'getConfiguration' in ctor.prototype,
   };
 }
 
 /**
- * display-p3 when the display reports a P3 gamut; sRGB otherwise.
+ * sRGB by default: the shader palettes are sRGB values, and the WebGL2 renderer
+ * draws sRGB, so both renderers match. `?p3=1` on a P3 display configures a
+ * display-p3 canvas; the WGSL then converts its output (webgpu/outputColor.ts)
+ * instead of letting P3 primaries oversaturate the palette.
  * Extended tone mapping (rgba16float swapchain) only behind `?hdr=1` and only when
  * the browser supports toneMapping — library listening on SDR laptops stays SDR.
  */
 export function resolveCanvasDisplay(
   env: CanvasDisplayEnvironment = readCanvasDisplayEnvironment(),
 ): CanvasDisplayOptions {
-  const colorSpace: PredefinedColorSpace = env.displayP3 ? 'display-p3' : 'srgb';
+  const wantsP3 = queryFlag(env.search ?? '', 'p3') && !!env.displayP3;
+  const colorSpace: PredefinedColorSpace = wantsP3 ? 'display-p3' : 'srgb';
   const wantsHdr = queryFlag(env.search ?? '', 'hdr');
   if (wantsHdr && env.toneMappingSupported) {
     return { colorSpace, toneMapping: 'extended', formatOverride: 'rgba16float' };
@@ -162,7 +163,8 @@ export interface CanvasConfigurationInput {
 }
 
 /**
- * Single GPUCanvasConfiguration used by the boot probe, visualizer init, and resize.
+ * The GPUCanvasConfiguration the boot probe applies — once per canvas; a resize only
+ * changes canvas.width/height, which getCurrentTexture() picks up.
  * Canvas swapchain usage stays RENDER_ATTACHMENT; compute jobs use dedicated GPUBuffers.
  * alphaMode stays opaque (ShaderGUI does not composite through the canvas).
  */

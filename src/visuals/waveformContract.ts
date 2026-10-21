@@ -195,17 +195,20 @@ export function injectShaderTokens(source: string, tokens: Record<string, string
 }
 
 /** Float32 payload for the WebGPU ShaderGUI uniform buffer (22 floats / 88 bytes). */
+export const WAVEFORM_UNIFORM_FLOATS = 22;
+
+/** Pack into `out` (length ≥ WAVEFORM_UNIFORM_FLOATS) to avoid a per-frame allocation. */
 export function packWaveformUniforms(
   u: WaveformUniforms,
   debugMode = 0,
+  out: Float32Array = new Float32Array(WAVEFORM_UNIFORM_FLOATS),
 ): Float32Array {
-  return new Float32Array([
-    u.resolution[0], u.resolution[1], u.time, u.beatPhase,
-    u.rsycrb, u.fractal, u.pulse,
-    u.audioLevel, u.audioLevelL, u.audioLevelR,
-    u.spectrum0, u.spectrum1, u.spectrum2, u.spectrum3, u.spectrum4,
-    u.modeNone, u.modeIR, u.isPlaying, u.playbackProgress,
-    u.volume, u.colorShift,
-    debugMode,
-  ]);
+  out[0] = u.resolution[0]; out[1] = u.resolution[1]; out[2] = u.time; out[3] = u.beatPhase;
+  out[4] = u.rsycrb; out[5] = u.fractal; out[6] = u.pulse;
+  out[7] = u.audioLevel; out[8] = u.audioLevelL; out[9] = u.audioLevelR;
+  out[10] = u.spectrum0; out[11] = u.spectrum1; out[12] = u.spectrum2; out[13] = u.spectrum3; out[14] = u.spectrum4;
+  out[15] = u.modeNone; out[16] = u.modeIR; out[17] = u.isPlaying; out[18] = u.playbackProgress;
+  out[19] = u.volume; out[20] = u.colorShift;
+  out[21] = debugMode;
+  return out;
 }
