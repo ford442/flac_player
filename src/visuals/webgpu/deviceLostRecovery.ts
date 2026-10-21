@@ -11,7 +11,7 @@ export const MAX_DEVICE_LOST_RECOVERIES = 1;
 /** The slice of WebGPUVisualizer the boot loop drives (mockable in unit tests). */
 export interface RecoverableVisualizer {
   setOnDeviceLost(cb: (reason: string) => void): void;
-  initialize(analyser: AnalyserNode, boot: WebGPUProbeSuccess): Promise<boolean>;
+  initialize(analyser: AnalyserNode | null, boot: WebGPUProbeSuccess): Promise<boolean>;
   getDevice(): GPUDevice | null;
   destroy(): void;
 }
@@ -19,7 +19,8 @@ export interface RecoverableVisualizer {
 export interface WebGPUBootHooks<V extends RecoverableVisualizer> {
   probe: () => Promise<WebGPUProbeResult>;
   createVisualizer: () => V;
-  analyser: AnalyserNode;
+  /** Read at each (re)initialize, so a recovery uses the current graph's analyser. */
+  getAnalyser: () => AnalyserNode | null;
   cancelled: () => boolean;
   /** Visualizer configured on a fresh device (first boot or after recovery). */
   onReady: (visualizer: V, boot: WebGPUProbeSuccess) => void;
@@ -33,8 +34,10 @@ export interface WebGPUBootHooks<V extends RecoverableVisualizer> {
 /**
  * Probe → initialize the WebGPU visualizer, and on device loss (reason other than
  * 'destroyed', which the visualizer filters) re-run the probe on the same canvas
- * up to `maxRecoveries` times. A failed re-probe ends at `onFatal`, so the canvas
- * is never left frozen behind a `status: 'ready'` breadcrumb. Audio is untouched.
+ * up to `maxRecoveries` times. GpuDeviceService has already dropped the lost
+ * device, so the re-probe gets a new one. A failed re-probe ends at `onFatal`, so
+ * the canvas is never left frozen behind a `status: 'ready'` breadcrumb. Audio is
+ * untouched. The device is shared: nothing here destroys it.
  */
 export async function bootWebGPUWithRecovery<V extends RecoverableVisualizer>(
   hooks: WebGPUBootHooks<V>,
@@ -46,10 +49,7 @@ export async function bootWebGPUWithRecovery<V extends RecoverableVisualizer>(
     lost: { breadcrumb: WebGPUProbeBreadcrumb; reason: string } | null,
   ): Promise<void> => {
     const boot = await hooks.probe();
-    if (hooks.cancelled()) {
-      if (boot.ok) boot.device.destroy();
-      return;
-    }
+    if (hooks.cancelled()) return;
     if (!boot.ok) {
       console.warn('[ShaderGUI] WebGPU probe failed:', boot.breadcrumb.reason);
       hooks.onFatal(lost
@@ -77,7 +77,7 @@ export async function bootWebGPUWithRecovery<V extends RecoverableVisualizer>(
     });
 
     try {
-      await visualizer.initialize(hooks.analyser, boot);
+      await visualizer.initialize(hooks.getAnalyser(), boot);
     } catch (err: unknown) {
       visualizer.destroy();
       const msg = err instanceof Error ? err.message : String(err);

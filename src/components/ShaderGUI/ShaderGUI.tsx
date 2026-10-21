@@ -22,7 +22,6 @@ import {
 } from '../../visuals/webgpuProbe';
 import { bootWebGPUWithRecovery } from '../../visuals/webgpu/deviceLostRecovery';
 import { buildWebGL2ContextAttributes } from '../../visuals/webgpu/canvasConfig';
-import { adoptVisualizerDevice, releaseVisualizerDevice } from '../../gpu-chores';
 import { PlaybackScrubber } from '../PlaybackScrubber';
 import { useActions } from '../PlayerActionsContext';
 import { UrlLoader } from '../UrlLoader';
@@ -157,8 +156,19 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const { beatPhaseRef, spectrumRef, processFrame, processBytes } = useBeatDetection();
   const timeRef = useRef(0);
 
+  // The init effect keys on whether an analyser exists, not on which one: a graph
+  // rebuilt for another sample rate hands its new analyser to the live visualizer
+  // (setAnalyser) and keeps the GPUDevice, pipelines and canvas (#259 W1).
+  const analyserRef = useRef(analyser);
+  analyserRef.current = analyser;
+  const hasAnalyser = analyser !== null;
+  useEffect(() => {
+    webgpuRef.current?.setAnalyser(analyser);
+    webgl2Ref.current?.setAnalyser(analyser);
+    canvas2dRef.current?.setAnalyser(analyser);
+  }, [analyser]);
+
   const destroyAllVisualizers = useCallback(() => {
-    releaseVisualizerDevice(webgpuRef.current?.getDevice() ?? null);
     webgpuRef.current?.destroy();
     webgpuRef.current = null;
     webgl2Ref.current?.destroy();
@@ -243,13 +253,14 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     await bootWebGPUWithRecovery({
       probe: () => probeWebGPU(node, { requestedVisualizer }),
       createVisualizer: () => new WebGPUVisualizer(node),
-      analyser: audioAnalyser,
+      getAnalyser: () => analyserRef.current,
       cancelled,
       onReady: (visualizer) => {
         webgpuRef.current = visualizer;
+        // The analyser may have been replaced while the pipelines compiled.
+        visualizer.setAnalyser(analyserRef.current);
         setProbeFailure(null);
         setRendererReady(true);
-        adoptVisualizerDevice(visualizer.getDevice());
         setCurrentVisualizer({
           backend: requiredBackend,
           readPixels: () => null,
@@ -261,7 +272,6 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         });
       },
       onLost: (visualizer) => {
-        releaseVisualizerDevice(visualizer.getDevice());
         if (webgpuRef.current === visualizer) webgpuRef.current = null;
         setCurrentVisualizer(null);
         setRendererReady(false);
@@ -299,10 +309,11 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     const isCancelled = () => cancelled;
 
     const init = async () => {
-      if (!canvasRef.current || !analyser || controlsOnly) return;
+      const audioAnalyser = analyserRef.current;
+      if (!canvasRef.current || !hasAnalyser || !audioAnalyser || controlsOnly) return;
 
       destroyAllVisualizers();
-      await initVisualizer(canvasRef.current, analyser, isCancelled);
+      await initVisualizer(canvasRef.current, audioAnalyser, isCancelled);
     };
 
     init();
@@ -311,7 +322,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       cancelled = true;
       destroyAllVisualizers();
     };
-  }, [analyser, controlsOnly, destroyAllVisualizers, initVisualizer, preferenceEpoch]);
+  }, [hasAnalyser, controlsOnly, destroyAllVisualizers, initVisualizer, preferenceEpoch]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -354,7 +365,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         if (gpu.seq !== gpuFrame.seq) {
           gpu.seq = gpuFrame.seq;
           amplitudesToAnalyserBytes(gpuFrame.spectrum, analyser, gpu.smoothed, gpu.bytes);
-          processBytes(gpu.bytes);
+          processBytes(gpu.bytes, analyser.context.sampleRate);
         } else {
           processBytes(null); // GPU runs at METER_HZ: hold bands between results
         }
@@ -365,7 +376,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         }
         freqData = analyserBytesRef.current;
         analyser.getByteFrequencyData(freqData);
-        processBytes(freqData);
+        processBytes(freqData, analyser.context.sampleRate);
       } else {
         processFrame(null);
       }
@@ -465,6 +476,13 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     e.target.value = '';
   }, [addFiles]);
 
+  // Stable so TopScreen's ResizeObserver is not rebuilt on every render (#259 W6).
+  const handleCanvasResize = useCallback(() => {
+    webgpuRef.current?.resize();
+    webgl2Ref.current?.resize();
+    canvas2dRef.current?.resize();
+  }, []);
+
   const handleOpenFiles = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
@@ -496,6 +514,15 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             Required backend: <strong className="text-purple-200">{activeBackend}</strong>
             <br />
             DEBUG_VISUALIZER: <code>{window.DEBUG_VISUALIZER ?? 'unset'}</code>
+            <br />
+            {/* COOP/COEP precondition for SAB rings, SDL3 pthreads and the analysis tap (docs/DEPLOYMENT.md). */}
+            crossOriginIsolated:{' '}
+            <strong
+              className={window.crossOriginIsolated ? 'text-green-300' : 'text-red-400'}
+              data-testid="cross-origin-isolated"
+            >
+              {window.crossOriginIsolated ? 'yes' : 'no — SAB off, SDL3 unavailable'}
+            </strong>
           </div>
           {gpuStats && (
             <div className="mt-2 text-[10px] text-gray-300" data-testid="gpu-pass-time">
@@ -558,11 +585,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             activeBackend={activeBackend}
             rendererBadge={rendererLabel.badge}
             probeFailure={probeFailure}
-            onCanvasResize={() => {
-              webgpuRef.current?.resize();
-              webgl2Ref.current?.resize();
-              canvas2dRef.current?.resize();
-            }}
+            onCanvasResize={handleCanvasResize}
             onCanvasDoubleClick={handleToggle3D}
             isLoading={isLoading}
           />

@@ -84,6 +84,13 @@ export type PlayResult = 'playing' | 'blocked' | 'pending' | 'idle';
 export interface EngineDeps {
   createBackend(mode: AudioOutputMode): Promise<ConfigurableAudioBackend>;
   subscribeGraphRecreated(listener: () => void): () => void;
+  /**
+   * Called synchronously from user-initiated play commands, before any await, so
+   * the audio context is created / resumed inside the gesture (WebKit).
+   */
+  unlockAudio(): void;
+  /** Transport is playing or loading: keep the audio context running (else it idles out). */
+  setPlaybackActive(active: boolean): void;
   /** URLs to try in order (fast mirror first). */
   candidateUrls(url: string): string[];
   /** Whole-file bytes, offline cache first. */
@@ -130,6 +137,11 @@ export function isAbortError(err: unknown): boolean {
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error && err.message ? err.message : fallback;
+}
+
+/** Statuses during which the audio graph must keep running. */
+function isAudible(status: TransportStatus): boolean {
+  return status === 'playing' || status === 'loading';
 }
 
 function sameGapless(a: GaplessSettings, b: GaplessSettings): boolean {
@@ -207,6 +219,9 @@ export class PlaybackEngine {
       this.deps.subscribeGraphRecreated(() => this.onGraphRecreated()),
       this.store.subscribe((state, prev) => {
         if (state.queue !== prev.queue) this.onQueueChanged(prev.queue);
+        if (state.transport.status !== prev.transport.status) {
+          this.deps.setPlaybackActive(isAudible(state.transport.status));
+        }
       }),
     );
     this.createBackend(this.store.getState().settings.outputMode);
@@ -222,6 +237,7 @@ export class PlaybackEngine {
     this.backendReady = Promise.resolve(null);
     this.teardownBackend();
     patchTransport(this.store, { status: 'idle', loadingTrackId: undefined });
+    this.deps.setPlaybackActive(false);
   }
 
   /** Called once per track that starts (not on silent reloads). */
@@ -380,6 +396,7 @@ export class PlaybackEngine {
   /** Load `track` into the backend; resolves true once it is loaded (and playing, with autoplay). */
   async load(track: PlaylistTrack, options: LoadOptions = {}): Promise<boolean> {
     const { autoplay = true, startAt, restorePosition = true, index, silent = false } = options;
+    if (autoplay) this.deps.unlockAudio();
     this.cancelLoad();
     const token = this.loadToken;
     const signal = this.loadAbort!.signal;
@@ -530,6 +547,7 @@ export class PlaybackEngine {
   // ---------------------------------------------------------------------------
 
   async play(): Promise<PlayResult> {
+    this.deps.unlockAudio();
     const { transport, queue } = this.store.getState();
     switch (transport.status) {
       case 'loading':

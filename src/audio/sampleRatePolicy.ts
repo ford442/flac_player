@@ -1,8 +1,12 @@
 /**
  * Shared AudioContext sample-rate and latency policy.
  *
- * Native file rate is preferred when the device can open it. Otherwise the
- * constructor omits `sampleRate` and the OS device default is used.
+ * Default: one context at the output device's rate for the page's lifetime.
+ * Browsers resample a context to the device anyway, so a context opened at the
+ * file's rate is only bit-exact when the device already runs at that rate, and
+ * then the device-rate context is too (decision record: docs/AUDIO_BACKENDS.md,
+ * "One context at the device rate"). `recreateOnSampleRateMismatch` (or
+ * `?ctxrate=native`) restores the old open-at-file-rate behavior.
  */
 
 export type LatencyMode = 'playback' | 'interactive' | 'balanced';
@@ -31,8 +35,18 @@ export const BALANCED_LATENCY_SECONDS = 0.03;
 
 export const DEFAULT_AUDIO_CONTEXT_POLICY: AudioContextOptionsPolicy = {
   latencyHint: 'playback',
-  recreateOnSampleRateMismatch: true,
+  recreateOnSampleRateMismatch: false,
 };
+
+/** `?ctxrate=native`: open (and rebuild) the context at each file's rate, for A/B. */
+export function isNativeRateRequestedByUrl(): boolean {
+  if (typeof window === 'undefined' || !window.location) return false;
+  try {
+    return new URLSearchParams(window.location.search).get('ctxrate') === 'native';
+  } catch {
+    return false;
+  }
+}
 
 export function isLatencyMode(value: string | null | undefined): value is LatencyMode {
   return value === 'playback' || value === 'interactive' || value === 'balanced';
@@ -100,23 +114,19 @@ type AudioContextCtor = typeof AudioContext & {
   isSampleRateSupported?: (sampleRate: number) => boolean;
 };
 
-/** Probe whether the constructor will accept `rate`. Closes any throwaway context. */
-export function probeSampleRateSupported(rate: number): boolean {
+/**
+ * Whether to ask the constructor for `rate`. Uses `AudioContext.isSampleRateSupported`
+ * where it exists and otherwise assumes yes: a rejected rate is caught by the
+ * constructor relaxation ({@link relaxContextOptions}) and remembered there, so no
+ * throwaway context is ever opened just to test a rate.
+ */
+export function isSampleRateAccepted(rate: number): boolean {
   if (!Number.isFinite(rate) || rate <= 0) return false;
   const Ctor = globalThis.AudioContext as AudioContextCtor | undefined;
   if (!Ctor) return false;
-  if (typeof Ctor.isSampleRateSupported === 'function') {
-    try {
-      return Ctor.isSampleRateSupported(rate);
-    } catch {
-      return false;
-    }
-  }
+  if (typeof Ctor.isSampleRateSupported !== 'function') return true;
   try {
-    const ctx = new Ctor({ sampleRate: rate });
-    const ok = Math.abs(ctx.sampleRate - rate) < 1;
-    void ctx.close();
-    return ok;
+    return Ctor.isSampleRateSupported(rate);
   } catch {
     return false;
   }
@@ -124,7 +134,8 @@ export function probeSampleRateSupported(rate: number): boolean {
 
 /** `AudioContextOptions` plus `sinkId` / `renderSizeHint` (Chromium; not yet in lib.dom). */
 export interface AudioContextOptionsWithSink extends AudioContextOptions {
-  sinkId?: string;
+  /** A device id, or `{ type: 'none' }` to render without an output device. */
+  sinkId?: string | { type: 'none' };
   renderSizeHint?: RenderSizeHint;
 }
 

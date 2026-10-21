@@ -95,13 +95,28 @@ registerRoute(
   ({ url, request }) => request.method === 'GET'
     && url.origin === self.location.origin
     && /\.(wasm|js)$/.test(url.pathname)
-    && /\/(sdl-audio|script-processor|projectm)/.test(url.pathname),
+    && /\/(sdl-audio|projectm)/.test(url.pathname),
   new CacheFirst({
     cacheName: 'flac-player-wasm-v2',
     plugins: [
       new CacheableResponsePlugin({ statuses: [0, 200] }),
       new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 60 * 60 * 24 * 30 }),
       corpPlugin,
+    ],
+  }),
+);
+
+/**
+ * projectM presets (.milk from the CDN in public/projectm/presets.json) – the
+ * URLs pin a commit, so cache-first. CORS responses: no CORP rewrite needed.
+ */
+registerRoute(
+  ({ url, request }) => request.method === 'GET' && /\.milk$/i.test(url.pathname),
+  new CacheFirst({
+    cacheName: 'flac-player-projectm-presets-v1',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [200] }),
+      new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 90 }),
     ],
   }),
 );

@@ -12,7 +12,7 @@ Dev builds have no service worker.
 | Precache manifest (app shell, `manifest.json`, icons) | precache | workbox-precache |
 | Navigations (e.g. `<base>/playlist/{id}`) | precached `<base>/index.html` (derived from the SW scope) | workbox-precache |
 | `GET /api/songs*` (same origin or `REACT_APP_API_URL` host) | stale-while-revalidate | `API_CACHE_NAME` |
-| SDL / script-processor / projectM `.wasm`/`.js` | cache-first, 30 days | `flac-player-wasm-v2` |
+| SDL / projectM `.wasm`/`.js` | cache-first, 30 days | `flac-player-wasm-v2` |
 | Audio files (`.flac .mp3 .wav .ogg .opus .m4a .aac`) | cache hit → served with `Range` (200/206/416); miss → network, not stored | `flac-player-tracks-v1` |
 
 The audio route is what lets the native `<audio>` path (non-FLAC tracks in `streaming`
