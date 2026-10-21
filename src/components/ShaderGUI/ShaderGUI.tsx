@@ -496,6 +496,15 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             Required backend: <strong className="text-purple-200">{activeBackend}</strong>
             <br />
             DEBUG_VISUALIZER: <code>{window.DEBUG_VISUALIZER ?? 'unset'}</code>
+            <br />
+            {/* COOP/COEP precondition for SAB rings, SDL3 pthreads and the analysis tap (docs/DEPLOYMENT.md). */}
+            crossOriginIsolated:{' '}
+            <strong
+              className={window.crossOriginIsolated ? 'text-green-300' : 'text-red-400'}
+              data-testid="cross-origin-isolated"
+            >
+              {window.crossOriginIsolated ? 'yes' : 'no — SAB off, SDL3 unavailable'}
+            </strong>
           </div>
           {gpuStats && (
             <div className="mt-2 text-[10px] text-gray-300" data-testid="gpu-pass-time">
