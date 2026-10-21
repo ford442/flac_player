@@ -1,4 +1,4 @@
-// Parsed track metadata persisted across reloads, alongside libraryCache.
+// Parsed track metadata persisted across reloads.
 //
 // Tags + specs (small JSON) live in localStorage; embedded cover art lives in the Cache API
 // (blobs do not belong in the 5 MB localStorage quota). Entries expire with the library cache
@@ -8,7 +8,7 @@ import type { TrackMetadata, TrackSpecs, TrackTags } from '../utils/trackMetadat
 
 export const METADATA_CACHE_KEY = 'flac_player_track_metadata';
 export const METADATA_ARTWORK_CACHE_NAME = 'flac-player-artwork-v1';
-/** Mirrors LIBRARY_CACHE_TTL_MS (not imported: libraryCache imports this module to clear it). */
+/** Entries older than a day are re-read from the file. */
 export const METADATA_CACHE_TTL_MS = 1000 * 60 * 60 * 24;
 export const METADATA_CACHE_MAX_ENTRIES = 300;
 export const METADATA_ARTWORK_MAX_BYTES = 4 * 1024 * 1024;

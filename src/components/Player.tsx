@@ -16,7 +16,6 @@ import { isRenderSizeHintSupported } from '../audio/sampleRatePolicy';
 import { usePlayer } from '../player/PlayerContext';
 import { useNotify, useQueue, useSettings, useTransport } from '../player/selectors';
 import { persistPlayerState } from '../player/persistence';
-import { isLibraryTrack } from '../types/track';
 import type { AudioOutputControls } from './EQPanel';
 import { AudioCapabilitiesContext } from './AudioCapabilitiesContext';
 import { PlayerActionsProvider, type AppActions } from './PlayerActionsContext';
@@ -78,11 +77,6 @@ export const Player: React.FC = () => {
   );
 
   const library = useLibraryState({ enabled: !isSharedPlaylist, notify, engine });
-  const { refreshStats } = library;
-  // Starting a library track records a play: refresh the play-count stats.
-  useEffect(() => engine.onTrackStarted((track) => {
-    if (isLibraryTrack(track)) refreshStats();
-  }), [engine, refreshStats]);
 
   const [sharedPlaylistTitle, setSharedPlaylistTitle] = useState('');
   const [activeTab, setActiveTab] = useState<ViewTab>('library');

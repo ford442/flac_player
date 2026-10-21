@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useState } from 'react';
 import type { AudioOutputMode } from '../../types/audio';
 import { EQPanel, type AudioOutputControls } from '../EQPanel';
-import { CacheStatsPanel } from '../OfflineCache';
+import { CacheStatsPanel, StorageStatusPanel } from '../OfflineCache';
 import type { GaplessMode } from '../../types/gapless';
 import type { ReplayGainMode } from '../../utils/replayGain';
 import type { LatencyMode } from '../../audio/sampleRatePolicy';
@@ -111,12 +111,14 @@ export const PlayerFallbackSettingsTab: React.FC<PlayerFallbackSettingsTabProps>
           </label>
         </div>
         <div className="bg-white/5 rounded-xl p-5 border border-white/10 space-y-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Offline Cache</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Offline</span>
           <p className="text-xs text-gray-400">
-            Recently played tracks are cached automatically (up to 500 MB, LRU eviction).
-            You can also download individual tracks from the library for offline use.
+            The library catalog is kept on this device, so it browses and filters offline.
+            Recently played tracks are cached automatically (up to 500 MB, LRU eviction);
+            you can also download individual tracks from the library.
           </p>
           <CacheStatsPanel onClearAll={onClearCache} />
+          <StorageStatusPanel />
         </div>
       </div>
     </div>

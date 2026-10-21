@@ -287,8 +287,8 @@ The local FastAPI dev backend provides the following endpoints (verified from `s
 
 - **Health**: `GET /`, `GET /api/health`
 - **Library**: `GET /api/songs` (filtering, sorting, pagination), `GET /api/library/songs`
-- **Tags**: `GET /api/songs/tags`
-- **Stats**: `GET /api/songs/stats`
+- **Tags**: `GET /api/songs/tags` (the frontend computes tags from its catalog instead)
+- **Stats**: `GET /api/songs/stats` (likewise computed locally)
 - **CRUD**: `GET /api/songs/{id}`, `POST /api/upload/songs`, `PUT /api/songs/{id}`, `PATCH /api/songs/{id}`, `DELETE /api/songs/{id}`
 - **Plays**: `POST /api/songs/{id}/play` (increments `play_count`)
 - **Trash**: `POST /api/songs/{id}/trash` (sets `rating=0`, adds `trash` tag)
