@@ -63,6 +63,12 @@ SharedArrayBuffer; `src/audio/analysisRing.ts` reads it (`getAnalysisTap()`). Ke
 sync. Writers only memcpy — FFT / analysis runs on reader threads (`src/sdl/dsp_fft.h` via
 `src/audio/wasmFft.ts`, or gpu-chores WebGPU), never in an audio callback.
 
+**Context lifecycle (#259):** one shared `AudioContext` at the device rate for the session
+(decision record in `docs/AUDIO_BACKENDS.md`; `?ctxrate=native` restores per-file-rate rebuilds).
+The engine calls `unlock()` synchronously from user play commands and reports
+`setPlaybackActive(playing|loading)`; the manager resumes on gesture / visibility / `statechange`
+(incl. iOS `interrupted`) and suspends after 10 s idle. Never open throwaway contexts.
+
 **Buffered (web-audio, worklet, SDL):**
 ```
 fetch(url) → ArrayBuffer → audio/flacDecoder / audio/audioDecoder → AudioBuffer or worklet ring
@@ -80,6 +86,12 @@ AnalyserNode → VisualizerShell
   → ShaderGUI: WebGPU → WebGL2 → Canvas2D (rendererSelection.ts)
   → projectM: optional WASM host (?aesthetic=projectm|split)
 ```
+
+- One `GPUDevice` per session from `GpuDeviceService` (`visuals/webgpu/deviceService.ts`), lent to the
+  visualizer and gpu-chores; analyser changes go through `setAnalyser()`, never a re-init.
+- WebGL2 survives `webglcontextlost`/`restored`. projectM: `ProjectMEngine` owns one canvas + main loop
+  (SDL-free `emscripten_webgl_create_context` host); presets come from `public/projectm/presets.json`
+  at runtime (`?preset=`).
 
 ## Playback engine (#258)
 

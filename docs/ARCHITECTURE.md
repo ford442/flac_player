@@ -261,7 +261,7 @@ CI runs `npm run verify:wasm` against `public/wasm-source.sha256`. Production we
 
 ## Cross-origin isolation
 
-Required for AudioWorklet, SharedArrayBuffer, SDL pthread builds, and projectM WASM:
+Required for SharedArrayBuffer: the worklet play ring and PCM tap (they fall back to `postMessage`), the analysis ring (off without it) and the SDL3 `-pthread` build (disabled in the engine pickers without it). AudioWorklet, streaming and projectM (no pthreads) work without it. Every deploy target's headers are in `docs/DEPLOYMENT.md`:
 
 ```
 Cross-Origin-Opener-Policy: same-origin
