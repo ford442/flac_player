@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Build in-app projectM WASM host (libprojectM + projectm_host.cpp).
 #
-# Host is a GL/SDL2 video module (USE_SDL=2, WebGL2-only, FULL_ES3, preset
-# preload). Keep it separate from sdl-audio.wasm and keep USE_SDL=2. -O2 is the Emscripten default for large CMake/static-lib links:
+# Host is a WebGL2-only GL module (FULL_ES3) with no SDL: the context comes
+# from emscripten_webgl_create_context on Module.canvas. SDL2's video init
+# installed a window keydown handler that preventDefault-ed Tab / Ctrl+key
+# app-wide (#259 G4), so do not add USE_SDL back. Presets are not bundled;
+# ProjectMEngine fetches them at runtime (public/projectm/presets.json).
+# Keep it separate from sdl-audio.wasm. -O2 is the Emscripten default for large CMake/static-lib links:
 # faster compiles, less brittle inlining across libprojectM, and the host is
 # not on the audio callback. SDL audio uses -O3 because the pthread callback
 # + ring copy is the hot path. Do not copy SDL's -O3 (or a future pinned-emsdk
@@ -22,8 +26,12 @@
 # checked by npm run verify:wasm. Overriding PROJECTM_TAG builds a
 # non-canonical artifact and does not update that hash.
 #
+# Exceptions: libprojectM is compiled with NO_DISABLE_EXCEPTION_CATCHING and
+# reports a bad preset by throwing; the host must link with it too, or that
+# throw aborts the module instead of reaching the preset-switch-failed path.
+#
 # Outputs to public/projectm/:
-#   projectm-host.js, projectm-host.wasm, projectm-host.data (presets)
+#   projectm-host.js, projectm-host.wasm
 #
 # Requires: emsdk, cmake, git
 #
@@ -85,7 +93,6 @@ printf '%s\n' "$STAMP" > "$STAMP_FILE"
 
 LIB_BUILD="$BUILD_ROOT/cmake-build"
 LIB_PROJECTM="$LIB_BUILD/src/libprojectM/libprojectM-4.a"
-LIB_PLAYLIST="$LIB_BUILD/src/playlist/libprojectM-4-playlist.a"
 LIB_EVAL="$LIB_BUILD/vendor/projectm-eval/projectm-eval/libprojectM_eval.a"
 
 if [ ! -f "$LIB_BUILD/CMakeCache.txt" ]; then
@@ -99,15 +106,9 @@ if [ ! -f "$LIB_BUILD/CMakeCache.txt" ]; then
     -DBUILD_SHARED_LIBS=OFF
 fi
 
-if [ ! -f "$LIB_PROJECTM" ] || [ ! -f "$LIB_PLAYLIST" ]; then
-  echo "Building libprojectM + playlist..."
-  emmake make -C "$LIB_BUILD" -j"$(nproc)" projectM projectM_playlist
-fi
-
-PRESETS_DIR="$BUILD_ROOT/src/presets"
-if [ ! -d "$PRESETS_DIR" ]; then
-  echo "Warning: presets directory not found at $PRESETS_DIR"
-  PRESETS_DIR="$BUILD_ROOT/src/buildshare/presets"
+if [ ! -f "$LIB_PROJECTM" ]; then
+  echo "Building libprojectM..."
+  emmake make -C "$LIB_BUILD" -j"$(nproc)" projectM
 fi
 
 if [[ "$DEBUG" -eq 1 ]]; then
@@ -122,18 +123,15 @@ fi
 PM_MAXIMUM_MEMORY=268435456   # 256 MiB
 
 echo "Compiling projectm_host.cpp -> $OUT_DIR/projectm-host.js"
-# Link from $OUT_DIR with a relative -o: the file packager bakes the .data path
-# into the glue (PACKAGE_NAME), and an absolute one differs per checkout.
+# Link from $OUT_DIR with a relative -o so nothing checkout-specific lands in the glue.
 cd "$OUT_DIR"
+rm -f projectm-host.data  # presets used to be preloaded; a stale .data would still be copied
 em++ "$HOST_CPP" \
   -I"$LIB_BUILD/src/api/include" \
-  -I"$LIB_BUILD/src/playlist/include" \
   -I"$BUILD_ROOT/src/src/api/include" \
-  -I"$BUILD_ROOT/src/src/playlist/api" \
   "$LIB_PROJECTM" \
-  "$LIB_PLAYLIST" \
   "$LIB_EVAL" \
-  -s USE_SDL=2 \
+  -s NO_DISABLE_EXCEPTION_CATCHING \
   -s MIN_WEBGL_VERSION=2 \
   -s MAX_WEBGL_VERSION=2 \
   -s FULL_ES3=1 \
@@ -142,9 +140,8 @@ em++ "$HOST_CPP" \
   -s MODULARIZE=1 \
   -s EXPORT_NAME="createProjectMModule" \
   -s ENVIRONMENT=web \
-  -s EXPORTED_FUNCTIONS='["_pm_init","_pm_resize","_pm_add_pcm","_pm_next_preset","_pm_prev_preset","_pm_load_preset_data","_pm_set_beat_sensitivity","_pm_destroy","_malloc","_free"]' \
+  -s EXPORTED_FUNCTIONS='["_pm_init","_pm_resize","_pm_add_pcm","_pm_load_preset_data","_pm_set_preset_locked","_pm_set_beat_sensitivity","_pm_set_paused","_pm_destroy","_malloc","_free"]' \
   -s EXPORTED_RUNTIME_METHODS='["HEAPF32","HEAPU8","wasmMemory"]' \
-  $( [ -d "$PRESETS_DIR" ] && echo "--preload-file ${PRESETS_DIR}@/presets" ) \
   "${PM_OPT_FLAGS[@]}" \
   -o projectm-host.js
 cd "$PROJECT_ROOT"

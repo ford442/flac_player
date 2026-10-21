@@ -42,6 +42,9 @@ export const VisualizerShell: React.FC<VisualizerShellProps> = ({
   const effectiveAesthetic: VisualizerAesthetic =
     projectmFailed && aesthetic !== 'shadergui' ? 'shadergui' : aesthetic;
 
+  // Stable: ProjectMHost must not see a new callback on every beat-phase render.
+  const handleProjectMFailed = useCallback(() => setProjectmFailed(true), []);
+
   const setAesthetic = useCallback((mode: VisualizerAesthetic) => {
     persistVisualizerAesthetic(mode);
     onAestheticChange(mode);
@@ -76,7 +79,7 @@ export const VisualizerShell: React.FC<VisualizerShellProps> = ({
           <ProjectMHost
             beatPhase={beatPhase}
             beatSyncPresets={beatSync}
-            onFailed={() => setProjectmFailed(true)}
+            onFailed={handleProjectMFailed}
           />
           <label className="visualizer-shell__beat-toggle">
             <input
@@ -103,7 +106,7 @@ export const VisualizerShell: React.FC<VisualizerShellProps> = ({
           <ProjectMHost
             beatPhase={beatPhase}
             beatSyncPresets={beatSync}
-            onFailed={() => setProjectmFailed(true)}
+            onFailed={handleProjectMFailed}
           />
           <label className="visualizer-shell__beat-toggle">
             <input
