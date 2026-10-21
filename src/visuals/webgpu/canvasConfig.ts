@@ -64,7 +64,10 @@ export function readGlStrict(
 
 /**
  * WebGL2 context attributes for the opt-in fallback. Mirrors the WebGPU
- * powerPreference (`?gpu=low`); `desynchronized` is a hint browsers may ignore.
+ * powerPreference (`?gpu=low`). No depth / stencil: every pass is a fullscreen
+ * triangle with depth testing off. Not `desynchronized` (a low-latency inking
+ * hint that tears), and no preserved buffer: debug readback re-renders and reads
+ * inside the same task (WebGL2Visualizer.readPixels).
  */
 /** lib.dom omits `xrCompatible` (WebXR spec); browsers accept it on getContext. */
 export type WebGL2ContextAttributes = WebGLContextAttributes & { xrCompatible?: boolean };
@@ -75,11 +78,12 @@ export function buildWebGL2ContextAttributes(
   const search = options.search ?? (typeof window !== 'undefined' ? window.location.search : '');
   return {
     alpha: false,
+    depth: false,
+    stencil: false,
     premultipliedAlpha: false,
     antialias: options.antialias ?? false,
     powerPreference: readGpuPowerPreference(search),
     preserveDrawingBuffer: false,
-    desynchronized: true,
     failIfMajorPerformanceCaveat: readGlStrict(search),
     xrCompatible: false,
   };
