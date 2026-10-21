@@ -255,7 +255,7 @@ Key endpoints: `GET /api/songs`, `POST /api/songs/{id}/play`, `POST /api/share`,
 | Artifact | Build command | Committed in `public/` |
 |----------|---------------|------------------------|
 | SDL3 | `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh` (`--debug` via `scripts/build-wasm.sh --debug --sdl3`) | `sdl-audio.js`, `sdl-audio.wasm` |
-| projectM | `npm run build:projectm` | `projectm/projectm-host.*` (optional; separate `USE_SDL=2` video host) |
+| projectM | `npm run build:projectm` | `projectm/projectm-host.*` (optional; WebGL2 host, no SDL; presets fetched at runtime via `projectm/presets.json`) |
 
 CI runs `npm run verify:wasm` against `public/wasm-source.sha256`. Production webpack uses `--env skipWasm=true` and copies prebuilt binaries.
 

@@ -20,14 +20,15 @@ import {
 import { buildWaveformWGSL, waveformWGSL } from '../src/shaders/waveform';
 
 describe('webgl2 context attributes', () => {
-  it('defaults: no MSAA, no preserved buffer, desynchronized, lenient caveat', () => {
+  it('defaults: no MSAA, no depth/stencil, no preserved buffer, not desynchronized, lenient caveat', () => {
     expect(buildWebGL2ContextAttributes({ search: '' })).toEqual({
       alpha: false,
+      depth: false,
+      stencil: false,
       premultipliedAlpha: false,
       antialias: false,
       powerPreference: 'high-performance',
       preserveDrawingBuffer: false,
-      desynchronized: true,
       failIfMajorPerformanceCaveat: false,
       xrCompatible: false,
     });

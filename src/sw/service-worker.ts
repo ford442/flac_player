@@ -107,6 +107,21 @@ registerRoute(
 );
 
 /**
+ * projectM presets (.milk from the CDN in public/projectm/presets.json) – the
+ * URLs pin a commit, so cache-first. CORS responses: no CORP rewrite needed.
+ */
+registerRoute(
+  ({ url, request }) => request.method === 'GET' && /\.milk$/i.test(url.pathname),
+  new CacheFirst({
+    cacheName: 'flac-player-projectm-presets-v1',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [200] }),
+      new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 90 }),
+    ],
+  }),
+);
+
+/**
  * Offline tracks – serve flac-player-tracks-v1 entries (written by trackCache /
  * background downloads) to the native <audio> path, honouring Range. Misses go
  * straight to the network; this route never writes to the cache.
