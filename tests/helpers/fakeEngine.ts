@@ -91,6 +91,8 @@ export function makeEngine(overrides: Partial<EngineDeps> = {}) {
   const deps: EngineDeps = {
     createBackend: vi.fn(async (mode: string) => new FakeBackend(mode) as unknown as ConfigurableAudioBackend),
     subscribeGraphRecreated: (listener) => { graphListeners.add(listener); return () => { graphListeners.delete(listener); }; },
+    unlockAudio: vi.fn(),
+    setPlaybackActive: vi.fn(),
     candidateUrls: (url) => [url],
     fetchTrackBytes: async () => new ArrayBuffer(8),
     probeContentLength: async () => 1000,

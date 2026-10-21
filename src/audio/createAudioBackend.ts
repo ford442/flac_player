@@ -1,6 +1,7 @@
 import type { AudioOutputMode } from '../types/audio';
 import { AudioContextManager, sharedAudioContextManager } from './AudioContextManager';
 import type { ConfigurableAudioBackend } from '../types/audio';
+export { outputModeUnavailableReason } from './outputModeSupport';
 
 export async function createAudioBackend(
   mode: AudioOutputMode,

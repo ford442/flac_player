@@ -7,7 +7,7 @@ import type { ReplayGainMode } from '../../utils/replayGain';
 import type { LatencyMode } from '../../audio/sampleRatePolicy';
 import { useActions } from '../PlayerActionsContext';
 import { useSettings, useTransport } from '../../player/selectors';
-import { OUTPUT_MODE_LABELS } from './types';
+import { OutputModeOptions } from './OutputModeOptions';
 import {
   isCompatibilityVisualizerEnabled,
   setCompatibilityVisualizer,
@@ -70,9 +70,7 @@ export const PlayerFallbackSettingsTab: React.FC<PlayerFallbackSettingsTabProps>
           <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Audio Engine</span>
           <select value={outputMode} onChange={(e) => setOutputMode(e.target.value as AudioOutputMode)}
             className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm text-white">
-            {Object.entries(OUTPUT_MODE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
+            <OutputModeOptions />
           </select>
           {playbackPath && (
             <div className="text-xs text-cyan-300/90 bg-cyan-950/30 border border-cyan-500/20 rounded-lg px-3 py-2" role="status">

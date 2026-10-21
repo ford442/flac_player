@@ -18,6 +18,9 @@ export interface AudioOutputControls {
   /** `navigator.mediaDevices.selectAudioOutput` exists. */
   pickerSupported: boolean;
   devices: OutputDeviceOption[];
+  /** Outputs exist but their ids are hidden until a media permission (Chromium). */
+  devicesHidden?: boolean;
+  onRevealDevices?: () => void;
   onSelectOutputDevice: (deviceId?: string, label?: string) => Promise<void>;
   info: AudioOutputInfo | null;
   /** SDL owns the device; the Web Audio sink does not apply. */
@@ -361,6 +364,15 @@ export const EQPanel: React.FC<EQPanelProps> = ({
                   className="px-2 py-1 rounded text-xs bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white"
                 >
                   Choose…
+                </button>
+              )}
+              {audioOutput.devicesHidden && audioOutput.devices.length === 0 && audioOutput.onRevealDevices && (
+                <button
+                  onClick={audioOutput.onRevealDevices}
+                  className="px-2 py-1 rounded text-xs bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white"
+                  title="This browser lists output devices only after a microphone permission. The microphone is released at once; nothing is recorded."
+                >
+                  Show devices…
                 </button>
               )}
               {audioOutput.devices.length === 0 && (
