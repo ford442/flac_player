@@ -23,6 +23,32 @@ interface TopScreenProps {
   isLoading?: boolean;
 }
 
+/**
+ * Cover art that survives COEP `require-corp`. The first request is CORS-mode
+ * (`crossOrigin="anonymous"`), which COEP accepts when the art host sends
+ * `Access-Control-Allow-Origin`. If that fails it retries no-cors, which works
+ * when the host sends `Cross-Origin-Resource-Policy: cross-origin` (or the page
+ * is not cross-origin isolated). If both attempts fail, the art is hidden and the
+ * overlay keeps its text. See docs/DEPLOYMENT.md → Cross-origin isolation.
+ */
+const CoverArt: React.FC<{ url: string; alt: string }> = ({ url, alt }) => {
+  const [attempt, setAttempt] = useState<{ url: string; mode: 'cors' | 'no-cors' | 'failed' }>({ url, mode: 'cors' });
+  const mode = attempt.url === url ? attempt.mode : 'cors';
+  if (mode === 'failed') return null;
+  return (
+    <img
+      // Remount on a mode change: some browsers ignore a crossOrigin change on a live <img>.
+      key={mode}
+      className="track-meta-art"
+      src={url}
+      alt={alt}
+      crossOrigin={mode === 'cors' ? 'anonymous' : undefined}
+      data-cors-mode={mode}
+      onError={() => setAttempt({ url, mode: mode === 'cors' ? 'no-cors' : 'failed' })}
+    />
+  );
+};
+
 export const TopScreen: React.FC<TopScreenProps> = ({
   canvasRef,
   canvasSessionKey = 'webgpu',
@@ -174,13 +200,7 @@ export const TopScreen: React.FC<TopScreenProps> = ({
       </div>}
       {!probeFailure && !isLoading && (album || artworkUrl || (specs && specs.length > 0)) && (
         <div className="track-meta-overlay" data-testid="track-meta-overlay">
-          {artworkUrl && (
-            <img
-              className="track-meta-art"
-              src={artworkUrl}
-              alt={`${album || title || 'Track'} cover art`}
-            />
-          )}
+          {artworkUrl && <CoverArt url={artworkUrl} alt={`${album || title || 'Track'} cover art`} />}
           <div className="track-meta-text">
             {album && <div className="track-meta-album">{album}</div>}
             {specs && specs.length > 0 && <div className="track-meta-specs">{specs.join(' · ')}</div>}

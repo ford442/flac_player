@@ -15,7 +15,7 @@
       ]
     },
     {
-      "source": "/service-worker.js",
+      "source": "/:base*/service-worker.js",
       "headers": [
         { "key": "Cache-Control", "value": "no-cache" },
         { "key": "Cross-Origin-Resource-Policy", "value": "same-origin" }

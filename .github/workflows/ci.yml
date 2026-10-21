@@ -66,6 +66,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:streaming
       - run: npm run test:e2e
+      - name: Production build is cross-origin isolated (vercel.json headers)
+        run: npm run build -- --env skipWasm=true && npm run test:e2e:prod
       - name: Upload Playwright traces on failure
         if: failure()
         uses: actions/upload-artifact@v4
