@@ -115,7 +115,7 @@ export const OfflineBadge: React.FC<OfflineBadgeProps> = ({ track, onDownload, o
           <button
             type="button"
             onClick={handleCancel}
-            className="text-gray-500 hover:text-red-400 ml-1"
+            className="text-gray-400 hover:text-red-400 ml-1"
             title="Cancel download"
             aria-label="Cancel download"
           >
@@ -148,7 +148,7 @@ export const OfflineBadge: React.FC<OfflineBadgeProps> = ({ track, onDownload, o
       onClick={handleDownload}
       onDoubleClick={e => e.stopPropagation()}
       data-testid="offline-badge-download"
-      className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-blue-300 transition-colors"
+      className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-blue-300 transition-colors"
       title="Download for offline"
       aria-label="Download for offline"
     >
@@ -229,7 +229,7 @@ export const CacheStatsPanel: React.FC<CacheStatsPanelProps> = ({ onClearAll, on
         </p>
       )}
       {canUseBackgroundDownloads() && (
-        <p className="text-xs text-gray-500">Background downloads enabled via service worker</p>
+        <p className="text-xs text-gray-400">Background downloads enabled via service worker</p>
       )}
     </div>
   );

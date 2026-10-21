@@ -1,5 +1,5 @@
 import React from 'react';
-import './ShaderGUI.css';
+import './ShaderGUI.layout.css';
 
 interface ChassisProps {
   children: React.ReactNode;

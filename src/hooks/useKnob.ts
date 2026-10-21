@@ -1,67 +1,78 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback } from 'react';
+import { sliderKeyValue } from '../utils/sliderKeys';
+
+const DRAG_SENSITIVITY = 0.005; // value per pixel of vertical drag
+const RESET_VALUE = 0.5;
 
 export interface KnobState {
+  value: number;
+  /** Latest value without waiting for a render (render loops read this). */
   valueRef: React.MutableRefObject<number>;
-  bindDrag: {
-    onMouseDown: (e: React.MouseEvent) => void;
+  isDragging: boolean;
+  /** Spread onto the element with role="slider". */
+  bind: {
+    onPointerDown: (e: React.PointerEvent<HTMLElement>) => void;
+    onPointerMove: (e: React.PointerEvent<HTMLElement>) => void;
+    onPointerUp: () => void;
+    onPointerCancel: () => void;
+    onKeyDown: (e: React.KeyboardEvent<HTMLElement>) => void;
     onDoubleClick: () => void;
   };
-  isDragging: boolean;
-  tooltipValue: number;
 }
 
-export function useKnob(initialValue = 0.5): KnobState {
+/**
+ * A 0–1 rotary control: vertical pointer drag, arrow / Page / Home / End keys,
+ * double-click to centre. `onChange` fires on every change, drags included.
+ */
+export function useKnob(initialValue = 0.5, onChange?: (value: number) => void): KnobState {
   const valueRef = useRef(initialValue);
+  const [value, setValueState] = useState(initialValue);
   const [isDragging, setIsDragging] = useState(false);
-  const [tooltipValue, setTooltipValue] = useState(initialValue);
-  const dragStartY = useRef(0);
-  const dragStartValue = useRef(initialValue);
+  const drag = useRef<{ startY: number; startValue: number } | null>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    const deltaY = dragStartY.current - e.clientY;
-    const sensitivity = 0.005;
-    let newValue = dragStartValue.current + deltaY * sensitivity;
-    newValue = Math.max(0, Math.min(1, newValue));
-    valueRef.current = newValue;
-    setTooltipValue(newValue);
+  const setValue = useCallback((next: number) => {
+    const clamped = Math.max(0, Math.min(1, next));
+    if (clamped === valueRef.current) return;
+    valueRef.current = clamped;
+    setValueState(clamped);
+    onChangeRef.current?.(clamped);
   }, []);
 
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    window.removeEventListener('mousemove', handleMouseMove);
-    window.removeEventListener('mouseup', handleMouseUp);
-  }, [handleMouseMove]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const onPointerDown = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    if (e.button !== 0) return;
     e.preventDefault();
-    dragStartY.current = e.clientY;
-    dragStartValue.current = valueRef.current;
+    e.currentTarget.focus();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    drag.current = { startY: e.clientY, startValue: valueRef.current };
     setIsDragging(true);
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-  }, [handleMouseMove, handleMouseUp]);
-
-  const handleDoubleClick = useCallback(() => {
-    valueRef.current = 0.5;
-    setTooltipValue(0.5);
   }, []);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [handleMouseMove, handleMouseUp]);
+  const onPointerMove = useCallback((e: React.PointerEvent<HTMLElement>) => {
+    if (!drag.current) return;
+    setValue(drag.current.startValue + (drag.current.startY - e.clientY) * DRAG_SENSITIVITY);
+  }, [setValue]);
+
+  const endDrag = useCallback(() => {
+    drag.current = null;
+    setIsDragging(false);
+  }, []);
+
+  const onKeyDown = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
+    const next = sliderKeyValue(e.key, valueRef.current, { step: 0.01, page: 0.1 });
+    if (next === null) return;
+    e.preventDefault();
+    setValue(next);
+  }, [setValue]);
+
+  const onDoubleClick = useCallback(() => setValue(RESET_VALUE), [setValue]);
 
   return {
+    value,
     valueRef,
-    bindDrag: {
-      onMouseDown: handleMouseDown,
-      onDoubleClick: handleDoubleClick,
-    },
     isDragging,
-    tooltipValue,
+    bind: { onPointerDown, onPointerMove, onPointerUp: endDrag, onPointerCancel: endDrag, onKeyDown, onDoubleClick },
   };
 }
 

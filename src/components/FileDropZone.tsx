@@ -55,11 +55,10 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({ onFiles }) => {
       onClick={() => inputRef.current?.click()}
       role="button"
       tabIndex={0}
-      aria-label="Drag and drop FLAC, WAV, or MP3 files here, or click to browse"
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') inputRef.current?.click(); }}
     >
       <p className="text-sm text-gray-400">Drop FLAC/WAV/MP3 files here</p>
-      <p className="text-xs text-gray-500 mt-1">or click to browse</p>
+      <p className="text-xs text-gray-400 mt-1">or click to browse</p>
       <input
         ref={inputRef}
         type="file"

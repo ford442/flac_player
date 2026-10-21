@@ -126,6 +126,15 @@ Player.tsx → useListeningRoomBridge({ engine, store }) → useListeningRoom
 - Server: `server/rooms.py` router mounted in `server/app.py` (in-memory → one uvicorn worker); production bridge port pending
 - Details: `docs/LISTENING_ROOMS.md`
 
+## Styling and accessibility
+
+Tailwind CSS v4: `src/index.css` (imported by `src/index.tsx`) → `postcss.config.mjs` → `postcss-loader`. Palette tokens
+live in its `@theme static` block (`bg-surface`, `--color-gui-*`); don't add arbitrary `bg-[#…]` colors. ShaderGUI keeps
+hand-written CSS: `ShaderGUI.layout.css` (mirrored by `WAVEFORM_LAYOUT`) and `ShaderGUI.overlays.css`.
+
+Shortcuts come from one map (`hooks/keyboardShortcutMap.ts`); the help dialog renders it, so add keys there. Custom
+controls are ARIA sliders (`utils/sliderKeys.ts`). `eslint-plugin-jsx-a11y` runs in lint and `tests/a11y.spec.ts` runs axe.
+
 ## Debug logging
 
 Off by default. Enable with `REACT_APP_DEBUG=true` in `.env` (webpack DefinePlugin).
