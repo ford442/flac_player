@@ -103,9 +103,11 @@ describe('gpu canvas policy', () => {
       .toEqual(buildCanvasConfiguration({ device, format: 'bgra8unorm' }));
   });
 
-  it('uses display-p3 only when the display reports a P3 gamut', () => {
+  it('stays sRGB on a P3 display unless ?p3=1 opts in (#259 W5)', () => {
     expect(resolveCanvasDisplay({ search: '', displayP3: false })).toEqual(DEFAULT_CANVAS_DISPLAY);
-    const p3 = resolveCanvasDisplay({ search: '', displayP3: true });
+    expect(resolveCanvasDisplay({ search: '', displayP3: true })).toEqual(DEFAULT_CANVAS_DISPLAY);
+    expect(resolveCanvasDisplay({ search: '?p3=1', displayP3: false })).toEqual(DEFAULT_CANVAS_DISPLAY);
+    const p3 = resolveCanvasDisplay({ search: '?p3=1', displayP3: true });
     expect(p3).toEqual({ colorSpace: 'display-p3', formatOverride: null });
     const device = {} as GPUDevice;
     expect(buildCanvasConfiguration({ device, format: 'rgba8unorm', display: p3 })).toEqual({
@@ -118,7 +120,7 @@ describe('gpu canvas policy', () => {
   });
 
   it('opts into extended tone mapping only behind ?hdr=1 with browser support', () => {
-    expect(resolveCanvasDisplay({ search: '', toneMappingSupported: true, highDynamicRange: true }))
+    expect(resolveCanvasDisplay({ search: '', toneMappingSupported: true }))
       .toEqual(DEFAULT_CANVAS_DISPLAY);
     expect(resolveCanvasDisplay({ search: '?hdr=1', toneMappingSupported: false }))
       .toEqual(DEFAULT_CANVAS_DISPLAY);

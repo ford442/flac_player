@@ -2,52 +2,83 @@ import { Mat4, Vec3 } from './math';
 import {
   DEFAULT_WAVEFORM_UNIFORMS,
   packWaveformUniforms,
+  WAVEFORM_UNIFORM_FLOATS,
   type WaveformUniforms,
 } from './waveformContract';
 import type { WebGL2DebugMode } from './types';
 import { createDebugConfig, debugModeToUniform } from './webgl2/debugModes';
 import type { WebGL2DebugConfig } from './types';
 import { updateWebGPUTiming, type WebGPUProbeSuccess } from './webgpuProbe';
-import {
-  buildCanvasConfiguration,
-  DEFAULT_CANVAS_DISPLAY,
-  type CanvasDisplayOptions,
-} from './webgpu/canvasConfig';
+import { DEFAULT_CANVAS_DISPLAY, type CanvasDisplayOptions } from './webgpu/canvasConfig';
 import { GpuPassTimer } from './webgpu/gpuPassTimer';
 import { createWaveformResources, type WaveformGpuResources } from './webgpu/waveformResources';
 import { createGuiResources, type GuiGpuResources } from './webgpu/guiResources';
 import { createCubeResources, type CubeGpuResources } from './webgpu/cubeResources';
+import { downsampleAudioData } from './visualSync';
+import { DEFAULT_SPECTRUM_RATE } from './spectrumBands';
 
 export type VisualizerMode = 'flat' | '3D';
 
 /** @deprecated Prefer WaveformUniforms from visuals/waveformContract — kept as alias. */
 export type ShaderGUIUniforms = WaveformUniforms;
 
-// WebGPU shader interface for audio visualization
+/**
+ * WebGPU shader interface for audio visualization.
+ *
+ * Borrows the shared GPUDevice (GpuDeviceService) and the canvas context the probe
+ * configured: it never destroys the device and never reconfigures the canvas
+ * (a resize only changes canvas.width/height, picked up by getCurrentTexture()).
+ * A new AnalyserNode (graph rebuilt for another sample rate) arrives through
+ * {@link setAnalyser}; nothing GPU-side is recreated for it.
+ */
 export class WebGPUVisualizer {
   private device: GPUDevice | null = null;
   private context: GPUCanvasContext | null = null;
   private canvasFormat: GPUTextureFormat | null = null;
   private canvas: HTMLCanvasElement;
   private animationFrameId: number | null = null;
-  private analyser: AnalyserNode | null = null;
-  private audioData: Uint8Array = new Uint8Array(0);
+  /** Context rate of the spectra passed to setAudioData (bars are cut in Hz). */
+  private sampleRate = DEFAULT_SPECTRUM_RATE;
   private time: number = 0;
+  private lastFrameMs: number | null = null;
+  private audioLevel = 0;
   private mode: VisualizerMode = 'flat';
 
   private waveform: WaveformGpuResources | null = null;
   private gui: GuiGpuResources | null = null;
   private cube: CubeGpuResources | null = null;
+  private cubePending: Promise<void> | null = null;
+  private cubeFailed = false;
   private guiUniforms: ShaderGUIUniforms = { ...DEFAULT_WAVEFORM_UNIFORMS };
-  private guiAudioData: Float32Array = new Float32Array(64);
+  private readonly guiAudioData = new Float32Array(64);
+  private readonly guiUniformData = new Float32Array(WAVEFORM_UNIFORM_FLOATS);
+  private readonly waveformUniformData = new Float32Array(4);
   private debug: WebGL2DebugConfig = createDebugConfig();
   private depthTexture: GPUTexture | null = null;
+  private depthView: GPUTextureView | null = null;
   private display: CanvasDisplayOptions = DEFAULT_CANVAS_DISPLAY;
   private passTimer: GpuPassTimer | null = null;
 
   private cameraRotation = { x: 0, y: 0 };
   private isDragging = false;
   private lastMousePos = { x: 0, y: 0 };
+  private readonly onMouseDown = (e: MouseEvent) => {
+    this.isDragging = true;
+    this.lastMousePos = { x: e.clientX, y: e.clientY };
+    this.checkInteraction();
+  };
+  private readonly onMouseMove = (e: MouseEvent) => {
+    if (this.isDragging && this.mode === '3D') {
+      const deltaX = e.clientX - this.lastMousePos.x;
+      const deltaY = e.clientY - this.lastMousePos.y;
+      this.cameraRotation.y += deltaX * 0.01;
+      this.cameraRotation.x += deltaY * 0.01;
+      this.lastMousePos = { x: e.clientX, y: e.clientY };
+    }
+  };
+  private readonly onMouseUp = () => {
+    this.isDragging = false;
+  };
 
   private onTogglePlay: (() => void) | null = null;
   private onDeviceLostCallback?: (reason: string) => void;
@@ -55,7 +86,9 @@ export class WebGPUVisualizer {
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
-    this.setupInputListeners();
+    this.canvas.addEventListener('mousedown', this.onMouseDown);
+    window.addEventListener('mousemove', this.onMouseMove);
+    window.addEventListener('mouseup', this.onMouseUp);
   }
 
   getDevice(): GPUDevice | null {
@@ -78,6 +111,7 @@ export class WebGPUVisualizer {
 
   setMode(mode: VisualizerMode) {
     this.mode = mode;
+    if (mode === '3D') void this.ensureCube();
   }
 
   setTogglePlayCallback(cb: () => void) {
@@ -88,54 +122,79 @@ export class WebGPUVisualizer {
     this.onDeviceLostCallback = cb;
   }
 
-  async initialize(analyser: AnalyserNode, boot: WebGPUProbeSuccess): Promise<boolean> {
-    try {
-      this.device = boot.device;
-      this.context = boot.context;
-      const canvasFormat = boot.format;
-      this.canvasFormat = canvasFormat;
-      this.display = boot.display;
+  /** Swap the spectrum source (graph rebuilt at another rate) without touching the GPU. */
+  setAnalyser(analyser: AnalyserNode | null): void {
+    this.sampleRate = analyser?.context?.sampleRate ?? DEFAULT_SPECTRUM_RATE;
+  }
 
-      this.device.lost.then((info) => {
-        console.warn('WebGPU device lost:', info.message, 'reason:', info.reason);
-        this.device = null;
+  /**
+   * Build the flat + GUI pipelines on the probed device. Rejects (and leaves the
+   * device alone) on a shader, pipeline or validation error, so the caller shows the
+   * failure instead of a black canvas behind a `ready` status.
+   */
+  async initialize(analyser: AnalyserNode | null, boot: WebGPUProbeSuccess): Promise<boolean> {
+    try {
+      const device = boot.device;
+      this.device = device;
+      this.context = boot.context;
+      this.canvasFormat = boot.format;
+      this.display = boot.display;
+      this.setAnalyser(analyser);
+
+      void device.lost?.then((info) => {
+        if (this.device === device) this.device = null;
         if (this.destroyed || info.reason === 'destroyed') return;
         this.onDeviceLostCallback?.(info.reason);
       });
 
-      this.context.configure(buildCanvasConfiguration({
-        device: this.device,
-        format: canvasFormat,
-        display: this.display,
-      }));
-
-      this.analyser = analyser;
-      this.audioData = new Uint8Array(analyser.frequencyBinCount);
-
-      this.waveform = await createWaveformResources(this.device, canvasFormat);
-      this.cube = await createCubeResources(this.device, canvasFormat);
-      this.gui = await createGuiResources(this.device, canvasFormat);
-      this.passTimer = new GpuPassTimer(this.device);
-
+      const [waveform, gui] = await Promise.all([
+        createWaveformResources(device, boot.format),
+        createGuiResources(device, boot.format, boot.display.colorSpace),
+      ]);
+      this.waveform = waveform;
+      this.gui = gui;
+      if (this.destroyed) {
+        this.destroyGpuResources();
+        return false;
+      }
+      this.passTimer = new GpuPassTimer(device);
+      if (this.mode === '3D') void this.ensureCube();
       return true;
     } catch (error) {
       console.error('Error initializing WebGPU:', error);
-      this.cleanupPartial();
+      this.destroyGpuResources();
+      this.device = null;
+      this.context = null;
+      this.canvasFormat = null;
       throw error;
     }
   }
 
-  private cleanupPartial() {
-    this.destroyGpuBuffers();
-    if (this.device) {
-      this.device.destroy();
-      this.device = null;
+  /** Cube pipeline on first 3D use; on failure 3D keeps drawing the flat waveform. */
+  private ensureCube(): Promise<void> {
+    if (this.cube || this.cubeFailed || !this.device || !this.canvasFormat) return Promise.resolve();
+    if (!this.cubePending) {
+      const device = this.device;
+      this.cubePending = createCubeResources(device, this.canvasFormat, this.display.colorSpace)
+        .then((cube) => {
+          if (this.destroyed || this.device !== device) {
+            destroyCube(cube);
+            return;
+          }
+          this.cube = cube;
+        })
+        .catch((error: unknown) => {
+          this.cubeFailed = true;
+          console.error('[WebGPUVisualizer] 3D cube pipeline failed; staying flat:', error);
+        })
+        .finally(() => {
+          this.cubePending = null;
+        });
     }
-    this.context = null;
-    this.canvasFormat = null;
+    return this.cubePending;
   }
 
-  private destroyGpuBuffers() {
+  private destroyGpuResources() {
     this.passTimer?.destroy();
     this.passTimer = null;
     this.waveform?.uniformBuffer.destroy();
@@ -143,37 +202,11 @@ export class WebGPUVisualizer {
     this.gui?.uniformBuffer.destroy();
     this.gui?.audioBuffer.destroy();
     this.gui = null;
-    this.cube?.uniformBuffer.destroy();
-    this.cube?.vertexBuffer.destroy();
-    this.cube?.indexBuffer.destroy();
-    this.cube?.renderTargetTexture.destroy();
+    if (this.cube) destroyCube(this.cube);
     this.cube = null;
-    if (this.depthTexture) {
-      this.depthTexture.destroy();
-      this.depthTexture = null;
-    }
-  }
-
-  private setupInputListeners() {
-    this.canvas.addEventListener('mousedown', (e) => {
-      this.isDragging = true;
-      this.lastMousePos = { x: e.clientX, y: e.clientY };
-      this.checkInteraction();
-    });
-
-    window.addEventListener('mousemove', (e) => {
-      if (this.isDragging && this.mode === '3D') {
-        const deltaX = e.clientX - this.lastMousePos.x;
-        const deltaY = e.clientY - this.lastMousePos.y;
-        this.cameraRotation.y += deltaX * 0.01;
-        this.cameraRotation.x += deltaY * 0.01;
-        this.lastMousePos = { x: e.clientX, y: e.clientY };
-      }
-    });
-
-    window.addEventListener('mouseup', () => {
-      this.isDragging = false;
-    });
+    this.depthTexture?.destroy();
+    this.depthTexture = null;
+    this.depthView = null;
   }
 
   private checkInteraction() {
@@ -183,32 +216,37 @@ export class WebGPUVisualizer {
     }
   }
 
+  /** Real frame time (clamped so a background tab does not jump the animation). */
+  private advanceTime(): void {
+    const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (this.lastFrameMs !== null) this.time += Math.min(Math.max((now - this.lastFrameMs) / 1000, 0), 0.1);
+    this.lastFrameMs = now;
+  }
+
   render(): void {
     if (!this.device || !this.context || !this.waveform) return;
+    this.advanceTime();
 
-    let audioLevel = 0;
-    if (this.analyser && this.audioData.length > 0) {
-      const tempData = new Uint8Array(this.analyser.frequencyBinCount);
-      this.analyser.getByteFrequencyData(tempData);
-      let sum = 0;
-      for (let i = 0; i < tempData.length; i++) sum += tempData[i]!;
-      audioLevel = sum / tempData.length / 255.0;
-    }
-    this.time += 0.016;
-
-    if (this.mode === 'flat') {
-      this.renderFlat(audioLevel);
+    if (this.mode === 'flat' || !this.cube) {
+      this.renderFlat(this.audioLevel);
     } else {
-      this.render3D(audioLevel);
+      this.render3D(this.audioLevel);
     }
+  }
+
+  private writeWaveformUniforms(width: number, height: number, audioLevel: number): void {
+    const data = this.waveformUniformData;
+    data[0] = width;
+    data[1] = height;
+    data[2] = this.time;
+    data[3] = audioLevel;
+    this.device!.queue.writeBuffer(this.waveform!.uniformBuffer, 0, data);
   }
 
   private renderFlat(audioLevel: number) {
     if (!this.device || !this.context || !this.waveform) return;
 
-    this.device.queue.writeBuffer(this.waveform.uniformBuffer, 0, new Float32Array([
-      this.canvas.width, this.canvas.height, this.time, audioLevel,
-    ]));
+    this.writeWaveformUniforms(this.canvas.width, this.canvas.height, audioLevel);
 
     const commandEncoder = this.device.createCommandEncoder();
     const textureView = this.context.getCurrentTexture().createView();
@@ -232,9 +270,7 @@ export class WebGPUVisualizer {
   private render3D(audioLevel: number) {
     if (!this.device || !this.context || !this.waveform || !this.cube) return;
 
-    this.device.queue.writeBuffer(this.waveform.uniformBuffer, 0, new Float32Array([
-      512, 512, this.time, audioLevel,
-    ]));
+    this.writeWaveformUniforms(512, 512, audioLevel);
 
     const commandEncoder = this.device.createCommandEncoder();
 
@@ -271,15 +307,16 @@ export class WebGPUVisualizer {
     const mvp = Mat4.multiply(projection, view);
     this.device.queue.writeBuffer(this.cube.uniformBuffer, 0, mvp.values.buffer as ArrayBuffer);
 
-    if (!this.depthTexture
+    if (!this.depthTexture || !this.depthView
       || this.depthTexture.width !== this.canvas.width
       || this.depthTexture.height !== this.canvas.height) {
-      if (this.depthTexture) this.depthTexture.destroy();
+      this.depthTexture?.destroy();
       this.depthTexture = this.device.createTexture({
         size: [this.canvas.width, this.canvas.height],
         format: 'depth24plus',
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
       });
+      this.depthView = this.depthTexture.createView();
     }
 
     const textureView = this.context.getCurrentTexture().createView();
@@ -292,7 +329,7 @@ export class WebGPUVisualizer {
         storeOp: 'store',
       }],
       depthStencilAttachment: {
-        view: this.depthTexture.createView(),
+        view: this.depthView,
         depthClearValue: 1.0,
         depthLoadOp: 'clear',
         depthStoreOp: 'store',
@@ -321,40 +358,27 @@ export class WebGPUVisualizer {
     return this.debug.mode;
   }
 
+  /**
+   * A linear 0..Nyquist spectrum (analyser bytes or GPU bins, 0..255) for this frame:
+   * 64 log-spaced bars in Hz for the GUI shader, plus the mean level for the 3D pass.
+   */
   setAudioData(data: Uint8Array | Float32Array): void {
-    const targetBins = 64;
-    const sourceBins = data.length;
-    const binRatio = sourceBins / targetBins;
-    for (let i = 0; i < targetBins; i++) {
-      let sum = 0;
-      const start = Math.floor(i * binRatio);
-      const end = Math.floor((i + 1) * binRatio);
-      for (let j = start; j < end; j++) {
-        sum += data[j]!;
-      }
-      this.guiAudioData[i] = sum / ((end - start) * 255);
-    }
+    downsampleAudioData(data, 64, this.sampleRate, this.guiAudioData);
+    let sum = 0;
+    for (let i = 0; i < data.length; i++) sum += data[i]!;
+    this.audioLevel = data.length > 0 ? sum / data.length / 255 : 0;
   }
 
-  resize(): void {
-    if (!this.device || !this.context || !this.canvasFormat) return;
-    this.context.configure(buildCanvasConfiguration({
-      device: this.device,
-      format: this.canvasFormat,
-      display: this.display,
-    }));
-  }
+  /** No-op: the probe configured the canvas once; getCurrentTexture() follows canvas.width/height. */
+  resize(): void {}
 
   renderGUI(): void {
     if (!this.device || !this.context || !this.gui) return;
 
-    this.device.queue.writeBuffer(
-      this.gui.uniformBuffer,
-      0,
-      new Float32Array(packWaveformUniforms(this.guiUniforms, debugModeToUniform(this.debug.mode))),
-    );
+    packWaveformUniforms(this.guiUniforms, debugModeToUniform(this.debug.mode), this.guiUniformData);
+    this.device.queue.writeBuffer(this.gui.uniformBuffer, 0, this.guiUniformData);
 
-    this.device.queue.writeBuffer(this.gui.audioBuffer, 0, this.guiAudioData.buffer as ArrayBuffer);
+    this.device.queue.writeBuffer(this.gui.audioBuffer, 0, this.guiAudioData);
 
     const commandEncoder = this.device.createCommandEncoder();
     const textureView = this.context.getCurrentTexture().createView();
@@ -399,15 +423,28 @@ export class WebGPUVisualizer {
     }
   }
 
+  /**
+   * Release this visualizer's buffers, pipelines' resources and input listeners.
+   * The device is borrowed and stays alive; the canvas stays configured for the
+   * next visualizer on it.
+   */
   destroy(): void {
     this.destroyed = true;
     this.stopAnimation();
-    this.destroyGpuBuffers();
-    if (this.device) {
-      this.device.destroy();
-      this.device = null;
-    }
+    this.destroyGpuResources();
+    this.canvas.removeEventListener('mousedown', this.onMouseDown);
+    window.removeEventListener('mousemove', this.onMouseMove);
+    window.removeEventListener('mouseup', this.onMouseUp);
+    this.device = null;
     this.context = null;
     this.canvasFormat = null;
+    this.onTogglePlay = null;
   }
+}
+
+function destroyCube(cube: CubeGpuResources): void {
+  cube.uniformBuffer.destroy();
+  cube.vertexBuffer.destroy();
+  cube.indexBuffer.destroy();
+  cube.renderTargetTexture.destroy();
 }

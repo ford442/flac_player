@@ -1,4 +1,6 @@
 import { checkShaderCompilation } from './checkShaderCompilation';
+import { outputColorWGSL } from './outputColor';
+import { createRenderPipelineChecked, withValidationScope } from './pipelineErrors';
 
 export interface CubeGpuResources {
   vertexBuffer: GPUBuffer;
@@ -11,7 +13,9 @@ export interface CubeGpuResources {
   renderTargetView: GPUTextureView;
 }
 
-const CUBE_SHADER = `
+const cubeShader = (colorSpace: PredefinedColorSpace) => `
+${outputColorWGSL(colorSpace)}
+
 struct Uniforms {
             modelViewProjectionMatrix : mat4x4<f32>,
         };
@@ -54,27 +58,17 @@ struct Uniforms {
                  color = color + vec4<f32>(edge * 0.2);
             }
 
-            return color;
+            return vec4<f32>(toOutputColor(color.rgb), color.a);
         }
       `;
 
+/** Built lazily on the first 3D frame (the default mode is flat). */
 export async function createCubeResources(
   device: GPUDevice,
   canvasFormat: GPUTextureFormat,
+  colorSpace: PredefinedColorSpace = 'srgb',
 ): Promise<CubeGpuResources> {
   const texSize = 512;
-  const renderTargetTexture = device.createTexture({
-    size: [texSize, texSize],
-    format: canvasFormat,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
-  });
-  const renderTargetView = renderTargetTexture.createView();
-
-  const sampler = device.createSampler({
-    magFilter: 'linear',
-    minFilter: 'linear',
-  });
-
   const vertexData = new Float32Array([
     -1, -1, 1, 0, 1,
     1, -1, 1, 1, 1,
@@ -111,79 +105,97 @@ export async function createCubeResources(
     20, 21, 22, 20, 22, 23,
   ]);
 
-  const vertexBuffer = device.createBuffer({
-    size: vertexData.byteLength,
-    usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-  });
-  device.queue.writeBuffer(vertexBuffer, 0, vertexData);
-
-  const indexBuffer = device.createBuffer({
-    size: indexData.byteLength,
-    usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
-  });
-  device.queue.writeBuffer(indexBuffer, 0, indexData);
-
-  const uniformBuffer = device.createBuffer({
-    size: 64,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
-  const cubeModule = device.createShaderModule({ code: CUBE_SHADER });
+  const cubeModule = device.createShaderModule({ code: cubeShader(colorSpace), label: 'cube' });
   await checkShaderCompilation(cubeModule, 'cube');
 
-  const cubeBindGroupLayout = device.createBindGroupLayout({
-    entries: [
-      { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
-      { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
-      { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: {} },
-    ],
+  const created = await withValidationScope(device, 'cube', () => {
+    const renderTargetTexture = device.createTexture({
+      label: 'cube-face',
+      size: [texSize, texSize],
+      format: canvasFormat,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    const renderTargetView = renderTargetTexture.createView();
+    const sampler = device.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+
+    const vertexBuffer = device.createBuffer({
+      label: 'cube-vertices',
+      size: vertexData.byteLength,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(vertexBuffer, 0, vertexData);
+    const indexBuffer = device.createBuffer({
+      label: 'cube-indices',
+      size: indexData.byteLength,
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+    });
+    device.queue.writeBuffer(indexBuffer, 0, indexData);
+    const uniformBuffer = device.createBuffer({
+      label: 'cube-uniforms',
+      size: 64,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    const cubeBindGroupLayout = device.createBindGroupLayout({
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+        { binding: 2, visibility: GPUShaderStage.FRAGMENT, texture: {} },
+      ],
+    });
+    const bindGroup = device.createBindGroup({
+      layout: cubeBindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 1, resource: sampler },
+        { binding: 2, resource: renderTargetView },
+      ],
+    });
+    const layout = device.createPipelineLayout({ bindGroupLayouts: [cubeBindGroupLayout] });
+    return { vertexBuffer, indexBuffer, uniformBuffer, bindGroup, sampler, renderTargetTexture, renderTargetView, layout };
   });
 
-  const bindGroup = device.createBindGroup({
-    layout: cubeBindGroupLayout,
-    entries: [
-      { binding: 0, resource: { buffer: uniformBuffer } },
-      { binding: 1, resource: sampler },
-      { binding: 2, resource: renderTargetView },
-    ],
-  });
-
-  const cubePipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [cubeBindGroupLayout] });
-
-  const pipeline = device.createRenderPipeline({
-    layout: cubePipelineLayout,
-    vertex: {
-      module: cubeModule,
-      entryPoint: 'vertex_main',
-      buffers: [{
-        arrayStride: 20,
-        attributes: [
-          { shaderLocation: 0, offset: 0, format: 'float32x3' },
-          { shaderLocation: 1, offset: 12, format: 'float32x2' },
-        ],
-      }],
-    },
-    fragment: {
-      module: cubeModule,
-      entryPoint: 'fragment_main',
-      targets: [{ format: canvasFormat }],
-    },
-    primitive: { topology: 'triangle-list', cullMode: 'back' },
-    depthStencil: {
-      depthWriteEnabled: true,
-      depthCompare: 'less',
-      format: 'depth24plus',
-    },
-  });
-
-  return {
-    vertexBuffer,
-    indexBuffer,
-    uniformBuffer,
-    bindGroup,
-    pipeline,
-    sampler,
-    renderTargetTexture,
-    renderTargetView,
-  };
+  try {
+    const pipeline = await createRenderPipelineChecked(device, {
+      layout: created.layout,
+      vertex: {
+        module: cubeModule,
+        entryPoint: 'vertex_main',
+        buffers: [{
+          arrayStride: 20,
+          attributes: [
+            { shaderLocation: 0, offset: 0, format: 'float32x3' },
+            { shaderLocation: 1, offset: 12, format: 'float32x2' },
+          ],
+        }],
+      },
+      fragment: {
+        module: cubeModule,
+        entryPoint: 'fragment_main',
+        targets: [{ format: canvasFormat }],
+      },
+      primitive: { topology: 'triangle-list', cullMode: 'back' },
+      depthStencil: {
+        depthWriteEnabled: true,
+        depthCompare: 'less',
+        format: 'depth24plus',
+      },
+    }, 'cube');
+    return {
+      vertexBuffer: created.vertexBuffer,
+      indexBuffer: created.indexBuffer,
+      uniformBuffer: created.uniformBuffer,
+      bindGroup: created.bindGroup,
+      pipeline,
+      sampler: created.sampler,
+      renderTargetTexture: created.renderTargetTexture,
+      renderTargetView: created.renderTargetView,
+    };
+  } catch (error) {
+    created.vertexBuffer.destroy();
+    created.indexBuffer.destroy();
+    created.uniformBuffer.destroy();
+    created.renderTargetTexture.destroy();
+    throw error;
+  }
 }

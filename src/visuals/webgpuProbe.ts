@@ -2,13 +2,17 @@ import type { VisualizerBackend } from './types';
 import { debug } from '../utils/debug';
 import {
   buildCanvasConfiguration,
-  buildDeviceDescriptor,
   DEFAULT_CANVAS_DISPLAY,
   readGpuPowerPreference,
   resolveCanvasDisplay,
-  selectDeviceFeatures,
   type CanvasDisplayOptions,
 } from './webgpu/canvasConfig';
+import {
+  GpuDeviceService,
+  gpuDeviceService,
+  type GpuAdapterSummary,
+  type GpuFeatureLevel,
+} from './webgpu/deviceService';
 
 export interface BrowserIdentity {
   brand: string;
@@ -16,13 +20,7 @@ export interface BrowserIdentity {
   userAgent: string;
 }
 
-export interface WebGPUAdapterSummary {
-  vendor: string;
-  architecture: string;
-  device: string;
-  description: string;
-  isFallbackAdapter: boolean;
-}
+export type WebGPUAdapterSummary = GpuAdapterSummary;
 
 export type WebGPUProbeStatus = 'probing' | 'ready' | 'failed';
 
@@ -45,6 +43,15 @@ export interface WebGPUProbeBreadcrumb {
   firstUncapturedError?: string | null;
   /** Successful device-lost re-probes on this canvas session (0 or 1). */
   deviceLostRecoveries?: number;
+  /** 'compatibility' when only a GL / D3D11-class adapter was available. */
+  featureLevel?: GpuFeatureLevel | null;
+  /**
+   * GpuDeviceService counters at probe time. `deviceRequests` stays 1 across
+   * sample-rate changes (the analyser is swapped, the device is kept).
+   */
+  adapterRequests?: number;
+  deviceRequests?: number;
+  deviceLosses?: number;
   /** WebGL2 opt-in: attributes the browser granted (requested ones on failure). */
   glAttributes?: WebGLContextAttributes;
   timestamp: string;
@@ -78,8 +85,14 @@ export interface WebGPUProbeOptions {
   requestedVisualizer?: VisualizerBackend | null;
   publish?: boolean;
   powerPreference?: GPUPowerPreference;
-  /** Defaults to resolveCanvasDisplay() (P3 when supported, HDR only with ?hdr=1). */
+  /** Defaults to resolveCanvasDisplay() (sRGB; P3 only with ?p3=1, HDR only with ?hdr=1). */
   display?: CanvasDisplayOptions;
+  /**
+   * Where the device comes from. Default: the app-wide {@link gpuDeviceService},
+   * or — when `gpu` is injected (tests) — a private service whose device is
+   * destroyed if the canvas cannot be configured.
+   */
+  deviceService?: GpuDeviceService;
 }
 
 declare global {
@@ -125,27 +138,6 @@ export function identifyBrowser(input: BrowserIdentityInput = {}): BrowserIdenti
     };
   }
   return { brand: 'Unknown', version: null, userAgent };
-}
-
-function summarizeAdapter(adapter: GPUAdapter): WebGPUAdapterSummary {
-  try {
-    const info = adapter.info;
-    return {
-      vendor: info.vendor || 'unknown',
-      architecture: info.architecture || 'unknown',
-      device: info.device || 'unknown',
-      description: info.description || 'unknown',
-      isFallbackAdapter: info.isFallbackAdapter,
-    };
-  } catch {
-    return {
-      vendor: 'unknown',
-      architecture: 'unknown',
-      device: 'unknown',
-      description: 'unavailable',
-      isFallbackAdapter: false,
-    };
-  }
 }
 
 function breadcrumb(
@@ -201,21 +193,16 @@ function failure(
   return { ok: false, breadcrumb: value };
 }
 
+const watchedDevices = new WeakSet<GPUDevice>();
+
 function errorDetail(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function destroyDevice(device: GPUDevice): void {
-  try {
-    device.destroy();
-  } catch {
-    // The probe is already failing; cleanup must not hide the original reason.
-  }
-}
-
 /**
- * Acquire and validate the exact WebGPU adapter, device, and canvas context used
- * by the WGSL visualizer. A failed result never falls through to another renderer.
+ * Borrow the shared WebGPU device (GpuDeviceService) and configure the visualizer
+ * canvas with it — the canvas's only `configure()`. A failed result never falls
+ * through to another renderer.
  */
 export async function probeWebGPU(
   canvas: HTMLCanvasElement,
@@ -225,106 +212,63 @@ export async function probeWebGPU(
   const requestedVisualizer = options.requestedVisualizer ?? null;
   const shouldPublish = options.publish !== false;
   const powerPreference = options.powerPreference ?? readGpuPowerPreference();
-  const gpu = options.gpu === undefined
-    ? (typeof navigator === 'undefined' ? null : navigator.gpu)
-    : options.gpu;
+  const ownsService = !options.deviceService && options.gpu !== undefined;
+  const service = options.deviceService
+    ?? (ownsService ? new GpuDeviceService({ gpu: () => options.gpu, lendToChores: false }) : gpuDeviceService);
 
   if (shouldPublish) {
     publishWebGPUProbe(breadcrumb(
       'probing', browser, requestedVisualizer, null, null, null, powerPreference,
     ));
   }
-  if (!gpu) {
-    return failure(
-      'webgpu-unsupported',
-      'navigator.gpu is unavailable',
-      browser,
-      requestedVisualizer,
-      null,
-      shouldPublish,
-      powerPreference,
-    );
-  }
 
-  let adapter: GPUAdapter | null;
-  try {
-    adapter = await gpu.requestAdapter({ powerPreference });
-  } catch (error) {
-    return failure(
-      'webgpu-adapter-request-failed',
-      errorDetail(error),
+  const granted = await service.acquire({ powerPreference });
+  if (!granted.ok) {
+    const failed = failure(
+      granted.reason,
+      granted.detail,
       browser,
       requestedVisualizer,
-      null,
-      shouldPublish,
+      granted.adapterSummary,
+      false,
       powerPreference,
+      granted.requestedFeatures,
     );
+    Object.assign(failed.breadcrumb, { featureLevel: granted.featureLevel }, service.stats);
+    if (shouldPublish) publishWebGPUProbe(failed.breadcrumb);
+    return failed;
   }
-  if (!adapter) {
-    return failure(
-      'webgpu-no-adapter',
-      'navigator.gpu.requestAdapter() returned null',
-      browser,
-      requestedVisualizer,
-      null,
-      shouldPublish,
-      powerPreference,
+  const { adapter, device, adapterSummary, requestedFeatures, featureLevel } = granted;
+  // A shared device outlives this canvas; only a private (test) service's device dies with it.
+  const releaseDevice = () => {
+    if (ownsService) service.destroy();
+  };
+  const fail = (reason: string, detail: string): WebGPUProbeFailure => {
+    releaseDevice();
+    const failed = failure(
+      reason, detail, browser, requestedVisualizer, adapterSummary, false, powerPreference, requestedFeatures,
     );
-  }
-
-  const adapterSummary = summarizeAdapter(adapter);
-  const requestedFeatures = selectDeviceFeatures(adapter);
-  const deviceDescriptor = buildDeviceDescriptor(adapter);
-  let device: GPUDevice;
-  try {
-    device = await adapter.requestDevice(deviceDescriptor);
-  } catch (error) {
-    return failure(
-      'webgpu-device-request-failed',
-      errorDetail(error),
-      browser,
-      requestedVisualizer,
-      adapterSummary,
-      shouldPublish,
-      powerPreference,
-      requestedFeatures,
-    );
-  }
+    Object.assign(failed.breadcrumb, { featureLevel }, service.stats);
+    if (shouldPublish) publishWebGPUProbe(failed.breadcrumb);
+    return failed;
+  };
 
   let context: GPUCanvasContext | null;
   try {
     context = canvas.getContext('webgpu') as GPUCanvasContext | null;
   } catch (error) {
-    destroyDevice(device);
-    return failure(
-      'webgpu-context-request-failed',
-      errorDetail(error),
-      browser,
-      requestedVisualizer,
-      adapterSummary,
-      shouldPublish,
-      powerPreference,
-      requestedFeatures,
-    );
+    return fail('webgpu-context-request-failed', errorDetail(error));
   }
   if (!context) {
-    destroyDevice(device);
-    return failure(
-      'webgpu-no-context',
-      "visualizerCanvas.getContext('webgpu') returned null",
-      browser,
-      requestedVisualizer,
-      adapterSummary,
-      shouldPublish,
-      powerPreference,
-      requestedFeatures,
-    );
+    return fail('webgpu-no-context', "visualizerCanvas.getContext('webgpu') returned null");
   }
 
+  const gpu = options.gpu ?? (typeof navigator === 'undefined' ? null : navigator.gpu);
+  const preferredFormat = (): GPUTextureFormat => gpu?.getPreferredCanvasFormat() ?? 'bgra8unorm';
   let format: GPUTextureFormat;
   let display = options.display ?? resolveCanvasDisplay();
   try {
-    format = display.formatOverride ?? gpu.getPreferredCanvasFormat();
+    format = display.formatOverride ?? preferredFormat();
     try {
       context.configure(buildCanvasConfiguration({ device, format, display }));
     } catch (displayError) {
@@ -332,21 +276,11 @@ export async function probeWebGPU(
       if (display === DEFAULT_CANVAS_DISPLAY) throw displayError;
       console.warn('[webgpuProbe] display config rejected, using sRGB:', errorDetail(displayError));
       display = DEFAULT_CANVAS_DISPLAY;
-      format = gpu.getPreferredCanvasFormat();
+      format = preferredFormat();
       context.configure(buildCanvasConfiguration({ device, format, display }));
     }
   } catch (error) {
-    destroyDevice(device);
-    return failure(
-      'webgpu-context-configure-failed',
-      errorDetail(error),
-      browser,
-      requestedVisualizer,
-      adapterSummary,
-      shouldPublish,
-      powerPreference,
-      requestedFeatures,
-    );
+    return fail('webgpu-context-configure-failed', errorDetail(error));
   }
 
   const ready = breadcrumb(
@@ -360,13 +294,19 @@ export async function probeWebGPU(
     requestedFeatures,
   );
   ready.display = display;
+  ready.featureLevel = featureLevel;
+  Object.assign(ready, service.stats);
   ready.gpuTimeMs = null;
   ready.uncapturedErrors = 0;
   ready.firstUncapturedError = null;
   if (shouldPublish) publishWebGPUProbe(ready);
   // Report into whatever breadcrumb is live when the error fires (re-probes replace it).
-  watchUncapturedErrors(device, () =>
-    (shouldPublish && typeof window !== 'undefined' ? window.webgpuProbe : ready));
+  // The device is shared across probes, so it is watched once.
+  if (!watchedDevices.has(device)) {
+    watchedDevices.add(device);
+    watchUncapturedErrors(device, () =>
+      (shouldPublish && typeof window !== 'undefined' ? window.webgpuProbe : ready));
+  }
   return { ok: true, adapter, device, context, format, display, breadcrumb: ready };
 }
 
