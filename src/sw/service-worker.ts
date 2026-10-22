@@ -4,7 +4,7 @@ import { clientsClaim } from 'workbox-core';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching';
 import { NavigationRoute, registerRoute } from 'workbox-routing';
-import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies';
+import { CacheFirst, NetworkFirst } from 'workbox-strategies';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import {
   API_CACHE_NAME,
@@ -75,9 +75,12 @@ function isSongsApiRequest(url: URL): boolean {
     || (API_HOST !== '' && url.host === API_HOST);
 }
 
+// Network first: the catalog sync must see the host's current rows (a stale copy would
+// undo edits until the next sync). The IndexedDB catalog is the offline library; this
+// cache only covers other /api/songs reads (a single song, shared playlists) offline.
 registerRoute(
   ({ url, request }) => request.method === 'GET' && isSongsApiRequest(url),
-  new StaleWhileRevalidate({
+  new NetworkFirst({
     cacheName: API_CACHE_NAME,
     plugins: [
       new CacheableResponsePlugin({ statuses: [0, 200] }),

@@ -45,6 +45,8 @@ export const PlayerFallbackLocalPlaylist: React.FC<Props> = ({ playlist, control
         <div className="min-w-0 flex-1">
           {editingTitle ? (
             <input
+              // Shown only after the user chose "Rename", so focus belongs here.
+              // eslint-disable-next-line jsx-a11y/no-autofocus
               autoFocus value={draftTitle} aria-label="Rename playlist" maxLength={200}
               onChange={e => setDraftTitle(e.target.value)} onBlur={commitTitle}
               onKeyDown={e => {
@@ -98,9 +100,9 @@ export const PlayerFallbackLocalPlaylist: React.FC<Props> = ({ playlist, control
                   className={`flex items-center gap-2 px-2 py-1.5 rounded bg-black/20 cursor-grab ${
                     dragIndex === index ? 'opacity-50' : ''} ${overIndex === index ? 'ring-1 ring-purple-400' : ''}`}
                 >
-                  <span aria-hidden className="text-gray-500 select-none">⋮⋮</span>
+                  <span aria-hidden className="text-gray-400 select-none">⋮⋮</span>
                   <span className="flex-1 min-w-0 truncate text-sm text-gray-100">
-                    {track ? (track.title || track.name) : <span className="text-gray-500">Track unavailable ({id})</span>}
+                    {track ? (track.title || track.name) : <span className="text-gray-400">Track unavailable ({id})</span>}
                   </span>
                   <button aria-label={`Move ${track?.title ?? 'track'} up`} className="px-1 text-gray-400 hover:text-white disabled:opacity-30"
                     disabled={index === 0} onClick={() => void moveTrack(playlist.id, index, index - 1)}>▲</button>

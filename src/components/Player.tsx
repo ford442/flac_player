@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { routePath } from '../utils/publicPath';
 import { fetchSong } from '../api/songApi';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { listShortcuts, type ShortcutHandlers } from '../hooks/keyboardShortcutMap';
 import { isOutputPickerSupported, useAudioSettings } from '../hooks/useAudioSettings';
 import { useAudioOutputInfo, useOutputDevices } from '../hooks/useAudioOutputInfo';
 import { useLibraryState } from '../hooks/useLibraryState';
@@ -15,7 +16,6 @@ import { isRenderSizeHintSupported } from '../audio/sampleRatePolicy';
 import { usePlayer } from '../player/PlayerContext';
 import { useNotify, useQueue, useSettings, useTransport } from '../player/selectors';
 import { persistPlayerState } from '../player/persistence';
-import { isLibraryTrack } from '../types/track';
 import type { AudioOutputControls } from './EQPanel';
 import { AudioCapabilitiesContext } from './AudioCapabilitiesContext';
 import { PlayerActionsProvider, type AppActions } from './PlayerActionsContext';
@@ -77,11 +77,6 @@ export const Player: React.FC = () => {
   );
 
   const library = useLibraryState({ enabled: !isSharedPlaylist, notify, engine });
-  const { refreshStats } = library;
-  // Starting a library track records a play: refresh the play-count stats.
-  useEffect(() => engine.onTrackStarted((track) => {
-    if (isLibraryTrack(track)) refreshStats();
-  }), [engine, refreshStats]);
 
   const [sharedPlaylistTitle, setSharedPlaylistTitle] = useState('');
   const [activeTab, setActiveTab] = useState<ViewTab>('library');
@@ -199,7 +194,7 @@ export const Player: React.FC = () => {
     renderSizeMode, setRenderSizeMode,
   ]);
 
-  useKeyboardShortcuts({
+  const shortcutHandlers: ShortcutHandlers = {
     onPlayPause: actions.togglePlay,
     onSeekForward: actions.seekBy ? () => actions.seekBy?.(10) : undefined,
     onSeekBackward: actions.seekBy ? () => actions.seekBy?.(-10) : undefined,
@@ -211,8 +206,11 @@ export const Player: React.FC = () => {
     onToggleQueue: () => setShowQueue(prev => !prev),
     onMute: actions.toggleMute,
     onShowHelp: () => setShowHelp(prev => !prev),
-    isEnabled: true,
-  });
+  };
+  useKeyboardShortcuts(shortcutHandlers);
+  const helpModal = showHelp && (
+    <KeyboardHelpModal shortcuts={listShortcuts(shortcutHandlers)} onClose={() => setShowHelp(false)} />
+  );
 
   const isDraggingFile = useGlobalFileDrop(actions.addFiles);
 
@@ -264,12 +262,12 @@ export const Player: React.FC = () => {
               {library.isResyncingLibrary ? '⏳ Rescanning...' : '🔄 Rescan Library'}
             </button>
             <a href="https://storage.noahcohn.com/admin" target="_blank" rel="noopener noreferrer"
-              className="px-4 py-2 rounded-lg bg-purple-600/90 text-white text-sm font-semibold hover:bg-purple-500 transition-colors shadow-lg">
+              className="px-4 py-2 rounded-lg bg-purple-600/90 text-white text-sm font-semibold hover:bg-purple-600 transition-colors shadow-lg">
               ⬆️ Add Music
             </a>
           </div>
         )}
-        {showHelp && <KeyboardHelpModal onClose={() => setShowHelp(false)} />}
+        {helpModal}
         {isSharedPlaylist && sharedPlaylistTitle && (
           <div className="fixed top-0 left-0 right-0 z-40 flex items-center justify-center pt-4 pointer-events-none">
             <h1 className="text-xl md:text-2xl font-bold text-white/90 bg-black/50 backdrop-blur px-6 py-2 rounded-full border border-white/10 pointer-events-auto">
@@ -298,7 +296,7 @@ export const Player: React.FC = () => {
       <AudioCapabilitiesContext.Provider value={capabilities}>
         {roomPanel}
         <PlayerFallbackView
-          showHelp={showHelp} setShowHelp={setShowHelp}
+          helpModal={helpModal} setShowHelp={setShowHelp}
           showQueue={showQueue} setShowQueue={setShowQueue}
           library={library}
           playlists={playlists}

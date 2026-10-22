@@ -99,27 +99,39 @@ test.describe('Library features', () => {
     await expect(page.getByText('Shareable playlist link copied to clipboard!')).toBeVisible();
   });
 
-  test('loads the next library page with an offset instead of refetching', async ({ page }) => {
-    const page1 = Array.from({ length: 200 }, (_, i) => ({
-      id: `p1-${i}`, name: `Song ${i}.flac`, title: `Song ${i}`, author: 'Pager', url: '/fixtures/test.flac', duration: 1,
+  test('syncs the catalog once and pages it locally', async ({ page }) => {
+    const library = Array.from({ length: 250 }, (_, i) => ({
+      id: `p-${i}`, name: `Song ${i}.flac`, title: `Song ${i}`, author: 'Pager', url: '/fixtures/test.flac', duration: 1,
     }));
-    const offsets: string[] = [];
+    const requests: Array<{ offset: string; limit: string | null }> = [];
     await page.unroute('**/api/songs?**');
     await page.route('**/api/songs?**', route => {
-      const offset = new URL(route.request().url()).searchParams.get('offset') ?? '0';
-      offsets.push(offset);
-      const body = offset === '0' ? page1 : [{ ...MOCK_TRACKS[0], id: 'p2-0', title: 'Page Two Song' }];
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+      const params = new URL(route.request().url()).searchParams;
+      requests.push({ offset: params.get('offset') ?? '0', limit: params.get('limit') });
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(library) });
     });
 
     await page.goto('/');
     await page.getByRole('button', { name: 'Open Advanced Library' }).click();
     await page.getByRole('button', { name: '📚 Library' }).click();
-    await expect(page.getByText('Song 0', { exact: true })).toBeVisible({ timeout: 15_000 });
+    const songs = page.getByText(/^Song \d+$/);
+    await expect(songs).toHaveCount(200, { timeout: 15_000 });
 
     await page.getByRole('button', { name: /Load more/ }).click();
-    await expect(page.getByText('Page Two Song', { exact: true })).toBeVisible();
-    expect(offsets).toContain('200');
+    await expect(songs).toHaveCount(250);
     await expect(page.getByRole('button', { name: /Load more/ })).toHaveCount(0);
+    // One short sync page; "Load more" never goes back to the host.
+    expect(requests).toEqual([{ offset: '0', limit: '1000' }]);
+  });
+
+  test('browses the synced catalog when the host is unreachable', async ({ page }) => {
+    await page.goto('/');
+    await openLibrary(page);
+
+    await page.unroute('**/api/songs?**');
+    await page.route('**/api/songs?**', route => route.abort('internetdisconnected'));
+    await page.reload();
+    await openLibrary(page);
+    await expect(page.getByText('Library host unreachable — showing your synced library')).toBeVisible();
   });
 });

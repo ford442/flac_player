@@ -45,7 +45,8 @@ flac_player/
 │   ├── player/           PlaybackEngine, zustand store, selectors, persistence
 │   ├── hooks/            usePlayerActions, useLibraryState, useAudioSettings
 │   ├── api/              http.ts, schemas.ts, songApi.ts, library.ts
-│   ├── storage/          libraryCache, trackCache, queueStorage
+│   ├── catalog/          IndexedDB library catalog (Dexie): sync, query, aggregates
+│   ├── storage/          trackCache, queueStorage, playlistStore
 │   ├── visuals/          WebGPU probe + canvas policy; opt-in WebGL2; gpu resource modules, webgpuVisualizer, math
 │   └── projectm/         ProjectMEngine, projectm_host.cpp
 ├── scripts/              build-wasm.sh, build-projectm-wasm.sh, verify-wasm-artifacts.sh

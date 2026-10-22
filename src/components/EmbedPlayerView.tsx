@@ -56,7 +56,7 @@ export const EmbedPlayerView: React.FC = () => {
           <span className="text-xs font-mono uppercase tracking-wider text-cyan-400">
             Project-M audio feed
           </span>
-          <span className={`text-[10px] font-mono ${isPlaying ? 'text-green-400' : 'text-gray-500'}`}>
+          <span className={`text-[10px] font-mono ${isPlaying ? 'text-green-400' : 'text-gray-400'}`}>
             {isLoading ? 'loading…' : isPlaying ? '▶ playing' : '■ stopped'}
           </span>
         </div>
@@ -140,7 +140,7 @@ export const EmbedPlayerView: React.FC = () => {
           />
         </div>
 
-        <p className="text-[10px] text-gray-500 leading-relaxed">
+        <p className="text-[10px] text-gray-400 leading-relaxed">
           WebGPU visualizer disabled — this window only decodes audio and forwards
           it to the Project-M visualizer. Close it to stop the feed.
         </p>

@@ -89,7 +89,7 @@ Last updated: September 2026
 **Library fetch**
 
 1. `songApi.fetchSongs()` → `GET /api/songs` on `REACT_APP_API_URL` (default `storage.noahcohn.com`).
-2. Response cached in `libraryCache.ts` (TTL). Each item includes absolute `https://` `url`.
+2. Every page is synced into the IndexedDB catalog (`src/catalog/`); the library view reads from it. Each item includes absolute `https://` `url`.
 
 ## 6. Debug logging
 

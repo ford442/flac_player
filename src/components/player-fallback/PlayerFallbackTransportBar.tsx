@@ -26,7 +26,7 @@ export const PlayerFallbackTransportBar: React.FC = () => {
   } = useActions();
 
   return (
-    <footer className="border-t border-white/10 bg-[#0a0a18] px-6 py-4">
+    <footer className="border-t border-white/10 bg-surface-sunken px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="w-1/3 flex items-center gap-3">
           {currentTrack && (

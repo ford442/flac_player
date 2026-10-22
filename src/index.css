@@ -1,0 +1,35 @@
+/*
+ * Tailwind CSS v4 entry (webpack: postcss-loader → @tailwindcss/postcss).
+ * Utilities live in cascade layers, so the hand-written component CSS (unlayered)
+ * still wins wherever both style the same property on one element.
+ */
+@import "tailwindcss" source(none);
+
+@source "./**/*.{ts,tsx}";
+
+/*
+ * App palette. `static` emits every variable on :root even when no utility uses it,
+ * so hand-written CSS (ShaderGUI) reads the same tokens through var(--color-…).
+ */
+@theme static {
+  /* Fallback / library UI surfaces */
+  --color-surface: #0f0f1e;
+  --color-surface-raised: #1a1a2e;
+  --color-surface-sunken: #0a0a18;
+
+  /* ShaderGUI hardware palette (keep in sync with WAVEFORM_LAYOUT.colors) */
+  --color-gui-ink: #1a0a2e;
+  --color-gui-screen: #2d1b4e;
+  --color-gui-panel: #120824;
+  --color-gui-chassis: #e4e4e8;
+  --color-gui-chassis-shade: #d8d8e0;
+  --color-gui-bezel: #c8c8d0;
+  --color-gui-text: #e8d5f5;
+  --color-gui-cyan: #22d3ee;
+  --color-gui-violet: #c084fc;
+  --color-gui-pink: #f472b6;
+  --color-gui-green: #4ade80;
+  --color-gui-red: #f87171;
+
+  --font-gui-mono: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+}

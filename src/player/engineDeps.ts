@@ -3,6 +3,7 @@
 import { createAudioBackend } from '../audio/createAudioBackend';
 import { sharedAudioContextManager } from '../audio/AudioContextManager';
 import { recordPlay } from '../api/songApi';
+import { recordLibraryPlay } from '../catalog/libraryRows';
 import { fetchTrackBytes } from '../api/trackBytes';
 import { enrichTrackReplayGain } from '../hooks/useReplayGainApplication';
 import { getPreferredStorageUrls } from '../utils/audioUtils';
@@ -21,7 +22,10 @@ export function browserEngineDeps(): EngineDeps {
     candidateUrls: getPreferredStorageUrls,
     fetchTrackBytes,
     probeContentLength: async (url, signal) => (await probeRemoteAudio(url, signal)).contentLength,
-    recordPlay: (id) => { void recordPlay(id); },
+    recordPlay: (id) => {
+      void recordPlay(id);
+      recordLibraryPlay(id).catch(() => { /* the next sync brings the host's count */ });
+    },
     enrichReplayGain: enrichTrackReplayGain,
     readLocalFile: readLocalTrack,
     readSavedPosition: (id) => readSavedPosition(id),

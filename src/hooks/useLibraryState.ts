@@ -1,25 +1,22 @@
-// Library browsing state: filters, the TanStack-backed catalog and track edits
-// (#258). Replaces the library half of usePlayerData; the queue and volume now
-// live in the player store.
+// Library browsing state: filters over the IndexedDB catalog and track edits (#258).
+// Edits go to the host first, then into the catalog, so every live view updates.
 
 import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import type { PlaylistTrack, SortBy, LibraryStats, TagInfo } from '../types/library';
-import {
-  libraryKeys, patchLibraryTrack, removeLibraryTrack, useLibraryCatalog, type LibraryFilters,
-} from '../api/library';
+import { useLibraryCatalog, type LibraryFilters } from '../api/library';
+import { markLibraryRowTrashed, patchLibraryRow } from '../catalog/libraryRows';
 import { trashTrack as trashTrackRequest, triggerMusicResync, updateSampleMetadata } from '../api/songApi';
 import { clearMetadataCache } from '../storage/metadataCache';
 import { isFastMirrorEligible } from '../utils/audioUtils';
 import type { PlaybackEngine } from '../player/PlaybackEngine';
 
-/** Typing in the search box refetches once it pauses for this long. */
+/** Typing in the search box filters once it pauses for this long. */
 const SEARCH_DEBOUNCE_MS = 250;
 
 type Notify = (message: string, type: 'success' | 'error' | 'info') => void;
 
 export interface LibraryState {
-  /** Rows of the current filters (with the cached copy while offline). */
+  /** Rows of the current filters, from the catalog (so also offline). */
   library: PlaylistTrack[];
   /** `library` narrowed by the storage-source filter. */
   displayedLibrary: PlaylistTrack[];
@@ -30,7 +27,7 @@ export interface LibraryState {
   hasMoreLibrary: boolean;
   loadMoreLibrary: () => void;
   backendStatus: 'checking' | 'up' | 'down';
-  /** Refetch songs, tags and stats. */
+  /** Re-sync the catalog from the host. */
   refresh: () => Promise<void>;
 
   searchQuery: string;
@@ -50,8 +47,6 @@ export interface LibraryState {
   triggerLibraryResync: () => Promise<void>;
   updateTrack: (id: string, updates: Partial<PlaylistTrack>) => Promise<void>;
   trashTrack: (id: string) => Promise<void>;
-  /** Re-read stats (play counts change when a library track starts). */
-  refreshStats: () => void;
 }
 
 function useDebounced<T>(value: T, ms: number): T {
@@ -66,7 +61,6 @@ function useDebounced<T>(value: T, ms: number): T {
 export function useLibraryState(
   { enabled, notify, engine }: { enabled: boolean; notify: Notify; engine: PlaybackEngine },
 ): LibraryState {
-  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [minRating, setMinRating] = useState(0);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -76,14 +70,14 @@ export function useLibraryState(
   const [isResyncingLibrary, setIsResyncingLibrary] = useState(false);
 
   const search = useDebounced(searchQuery.trim(), SEARCH_DEBOUNCE_MS);
-  // The query key: a filter change refetches page 0 and resets paging (#258 bug 10).
+  // A filter change resets paging (#258 bug 10).
   const filters = useMemo<LibraryFilters>(
     () => ({ search, minRating, tags: selectedTags, untaggedOnly, sortBy }),
     [search, minRating, selectedTags, untaggedOnly, sortBy],
   );
   const catalog = useLibraryCatalog(filters, {
     enabled,
-    onCacheFallback: () => notify('Showing cached library (server unavailable)', 'info'),
+    onOffline: () => notify('Library host unreachable — showing your synced library', 'info'),
   });
 
   const fastMirrorCount = useMemo(
@@ -96,13 +90,6 @@ export function useLibraryState(
   );
 
   const { refresh } = catalog;
-  const refreshTagsAndStats = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: libraryKeys.tags });
-    void queryClient.invalidateQueries({ queryKey: libraryKeys.stats });
-  }, [queryClient]);
-  const refreshStats = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: libraryKeys.stats });
-  }, [queryClient]);
 
   const triggerLibraryResync = useCallback(async () => {
     if (isResyncingLibrary) return;
@@ -131,11 +118,10 @@ export function useLibraryState(
       notify('Failed to save changes', 'error');
       throw new Error('Failed to save changes');
     }
-    patchLibraryTrack(queryClient, id, updates);
+    await patchLibraryRow(id, updates).catch(() => { /* the next sync brings it in */ });
     engine.patchTrack(id, updates);
-    refreshTagsAndStats();
     notify('Changes saved', 'success');
-  }, [queryClient, engine, refreshTagsAndStats, notify]);
+  }, [engine, notify]);
 
   const trashTrack = useCallback(async (id: string) => {
     try {
@@ -144,10 +130,9 @@ export function useLibraryState(
       notify('Failed to trash track', 'error');
       return;
     }
-    removeLibraryTrack(queryClient, id);
-    refreshStats();
+    await markLibraryRowTrashed(id).catch(() => { /* the next sync brings it in */ });
     notify('Moved to trash', 'success');
-  }, [queryClient, refreshStats, notify]);
+  }, [notify]);
 
   return {
     library: catalog.tracks,
@@ -170,6 +155,5 @@ export function useLibraryState(
     triggerLibraryResync,
     updateTrack,
     trashTrack,
-    refreshStats,
   };
 }

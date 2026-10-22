@@ -57,7 +57,7 @@ export const PlayerFallbackLibraryTab: React.FC<PlayerFallbackLibraryTabProps> =
               <button key={tag} onClick={() => setSelectedTags(prev => prev.filter(t => t !== tag))}
                 className="px-2 py-1 text-xs bg-purple-500/30 text-purple-200 rounded-full hover:bg-purple-500/50">{tag} ×</button>
             ))}
-            <button onClick={() => setSelectedTags([])} className="text-xs text-gray-500 hover:text-white">Clear</button>
+            <button onClick={() => setSelectedTags([])} className="text-xs text-gray-400 hover:text-white">Clear</button>
           </div>
         )}
       </div>

@@ -11,11 +11,15 @@ running the optional local backend in `server/` (see `server/README.md`).
 Songs come from `GET /api/songs` on that host. Audio files are served as static files
 from `https://storage.noahcohn.com/files/audio/music/{filename}`.
 
-## How songs load (api/songApi.ts → api/http.ts)
+## How songs load (catalog/ → api/songApi.ts → api/http.ts)
 
 ```
-useLibraryCatalog(filters)            // api/library.ts, TanStack Query keyed on filters
-  → fetchSongs() → apiFetch('/api/songs?…', SongListSchema)   // status check + valibot
+useLibraryCatalog(filters)            // api/library.ts
+  → useLibrarySync: TanStack query ['library','sync'] → syncRemoteLibrary(fetchSongPage)
+      → GET /api/songs?limit=1000&offset=N&sort_by=date&sort_desc=false, every page
+        (apiFetch + valibot; no host supports updated_since, so the walk diffs locally)
+      → IndexedDB `flac_player` (Dexie, catalog/db.ts): tracks keyed [source+sourceId]
+  → useLiveQuery over the catalog → filter / sort / tags / stats locally (catalog/libraryQuery.ts)
   → each item.url is already an absolute https:// URL (set by the backend)
   → resolveTrackUrl(url, id): the only resolver; relative → API_BASE_URL + path
 
@@ -34,8 +38,7 @@ engine.load(track)                    // player/PlaybackEngine.ts
 
 Defined once in `src/api/http.ts`. Catalog requests go through `apiFetch(path, schema, {signal})`.
 `API_BASE_URL` is used for:
-- `GET /api/songs` (library fetch)
-- `GET /api/songs/tags`
+- `GET /api/songs` (catalog sync; tags and stats are computed from the catalog)
 - `POST /api/songs/{id}/play`
 - Fallback audio proxy: `/api/music/{id}` (only when song has no filename)
 
@@ -125,6 +128,27 @@ Player.tsx → useListeningRoomBridge({ engine, store }) → useListeningRoom
 - Rooms lock the backend to `streaming` and force its native `<audio>` path (`setNativeOnly`, `getSyncClock`)
 - Server: `server/rooms.py` router mounted in `server/app.py` (in-memory → one uvicorn worker); production bridge port pending
 - Details: `docs/LISTENING_ROOMS.md`
+
+## Styling and accessibility
+
+Tailwind CSS v4: `src/index.css` (imported by `src/index.tsx`) → `postcss.config.mjs` → `postcss-loader`. Palette tokens
+live in its `@theme static` block (`bg-surface`, `--color-gui-*`); don't add arbitrary `bg-[#…]` colors. ShaderGUI keeps
+hand-written CSS: `ShaderGUI.layout.css` (mirrored by `WAVEFORM_LAYOUT`) and `ShaderGUI.overlays.css`.
+
+Shortcuts come from one map (`hooks/keyboardShortcutMap.ts`); the help dialog renders it, so add keys there. Custom
+controls are ARIA sliders (`utils/sliderKeys.ts`). `eslint-plugin-jsx-a11y` runs in lint and `tests/a11y.spec.ts` runs axe.
+
+## Library catalog (IndexedDB, phase 1)
+
+- One Dexie database `flac_player` (`src/catalog/db.ts`): `tracks`, `albums`, `artists`, `artwork`,
+  `sources`, `scanState`, `playlists`, `state` (the saved queue lives at `state.queue`).
+  Schema changes are a new `db.version(n)` with an upgrade — never edit an existing version.
+- The catalog is the offline source of truth for the library view; `trackCache` stays the audio store.
+  Remote rows are `source: 'library'`; host-trashed rows stay with `trashed: true` and are hidden.
+- Edits mirror into the catalog after the host accepts them (`catalog/libraryRows.ts`).
+- `migrateLegacyStorage` moves the pre-catalog `flac_player_playlists` DB and localStorage queue in once.
+- Tests get a fresh `fake-indexeddb` factory per test (`tests/setup.ts`); pass a `CatalogDb` on its own
+  `IDBFactory` where a test needs isolation.
 
 ## Debug logging
 

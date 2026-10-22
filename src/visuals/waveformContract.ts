@@ -1,7 +1,7 @@
 /**
  * Single source of truth for ShaderGUI waveform layout + uniform contracts.
  *
- * Knob/LED UV coordinates must stay aligned with ShaderGUI.css
+ * Knob/LED UV coordinates must stay aligned with ShaderGUI.layout.css
  * (`.shader-gui-layout`, `.shader-gui-top-right`, knobs, buttons).
  * Change positions here once — both WGSL and GLSL shaders inject these values.
  */

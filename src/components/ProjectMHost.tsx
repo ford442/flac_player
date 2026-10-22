@@ -143,7 +143,7 @@ export const ProjectMHost: React.FC<ProjectMHostProps> = ({
     if (!preset.current) return;
     const url = buildPresetShareUrl(preset.current);
     try {
-      await navigator.clipboard.writeText(url);
+      await window.navigator.clipboard.writeText(url);
       setShareNote('Link copied');
     } catch {
       // No clipboard permission: put the link in the address bar instead.

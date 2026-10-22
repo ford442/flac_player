@@ -202,11 +202,15 @@ The user ticks which fields to apply; only then is `PATCH /api/songs/{id}` sent 
 `title`, `genre`, `description`, and/or merged `tags`. `artist` is shown for reference only —
 the PATCH body has no `author` field yet.
 
-### Library pagination & tag suggestions (frontend)
+### Library catalog & tag suggestions (frontend)
 
-- `useLibraryCatalog` (`src/api/library.ts`, TanStack Query) fetches `GET /api/songs?limit=200&offset=N`
-  (`LIBRARY_PAGE_SIZE`). The filters are the query key: changing one refetches page 0; "Load more"
-  requests the next offset with the same filters and appends; it is shown while the last page was full.
+- `syncRemoteLibrary` (`src/catalog/remoteSync.ts`) walks `GET /api/songs?limit=1000&offset=N&sort_by=date&sort_desc=false`
+  into the IndexedDB catalog: unchanged rows are skipped, rows the host stopped listing are deleted once
+  the walk completes, and a host that ignores `offset` (page repeats) ends the walk. Neither host supports
+  `updated_since` yet; adding it to `list_songs` would let the sync fetch only changed rows.
+- `useLibraryCatalog` (`src/api/library.ts`) filters, sorts, and computes tags and stats from the catalog
+  with the hosts' semantics, so the library works offline. `GET /api/songs/tags` and `/stats` are no longer
+  called. "Load more" widens a local window of `LIBRARY_PAGE_SIZE` (200) rows.
 - Responses are validated with valibot (`src/api/schemas.ts`); a mistyped optional field reads as
   undefined and an invalid row is dropped rather than failing the page.
 - Library edit mode calls `GET /api/songs/{id}/suggest-tags` and shows the results as one-click chips
@@ -217,8 +221,9 @@ the PATCH body has no `author` field yet.
 A **playlist** is a named, editable, persistent list of track ids. It is a different object from a
 **share link** (`POST /api/share`), which stays an immutable, expiring snapshot and is unchanged.
 
-**Local-first (frontend).** The Playlists tab saves playlists in IndexedDB (`flac_player_playlists`,
-`src/storage/playlistStore.ts`, model `{ id, title, description, trackIds, updatedAt, origin: 'local' | 'cloud' }`).
+**Local-first (frontend).** The Playlists tab saves playlists in the catalog database (`flac_player`,
+`playlists` table; `src/storage/playlistStore.ts`; the pre-catalog `flac_player_playlists` database is
+imported once, model `{ id, title, description, trackIds, updatedAt, origin: 'local' | 'cloud' }`).
 They work with no backend support: create from the queue, rename, delete, reorder (drag or ▲/▼), replace with
 the queue, and play. Deleting a local playlist never touches the network. Only track ids are stored — audio
 bytes stay in `trackCache` / the Cache API. Tracks no longer in the library are skipped on play.
