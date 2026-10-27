@@ -70,10 +70,9 @@ npm test                # all four, in that order
 If you are developing with the SDL-based audio engine (Emscripten build), build the WASM bundles first:
 
 ```bash
-# One-time: install and activate Emscripten (from repo root)
+# One-time: install the pinned Emscripten (scripts/emsdk-version) into ./emsdk
 git clone https://github.com/emscripten-core/emsdk.git
-cd emsdk && ./emsdk install latest && ./emsdk activate latest
-source ./emsdk_env.sh
+cd emsdk && ./emsdk install "$(cat ../scripts/emsdk-version)" && ./emsdk activate "$(cat ../scripts/emsdk-version)"
 
 # Build SDL3 WASM artifacts into public/
 cd ..   # back to repo root
@@ -83,7 +82,7 @@ npm run build:wasm:sdl3         # same as bash src/sdl/build.sh
 npm start
 ```
 
-**WASM policy:** C++ sources live in `src/sdl/`; compiled `public/sdl-audio.*` is committed to the repo. CI runs `npm run verify:wasm` to ensure the source hash in `public/wasm-source.sha256` matches. PRs that touch SDL sources also run an optional emsdk build job. SDL2 playback was retired (#212); projectM uses a separate `USE_SDL=2` video host.
+**WASM policy:** C++ sources live in `src/sdl/`, `src/dsp/`, `src/resampler/` and `src/projectm/`; the compiled `public/*.wasm` are committed. Every graph is built with the Emscripten release in `scripts/emsdk-version` (the build scripts refuse any other `emcc`; see [docs/WASM_TOOLCHAIN.md](docs/WASM_TOOLCHAIN.md)). CI runs `npm run verify:wasm` (source hashes, which include the pin) and, on PRs that touch a graph, rebuilds it with the pinned emsdk and fails on any byte difference. SDL2 playback was retired (#212); projectM uses a separate `USE_SDL=2` video host.
 
 **Production webpack build** does not compile WASM (no emsdk required). It copies prebuilt artifacts from `public/`:
 

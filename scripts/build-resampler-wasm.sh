@@ -8,6 +8,11 @@
 # unpacked under .build/. Only libspeexdsp/resample.c is compiled; the ABI is
 # src/resampler/speex_resampler_wasm.c. src/audio/resampler.ts falls back to
 # linear interpolation when this module fails to load.
+#
+# Heap: 4 MiB initial, growth capped at 32 MiB. Quality-10 state for 8 ch is
+# well under 1 MiB and resampler.ts stages one bounded slice per rs_process, so
+# growth past the cap means a caller bug; without MAXIMUM_MEMORY Emscripten
+# would let it grow to 2 GiB.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -59,6 +64,7 @@ emcc \
   -s EXPORTED_RUNTIME_METHODS='["HEAPF32"]' \
   -s ALLOW_MEMORY_GROWTH=1 \
   -s INITIAL_MEMORY=4194304 \
+  -s MAXIMUM_MEMORY=33554432 \
   -s MODULARIZE=1 \
   -s EXPORT_NAME="createSpeexResamplerModule" \
   -s ENVIRONMENT="web,worker,node" \

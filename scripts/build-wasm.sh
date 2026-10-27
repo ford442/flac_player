@@ -7,8 +7,9 @@
 #   scripts/build-wasm.sh --debug      # -O0 -g ASSERTIONS SAFE_HEAP (combine with target)
 #   scripts/build-wasm.sh --debug --sdl3
 #
-# Do not add -flto until emsdk is pinned in CI and locally (wasm-build uses
-# `emsdk install latest`; LTO codegen is not reproducible across LLVM).
+# Emscripten is pinned (scripts/emsdk-version, docs/WASM_TOOLCHAIN.md). Keep
+# -flto off until a follow-up confirms public/sdl-audio.wasm is byte-stable
+# under the pin; add it in its own PR, never together with a pin bump.
 # Do not add --closure 1 (pthread + MODULARIZE glue).
 set -euo pipefail
 

@@ -130,6 +130,9 @@ npm run build:projectm     # optional Milkdrop host
 npm run verify:wasm        # CI artifact check
 ```
 
+Emscripten is pinned in `scripts/emsdk-version` (6.0.11); the build scripts refuse any other `emcc`
+and every source hash covers the pin. Per-graph flags and heap caps: `docs/WASM_TOOLCHAIN.md`.
+
 Production webpack (`npm run build`) copies prebuilt artifacts from `public/` — no emsdk required.
 
 ## Related docs
@@ -138,4 +141,5 @@ Production webpack (`npm run build`) copies prebuilt artifacts from `public/` �
 - `docs/AUDIO_BACKENDS.md` — backend selection
 - `docs/API.md` — REST + projectM embed
 - `docs/LISTENING_ROOMS.md` — synced listening rooms
+- `docs/WASM_TOOLCHAIN.md` — emsdk pin, compile commands, heap caps
 - `AGENTS.md` — full agent reference

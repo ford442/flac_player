@@ -74,53 +74,104 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-  # Compile WASM when SDL sources change on PRs (validates emsdk build + committed artifacts).
+  # Rebuild each WASM graph a PR touches with the pinned Emscripten and fail if
+  # the committed artifacts differ. The pin (scripts/emsdk-version) makes an
+  # unchanged graph rebuild byte-identically, so an LLVM release can no longer
+  # fail a comment-only C++ change. Pinned toolchain (docs/WASM_TOOLCHAIN.md):
+  #   emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.11 (a0014542110d6078c3a1a7941fa1ddb3a2281f16)
+  #   clang version 24.0.0git (https:/github.com/llvm/llvm-project f718ebe873411a562ef6e5c27da36d75b7aaec98)
   wasm-build:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
-        id: wasm_changes
+        id: changes
         with:
           filters: |
-            wasm:
+            pin:
+              - 'scripts/emsdk-version'
+            toolchain:
+              - 'scripts/emsdk-version'
+              - 'scripts/emsdk-env.sh'
+            sdl:
               - 'src/sdl/**'
               - 'scripts/build-wasm.sh'
               - 'scripts/wasm-source-hash.sh'
-              - 'scripts/emsdk-env.sh'
+              - 'scripts/update-wasm-source-hash.sh'
             dsp:
               - 'src/sdl/dsp_chain.h'
               - 'src/sdl/dsp_fft.h'
               - 'src/dsp/**'
+              - 'tests/native/**'
               - 'scripts/build-dsp-wasm.sh'
               - 'scripts/dsp-source-hash.sh'
-              - 'scripts/emsdk-env.sh'
-      - name: Install Emscripten
-        if: steps.wasm_changes.outputs.wasm == 'true' || steps.wasm_changes.outputs.dsp == 'true'
+              - 'scripts/test-dsp-golden.sh'
+            resampler:
+              - 'src/resampler/**'
+              - 'scripts/build-resampler-wasm.sh'
+              - 'scripts/resampler-source-hash.sh'
+            projectm:
+              - 'src/projectm/**'
+              - 'scripts/build-projectm-wasm.sh'
+              - 'scripts/projectm-source-hash.sh'
+      - name: Decide targets
+        id: targets
+        env:
+          PIN: ${{ steps.changes.outputs.pin }}
+          TOOLCHAIN: ${{ steps.changes.outputs.toolchain }}
+          SDL: ${{ steps.changes.outputs.sdl }}
+          DSP: ${{ steps.changes.outputs.dsp }}
+          RESAMPLER: ${{ steps.changes.outputs.resampler }}
+          PROJECTM: ${{ steps.changes.outputs.projectm }}
         run: |
+          any() { for v in "$@"; do [ "$v" = true ] && { echo true; return; }; done; echo false; }
+          {
+            echo "sdl=$(any "$TOOLCHAIN" "$SDL")"
+            echo "dsp=$(any "$TOOLCHAIN" "$DSP")"
+            echo "resampler=$(any "$TOOLCHAIN" "$RESAMPLER")"
+            # libprojectM is a slow CMake build: only its own inputs or a pin bump.
+            echo "projectm=$(any "$PIN" "$PROJECTM")"
+            echo "any=$(any "$TOOLCHAIN" "$SDL" "$DSP" "$RESAMPLER" "$PIN" "$PROJECTM")"
+          } >> "$GITHUB_OUTPUT"
+          cat "$GITHUB_OUTPUT"
+      - name: Install pinned Emscripten
+        if: steps.targets.outputs.any == 'true'
+        run: |
+          EMSDK_VERSION="$(tr -d '[:space:]' < scripts/emsdk-version)"
+          echo "EMSDK_VERSION=$EMSDK_VERSION" >> "$GITHUB_ENV"
           git clone https://github.com/emscripten-core/emsdk.git --depth 1
           cd emsdk
-          ./emsdk install latest
-          ./emsdk activate latest
-      - name: Build WASM targets
-        if: steps.wasm_changes.outputs.wasm == 'true'
-        run: |
-          source emsdk/emsdk_env.sh
-          npm run build:wasm
-      - name: Check for uncommitted WASM output
-        if: steps.wasm_changes.outputs.wasm == 'true'
-        run: |
-          git diff --exit-code public/sdl-audio.js public/sdl-audio.wasm \
-            public/wasm-source.sha256 \
-            || (echo "::error::WASM build produced diffs. Run npm run build:wasm locally and commit public/ artifacts." && exit 1)
+          ./emsdk install "$EMSDK_VERSION"
+          ./emsdk activate "$EMSDK_VERSION"
+          source ./emsdk_env.sh >/dev/null 2>&1
+          emcc -v
+      - name: Build SDL3 playback WASM
+        if: steps.targets.outputs.sdl == 'true'
+        run: npm run build:wasm
       - name: Build DSP chain WASM
-        if: steps.wasm_changes.outputs.dsp == 'true'
+        if: steps.targets.outputs.dsp == 'true'
+        run: npm run build:wasm:dsp
+      - name: DSP golden (scalar vs SIMD, analysis ring, FFT)
+        if: steps.targets.outputs.dsp == 'true'
+        run: npm run test:dsp-golden
+      - name: Build SpeexDSP resampler WASM
+        if: steps.targets.outputs.resampler == 'true'
+        run: npm run build:wasm:resampler
+      - name: Build projectM host WASM
+        if: steps.targets.outputs.projectm == 'true'
+        run: npm run build:projectm
+      - name: Check for uncommitted WASM output
+        if: steps.targets.outputs.any == 'true'
         run: |
-          source emsdk/emsdk_env.sh
-          npm run build:wasm:dsp
-      - name: Check for uncommitted DSP chain WASM output
-        if: steps.wasm_changes.outputs.dsp == 'true'
-        run: |
-          git diff --exit-code public/dsp-chain.js public/dsp-chain.wasm public/dsp-source.sha256 \
-            || (echo "::error::DSP WASM build produced diffs. Run npm run build:wasm:dsp locally and commit public/ artifacts." && exit 1)
+          dirty="$(git status --porcelain -- \
+            public/sdl-audio.js public/sdl-audio.wasm public/wasm-source.sha256 \
+            public/dsp-chain.js public/dsp-chain.wasm public/dsp-source.sha256 \
+            public/speex-resampler.js public/speex-resampler.wasm public/resampler-source.sha256 \
+            public/projectm/)"
+          if [ -n "$dirty" ]; then
+            echo "$dirty"
+            echo "::error::WASM build (emsdk $EMSDK_VERSION) produced diffs. Rebuild with the pinned emsdk and commit the public/ artifacts."
+            exit 1
+          fi
+      - run: npm run verify:wasm
