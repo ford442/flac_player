@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { PlaylistTrack } from '../api/audioLoader';
+import type { PlaylistTrack } from '../types/library';
 import { assetUrl } from '../utils/publicPath';
 
 /**

@@ -97,10 +97,12 @@ flac_player/
 │   │       ├── WorkletAudioPlayer.ts     # re-export of worklet/WorkletAudioPlayer
 │   │       ├── worklet/                  # AudioWorklet orchestration, hi-fi ring feeder, projectM tap reader
 │   │       └── Sdl3AudioPlayer.ts        # SDL3 WASM
+│   ├── player/                 # PlaybackEngine (backend lifecycle, load tokens, queue cursor, clock), zustand store, selectors, persistence (#258)
 │   ├── hooks/
-│   │   ├── usePlaybackController.ts  # Backend lifecycle, load/play, queue advance
+│   │   ├── usePlayerActions.ts       # Room-aware transport/queue actions (provided via PlayerActionsContext)
+│   │   ├── useLibraryState.ts        # Library filters + TanStack catalog + track edits
 │   ├── listening/              # Synced listening rooms (#209): protocol, clock sync, GuestSync, HostPublisher, hooks
-│   ├── api/                    # songApi.ts + audioLoader.ts (library fetch, URL resolution, queue types)
+│   ├── api/                    # http.ts (apiFetch, resolveTrackUrl), schemas.ts (valibot), songApi.ts, library.ts (TanStack hooks)
 │   └── visuals/                # webgpuVisualizer.ts, math.ts (Vec3/Mat4, cube path), probe, webgl2/, webgpu/
 ├── server/                     # Optional local FastAPI dev backend (see server/README.md)
 │   ├── app.py, models.py, storage.py, musicbrainz.py, replaygain.py, url_shortener.py
@@ -191,13 +193,13 @@ Copy `.env.example` to `.env` for local development.
 
 ### Naming Conventions
 - Components: PascalCase (e.g., `Player.tsx`, `LibraryView.tsx`)
-- Utilities: camelCase (e.g., `api/audioLoader.ts`, `audio/flacDecoder.ts`)
+- Utilities: camelCase (e.g., `api/songApi.ts`, `audio/flacDecoder.ts`)
 - CSS classes: Tailwind-like utility classes are used inside `Player.css` and `ShaderGUI.css` (e.g., `bg-white/10`, `flex`, `gap-2`)
-- Interfaces: PascalCase with descriptive names (e.g., `PlayerUIState`, `AudioPlaybackState`, `FlacDecoderResult`)
+- Interfaces: PascalCase with descriptive names (e.g., `TransportState`, `AudioPlaybackState`, `FlacDecoderResult`)
 
 ### Strict TypeScript Policy
 - `npm run typecheck` must pass alongside lint; CI runs both on every pull request.
-- Shared domain contracts belong in `src/types/`. Keep backend playback state (`AudioPlaybackState`) distinct from React UI state (`PlayerUIState`).
+- Shared domain contracts belong in `src/types/`. Keep backend playback state (`AudioPlaybackState`) distinct from the player store (`player/playerStore.ts`).
 - Do not introduce explicit `any` in application code. Use `unknown` at API, worker, and storage boundaries, then narrow it with type guards.
 - Generated Emscripten glue under `public/sdl*.js` is excluded from TypeScript migration and must not be hand-edited.
 
@@ -209,9 +211,10 @@ Copy `.env.example` to `.env` for local development.
 ## Critical Architecture Details
 
 ### Audio Backend Selection
-`usePlaybackController` (`src/hooks/usePlaybackController.ts`) owns backend lifecycle — load/play/queue
-advance — and selects one of four backends via `createAudioBackend()` (lazy dynamic imports). `Player.tsx`
-just calls into the hook; it does not choose the backend itself:
+`PlaybackEngine` (`src/player/PlaybackEngine.ts`, plain TS) owns backend lifecycle — load/play/queue
+advance, load tokens, the clock — and builds one of four backends via `createAudioBackend()` (lazy dynamic
+imports), once per output mode. It writes the zustand store (`player/playerStore.ts`); components read it
+through selectors (`player/selectors.ts`) and call `useActions()`. `Player.tsx` does not choose the backend:
 1. **Streaming** (`audio/backends/StreamingAudioPlayer.ts`) - Default. HTMLAudioElement + HTTP range requests; crossfade support
 2. **Web Audio** (`audio/backends/WebAudioPlayer.ts`) - Full fetch + decode; buffered `BufferSourceNode`
 3. **AudioWorklet** (`audio/backends/WorkletAudioPlayer.ts`) - Low-latency worklet; SAB play ring (hi-fi), varispeed playback rate, `setPCMCallback` for projectM PCM tap
@@ -296,7 +299,9 @@ The local FastAPI dev backend provides the following endpoints (verified from `s
 ```
 User selects track
     ↓
-api/audioLoader / songApi → absolute https:// URL from storage.noahcohn.com
+api/songApi (apiFetch + resolveTrackUrl) → absolute https:// URL from storage.noahcohn.com
+    ↓
+PlaybackEngine.load(track) — token, abort, one active path
     ↓
 createAudioBackend(mode) — streaming (default) | web-audio | worklet | sdl
     ↓
@@ -413,7 +418,8 @@ password, superseded by `scripts/deploy.py`'s bundle-upload flow) has been remov
 ## File Dependencies
 
 Key module dependencies:
-- `Player.tsx` → `usePlaybackController`, `audio/backends/*`, `api/audioLoader.ts`, `visuals/webgpuVisualizer.ts`, `useKeyboardShortcuts.ts`, `LibraryView.tsx`, `QueuePanel.tsx`, `StarRating.tsx`, `ShaderGUI.tsx`
+- `Player.tsx` → `player/*` (engine, store, persistence), `usePlayerActions`, `useLibraryState`, `useListeningRoomBridge`, `VisualizerShell`, `PlayerFallbackView`, `EmbedPlayerView`
+- `player/PlaybackEngine.ts` → `audio/createAudioBackend.ts` (via `player/engineDeps.ts`), `api/trackBytes.ts`, `api/songApi.ts`
 - `ShaderGUI.tsx` → `WebGPUVisualizer`, `useBeatDetection`, `TopScreen`, `BottomScreen`, `Knob`, `Button`, `VolumeSlider`, `Chassis`
 - `WebAudioPlayer.ts` / `WorkletAudioPlayer.ts` / `Sdl3AudioPlayer.ts` → `audio/flacDecoder.ts`
 - `visuals/webgpuVisualizer.ts` → `visuals/math.ts`, `waveform.ts`

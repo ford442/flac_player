@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ShaderGUI, ShaderGUIProps } from './ShaderGUI/ShaderGUI';
 import { ProjectMHost } from './ProjectMHost';
 import { useBeatDetection } from '../hooks/useBeatDetection';
+import { useAnalyser } from '../player/selectors';
 import {
   AESTHETIC_LABELS,
   VisualizerAesthetic,
@@ -18,9 +19,9 @@ export interface VisualizerShellProps extends ShaderGUIProps {
 export const VisualizerShell: React.FC<VisualizerShellProps> = ({
   aesthetic,
   onAestheticChange,
-  analyser,
   ...shaderProps
 }) => {
+  const analyser = useAnalyser();
   const [beatSync, setBeatSync] = useState(false);
   const [projectmFailed, setProjectmFailed] = useState(false);
   const { beatPhaseRef, processFrame } = useBeatDetection();
@@ -92,7 +93,6 @@ export const VisualizerShell: React.FC<VisualizerShellProps> = ({
         <div className={`visualizer-shell__shader${limitGpu ? ' visualizer-shell__shader--lite' : ''}`}>
           <ShaderGUI
             {...shaderProps}
-            analyser={analyser}
             controlsOnly={controlsOnly}
           />
         </div>

@@ -165,25 +165,27 @@ src/listening/
   roomApi.ts               # REST client, WS URL derivation
   roomSession.ts           # ?room= / /room/{id} links, sessionStorage host token, client id
   useListeningRoom.ts      # React hook owning one session
-  useListeningRoomBridge.ts# glue to usePlaybackController (adapter, track resolution, streaming lock)
+  useListeningRoomBridge.ts# glue to the PlaybackEngine (adapter, track resolution, streaming lock)
 src/components/ListeningRoomPanel.tsx  # badge + actions (both views)
 ```
 
-`useListeningRoomBridge` is called in `Player.tsx` right after `usePlaybackController`. `PlayerFallbackView` gets **one** prop, `room?: { role, driftMs, onListenTogether }`, for the header badge and the queue's Listen together button; all room actions live in `ListeningRoomPanel`.
+`useListeningRoomBridge({ engine, store })` is called in `Player.tsx`; guests' transport buttons go through the room-aware `usePlayerActions`. `PlayerFallbackView` gets **one** prop, `room?: { role, driftMs, onListenTogether }`, for the header badge and the queue's Listen together button; all room actions live in `ListeningRoomPanel`.
 
 ### Links and routing
 
 Join links use **`?room={id}`** (like `?share=`): the bundle loads with relative asset paths, so a query string works on any static host or subpath. `/room/{id}` is also recognized when the host rewrites it to the SPA (and `server/app.py` redirects it). `App.tsx` opens room links full-screen. A tab whose sessionStorage holds the room's host token is the host; any other tab is a guest and mounts read-only (no library load, no saved-queue writes).
 
-### Playback controller hooks
+### Playback engine hooks
 
-`usePlaybackController` exposes:
+`PlaybackEngine` (`src/player/PlaybackEngine.ts`) exposes:
 
-| Hook | Purpose |
-|------|---------|
-| `setListeningSyncMode('off' \| 'host' \| 'guest')` | Any role → `StreamingAudioPlayer.setNativeOnly(true)`. Guest → no queue auto-advance, no gapless preload. |
+| Method | Purpose |
+|--------|---------|
+| `setSyncMode('off' \| 'host' \| 'guest')` | Any role → `StreamingAudioPlayer.setNativeOnly(true)`. Guest → no queue auto-advance, no gapless preload. |
 | `getSyncClock()` | `SyncClock` of the native `<audio>` path, else `null`. |
-| `playTrack(track, index, { autoplay, restorePosition, startAt })` | Guests load without playing; hosts reload in place. Resolves `true` on success. |
+| `load(track, { index, autoplay, restorePosition, startAt, silent })` | Guests load without playing; hosts reload in place (`silent`). Resolves `true` unless superseded or failed. |
+| `play()` | Resolves `'playing'`, `'blocked'` (autoplay policy), `'pending'` or `'idle'`. |
+| `nudgeRate(rate)` | Guest drift correction without touching the user's rate setting. |
 
 ```typescript
 interface SyncClock {

@@ -1,12 +1,12 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import type { AudioLoader } from '../api/audioLoader';
+import { fetchPlaylistTracks, fetchPlaylists, fetchSong } from '../api/songApi';
 import { playlistStore, type PlaylistStore } from '../storage/playlistStore';
 import type { CloudPlaylist, PlaylistTrack } from '../types/library';
+import { isLibraryTrack } from '../types/track';
 import type { LocalPlaylist, PlaylistsController } from '../types/playlist';
 import { moveItem, resolveTracksById } from '../utils/playlistUtils';
 
 interface UsePlaylistsParams {
-  loader: AudioLoader;
   library: PlaylistTrack[];
   queue: PlaylistTrack[];
   addToast: (msg: string, type: 'success' | 'error' | 'info') => void;
@@ -20,7 +20,7 @@ interface UsePlaylistsParams {
  * cloud ones are the read-only `GET /api/playlists` list from the library host.
  */
 export function usePlaylists({
-  loader, library, queue, addToast, onPlayTracks, store = playlistStore,
+  library, queue, addToast, onPlayTracks, store = playlistStore,
 }: UsePlaylistsParams): PlaylistsController {
   const [local, setLocal] = useState<LocalPlaylist[]>([]);
   const [localAvailable, setLocalAvailable] = useState(() => store.isAvailable());
@@ -41,11 +41,11 @@ export function usePlaylists({
 
   const refreshCloud = useCallback(() => {
     setIsLoadingCloud(true);
-    loader.fetchPlaylists()
+    fetchPlaylists()
       .then(setCloud)
       .catch(() => addToast('Failed to load playlists', 'error'))
       .finally(() => setIsLoadingCloud(false));
-  }, [loader, addToast]);
+  }, [addToast]);
 
   const replaceInState = useCallback((updated: LocalPlaylist | null) => {
     if (updated) setLocal(prev => prev.map(p => p.id === updated.id ? updated : p));
@@ -65,11 +65,15 @@ export function usePlaylists({
   }, [library, queue]);
 
   const resolveTracks = useCallback(
-    (trackIds: string[]) => resolveTracksById(trackIds, knownTracks, id => loader.fetchSong(id)),
-    [knownTracks, loader],
+    // Only catalog ids are looked up; a link or local-file id saved before #258 is skipped.
+    (trackIds: string[]) => resolveTracksById(trackIds, knownTracks, id => (
+      isLibraryTrack({ id }) ? fetchSong(id) : Promise.reject(new Error(`Not a library track: ${id}`))
+    )),
+    [knownTracks],
   );
 
-  const queueIds = useCallback(() => queue.map(t => t.id).filter(Boolean), [queue]);
+  // Playlists hold catalog ids: links and local files in the queue cannot be resolved later.
+  const queueIds = useCallback(() => queue.filter(isLibraryTrack).map(t => t.id), [queue]);
 
   const createFromQueue = useCallback(async (title: string) => {
     const trackIds = queueIds();
@@ -127,19 +131,19 @@ export function usePlaylists({
   }, [local, playIds]);
 
   const playCloud = useCallback(async (id: string) => {
-    await playIds(await loader.fetchPlaylistTracks(id));
-  }, [loader, playIds]);
+    await playIds(await fetchPlaylistTracks(id));
+  }, [playIds]);
 
   const saveCloudCopy = useCallback(async (playlist: CloudPlaylist) => {
     await attempt(async () => {
-      const trackIds = playlist.track_ids?.length ? playlist.track_ids : await loader.fetchPlaylistTracks(playlist.id);
+      const trackIds = playlist.track_ids?.length ? playlist.track_ids : await fetchPlaylistTracks(playlist.id);
       const created = await store.create({
         title: playlist.title, description: playlist.description, trackIds, origin: 'cloud',
       });
       setLocal(prev => [created, ...prev]);
       addToast(`Saved a local copy of "${created.title}"`, 'success');
     }, 'Could not save playlist');
-  }, [loader, store, addToast, attempt]);
+  }, [store, addToast, attempt]);
 
   return {
     local, localAvailable, cloud, isLoadingCloud, refreshCloud, queueLength: queue.length,

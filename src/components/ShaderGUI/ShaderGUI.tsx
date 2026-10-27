@@ -23,10 +23,12 @@ import {
 import { bootWebGPUWithRecovery } from '../../visuals/webgpu/deviceLostRecovery';
 import { buildWebGL2ContextAttributes } from '../../visuals/webgpu/canvasConfig';
 import { adoptVisualizerDevice, releaseVisualizerDevice } from '../../gpu-chores';
-import type { GpuChoreBackend } from '../../gpu-chores';
-import { WaveformOverview } from '../WaveformOverview';
+import { PlaybackScrubber } from '../PlaybackScrubber';
+import { useActions } from '../PlayerActionsContext';
 import { UrlLoader } from '../UrlLoader';
-import { PlaylistTrack } from '../../api/audioLoader';
+import {
+  selectIsLoading, selectIsPlaying, useAnalyser, usePlaybackEngine, useQueue, useSettings, useTransport,
+} from '../../player/selectors';
 import { Chassis } from './Chassis';
 import { TopScreen } from './TopScreen';
 import { BottomScreen } from './BottomScreen';
@@ -40,74 +42,38 @@ import { formatSpecBadges } from '../../utils/trackMetadata';
 import { amplitudesToAnalyserBytes, resolveSpectrumSource } from '../../visuals/spectrumSource';
 import './ShaderGUI.css';
 
+/**
+ * The hardware-styled player. Transport, queue and volume come from the player
+ * store; playback time is read from the engine clock inside the render loop, so
+ * a clock tick never re-renders this component (#258).
+ */
 export interface ShaderGUIProps {
-  analyser: AnalyserNode | null;
-  currentTrack: PlaylistTrack | null;
-  /** Local file behind `currentTrack` (blob: URL tracks only); used to read tags without fetching. */
-  currentFile?: File;
-  queue: PlaylistTrack[];
-  queueCurrentIndex: number;
-  isPlaying: boolean;
-  isLoading?: boolean;
-  currentTime: number;
-  duration: number;
-  volume: number;
-  muted?: boolean;
-  onPlay: () => void;
-  onStop: () => void;
-  onSeek?: (time: number) => void;
-  onTrackClick: (index: number) => void;
-  onVolumeChange: (volume: number) => void;
-  onMute?: () => void;
-  onNext?: () => void;
-  onPrevious?: () => void;
   onToggleFallback?: () => void;
   showFallbackToggle?: boolean;
-  onFileSelect?: (files: File[]) => void;
-  onLoadUrl?: (url: string) => string | null;
-  onLoadDemo?: () => void;
+  /** Offer the load-from-URL / demo playlist panel. */
+  canLoadUrl?: boolean;
   /** Hide GPU visualizer; keep transport/queue controls (projectM-only mode). */
   controlsOnly?: boolean;
-  /** Scrubber peaks from gpu-chores (null while streaming / not yet reduced). */
-  overviewMinmax?: Float32Array | null;
-  overviewRms?: number | null;
-  overviewPeak?: number | null;
-  overviewBackend?: GpuChoreBackend | null;
-  overviewReason?: string | null;
 }
 
 export const ShaderGUI: React.FC<ShaderGUIProps> = ({
-  analyser,
-  currentTrack,
-  currentFile,
-  queue,
-  queueCurrentIndex,
-  isPlaying,
-  isLoading = false,
-  currentTime,
-  duration,
-  volume,
-  muted = false,
-  onPlay,
-  onStop,
-  onSeek,
-  onTrackClick,
-  onVolumeChange,
-  onMute,
-  onNext,
-  onPrevious,
   onToggleFallback,
   showFallbackToggle = false,
-  onFileSelect,
-  onLoadUrl,
-  onLoadDemo,
+  canLoadUrl = false,
   controlsOnly = false,
-  overviewMinmax = null,
-  overviewRms = null,
-  overviewPeak = null,
-  overviewBackend = null,
-  overviewReason = null,
 }) => {
+  const engine = usePlaybackEngine();
+  const actions = useActions();
+  const analyser = useAnalyser();
+  const currentTrack = useTransport((t) => t.currentTrack);
+  const currentFile = currentTrack?.file;
+  const isPlaying = useTransport(selectIsPlaying);
+  const isLoading = useTransport(selectIsLoading);
+  const duration = useTransport((t) => t.duration);
+  const queue = useQueue((q) => q.tracks);
+  const queueCurrentIndex = useQueue((q) => q.currentIndex);
+  const volume = useSettings((st) => st.volume);
+  const muted = useSettings((st) => st.muted);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const trackMeta = useTrackMetadata(
     !controlsOnly && currentTrack
@@ -363,9 +329,19 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   }, [activeBackend]);
 
   // Animation loop — shared uniform/audio path for GPU backends
+  // Everything the loop reads that React owns, refreshed each render. The loop is
+  // started once and never restarted by a prop or clock change (#258 bug 9).
+  const frameInputsRef = useRef({ analyser, isPlaying, duration, volume, modeNone, modeIR, visualizerMode });
+  frameInputsRef.current = { analyser, isPlaying, duration, volume, modeNone, modeIR, visualizerMode };
+  const analyserBytesRef = useRef<Uint8Array<ArrayBuffer>>(new Uint8Array(0));
+
   useEffect(() => {
-    const loop = () => {
-      timeRef.current += 0.016;
+    let last: number | null = null;
+    const loop = (now: number) => {
+      const { analyser, isPlaying, duration, volume, modeNone, modeIR, visualizerMode } = frameInputsRef.current;
+      // Real frame time, clamped so a background tab does not jump the animation.
+      timeRef.current += last === null ? 0 : Math.min(Math.max((now - last) / 1000, 0), 0.1);
+      last = now;
       // One spectrum read per frame feeds both beat detection and the audio bars.
       let freqData: Uint8Array<ArrayBuffer> | null = null;
       const gpuFrame = gpuFrameRef.current;
@@ -384,7 +360,10 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         }
         freqData = gpu.bytes;
       } else if (analyser) {
-        freqData = new Uint8Array(analyser.frequencyBinCount);
+        if (analyserBytesRef.current.length !== analyser.frequencyBinCount) {
+          analyserBytesRef.current = new Uint8Array(analyser.frequencyBinCount);
+        }
+        freqData = analyserBytesRef.current;
         analyser.getByteFrequencyData(freqData);
         processBytes(freqData);
       } else {
@@ -404,7 +383,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         modeNone,
         modeIR,
         isPlaying,
-        currentTime,
+        currentTime: engine.clock.now(),
         duration,
         volume,
       });
@@ -442,20 +421,15 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
 
     animFrameRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [
-    analyser, processFrame, processBytes, gpuFrameRef, beatPhaseRef, spectrumRef,
-    isPlaying, currentTime, duration, volume, modeNone, modeIR, visualizerMode,
-  ]);
+  }, [engine, processFrame, processBytes, gpuFrameRef, beatPhaseRef, spectrumRef]);
 
-  const handlePlay = useCallback(() => {
-    onPlay();
-  }, [onPlay]);
+  const { togglePlay, stop, previous, next, playQueueIndex, setVolume, toggleMute, addFiles, loadUrl, loadDemo } = actions;
 
   const handleStop = useCallback(() => {
     setStopFlash(1);
     setTimeout(() => setStopFlash(0), 300);
-    onStop();
-  }, [onStop]);
+    stop();
+  }, [stop]);
 
   const handleNone = useCallback(() => {
     setModeNone(prev => {
@@ -487,11 +461,9 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     const files = Array.from(e.target.files || []).filter(
       f => f.name.endsWith('.flac') || f.name.endsWith('.wav') || f.name.endsWith('.mp3') || f.type.includes('audio')
     );
-    if (files.length > 0 && onFileSelect) {
-      onFileSelect(files);
-    }
+    if (files.length > 0) addFiles(files);
     e.target.value = '';
-  }, [onFileSelect]);
+  }, [addFiles]);
 
   const handleOpenFiles = useCallback(() => {
     fileInputRef.current?.click();
@@ -594,17 +566,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             onCanvasDoubleClick={handleToggle3D}
             isLoading={isLoading}
           />
-          <WaveformOverview
-            minmax={overviewMinmax}
-            currentTime={currentTime}
-            duration={duration}
-            onSeek={onSeek}
-            analyser={analyser}
-            rms={overviewRms}
-            peak={overviewPeak}
-            backend={overviewBackend}
-            reason={overviewReason}
-          />
+          <PlaybackScrubber />
         </div>
 
         <div className="shader-gui-top-right">
@@ -627,15 +589,15 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
           </div>
 
           <div className="shader-gui-buttons">
-            <Button type="prev" active={false} onClick={() => onPrevious?.()} />
+            <Button type="prev" active={false} onClick={previous} />
             <Button type="none" active={modeNone === 1} onClick={handleNone} />
             <Button type="ir" active={modeIR === 1} onClick={handleIR} />
             <Button type="stop" active={stopFlash > 0} onClick={handleStop} />
-            <Button type="play" active={isPlaying} onClick={handlePlay} />
-            <Button type="next" active={false} onClick={() => onNext?.()} />
+            <Button type="play" active={isPlaying} onClick={togglePlay} />
+            <Button type="next" active={false} onClick={next} />
           </div>
 
-          {onLoadUrl && onLoadDemo && (
+          {canLoadUrl && (
             <div className="shader-url-wrap">
               <button
                 onClick={() => setShowUrlLoader(v => !v)}
@@ -650,27 +612,25 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
                 <div className="shader-url-panel">
                   <UrlLoader
                     onLoadUrl={(url) => {
-                      const err = onLoadUrl(url);
+                      const err = loadUrl(url);
                       if (!err) setShowUrlLoader(false);
                       return err;
                     }}
-                    onLoadDemo={() => { onLoadDemo(); setShowUrlLoader(false); }}
+                    onLoadDemo={() => { loadDemo(); setShowUrlLoader(false); }}
                   />
                 </div>
               )}
             </div>
           )}
 
-          {onFileSelect && (
-            <button
-              onClick={handleOpenFiles}
-              className="shader-button"
-              title="Open local audio files"
-              aria-label="Open Files"
-            >
-              <span className="button-icon">📂</span>
-            </button>
-          )}
+          <button
+            onClick={handleOpenFiles}
+            className="shader-button"
+            title="Open local audio files"
+            aria-label="Open Files"
+          >
+            <span className="button-icon">📂</span>
+          </button>
         </div>
         </>
         )}
@@ -679,23 +639,21 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
           <BottomScreen
             tracks={queue}
             currentIndex={queueCurrentIndex}
-            onTrackClick={onTrackClick}
+            onTrackClick={playQueueIndex}
             isLoading={isLoading}
           />
         </div>
 
         <div className="shader-gui-volume-col">
-          <VolumeSlider value={muted ? 0 : volume} onChange={onVolumeChange} />
-          {onMute && (
-            <button
-              onClick={onMute}
-              className="shader-mute-btn"
-              title={muted ? 'Unmute (M)' : 'Mute (M)'}
-              aria-label={muted ? 'Unmute' : 'Mute'}
-            >
-              {muted ? '🔇' : '🔊'}
-            </button>
-          )}
+          <VolumeSlider value={muted ? 0 : volume} onChange={setVolume} />
+          <button
+            onClick={toggleMute}
+            className="shader-mute-btn"
+            title={muted ? 'Unmute (M)' : 'Mute (M)'}
+            aria-label={muted ? 'Unmute' : 'Mute'}
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
         </div>
       </div>
     </Chassis>

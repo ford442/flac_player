@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { type PlaybackPathInfo } from '../../api/audioLoader';
-import { AudioOutputMode } from '../../hooks/usePlayerState';
+import type { AudioOutputMode } from '../../types/audio';
 import { EQPanel, type AudioOutputControls } from '../EQPanel';
 import { CacheStatsPanel } from '../OfflineCache';
 import type { GaplessMode } from '../../types/gapless';
 import type { ReplayGainMode } from '../../utils/replayGain';
 import type { LatencyMode } from '../../audio/sampleRatePolicy';
+import { useActions } from '../PlayerActionsContext';
+import { useSettings, useTransport } from '../../player/selectors';
 import { OUTPUT_MODE_LABELS } from './types';
 import {
   isCompatibilityVisualizerEnabled,
@@ -30,9 +31,6 @@ export interface PlayerFallbackSettingsTabProps {
   latencyMode: LatencyMode;
   setLatencyMode: (mode: LatencyMode) => void;
   audioOutput: AudioOutputControls;
-  outputMode: AudioOutputMode;
-  setOutputMode: (m: AudioOutputMode) => void;
-  playbackPath: PlaybackPathInfo | null;
   onClearCache: () => void;
 }
 
@@ -41,8 +39,11 @@ export const PlayerFallbackSettingsTab: React.FC<PlayerFallbackSettingsTabProps>
   gaplessMode, setGaplessMode, crossfadeMs, setCrossfadeMs,
   replayGainMode, setReplayGainMode, replayGainLimiter, setReplayGainLimiter,
   latencyMode, setLatencyMode, audioOutput,
-  outputMode, setOutputMode, playbackPath, onClearCache,
+  onClearCache,
 }) => {
+  const outputMode = useSettings((st) => st.outputMode);
+  const playbackPath = useTransport((t) => t.playbackPath);
+  const { setOutputMode } = useActions();
   const [compatibilityVisualizer, setCompatibilityVisualizerState] = useState(
     () => isCompatibilityVisualizerEnabled(),
   );
