@@ -82,7 +82,7 @@ export class Mat4 {
       for (let j = 0; j < 4; j++) {
         let sum = 0;
         for (let k = 0; k < 4; k++) {
-          sum += ae[k * 4 + i] * be[j * 4 + k];
+          sum += ae[k * 4 + i]! * be[j * 4 + k]!;
         }
         oe[j * 4 + i] = sum;
       }

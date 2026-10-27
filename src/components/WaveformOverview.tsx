@@ -54,8 +54,8 @@ function paintOverview(
 
   ctx.lineWidth = Math.max(1, step * 0.9);
   for (let i = 0; i < bins; i++) {
-    const min = peaks[i * 2];
-    const max = peaks[i * 2 + 1];
+    const min = peaks[i * 2]!;
+    const max = peaks[i * 2 + 1]!;
     const x = (i + 0.5) * step;
     const y0 = mid - max * mid;
     const y1 = mid - min * mid;

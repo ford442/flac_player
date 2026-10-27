@@ -11,7 +11,7 @@ A high-quality React application for playing FLAC and WAV audio files with WebGP
 - **Offline track cache**: Download tracks for offline playback via Cache API (`OfflineCache` UI)
 - **Convert (MP3 ↔ FLAC)**: Client-side convert & download in the **Convert** tab (ffmpeg.wasm; files never leave the browser)
 - **WebGPU Visualization**: Real-time ShaderGUI hardware panel with audio-reactive WGSL shaders
-- **WebGL2 / Canvas2D**: opt-in compatibility renderers (`?visualizer=webgl2` or the Compatibility toggle); WebGPU fails closed instead of silently falling back (#202)
+- **WebGL2 / Canvas2D**: opt-in compatibility renderers (`?webgl2=1` or the Compatibility toggle), always labeled with an on-screen badge and in the page title; WebGPU fails closed instead of silently falling back (#202)
 - **projectM Milkdrop** (optional): In-app visualizer — `?aesthetic=projectm|split`; build with `npm run build:projectm`
 - **Library management**: Ratings, tags, smart mix, queue, saved (local-first) and shareable playlists
 - **Multiple Audio Sources**: Load audio from:
@@ -70,20 +70,27 @@ npm test                # all four, in that order
 If you are developing with the SDL-based audio engine (Emscripten build), build the WASM bundles first:
 
 ```bash
-# One-time: install and activate Emscripten (from repo root)
+# One-time: install and activate the PINNED Emscripten (from repo root).
+# Never `latest`: the version in scripts/emsdk-version is what CI uses, and the
+# build scripts refuse any other emcc (different LLVM → different .wasm bytes).
 git clone https://github.com/emscripten-core/emsdk.git
-cd emsdk && ./emsdk install latest && ./emsdk activate latest
+cd emsdk && ./emsdk install "$(cat ../scripts/emsdk-version)" && ./emsdk activate "$(cat ../scripts/emsdk-version)"
 source ./emsdk_env.sh
+# scripts/emsdk-env.sh tries $EMSDK before ./emsdk: if $EMSDK points at an older
+# release the build refuses with "emcc X != pinned Y" — `export EMSDK=$PWD` here.
 
 # Build SDL3 WASM artifacts into public/
 cd ..   # back to repo root
 npm run build:wasm              # scripts/build-wasm.sh --sdl3
 npm run build:wasm:sdl3         # same as bash src/sdl/build.sh
+npm run build:wasm:resampler    # SpeexDSP HQ resampler
+npm run build:wasm:dsp          # dsp_chain.h + dsp_fft.h → public/dsp-chain.* (speaker DSP worklet)
+npm run build:projectm          # optional projectM host (slow: builds libprojectM)
 
 npm start
 ```
 
-**WASM policy:** C++ sources live in `src/sdl/`; compiled `public/sdl-audio.*` is committed to the repo. CI runs `npm run verify:wasm` to ensure the source hash in `public/wasm-source.sha256` matches. PRs that touch SDL sources also run an optional emsdk build job. SDL2 playback was retired (#212); projectM uses a separate `USE_SDL=2` video host.
+**WASM policy:** four WASM graphs are committed prebuilt: SDL3 playback (`src/sdl/` → `public/sdl-audio.*`), the SpeexDSP resampler (`src/resampler/` → `public/speex-resampler.*`), the speaker DSP chain (`src/dsp/` + `src/sdl/dsp_chain.h` → `public/dsp-chain.*`), and the projectM host (`src/projectm/` → `public/projectm/`). SDL3 and the DSP chain compile the same `dsp_chain.h`, so rebuild both when it changes. All are built with the emsdk version in `scripts/emsdk-version`. CI runs `npm run verify:wasm`, which checks each graph's source hash (`public/wasm-source.sha256`, `public/resampler-source.sha256`, `public/dsp-source.sha256`, `public/projectm/projectm-source.sha256`; every hash also covers the emsdk pin). PRs that touch a graph (or the pin) rebuild it with the pinned emsdk and fail if the committed artifacts differ. To bump the pin, see the header of `scripts/emsdk-env.sh`. SDL2 playback was retired (#212); projectM uses a separate `USE_SDL=2` video host.
 
 **Production webpack build** does not compile WASM (no emsdk required). It copies prebuilt artifacts from `public/`:
 
@@ -129,7 +136,7 @@ For manual URL loading: enter a FLAC/WAV URL, click Load, then play.
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System diagram, data flows |
 | [docs/AUDIO_BACKENDS.md](docs/AUDIO_BACKENDS.md) | When to use each backend |
 | [docs/API.md](docs/API.md) | REST + projectM embed |
-| [docs/ROADMAP.md](docs/ROADMAP.md) | Active backlog #193–#197 (foundation before listening rooms) |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Open-issue backlog and shipped foundation |
 
 ### Visualization Backends
 
@@ -138,12 +145,13 @@ ShaderGUI is **fail-closed on WebGPU** by default (fatal visualizer panel; audio
 | Backend | When used | Debug |
 |---------|-----------|-------|
 | `webgpu` | Default | Alt+D; `window.webgpuProbe`; `?gpu=low` for low-power adapter |
-| `webgl2` | Opt-in: `?visualizer=webgl2` or Settings → Compatibility visualizer | Alt+D; same `WAVEFORM_LAYOUT` as WGSL |
+| `webgl2` | Opt-in: `?webgl2=1` (or `?visualizer=webgl2`) or Settings → Compatibility visualizer. Shows a “WebGL2 compatibility renderer — not WebGPU” badge | Alt+D; same `WAVEFORM_LAYOUT` as WGSL |
 | `canvas2d` | Debug only (`window.DEBUG_VISUALIZER='canvas2d'`) | Basic bars + waveform |
 
 **Force WebGL2:**
 
 ```
+?webgl2=1
 ?visualizer=webgl2
 ?renderer=webgl2          # alias (sibling-project compat)
 ```

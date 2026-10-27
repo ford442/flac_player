@@ -34,9 +34,55 @@ export function selectDeviceFeatures(adapter: { features: FeatureSet }): GPUFeat
   return OPTIONAL_DEVICE_FEATURES.filter((feature) => adapter.features.has(feature));
 }
 
+/** Shows up in validation messages and `device.lost` diagnostics. */
+export const VISUALIZER_DEVICE_LABEL = 'flac-player-visualizer';
+
+/**
+ * requiredLimits stay omitted: fft_spectrum (N ≤ MAX_FFT_SIZE) fits the WebGPU
+ * default limits, and requiring more would drop Intel iGPU adapters.
+ */
 export function buildDeviceDescriptor(adapter: { features: FeatureSet }): GPUDeviceDescriptor {
   const requiredFeatures = selectDeviceFeatures(adapter);
-  return requiredFeatures.length > 0 ? { requiredFeatures } : {};
+  return requiredFeatures.length > 0
+    ? { label: VISUALIZER_DEVICE_LABEL, requiredFeatures }
+    : { label: VISUALIZER_DEVICE_LABEL };
+}
+
+export interface WebGL2AttributeOptions {
+  search?: string;
+  /** Default false: the ShaderGUI fullscreen pass does its own glow; MSAA is wasted bandwidth. */
+  antialias?: boolean;
+}
+
+/** `?gl=strict` → failIfMajorPerformanceCaveat (refuse software GL). */
+export function readGlStrict(
+  search: string = typeof window !== 'undefined' ? window.location.search : '',
+): boolean {
+  const query = search.startsWith('?') ? search.slice(1) : search;
+  return new URLSearchParams(query).get('gl') === 'strict';
+}
+
+/**
+ * WebGL2 context attributes for the opt-in fallback. Mirrors the WebGPU
+ * powerPreference (`?gpu=low`); `desynchronized` is a hint browsers may ignore.
+ */
+/** lib.dom omits `xrCompatible` (WebXR spec); browsers accept it on getContext. */
+export type WebGL2ContextAttributes = WebGLContextAttributes & { xrCompatible?: boolean };
+
+export function buildWebGL2ContextAttributes(
+  options: WebGL2AttributeOptions = {},
+): WebGL2ContextAttributes {
+  const search = options.search ?? (typeof window !== 'undefined' ? window.location.search : '');
+  return {
+    alpha: false,
+    premultipliedAlpha: false,
+    antialias: options.antialias ?? false,
+    powerPreference: readGpuPowerPreference(search),
+    preserveDrawingBuffer: false,
+    desynchronized: true,
+    failIfMajorPerformanceCaveat: readGlStrict(search),
+    xrCompatible: false,
+  };
 }
 
 export type CanvasToneMappingMode = 'standard' | 'extended';

@@ -1,5 +1,5 @@
 // Buffered Web Audio API player with gapless queue scheduling.
-import { decodeAudioWithBuffer } from '../../audioDecoder';
+import { decodeAudioWithBuffer } from '../audioDecoder';
 import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextManager } from '../AudioContextManager';
 import { ensureContextForBuffer } from '../ensureContextForSource';
 import { getOrFetchTrack } from '../../storage/trackCache';
@@ -123,7 +123,7 @@ export class WebAudioPlayer extends BaseAudioBackend {
           for (let ch = 0; ch < decoderResult.channels; ch++) {
             const channelData = buffer.getChannelData(ch);
             for (let i = 0, idx = ch; i < frameCount; i++, idx += decoderResult.channels) {
-              channelData[i] = interleaved[idx];
+              channelData[i] = interleaved[idx]!;
             }
           }
           this.nextAudioBuffer = buffer;
@@ -195,7 +195,7 @@ export class WebAudioPlayer extends BaseAudioBackend {
         for (let ch = 0; ch < decoderResult.channels; ch++) {
           const channelData = this.audioBuffer.getChannelData(ch);
           for (let i = 0, idx = ch; i < frameCount; i++, idx += decoderResult.channels) {
-            channelData[i] = interleaved[idx];
+            channelData[i] = interleaved[idx]!;
           }
         }
       }

@@ -33,13 +33,10 @@ export const getPreviousQueueIndex = (
   repeatMode: RepeatMode
 ): number => {
   if (queueLength <= 0) return -1;
-
-  if (repeatMode === 'all') {
-    return (queueCurrentIndex - 1 + queueLength) % queueLength;
-  }
-
-  if (queueCurrentIndex > 0) return queueCurrentIndex - 1;
-  return -1;
+  const currentIndex = queueCurrentIndex >= 0 && queueCurrentIndex < queueLength ? queueCurrentIndex : -1;
+  if (currentIndex > 0) return currentIndex - 1;
+  if (currentIndex === -1) return queueLength - 1;
+  return repeatMode === 'all' ? queueLength - 1 : -1;
 };
 
 export const handleQueueAutoAdvance = (
@@ -86,6 +83,7 @@ export const reorderQueueItem = (
   if (startIndex === endIndex) return queue;
   const next = [...queue];
   const [removed] = next.splice(startIndex, 1);
+  if (removed === undefined) return queue;
   next.splice(endIndex, 0, removed);
   return next;
 };
