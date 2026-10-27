@@ -246,9 +246,9 @@ async def get_songs(
     # Sorting
     sort_by: str = Query(
         "date",
-        enum=["date", "added_date", "rating", "rating_desc", "name", "last_played", "genre", "play_count", "random"]
+        json_schema_extra={"enum": ["date", "added_date", "rating", "rating_desc", "name", "last_played", "genre", "play_count", "random"]},
     ),
-    sort: Optional[str] = Query(None, enum=["random"], description="Legacy sort alias"),
+    sort: Optional[str] = Query(None, json_schema_extra={"enum": ["random"]}, description="Legacy sort alias"),
     sort_desc: bool = Query(True),
     # Exclude specific ID (for smart mix)
     exclude_id: Optional[str] = Query(None),
