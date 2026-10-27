@@ -1,4 +1,4 @@
-// Listening rooms — glue between usePlaybackController and useListeningRoom.
+// Listening rooms — glue between usePlaybackController (PlaybackEngine) and useListeningRoom.
 //
 // Builds the stable player adapter the room drives, resolves room track ids
 // to catalog tracks, and keeps the backend on the streaming/native clock
@@ -10,6 +10,7 @@ import type { RepeatMode } from '../storage/queueStorage';
 import type { AudioOutputMode } from '../hooks/usePlayerState';
 import type { PlayTrackOptions } from '../hooks/usePlaybackController';
 import type { ConfigurableAudioBackend, SyncClock } from '../types/audio';
+import type { PlaybackEngine } from '../audio/PlaybackEngine';
 import { sharedAudioContextManager } from '../audio/AudioContextManager';
 import { useListeningRoom, type ListeningRoomPlayer, type UseListeningRoomResult } from './useListeningRoom';
 import type { HostSample } from './hostPublisher';
@@ -31,18 +32,17 @@ export interface ListeningRoomBridgeOptions {
   initialRoomId: string | null;
   loader: AudioLoader;
   playback: {
-    playerRef: React.MutableRefObject<ConfigurableAudioBackend | null>;
+    engine: PlaybackEngine;
     playTrack: (track: PlaylistTrack, index?: number, options?: PlayTrackOptions) => Promise<boolean>;
     getSyncClock: () => SyncClock | null;
     setListeningSyncMode: (mode: 'off' | RoomRole) => void;
-    /** Changes when the backend instance is replaced. */
-    capabilities: unknown;
   };
+  /** Changes when the backend instance (or audio graph) is replaced. */
+  backendGeneration: number;
   currentTrack: PlaylistTrack | null;
   loadingTrackId: string | undefined;
   isPlaying: boolean;
   isLoading: boolean;
-  currentTime: number;
   queue: PlaylistTrack[];
   queueCurrentIndex: number;
   shuffle: boolean;
@@ -105,7 +105,7 @@ export function useListeningRoomBridge(options: ListeningRoomBridgeOptions): Use
     getLoadedTrackId: () => {
       const { playback } = latest.current;
       const loaded = loadedRef.current;
-      if (!loaded || loaded.player !== playback.playerRef.current || !playback.getSyncClock()) return null;
+      if (!loaded || loaded.player !== playback.engine.getBackend() || !playback.getSyncClock()) return null;
       return loaded.trackId;
     },
 
@@ -119,7 +119,7 @@ export function useListeningRoomBridge(options: ListeningRoomBridgeOptions): Use
         autoplay: false,
         restorePosition: false,
       });
-      const backend = latest.current.playback.playerRef.current;
+      const backend = latest.current.playback.engine.getBackend();
       if (!ok || !backend || !latest.current.playback.getSyncClock()) return false;
       loadedRef.current = { player: backend, trackId };
       return true;
@@ -139,12 +139,13 @@ export function useListeningRoomBridge(options: ListeningRoomBridgeOptions): Use
           }
         }
       }
-      await latest.current.playback.playerRef.current?.play();
+      await latest.current.playback.engine.play();
     },
 
-    pause: () => latest.current.playback.playerRef.current?.pause(),
-    seek: (seconds) => latest.current.playback.playerRef.current?.seek(seconds),
-    setRate: (rate) => latest.current.playback.playerRef.current?.setPlaybackRate(rate),
+    pause: () => latest.current.playback.engine.pause(),
+    seek: (seconds) => latest.current.playback.engine.seek(seconds),
+    // Rate nudges stay on the backend: they must not become the user's rate setting.
+    setRate: (rate) => latest.current.playback.engine.getBackend()?.setPlaybackRate(rate),
 
     getHostSample: (): HostSample | null => {
       const { currentTrack, loadingTrackId, isLoading, queueCurrentIndex, playback } = latest.current;
@@ -188,7 +189,9 @@ export function useListeningRoomBridge(options: ListeningRoomBridgeOptions): Use
   const room = useListeningRoom({
     initialRoomId: options.initialRoomId,
     player,
-    playbackKey: `${currentTrack?.id ?? ''}|${options.loadingTrackId ?? ''}|${options.isLoading}|${options.isPlaying}|${options.currentTime}`,
+    // Discrete changes publish at once; position ticks (seeks) arrive through subscribePlayback.
+    playbackKey: `${currentTrack?.id ?? ''}|${options.loadingTrackId ?? ''}|${options.isLoading}|${options.isPlaying}`,
+    subscribePlayback: options.playback.engine.subscribe,
     queue: roomQueue,
     onNotify: options.addToast,
     onLeft: options.onLeft,
@@ -198,14 +201,15 @@ export function useListeningRoomBridge(options: ListeningRoomBridgeOptions): Use
   // Room clock = native <audio>; guests also stop advancing their own queue.
   useEffect(() => {
     options.playback.setListeningSyncMode(role ?? 'off');
-  }, [role, options.playback.setListeningSyncMode, options.playback.capabilities]);
+  }, [role, options.playback.setListeningSyncMode, options.backendGeneration]);
 
   // MVP rooms run on the streaming backend only.
   useEffect(() => {
     if (!role || options.outputMode === 'streaming') return;
-    const state = options.playback.playerRef.current?.getState();
-    if (role === 'host' && currentTrack && state && state.duration > 0) {
-      resumeAfterSwitchRef.current = { trackId: currentTrack.id, position: state.currentTime, playing: state.isPlaying };
+    const { engine } = options.playback;
+    const state = engine.getStatus();
+    if (role === 'host' && currentTrack && state.duration > 0) {
+      resumeAfterSwitchRef.current = { trackId: currentTrack.id, position: engine.getTime(), playing: state.isPlaying };
     }
     options.setOutputMode('streaming');
     options.addToast('Listening rooms use the streaming backend', 'info');
@@ -216,11 +220,11 @@ export function useListeningRoomBridge(options: ListeningRoomBridgeOptions): Use
     const { playback, loadingTrackId, isLoading } = options;
     if (role !== 'host' || !currentTrack || !isShareableTrackId(currentTrack.id)) return;
     if (loadingTrackId || isLoading || options.outputMode !== 'streaming') return;
-    const backend = playback.playerRef.current;
+    const backend = playback.engine.getBackend();
     if (!backend || playback.getSyncClock() || reloadedForRef.current === currentTrack.id) return;
 
     const resume = resumeAfterSwitchRef.current?.trackId === currentTrack.id ? resumeAfterSwitchRef.current : null;
-    const state = backend.getState();
+    const state = { ...playback.engine.getStatus(), currentTime: playback.engine.getTime() };
     if (!resume && state.duration <= 0) return;
     reloadedForRef.current = currentTrack.id;
     resumeAfterSwitchRef.current = null;
@@ -230,7 +234,7 @@ export function useListeningRoomBridge(options: ListeningRoomBridgeOptions): Use
       restorePosition: false,
       startAt: resume ? resume.position : state.currentTime,
     }).finally(() => { suppressHostSampleRef.current = false; });
-  }, [role, currentTrack, options.loadingTrackId, options.isLoading, options.outputMode, options.playback.capabilities]);
+  }, [role, currentTrack, options.loadingTrackId, options.isLoading, options.outputMode, options.backendGeneration]);
 
   useEffect(() => {
     if (!role) reloadedForRef.current = null;

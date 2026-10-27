@@ -193,11 +193,11 @@ Copy `.env.example` to `.env` for local development.
 - Components: PascalCase (e.g., `Player.tsx`, `LibraryView.tsx`)
 - Utilities: camelCase (e.g., `audioLoader.ts`, `flacDecoder.ts`)
 - CSS classes: Tailwind-like utility classes are used inside `Player.css` and `ShaderGUI.css` (e.g., `bg-white/10`, `flex`, `gap-2`)
-- Interfaces: PascalCase with descriptive names (e.g., `PlayerUIState`, `AudioPlaybackState`, `FlacDecoderResult`)
+- Interfaces: PascalCase with descriptive names (e.g., `PlaybackStatus`, `AudioPlaybackState`, `FlacDecoderResult`)
 
 ### Strict TypeScript Policy
 - `npm run typecheck` must pass alongside lint; CI runs both on every pull request.
-- Shared domain contracts belong in `src/types/`. Keep backend playback state (`AudioPlaybackState`) distinct from React UI state (`PlayerUIState`).
+- Shared domain contracts belong in `src/types/`. Keep backend playback state (`AudioPlaybackState`) distinct from the engine snapshot React reads (`PlaybackStatus`, `src/audio/PlaybackEngine.ts`).
 - Do not introduce explicit `any` in application code. Use `unknown` at API, worker, and storage boundaries, then narrow it with type guards.
 - Generated Emscripten glue under `public/sdl*.js` is excluded from TypeScript migration and must not be hand-edited.
 
@@ -209,9 +209,10 @@ Copy `.env.example` to `.env` for local development.
 ## Critical Architecture Details
 
 ### Audio Backend Selection
-`usePlaybackController` (`src/hooks/usePlaybackController.ts`) owns backend lifecycle — load/play/queue
-advance — and selects one of four backends via `createAudioBackend()` (lazy dynamic imports). `Player.tsx`
-just calls into the hook; it does not choose the backend itself:
+`PlaybackEngine` (`src/audio/PlaybackEngine.ts`) owns backend lifecycle, the single load path and the
+transport clock, and selects one of four backends via `createAudioBackend()` (lazy dynamic imports).
+`usePlaybackController` (`src/hooks/usePlaybackController.ts`) maps queue advance and settings onto it;
+`Player.tsx` reads `PlaybackStatus` (no position) and never re-renders on `timeupdate`:
 1. **Streaming** (`audio/backends/StreamingAudioPlayer.ts`) - Default. HTMLAudioElement + HTTP range requests; crossfade support
 2. **Web Audio** (`audio/backends/WebAudioPlayer.ts`) - Full fetch + decode; buffered `BufferSourceNode`
 3. **AudioWorklet** (`audio/backends/WorkletAudioPlayer.ts`) - Low-latency worklet; `setPCMCallback` for projectM PCM tap

@@ -6,15 +6,21 @@ import type { PlaylistTrack } from '../audioLoader';
  * (lock screen, hardware media keys, Bluetooth headsets).
  *
  * It owns no playback logic: every OS action calls the same controller
- * methods the in-page keyboard shortcuts use. Position state is pushed from
- * the existing state-change callback stream, throttled to ~1 Hz — no extra
- * rAF loop. Firefox support is partial (metadata + play/pause; no artwork on
- * some platforms, seekto support varies).
+ * methods the in-page keyboard shortcuts use. Position state follows the
+ * PlaybackEngine clock through a subscription, throttled to ~1 Hz — no
+ * re-render per tick, no extra rAF loop. Firefox support is partial
+ * (metadata + play/pause; no artwork on some platforms, seekto support varies).
  */
+export interface MediaSessionClock {
+  subscribe(listener: () => void): () => void;
+  getTime(): number;
+}
+
 export interface MediaSessionOptions {
   currentTrack: PlaylistTrack | null;
   isPlaying: boolean;
-  currentTime: number;
+  /** Transport clock (the PlaybackEngine). */
+  clock: MediaSessionClock;
   duration: number;
   playbackRate: number;
   onPlay: () => void;
@@ -61,7 +67,7 @@ export function buildMediaMetadataInit(track: PlaylistTrack): MediaMetadataInit 
 }
 
 export function useMediaSession(options: MediaSessionOptions): void {
-  const { currentTrack, isPlaying, currentTime, duration, playbackRate, onSeek } = options;
+  const { currentTrack, isPlaying, clock, duration, playbackRate, onSeek } = options;
 
   // Latest options in a ref so handlers register once and never go stale.
   const optsRef = useRef(options);
@@ -78,7 +84,7 @@ export function useMediaSession(options: MediaSessionOptions): void {
       const o = optsRef.current;
       if (!o.onSeek) return;
       const max = o.duration > 0 ? o.duration : Infinity;
-      o.onSeek(Math.min(Math.max(o.currentTime + delta, 0), max));
+      o.onSeek(Math.min(Math.max(o.clock.getTime() + delta, 0), max));
     };
     const handlers: Record<HandlerAction, MediaSessionActionHandler | null> = {
       play: () => optsRef.current.onPlay(),
@@ -129,22 +135,28 @@ export function useMediaSession(options: MediaSessionOptions): void {
     lastPositionUpdateRef.current = 0;
   }, [isPlaying, currentTrack]);
 
-  // Position state, driven by backend state-change updates, throttled to ~1 Hz.
+  // Position state follows the clock, throttled to ~1 Hz; duration / rate /
+  // play-state changes push at once (the effect re-runs with a reset throttle).
   useEffect(() => {
     const session = getMediaSession();
     if (!session || typeof session.setPositionState !== 'function') return;
     if (!(duration > 0) || !Number.isFinite(duration)) return;
-    const now = Date.now();
-    if (now - lastPositionUpdateRef.current < POSITION_UPDATE_INTERVAL_MS) return;
-    lastPositionUpdateRef.current = now;
-    try {
-      session.setPositionState({
-        duration,
-        playbackRate: playbackRate > 0 ? playbackRate : 1,
-        position: Math.min(Math.max(currentTime, 0), duration),
-      });
-    } catch { /* invalid state during track switch */ }
-  }, [currentTime, duration, playbackRate]);
+    const push = () => {
+      const now = Date.now();
+      if (now - lastPositionUpdateRef.current < POSITION_UPDATE_INTERVAL_MS) return;
+      lastPositionUpdateRef.current = now;
+      try {
+        session.setPositionState({
+          duration,
+          playbackRate: playbackRate > 0 ? playbackRate : 1,
+          position: Math.min(Math.max(clock.getTime(), 0), duration),
+        });
+      } catch { /* invalid state during track switch */ }
+    };
+    lastPositionUpdateRef.current = 0;
+    push();
+    return clock.subscribe(push);
+  }, [clock, duration, playbackRate, isPlaying]);
 }
 
 export default useMediaSession;

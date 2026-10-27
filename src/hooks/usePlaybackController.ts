@@ -1,29 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { createAudioBackend } from '../audio/createAudioBackend';
-import { sharedAudioContextManager } from '../audio/AudioContextManager';
-import {
-  DEFAULT_AUDIO_BACKEND_CAPABILITIES,
-  type AudioBackendCapabilities,
-  type ConfigurableAudioBackend,
-  type AudioPlaybackState,
-  type DecodedPcmView,
-  type SyncClock,
-} from '../types/audio';
+import { PlaybackEngine, type PlaybackStatus } from '../audio/PlaybackEngine';
+import { positionKeyForTrack, readSavedPosition } from '../audio/playbackPosition';
+import type { DecodedPcmView, SyncClock } from '../types/audio';
 import type { AudioOutputMode } from './usePlayerState';
-import {
-  AudioLoader,
-  PlaylistTrack,
-  selectDecodeStrategy,
-  type PlaybackPathInfo,
-} from '../audioLoader';
-import { useReplayGainApplication } from './useReplayGainApplication';
+import { AudioLoader, PlaylistTrack } from '../audioLoader';
+import { usePlaybackStatus } from './usePlaybackEngine';
+import { applyReplayGainToPlayer, enrichTrackReplayGain } from './useReplayGainApplication';
 import { parseReplayGainFromCommon, replayGainTagsToTrackFields } from '../utils/replayGain';
 import type { ReplayGainSettings } from '../utils/replayGain';
-import { handleQueueAutoAdvance, getNextQueueIndex, getPreviousQueueIndex, getNextQueueTrack } from '../utils/queueUtils';
-import { isGaplessActive, type GaplessSettings } from '../types/gapless';
-import { getPreferredStorageUrls } from '../utils/audioUtils';
-import { createProjectMPCMFeed, notifyInAppProjectMTrackChange } from '../utils/projectMBridge';
-import { getOrFetchTrack } from '../storage/trackCache';
+import { getNextQueueIndex, getPreviousQueueIndex, getNextQueueTrack } from '../utils/queueUtils';
+import type { GaplessSettings } from '../types/gapless';
+import { notifyInAppProjectMTrackChange } from '../utils/projectMBridge';
 import type { RepeatMode } from '../storage/queueStorage';
 
 /**
@@ -46,12 +33,10 @@ export interface PlaybackControllerOptions {
   loader: AudioLoader;
   outputMode: AudioOutputMode;
   setOutputMode: (mode: AudioOutputMode) => void;
-  playerState: AudioPlaybackState;
-  setPlayerState: React.Dispatch<React.SetStateAction<AudioPlaybackState>>;
   setError: (error: string) => void;
-  currentTrack: PlaylistTrack | null;
   setCurrentTrack: (track: PlaylistTrack | null) => void;
-  setLoadingTrackId: (id: string | undefined) => void;
+  setLoadingTrackId: (id: string | undefined | ((prev: string | undefined) => string | undefined)) => void;
+  currentTrack: PlaylistTrack | null;
   queue: PlaylistTrack[];
   queueCurrentIndex: number;
   setQueueCurrentIndex: (index: number) => void;
@@ -65,23 +50,35 @@ export interface PlaybackControllerOptions {
   eqGains: number[];
   playbackRate: number;
   gaplessSettings: GaplessSettings;
-  crossfadeEnabled: boolean;
   replayGainSettings: ReplayGainSettings;
   addToast: (message: string, type: 'success' | 'error' | 'info') => void;
   loadStats: () => void;
   isSharedPlaylist: boolean;
 }
 
+interface PlannedNext {
+  track: PlaylistTrack;
+  index: number;
+}
+
+function newLocalTrackId(): string {
+  return `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/**
+ * Queue-aware adapter over {@link PlaybackEngine}. The engine owns the
+ * backend, the clock and the load path; this hook maps React state (queue,
+ * settings, room role) onto engine commands. Host components read
+ * {@link PlaybackStatus} here, which does not change on `timeupdate`.
+ */
 export function usePlaybackController({
   loader,
   outputMode,
   setOutputMode,
-  playerState,
-  setPlayerState,
   setError,
-  currentTrack,
   setCurrentTrack,
   setLoadingTrackId,
+  currentTrack,
   queue,
   queueCurrentIndex,
   setQueueCurrentIndex,
@@ -95,67 +92,40 @@ export function usePlaybackController({
   eqGains,
   playbackRate,
   gaplessSettings,
-  crossfadeEnabled,
   replayGainSettings,
   addToast,
   loadStats,
   isSharedPlaylist,
 }: PlaybackControllerOptions) {
-  const { applyReplayGain } = useReplayGainApplication();
-
+  const [engine] = useState(() => new PlaybackEngine({ loader }));
+  const status: PlaybackStatus = usePlaybackStatus(engine);
   const [currentFile, setCurrentFile] = useState<File | undefined>(undefined);
-  const [playbackPath, setPlaybackPathState] = useState<PlaybackPathInfo | null>(null);
-  const [capabilities, setCapabilities] = useState<AudioBackendCapabilities>(DEFAULT_AUDIO_BACKEND_CAPABILITIES);
-  const [prebufferingNext, setPrebufferingNext] = useState(false);
-  const [graphGeneration, setGraphGeneration] = useState(0);
 
-  const playerRef = useRef<ConfigurableAudioBackend | null>(null);
   const syncModeRef = useRef<ListeningSyncMode>('off');
-
-  /** Path and capabilities change together (load / backend swap). */
-  const setPlaybackPath = useCallback((path: PlaybackPathInfo | null) => {
-    setPlaybackPathState(path);
-    setCapabilities(playerRef.current?.getCapabilities() ?? DEFAULT_AUDIO_BACKEND_CAPABILITIES);
-  }, []);
   const pendingFilesRef = useRef<File[]>([]);
-  const handleAutoAdvanceRef = useRef<() => void>(() => {});
-  const advanceQueueIndexOnlyRef = useRef<() => void>(() => {});
-  const loadLocalFileRef = useRef<(file: File) => Promise<void>>(async () => {});
+  const playSeqRef = useRef(0);
+  /** The successor handed to the engine; gapless handoffs and auto-advance use it. */
+  const plannedNextRef = useRef<PlannedNext | null>(null);
 
-  const preloadNextInQueue = useCallback((fromIndex: number) => {
+  const latest = useRef({ queue, queueCurrentIndex, shuffle, repeatMode, replayGainSettings, setError });
+  latest.current = { queue, queueCurrentIndex, shuffle, repeatMode, replayGainSettings, setError };
+
+  const updatePlannedNext = useCallback(() => {
+    const { queue: q, queueCurrentIndex: index, shuffle: shuf, repeatMode: repeat } = latest.current;
     // Guests never transition on their own; the host's TRACK_CHANGE drives them.
-    if (!isGaplessActive(gaplessSettings) || syncModeRef.current === 'guest') {
-      playerRef.current?.clearPreload?.();
-      return;
-    }
-    const next = getNextQueueTrack(queue, fromIndex, shuffle, repeatMode);
-    if (!next) {
-      playerRef.current?.clearPreload?.();
-      return;
-    }
-    playerRef.current?.preloadNext?.({
+    // Repeat-one replays on `ended` instead of handing off to the next track.
+    const next = syncModeRef.current === 'guest' || repeat === 'one'
+      ? null
+      : getNextQueueTrack(q, index, shuf, repeat);
+    plannedNextRef.current = next;
+    engine.setNext(next ? {
       url: next.track.url,
       duration: next.track.duration,
-    });
-  }, [gaplessSettings, queue, shuffle, repeatMode]);
-
-  const advanceQueueIndexOnly = useCallback(() => {
-    const next = getNextQueueTrack(queue, queueCurrentIndex, shuffle, repeatMode);
-    if (!next) return;
-    setQueueCurrentIndex(next.index);
-    setCurrentTrack(next.track);
-    void applyReplayGain(playerRef.current, next.track, queue, replayGainSettings);
-    notifyInAppProjectMTrackChange();
-    preloadNextInQueue(next.index);
-    setTimeout(loadStats, 500);
-  }, [
-    queue, queueCurrentIndex, shuffle, repeatMode, preloadNextInQueue,
-    setQueueCurrentIndex, setCurrentTrack, loadStats, applyReplayGain, replayGainSettings,
-  ]);
+      positionKey: positionKeyForTrack(next.track),
+    } : null);
+  }, [engine]);
 
   const loadLocalFile = useCallback(async (file: File) => {
-    if (!playerRef.current) return;
-    setPlayerState(prev => ({ ...prev, isLoading: true }));
     setError('');
     setCurrentFile(file);
 
@@ -167,7 +137,7 @@ export function usePlaybackController({
         const meta = await parseBlob(file);
         const rgFields = replayGainTagsToTrackFields(parseReplayGainFromCommon(meta.common));
         track = {
-          id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          id: newLocalTrackId(),
           name: file.name,
           title: (meta.common.title as string) || file.name.replace(/\.[^/.]+$/, ''),
           author: (meta.common.artist as string) || 'Unknown Artist',
@@ -177,7 +147,7 @@ export function usePlaybackController({
         };
       } catch {
         track = {
-          id: `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          id: newLocalTrackId(),
           name: file.name,
           title: file.name.replace(/\.[^/.]+$/, ''),
           author: 'Unknown Artist',
@@ -188,27 +158,25 @@ export function usePlaybackController({
 
       setCurrentTrack(track);
 
-      if (outputMode === 'streaming') {
+      if (engine.getOutputMode() === 'streaming') {
         setError('Streaming mode does not support local files. Switch to a buffered audio mode.');
         return;
       }
 
-      await playerRef.current.loadFromArrayBuffer(arrayBuffer, file.name);
-      const enriched = await applyReplayGain(playerRef.current, track, queue, replayGainSettings);
-      setCurrentTrack(enriched);
-      playerRef.current.play();
-      addToast(`Playing: ${track.title || track.name}`, 'info');
+      const { queue: q, replayGainSettings: rg } = latest.current;
+      applyReplayGainToPlayer({ player: engine, track, queue: q, settings: rg });
+      const outcome = await engine.loadFile(arrayBuffer, file.name, {
+        url: track.url,
+        duration: track.duration,
+        positionKey: positionKeyForTrack(track),
+      });
+      if (outcome === 'loaded') addToast(`Playing: ${track.title || track.name}`, 'info');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load file';
       setError(message);
       addToast(`Failed to load file: ${message}`, 'error');
-    } finally {
-      setPlayerState(prev => ({ ...prev, isLoading: false }));
     }
-  }, [
-    addToast, outputMode, setCurrentTrack, setError, setPlayerState,
-    applyReplayGain, queue, replayGainSettings,
-  ]);
+  }, [engine, addToast, setCurrentTrack, setError]);
 
   const handleLocalFiles = useCallback((files: File[]) => {
     if (outputMode === 'streaming') {
@@ -220,223 +188,114 @@ export function usePlaybackController({
     files.forEach((file, i) => setTimeout(() => loadLocalFile(file), i * 100));
   }, [outputMode, loadLocalFile, addToast, setOutputMode]);
 
-  const loadAudioFromUrl = useCallback(async (url: string, track?: PlaylistTrack) => {
-    if (!url.trim() || !playerRef.current) return;
-    setPlayerState(prev => ({ ...prev, isLoading: true }));
-    setError('');
-    const expectedDuration = track?.duration && track.duration > 0 ? track.duration : undefined;
-
-    try {
-      const candidateUrls = getPreferredStorageUrls(url);
-      let loaded = false;
-      let lastError: unknown;
-      for (const candidateUrl of candidateUrls) {
-        try {
-          const player = playerRef.current;
-
-          if (outputMode === 'streaming' && player.loadFromURL) {
-            await player.loadFromURL(candidateUrl, { expectedDuration });
-            setPlaybackPath(player.getPlaybackPath?.() ?? null);
-          } else if (outputMode === 'worklet' || outputMode === 'sdl') {
-            const probe = await loader.probeAudioUrl(candidateUrl);
-            const strategy = selectDecodeStrategy(probe.contentLength, {
-              outputMode,
-              url: candidateUrl,
-            });
-            if (strategy === 'hifi-stream' && player.loadFromURLStreaming) {
-              await player.loadFromURLStreaming(candidateUrl, { expectedDuration });
-              setPlaybackPath(player.getPlaybackPath?.() ?? null);
-            } else {
-              let arrayBuffer: ArrayBuffer;
-              try {
-                const response = await getOrFetchTrack(candidateUrl);
-                arrayBuffer = await response.arrayBuffer();
-              } catch (cacheErr) {
-                console.warn('Offline cache miss or error, falling back to network fetch:', cacheErr);
-                arrayBuffer = await loader.loadFromURL(candidateUrl);
-              }
-              await player.loadFromArrayBuffer(arrayBuffer);
-              setPlaybackPath(player.getPlaybackPath?.() ?? null);
-            }
-          } else {
-            let arrayBuffer: ArrayBuffer;
-            try {
-              const response = await getOrFetchTrack(candidateUrl);
-              arrayBuffer = await response.arrayBuffer();
-            } catch (cacheErr) {
-              console.warn('Offline cache miss or error, falling back to network fetch:', cacheErr);
-              arrayBuffer = await loader.loadFromURL(candidateUrl);
-            }
-            await player.loadFromArrayBuffer(arrayBuffer);
-            setPlaybackPath(null);
-          }
-          loaded = true;
-          break;
-        } catch (err) { lastError = err; }
-      }
-      if (!loaded) {
-        const msg = `Failed to load audio from any source: ${candidateUrls.join(', ')}`;
-        throw new Error(lastError instanceof Error && lastError.message ? `${msg} (${lastError.message})` : msg);
-      }
-      if (track) {
-        setCurrentTrack(track);
-        if (track.id) {
-          await loader.recordPlay(track.id);
-          addToast('Playing: ' + (track.title || track.name), 'info');
-        }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load audio');
-      throw err;
-    } finally {
-      setPlayerState(prev => ({ ...prev, isLoading: false }));
-    }
-  }, [loader, outputMode, setCurrentTrack, setError, setPlayerState, addToast]);
-
   /** Resolves true once the track is loaded (and playing, unless autoplay is false). */
   const playTrack = useCallback(async (
     track: PlaylistTrack,
     index?: number,
     { autoplay = true, restorePosition = true, startAt }: PlayTrackOptions = {},
   ): Promise<boolean> => {
+    const seq = ++playSeqRef.current;
     setCurrentTrack(track);
     setLoadingTrackId(track.id);
     if (index !== undefined) setQueueCurrentIndex(index);
     setError('');
     notifyInAppProjectMTrackChange();
     try {
-      const enriched = await applyReplayGain(playerRef.current, track, queue, replayGainSettings);
+      const enriched = await enrichTrackReplayGain(track);
+      if (seq !== playSeqRef.current) return false;
       if (enriched !== track) setCurrentTrack(enriched);
-      await loadAudioFromUrl(enriched.url, enriched);
-      if (startAt !== undefined && startAt > 0) playerRef.current?.seek(startAt);
-      if (autoplay) {
-        const maybePromise = playerRef.current?.play();
-        if (maybePromise instanceof Promise) await maybePromise;
-      }
-      if (restorePosition && startAt === undefined) {
-        try {
-          const saved = JSON.parse(localStorage.getItem('flac_position') || 'null');
-          if (saved && saved.trackId === track.id && saved.time > 0) playerRef.current?.seek(saved.time);
-        } catch { /* no-op */ }
+      const { queue: q, replayGainSettings: rg } = latest.current;
+      applyReplayGainToPlayer({ player: engine, track: enriched, queue: q, settings: rg });
+
+      const positionKey = positionKeyForTrack(enriched);
+      const resumeAt = startAt ?? (restorePosition ? readSavedPosition(positionKey) ?? undefined : undefined);
+      const outcome = await engine.load(
+        { url: enriched.url, duration: enriched.duration, positionKey },
+        { autoplay, startAt: resumeAt },
+      );
+      if (outcome === 'superseded') return false;
+      if (enriched.id) {
+        void loader.recordPlay(enriched.id);
+        addToast('Playing: ' + (enriched.title || enriched.name), 'info');
       }
       setTimeout(loadStats, 500);
       return true;
     } catch (err) {
+      if (seq !== playSeqRef.current) return false;
       const message = err instanceof Error ? err.message : 'Failed to play track';
       setError(message);
       addToast(`Playback failed: ${message}`, 'error');
       console.error('Failed to play track:', err);
       return false;
     } finally {
-      setLoadingTrackId(undefined);
+      if (seq === playSeqRef.current) setLoadingTrackId(undefined);
     }
-  }, [
-    setCurrentTrack, setLoadingTrackId, setQueueCurrentIndex, setError,
-    applyReplayGain, queue, replayGainSettings, loadAudioFromUrl, loadStats, addToast,
-  ]);
+  }, [engine, loader, setCurrentTrack, setLoadingTrackId, setQueueCurrentIndex, setError, loadStats, addToast]);
 
-  handleAutoAdvanceRef.current = () =>
-    handleQueueAutoAdvance(
-      queue, queueCurrentIndex, shuffle, repeatMode,
-      (track, index) => { void playTrack(track, index); },
-      () => playerRef.current?.play()
-    );
-  advanceQueueIndexOnlyRef.current = advanceQueueIndexOnly;
-  loadLocalFileRef.current = loadLocalFile;
+  const playTrackRef = useRef(playTrack);
+  playTrackRef.current = playTrack;
 
-  // Backend lifecycle — depend only on outputMode. Queue-derived callbacks
-  // stay in refs so track/queue changes do not destroy and recreate the player.
+  // Engine callbacks: queue advance on `ended`, errors from backend init.
   useEffect(() => {
-    let cancelled = false;
-    let stopProjectMBridge: (() => void) | null = null;
-    let activePlayer: ConfigurableAudioBackend | null = null;
-
-    void createAudioBackend(outputMode).then((player) => {
-      if (cancelled) {
-        player.destroy();
+    engine.setOnError((message) => latest.current.setError(message));
+    engine.setOnEnded((event) => {
+      if (syncModeRef.current === 'guest') return;
+      const planned = plannedNextRef.current;
+      if (event?.alreadyPlayingNext) {
+        // The engine already plays the preloaded successor; follow it in the UI.
+        if (!planned) return;
+        setQueueCurrentIndex(planned.index);
+        setCurrentTrack(planned.track);
+        const { queue: q, replayGainSettings: rg } = latest.current;
+        void enrichTrackReplayGain(planned.track).then((enriched) =>
+          applyReplayGainToPlayer({ player: engine, track: enriched, queue: q, settings: rg }));
+        notifyInAppProjectMTrackChange();
+        setTimeout(loadStats, 500);
         return;
       }
-
-      activePlayer = player;
-      player.setStateChangeCallback((state) => {
-        setPlayerState(state);
-        setPrebufferingNext(Boolean(state.prebufferingNext));
-      });
-      player.setOnEndedCallback((event) => {
-        if (syncModeRef.current === 'guest') return;
-        if (event?.alreadyPlayingNext) {
-          advanceQueueIndexOnlyRef.current();
-          return;
-        }
-        handleAutoAdvanceRef.current();
-      });
-      playerRef.current = player;
-      setCapabilities(player.getCapabilities());
-      player.setVolume(muted ? 0 : volume);
-      player.setEQGains(eqGains);
-      player.setPlaybackRate(playbackRate);
-      player.setGaplessSettings?.(gaplessSettings);
-      player.setCrossfadeEnabled?.(crossfadeEnabled);
-      player.setNativeOnly?.(syncModeRef.current !== 'off');
-
-      stopProjectMBridge = createProjectMPCMFeed(player);
-
-      void player.initialize().then(() => {
-        if (cancelled || pendingFilesRef.current.length === 0) return;
-        const files = pendingFilesRef.current;
-        pendingFilesRef.current = [];
-        setTimeout(() => files.forEach((file, i) => setTimeout(() => { void loadLocalFileRef.current(file); }, i * 100)), 0);
-      }).catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : `${outputMode} initialization failed`);
-      });
-    }).catch((err: unknown) => {
-      if (!cancelled) setError(err instanceof Error ? err.message : `${outputMode} initialization failed`);
-    });
-
-    return () => {
-      cancelled = true;
-      stopProjectMBridge?.();
-      activePlayer?.setOnEndedCallback(undefined);
-      activePlayer?.destroy();
-      if (playerRef.current === activePlayer) {
-        playerRef.current = null;
+      if (latest.current.repeatMode === 'one') {
+        void engine.play();
+        return;
       }
+      if (planned) void playTrackRef.current(planned.track, planned.index);
+    });
+    return () => {
+      engine.setOnEnded(undefined);
+      engine.setOnError(undefined);
     };
-  }, [outputMode]);
+  }, [engine, setQueueCurrentIndex, setCurrentTrack, loadStats]);
 
+  // Backend lifecycle follows outputMode; release() on unmount (StrictMode-safe).
   useEffect(() => {
-    playerRef.current?.setEQGains(eqGains);
-  }, [eqGains]);
+    let cancelled = false;
+    void engine.setOutputMode(outputMode).then((backend) => {
+      if (cancelled || !backend || pendingFilesRef.current.length === 0) return;
+      const files = pendingFilesRef.current;
+      pendingFilesRef.current = [];
+      files.forEach((file, i) => setTimeout(() => { void loadLocalFile(file); }, i * 100));
+    });
+    return () => { cancelled = true; };
+  }, [engine, outputMode, loadLocalFile]);
+  useEffect(() => () => engine.release(), [engine]);
 
-  useEffect(() => {
-    playerRef.current?.setPlaybackRate(playbackRate);
-  }, [playbackRate]);
-
-  useEffect(() => {
-    playerRef.current?.setGaplessSettings?.(gaplessSettings);
-    playerRef.current?.setCrossfadeEnabled?.(crossfadeEnabled);
-  }, [gaplessSettings, crossfadeEnabled]);
+  useEffect(() => { engine.setVolume(muted ? 0 : volume); }, [engine, volume, muted]);
+  useEffect(() => { engine.setEQGains(eqGains); }, [engine, eqGains]);
+  useEffect(() => { engine.setPlaybackRate(playbackRate); }, [engine, playbackRate]);
+  useEffect(() => { engine.setGaplessSettings(gaplessSettings); }, [engine, gaplessSettings.mode, gaplessSettings.crossfadeMs]);
+  useEffect(() => { engine.setPositionPersistence(!isSharedPlaylist); }, [engine, isSharedPlaylist]);
 
   useEffect(() => {
     if (!currentTrack) return;
-    void applyReplayGain(playerRef.current, currentTrack, queue, replayGainSettings);
-  }, [replayGainSettings, currentTrack, queue, applyReplayGain]);
+    let cancelled = false;
+    void enrichTrackReplayGain(currentTrack).then((enriched) => {
+      if (!cancelled) applyReplayGainToPlayer({ player: engine, track: enriched, queue, settings: replayGainSettings });
+    });
+    return () => { cancelled = true; };
+  }, [engine, replayGainSettings.mode, replayGainSettings.limiterEnabled, currentTrack, queue]);
 
   useEffect(() => {
-    preloadNextInQueue(queueCurrentIndex);
-  }, [gaplessSettings, outputMode, queue, queueCurrentIndex, shuffle, repeatMode, preloadNextInQueue]);
-
-  useEffect(() => {
-    if (isSharedPlaylist) return;
-    const interval = setInterval(() => {
-      if (currentTrack && playerState.currentTime > 0 && playerState.duration > 0) {
-        try {
-          localStorage.setItem('flac_position', JSON.stringify({ trackId: currentTrack.id, time: playerState.currentTime }));
-        } catch { /* no-op */ }
-      }
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [isSharedPlaylist, currentTrack, playerState.currentTime, playerState.duration]);
+    updatePlannedNext();
+  }, [updatePlannedNext, queue, queueCurrentIndex, shuffle, repeatMode]);
 
   const playNextInQueue = useCallback(() => {
     const nextIndex = getNextQueueIndex(queue.length, queueCurrentIndex, shuffle, repeatMode);
@@ -453,23 +312,21 @@ export function usePlaybackController({
   }, [queue, queueCurrentIndex, repeatMode, playTrack]);
 
   const togglePlayback = useCallback(() => {
-    if (playerState.isPlaying) { playerRef.current?.pause(); return; }
-    if (queue.length === 0) { playerRef.current?.play(); return; }
+    const { isPlaying, duration, isLoading } = engine.getStatus();
+    if (isPlaying) { engine.pause(); return; }
+    if (queue.length === 0 || isLoading) { void engine.play(); return; }
     const initialIndex = queueCurrentIndex >= 0 ? queueCurrentIndex : 0;
     const initialTrack = queue[initialIndex];
-    if (playerState.duration === 0 && initialTrack) { void playTrack(initialTrack, initialIndex); return; }
-    playerRef.current?.play();
-  }, [playerState.isPlaying, playerState.duration, queue, queueCurrentIndex, playTrack]);
+    if (duration === 0 && initialTrack) { void playTrack(initialTrack, initialIndex); return; }
+    void engine.play();
+  }, [engine, queue, queueCurrentIndex, playTrack]);
 
   const toggleMute = useCallback(() => {
     setMuted(prev => {
       if (!prev) {
         prevVolumeRef.current = volume;
-        playerRef.current?.setVolume(0);
       } else {
-        const restoredVol = prevVolumeRef.current;
-        playerRef.current?.setVolume(restoredVol);
-        setVolume(restoredVol);
+        setVolume(prevVolumeRef.current);
       }
       return !prev;
     });
@@ -479,39 +336,29 @@ export function usePlaybackController({
     if (vol > 0) prevVolumeRef.current = vol;
     setMuted(false);
     setVolume(vol);
-    playerRef.current?.setVolume(vol);
   }, [setMuted, setVolume, prevVolumeRef]);
 
-  useEffect(() => {
-    return sharedAudioContextManager.subscribeGraphRecreated(() => {
-      setGraphGeneration((n) => n + 1);
-    });
-  }, []);
+  const getAnalyser = useCallback(() => engine.getAnalyser(), [engine]);
+  const getDecodedPcm = useCallback((): DecodedPcmView | null => engine.getDecodedPcm(), [engine]);
 
-  const getAnalyser = useCallback(() => {
-    void graphGeneration;
-    return playerRef.current?.getAnalyser() ?? null;
-  }, [graphGeneration]);
-  const getDecodedPcm = useCallback((): DecodedPcmView | null => {
-    return playerRef.current?.getDecodedPcm?.() ?? null;
-  }, []);
-
-  const stop = useCallback(() => playerRef.current?.stop(), []);
-  const seek = useCallback((time: number) => playerRef.current?.seek(time), []);
+  const stop = useCallback(() => engine.stop(), [engine]);
+  const seek = useCallback((time: number) => engine.seek(time), [engine]);
+  const pause = useCallback(() => engine.pause(), [engine]);
 
   const setListeningSyncMode = useCallback((mode: ListeningSyncMode) => {
     syncModeRef.current = mode;
-    playerRef.current?.setNativeOnly?.(mode !== 'off');
-    if (mode === 'guest') playerRef.current?.clearPreload?.();
-  }, []);
-  const getSyncClock = useCallback((): SyncClock | null => playerRef.current?.getSyncClock?.() ?? null, []);
+    engine.setNativeOnly(mode !== 'off');
+    updatePlannedNext();
+  }, [engine, updatePlannedNext]);
+  const getSyncClock = useCallback((): SyncClock | null => engine.getSyncClock(), [engine]);
 
   return {
-    playerRef,
+    engine,
+    status,
     currentFile,
-    playbackPath,
-    capabilities,
-    prebufferingNext,
+    playbackPath: status.playbackPath,
+    capabilities: status.capabilities,
+    prebufferingNext: status.prebufferingNext,
     playTrack,
     playNextInQueue,
     playPreviousInQueue,
@@ -523,7 +370,7 @@ export function usePlaybackController({
     getDecodedPcm,
     stop,
     seek,
-    graphGeneration,
+    pause,
     setListeningSyncMode,
     getSyncClock,
   };

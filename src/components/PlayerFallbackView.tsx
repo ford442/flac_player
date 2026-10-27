@@ -43,7 +43,6 @@ export interface PlayerFallbackViewProps {
   loadingTrackId: string | undefined;
   isPlaying: boolean;
   isLoading: boolean;
-  currentTime: number;
   duration: number;
   library: PlaylistTrack[];
   displayedLibrary: PlaylistTrack[];
@@ -137,7 +136,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     toasts, removeToast, showHelp, setShowHelp, backendStatus, onRetry,
     queue, queueCurrentIndex, showQueue, setShowQueue, shuffle, setShuffle, repeatMode, setRepeatMode,
     isResyncingLibrary, onTriggerResync, currentTrack, currentFile, loadingTrackId,
-    isPlaying, isLoading, currentTime, duration,
+    isPlaying, isLoading, duration,
     library, displayedLibrary, allTags, stats, isLoadingLibrary, fastMirrorCount,
     playlists,
     activeTab, setActiveTab, libraryViewMode, setLibraryViewMode,
@@ -180,7 +179,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = (props) => 
     setActiveTab('generate');
   };
 
-  const transportState = { isPlaying, isLoading, currentTime, duration, volume, muted };
+  const transportState = { isPlaying, isLoading, duration, volume, muted };
   const transportControls = { onPlay, onStop, onSeek, onVolumeChange, onMute, onNext, onPrevious };
   const overview = { minmax: overviewMinmax, rms: overviewRms, peak: overviewPeak, backend: overviewBackend, reason: overviewReason };
   const playbackMode = { shuffle, setShuffle, repeatMode, setRepeatMode };

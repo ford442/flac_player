@@ -21,7 +21,8 @@ Last updated: September 2026
 | Feature | Entry point |
 |---------|-------------|
 | Player orchestration | `src/components/Player.tsx` |
-| Playback controller | `src/hooks/usePlaybackController.ts` |
+| Transport (load / play / clock) | `src/audio/PlaybackEngine.ts`, React store `src/hooks/usePlaybackEngine.ts` |
+| Playback controller (queue → engine) | `src/hooks/usePlaybackController.ts` |
 | Backend factory | `src/audio/createAudioBackend.ts` |
 | Streaming (default) | `src/audio/backends/StreamingAudioPlayer.ts` |
 | Buffered Web Audio | `src/audio/backends/WebAudioPlayer.ts` |

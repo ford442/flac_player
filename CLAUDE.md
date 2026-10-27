@@ -69,6 +69,18 @@ No `<audio>` element for buffered modes. Streaming uses `<audio>` exclusively.
 
 Worklet backend exposes `setPCMCallback()` for projectM PCM (`createProjectMPCMFeed` in `projectMBridge.ts`).
 
+## Transport (PlaybackEngine)
+
+`src/audio/PlaybackEngine.ts` is the one transport: backend lifecycle, `load()` (generation counter —
+stale loads return `'superseded'`), play/pause/seek/stop, the clock, gapless `preloadNext` forwarding,
+throttled `flac_position` saves (`src/audio/playbackPosition.ts`). `usePlaybackController` maps the queue onto it.
+
+- Read transport state with `usePlaybackStatus` (no position). Only leaves that show time use
+  `usePlaybackTime` / `usePlaybackTimeRef` (`src/hooks/usePlaybackEngine.ts`) — do not put `currentTime` back
+  into Player state or props (`tests/playerRenders.test.ts` guards this).
+- `StreamingAudioPlayer.loadFromURL` halts every path before starting one; a graph recreate retires the
+  `<audio>` element (an element binds to one `MediaElementAudioSourceNode` forever) and reattaches the URL on a new one.
+
 ## Visualizer pipeline
 
 ```

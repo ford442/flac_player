@@ -19,7 +19,7 @@ import {
 } from '../../visuals/webgpuProbe';
 import { adoptVisualizerDevice, releaseVisualizerDevice } from '../../gpu-chores';
 import type { GpuChoreBackend } from '../../gpu-chores';
-import { WaveformOverview } from '../WaveformOverview';
+import { LiveWaveformOverview } from '../WaveformOverview';
 import { PlaylistTrack } from '../../audioLoader';
 import { Chassis } from './Chassis';
 import { TopScreen } from './TopScreen';
@@ -29,6 +29,7 @@ import { Button } from './Button';
 import { VolumeSlider } from './VolumeSlider';
 import { useBeatDetection } from '../../hooks/useBeatDetection';
 import { isLiveGpuFftEnabled, useLiveGpuSpectrum } from '../../hooks/useLiveGpuSpectrum';
+import { usePlaybackTimeRef } from '../../hooks/usePlaybackEngine';
 import './ShaderGUI.css';
 
 export interface ShaderGUIProps {
@@ -38,7 +39,6 @@ export interface ShaderGUIProps {
   queueCurrentIndex: number;
   isPlaying: boolean;
   isLoading?: boolean;
-  currentTime: number;
   duration: number;
   volume: number;
   muted?: boolean;
@@ -70,7 +70,6 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   queueCurrentIndex,
   isPlaying,
   isLoading = false,
-  currentTime,
   duration,
   volume,
   muted = false,
@@ -145,6 +144,8 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
 
   const { beatPhaseRef, spectrumRef, processFrame } = useBeatDetection();
   const timeRef = useRef(0);
+  // Track position for the uniforms, read per frame: no re-render or rAF restart per tick.
+  const currentTimeRef = usePlaybackTimeRef();
 
   const destroyAllVisualizers = useCallback(() => {
     releaseVisualizerDevice(webgpuRef.current?.getDevice() ?? null);
@@ -345,7 +346,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         modeNone,
         modeIR,
         isPlaying,
-        currentTime,
+        currentTime: currentTimeRef.current,
         duration,
         volume,
       });
@@ -388,7 +389,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     return () => cancelAnimationFrame(animFrameRef.current);
   }, [
     analyser, processFrame, beatPhaseRef, spectrumRef,
-    isPlaying, currentTime, duration, volume, modeNone, modeIR, visualizerMode,
+    isPlaying, currentTimeRef, duration, volume, modeNone, modeIR, visualizerMode,
   ]);
 
   const handlePlay = useCallback(() => {
@@ -526,9 +527,8 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             onCanvasDoubleClick={handleToggle3D}
             isLoading={isLoading}
           />
-          <WaveformOverview
+          <LiveWaveformOverview
             minmax={overviewMinmax}
-            currentTime={currentTime}
             duration={duration}
             onSeek={onSeek}
             analyser={analyser}

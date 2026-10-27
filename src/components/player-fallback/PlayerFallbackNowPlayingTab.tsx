@@ -24,7 +24,7 @@ export const PlayerFallbackNowPlayingTab: React.FC<PlayerFallbackNowPlayingTabPr
     <ShaderGUI
       analyser={analyser} currentTrack={currentTrack} queue={queue} queueCurrentIndex={queueCurrentIndex}
       isPlaying={transportState.isPlaying} isLoading={transportState.isLoading}
-      currentTime={transportState.currentTime} duration={transportState.duration} volume={transportState.volume}
+      duration={transportState.duration} volume={transportState.volume}
       muted={transportState.muted} onPlay={transportControls.onPlay} onStop={transportControls.onStop}
       onSeek={transportControls.onSeek}
       onTrackClick={(index) => onQueueTrackClick(index)}
