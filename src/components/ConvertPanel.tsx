@@ -213,7 +213,7 @@ export const ConvertPanel: React.FC = () => {
         }`}
       >
         <p className="text-sm text-gray-300">Drop MP3 or FLAC files here</p>
-        <p className="text-xs text-gray-500 mt-1">or click to browse — multiple files supported</p>
+        <p className="text-xs text-gray-400 mt-1">or click to browse — multiple files supported</p>
         <input
           ref={inputRef}
           type="file"
@@ -227,7 +227,7 @@ export const ConvertPanel: React.FC = () => {
 
       {hasFlacToMp3 && (
         <div className="bg-white/5 rounded-xl p-4 border border-white/10 flex flex-wrap items-center gap-4">
-          <label className="text-xs text-gray-500 uppercase tracking-wider" htmlFor="mp3-bitrate">
+          <label className="text-xs text-gray-400 uppercase tracking-wider" htmlFor="mp3-bitrate">
             MP3 bitrate
           </label>
           <select
@@ -254,7 +254,7 @@ export const ConvertPanel: React.FC = () => {
                   <div className="text-sm text-white truncate" title={item.file.name}>
                     {item.file.name}
                   </div>
-                  <div className="text-xs text-gray-500 flex flex-wrap gap-x-2">
+                  <div className="text-xs text-gray-400 flex flex-wrap gap-x-2">
                     <span>{formatBytes(item.file.size)}</span>
                     {item.direction && <span>{directionLabel(item.direction)}</span>}
                     {item.outputName && item.status === 'done' && (
@@ -265,7 +265,7 @@ export const ConvertPanel: React.FC = () => {
                   {(item.status === 'converting' || item.status === 'loading') && (
                     <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-purple-500 transition-all duration-150"
+                        className="h-full bg-purple-600 transition-all duration-150"
                         style={{ width: `${Math.round(item.progress * 100)}%` }}
                       />
                     </div>

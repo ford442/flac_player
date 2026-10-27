@@ -4,7 +4,7 @@
 
 import { useEffect, useRef } from 'react';
 import { fetchSharedPlaylist, fetchSongs } from '../api/songApi';
-import { loadQueueFromStorage } from '../storage/queueStorage';
+import { loadQueue } from '../storage/queueStorage';
 import type { PlaylistTrack } from '../types/library';
 import { isAbortError, type PlaybackEngine } from '../player/PlaybackEngine';
 
@@ -70,7 +70,9 @@ export function useAppBootstrap(options: BootstrapOptions): void {
       }
 
       if (signal.aborted) return;
-      const saved = loadQueueFromStorage();
+      const saved = await loadQueue();
+      // Anything queued while IndexedDB answered (a dropped file, a click) wins.
+      if (signal.aborted || engine.store.getState().queue.tracks.length > 0) return;
       if (saved && saved.tracks.length > 0) {
         engine.setQueue(saved.tracks, {
           currentIndex: saved.currentIndex,

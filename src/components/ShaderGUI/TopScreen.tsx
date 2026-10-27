@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import type { VisualizerBackend } from '../../visuals/types';
 import type { WebGPUProbeBreadcrumb } from '../../visuals/webgpuProbe';
-import './ShaderGUI.css';
+import './ShaderGUI.layout.css';
+import './ShaderGUI.overlays.css';
 
 /** Backing-store pixels per CSS pixel are capped: a 3× phone draws the fullscreen shader at 2×. */
 export const MAX_CANVAS_DPR = 2;

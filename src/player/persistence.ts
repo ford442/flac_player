@@ -1,6 +1,7 @@
-// localStorage persistence for the player store (#258): resume position, queue, volume.
+// Persistence for the player store (#258): resume position and volume in localStorage,
+// the queue in the catalog database.
 
-import { saveQueueToStorage } from '../storage/queueStorage';
+import { saveQueue as saveQueueToCatalog, type QueueState as SavedQueue } from '../storage/queueStorage';
 import { trackSource } from '../types/track';
 import type { PlaylistTrack } from '../types/library';
 import type { PlayerStore, QueueState } from './playerStore';
@@ -43,16 +44,18 @@ export interface PersistOptions {
   /** Save the queue (off for shared playlists and room guests). */
   queue: boolean;
   storage?: Storage | null;
+  /** Where the queue goes (tests capture it). */
+  saveQueue?: (queue: SavedQueue) => void;
 }
 
 /**
- * Write the store to localStorage as it changes. The position comes from the
+ * Write the store out as it changes. The position comes from the
  * engine clock every 5 s and on pagehide, never from a React render (#258 bug 4).
  */
 export function persistPlayerState(
   clock: { now(): number },
   store: PlayerStore,
-  { position, queue, storage = safeLocalStorage() }: PersistOptions,
+  { position, queue, storage = safeLocalStorage(), saveQueue = (q) => { void saveQueueToCatalog(q); } }: PersistOptions,
 ): () => void {
   if (!storage) return () => {};
   const cleanups: Array<() => void> = [];
@@ -75,7 +78,7 @@ export function persistPlayerState(
   cleanups.push(store.subscribe((state, prev) => {
     if (queue && state.queue !== prev.queue) {
       const { tracks, currentIndex, shuffle, repeatMode } = persistableQueue(state.queue);
-      saveQueueToStorage({ tracks: tracks.map(withoutFile), currentIndex, shuffle, repeat: repeatMode });
+      saveQueue({ tracks: tracks.map(withoutFile), currentIndex, shuffle, repeat: repeatMode });
     }
     if (state.settings.volume !== prev.settings.volume) {
       write(storage, VOLUME_STORAGE_KEY, String(state.settings.volume));

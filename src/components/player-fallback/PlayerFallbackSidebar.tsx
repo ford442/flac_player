@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import type { SortBy, TagInfo } from '../../types/library';
 import { FileDropZone } from '../FileDropZone';
 import { UrlLoader } from '../UrlLoader';
@@ -36,10 +36,11 @@ export const PlayerFallbackSidebar: React.FC<PlayerFallbackSidebarProps> = ({
   generationModelFilter, setGenerationModelFilter, generationModels,
   allTags, selectedTags, setSelectedTags,
 }) => {
+  const id = useId();
   const queueCount = useQueue((q) => q.tracks.length);
   const { addFiles, loadUrl, loadDemo } = useActions();
   return (
-    <aside className="w-64 border-r border-white/10 bg-[#0a0a18] flex flex-col">
+    <aside className="w-64 border-r border-white/10 bg-surface-sunken flex flex-col">
       <nav className="p-4 space-y-1">
         {[
           { id: 'library',     label: '📚 Library',    count: libraryCount },
@@ -62,8 +63,8 @@ export const PlayerFallbackSidebar: React.FC<PlayerFallbackSidebarProps> = ({
 
       <div className="p-4 border-t border-white/10 space-y-4">
         <div>
-          <label className="text-xs text-gray-500 uppercase">Min Rating</label>
-          <input type="range" min="0" max="5" step="1" value={minRating}
+          <label htmlFor={`${id}-min-rating`} className="text-xs text-gray-400 uppercase">Min Rating</label>
+          <input id={`${id}-min-rating`} type="range" min="0" max="5" step="1" value={minRating}
             onChange={(e) => setMinRating(parseInt(e.target.value))} className="w-full mt-1" />
           <div className="flex justify-between text-xs text-gray-400 mt-1"><span>Any</span><span>{minRating}+ stars</span></div>
         </div>
@@ -72,8 +73,8 @@ export const PlayerFallbackSidebar: React.FC<PlayerFallbackSidebarProps> = ({
           Untagged only
         </label>
         <div>
-          <label className="text-xs text-gray-500 uppercase">Sort By</label>
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}
+          <label htmlFor={`${id}-sort`} className="text-xs text-gray-400 uppercase">Sort By</label>
+          <select id={`${id}-sort`} value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)}
             className="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm">
             <option value="date">Date Added</option>
             <option value="rating">Rating</option>
@@ -84,18 +85,18 @@ export const PlayerFallbackSidebar: React.FC<PlayerFallbackSidebarProps> = ({
           </select>
         </div>
         <div>
-          <label className="text-xs text-gray-500 uppercase">Storage Source</label>
-          <select value={storageSourceFilter} onChange={(e) => setStorageSourceFilter(e.target.value as 'all' | 'fast')}
+          <label htmlFor={`${id}-source`} className="text-xs text-gray-400 uppercase">Storage Source</label>
+          <select id={`${id}-source`} value={storageSourceFilter} onChange={(e) => setStorageSourceFilter(e.target.value as 'all' | 'fast')}
             className="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm">
             <option value="all">All tracks</option>
             <option value="fast">Fast mirror only</option>
           </select>
-          <p className="text-xs text-gray-500 mt-2">{fastMirrorCount}/{libraryCount} tracks available on fast mirror ({FAST_STORAGE_HOST})</p>
+          <p className="text-xs text-gray-400 mt-2">{fastMirrorCount}/{libraryCount} tracks available on fast mirror ({FAST_STORAGE_HOST})</p>
         </div>
         <div>
-          <label className="text-xs text-gray-500 uppercase">Generation Model</label>
-          <select value={generationModelFilter} onChange={(event) => setGenerationModelFilter(event.target.value)}
-            className="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm" aria-label="Generation model filter">
+          <label htmlFor={`${id}-model`} className="text-xs text-gray-400 uppercase">Generation Model</label>
+          <select id={`${id}-model`} value={generationModelFilter} onChange={(event) => setGenerationModelFilter(event.target.value)}
+            className="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm">
             <option value="all">All models</option>
             {generationModels.map(model => <option key={model} value={model}>{model}</option>)}
           </select>
@@ -103,25 +104,25 @@ export const PlayerFallbackSidebar: React.FC<PlayerFallbackSidebarProps> = ({
       </div>
 
       <div className="flex-1 p-4 border-t border-white/10 overflow-auto">
-        <label className="text-xs text-gray-500 uppercase">Filter Tags</label>
-        <div className="flex flex-wrap gap-1 mt-2">
+        <h3 id={`${id}-tags`} className="text-xs text-gray-400 uppercase">Filter Tags</h3>
+        <div role="group" aria-labelledby={`${id}-tags`} className="flex flex-wrap gap-1 mt-2">
           {allTags.slice(0, 15).map(tag => (
-            <button key={tag.name}
+            <button key={tag.name} aria-pressed={selectedTags.includes(tag.name)}
               onClick={() => setSelectedTags(prev => prev.includes(tag.name) ? prev.filter(t => t !== tag.name) : [...prev, tag.name])}
               className={`px-2 py-1 text-xs rounded-full transition-colors ${
-                selectedTags.includes(tag.name) ? 'bg-purple-500 text-white' : 'bg-white/10 text-gray-400 hover:bg-white/20'
+                selectedTags.includes(tag.name) ? 'bg-purple-600 text-white' : 'bg-white/10 text-gray-400 hover:bg-white/20'
               }`}>{tag.name} ({tag.count})</button>
           ))}
         </div>
       </div>
 
       <div className="p-4 border-t border-white/10">
-        <label className="text-xs text-gray-500 uppercase block mb-2">Local Files</label>
+        <h3 className="text-xs text-gray-400 uppercase mb-2">Local Files</h3>
         <FileDropZone onFiles={addFiles} />
       </div>
 
       <div className="p-4 border-t border-white/10">
-        <label className="text-xs text-gray-500 uppercase block mb-2">From URL</label>
+        <h3 className="text-xs text-gray-400 uppercase mb-2">From URL</h3>
         <UrlLoader onLoadUrl={loadUrl} onLoadDemo={loadDemo} />
       </div>
     </aside>

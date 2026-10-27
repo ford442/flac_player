@@ -1,41 +1,26 @@
-// Library data as TanStack Query hooks (#258). Filters are part of the query key,
-// so changing a filter refetches page 0 and loadMore always continues the
-// current filter's pages. Requests are deduped and cancelled through the
-// query's AbortSignal.
+// The library view over the IndexedDB catalog. The host is synced into the catalog
+// (a TanStack query, so refresh/rescan just refetch it); rows, filters, tags and stats
+// are read locally with a live query, so the library works the same offline.
 
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLiveQuery } from 'dexie-react-hooks';
+import type { LibraryStats, PlaylistTrack, TagInfo } from '../types/library';
+import { getCatalogDb, type CatalogTrack } from '../catalog/db';
+import { syncRemoteLibrary, toCatalogTrack } from '../catalog/remoteSync';
 import {
-  QueryClient, keepPreviousData, useInfiniteQuery, useQuery, useQueryClient, type InfiniteData,
-} from '@tanstack/react-query';
-import type { LibraryStats, PlaylistTrack, SortBy, TagInfo } from '../types/library';
-import { getCachedLibrary, setCachedLibrary, type CachedLibrary } from '../storage/libraryCache';
-import { fetchSongs, fetchStats, fetchTags, type SongQuery } from './songApi';
+  computeStats, computeTags, EMPTY_STATS, filterTracks, fromCatalogTrack, sortTracks, type LibraryFilters,
+} from '../catalog/libraryQuery';
+import { fetchSongPage } from './songApi';
 
-/** Songs fetched per library page; more pages exist while pages come back full. */
+export { DEFAULT_LIBRARY_FILTERS, EMPTY_STATS, type LibraryFilters } from '../catalog/libraryQuery';
+
+/** Rows shown per "Load more" until the list is virtualized. */
 export const LIBRARY_PAGE_SIZE = 200;
-
-export interface LibraryFilters {
-  search: string;
-  minRating: number;
-  tags: string[];
-  untaggedOnly: boolean;
-  sortBy: SortBy;
-}
-
-export const DEFAULT_LIBRARY_FILTERS: LibraryFilters = {
-  search: '', minRating: 0, tags: [], untaggedOnly: false, sortBy: 'date',
-};
-
-export const EMPTY_STATS: LibraryStats = {
-  total_tracks: 0, rated_4plus: 0, total_duration_hours: 0,
-  total_play_count: 0, untagged_count: 0, trash_count: 0, unique_tags: 0, top_tags: [],
-};
 
 export const libraryKeys = {
   all: ['library'] as const,
-  songs: (filters: LibraryFilters) => ['library', 'songs', filters] as const,
-  tags: ['library', 'tags'] as const,
-  stats: ['library', 'stats'] as const,
+  sync: ['library', 'sync'] as const,
 };
 
 export function createQueryClient(): QueryClient {
@@ -46,41 +31,27 @@ export function createQueryClient(): QueryClient {
   });
 }
 
-export function songQuery(filters: LibraryFilters, offset: number): SongQuery {
-  return {
-    ratingGte: filters.minRating,
-    tags: filters.tags.length > 0 ? filters.tags : undefined,
-    untagged: filters.untaggedOnly,
-    search: filters.search || undefined,
-    sortBy: filters.sortBy,
-    sortDesc: true,
-    limit: LIBRARY_PAGE_SIZE,
-    offset,
-  };
-}
-
-type SongPages = InfiniteData<PlaylistTrack[], number>;
-
-function useSongPages(filters: LibraryFilters, enabled: boolean) {
-  return useInfiniteQuery({
-    queryKey: libraryKeys.songs(filters),
-    queryFn: async ({ pageParam, signal }) => (await fetchSongs(songQuery(filters, pageParam), signal)).tracks,
-    initialPageParam: 0,
-    getNextPageParam: (lastPage, pages) => (
-      lastPage.length === LIBRARY_PAGE_SIZE ? pages.reduce((n, page) => n + page.length, 0) : undefined
-    ),
-    // Keep the old list on screen while a new filter's first page loads.
-    placeholderData: keepPreviousData,
+/** Pull the host's catalog into IndexedDB. */
+export function useLibrarySync(enabled = true) {
+  return useQuery({
+    queryKey: libraryKeys.sync,
+    queryFn: ({ signal }) => syncRemoteLibrary(fetchSongPage, { signal }),
     enabled,
   });
 }
 
-export function useTags(enabled = true) {
-  return useQuery({ queryKey: libraryKeys.tags, queryFn: ({ signal }) => fetchTags(signal), enabled });
-}
+type LiveRows = { rows: CatalogTrack[] } | { failed: true };
 
-export function useStats(enabled = true) {
-  return useQuery({ queryKey: libraryKeys.stats, queryFn: ({ signal }) => fetchStats(signal), enabled });
+/** Every catalog row, live; `failed` when IndexedDB is unusable (private mode, blocked storage). */
+function useCatalogRows(enabled: boolean): LiveRows | undefined {
+  return useLiveQuery<LiveRows>(async () => {
+    if (!enabled) return { rows: [] };
+    try {
+      return { rows: await getCatalogDb().tracks.toArray() };
+    } catch {
+      return { failed: true };
+    }
+  }, [enabled]);
 }
 
 export interface LibraryCatalog {
@@ -90,88 +61,75 @@ export interface LibraryCatalog {
   isLoading: boolean;
   hasMore: boolean;
   loadMore(): void;
-  /** 'checking' until the first page answers; 'down' when it failed (cached rows may still show). */
+  /** 'checking' until the first sync answers; 'down' when the last sync failed. */
   backendStatus: 'checking' | 'up' | 'down';
-  /** True while showing the localStorage copy because the host is unreachable. */
-  fromCache: boolean;
-  /** Refetch songs, tags and stats. */
+  /** The host is unreachable and the view shows the synced catalog. */
+  offline: boolean;
+  /** Re-sync from the host. */
   refresh(): Promise<void>;
 }
 
-/**
- * Library rows, tags and stats for `filters`. When the host is unreachable it
- * serves the last cached copy (written only from real responses, so tags and
- * stats are never cached as empty placeholders).
- */
+/** Library rows, tags and stats for `filters`, from the catalog. */
 export function useLibraryCatalog(
   filters: LibraryFilters,
-  { enabled = true, onCacheFallback }: { enabled?: boolean; onCacheFallback?: () => void } = {},
+  { enabled = true, onOffline }: { enabled?: boolean; onOffline?: () => void } = {},
 ): LibraryCatalog {
   const queryClient = useQueryClient();
-  const songs = useSongPages(filters, enabled);
-  const tags = useTags(enabled);
-  const stats = useStats(enabled);
+  const sync = useLibrarySync(enabled);
+  const live = useCatalogRows(enabled);
 
-  // Pages can overlap when the catalog shifts between requests; keep the first copy.
-  const tracks = useMemo(() => {
-    const byId = new Map<string, PlaylistTrack>();
-    for (const track of (songs.data?.pages ?? []).flat()) {
-      if (!byId.has(track.id)) byId.set(track.id, track);
-    }
-    return [...byId.values()];
-  }, [songs.data]);
+  // Without IndexedDB, serve the last sync's rows straight from memory.
+  const syncRows = sync.data?.tracks;
+  const rows = useMemo<CatalogTrack[] | undefined>(() => {
+    if (!live) return undefined;
+    if ('rows' in live) return live.rows;
+    return syncRows?.map((t) => toCatalogTrack(t));
+  }, [live, syncRows]);
 
-  // Cache only answers from the server, merged with what the cache already holds.
-  useEffect(() => {
-    if (!songs.isSuccess || songs.isPlaceholderData) return;
-    const previous = getCachedLibrary();
-    setCachedLibrary(tracks, tags.data ?? previous?.tags ?? [], stats.data ?? previous?.stats ?? EMPTY_STATS);
-  }, [songs.isSuccess, songs.isPlaceholderData, tracks, tags.data, stats.data]);
+  // Filters by value, so callers needn't memoize the object.
+  const filterKey = JSON.stringify(filters);
+  // A fresh shuffle per filter change, stable while paging.
+  const { stableFilters, seed } = useMemo(
+    () => ({ stableFilters: filters, seed: (Math.random() * 2 ** 32) >>> 0 }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- filterKey is filters by value
+    [filterKey],
+  );
+  const matching = useMemo(
+    () => (rows ? sortTracks(filterTracks(rows, stableFilters), stableFilters.sortBy, seed) : []),
+    [rows, stableFilters, seed],
+  );
+  const tags = useMemo(() => (rows ? computeTags(rows) : []), [rows]);
+  const stats = useMemo(() => (rows ? computeStats(rows, tags) : EMPTY_STATS), [rows, tags]);
 
-  const failed = songs.isError && !songs.data;
-  const cached = useMemo<CachedLibrary | null>(() => (failed ? getCachedLibrary() : null), [failed]);
-  const fromCache = !!cached && cached.tracks.length > 0;
-
-  const onFallbackRef = useRef(onCacheFallback);
-  onFallbackRef.current = onCacheFallback;
-  useEffect(() => {
-    if (fromCache) onFallbackRef.current?.();
-  }, [fromCache]);
-
-  const { hasNextPage, isFetchingNextPage, fetchNextPage } = songs;
+  // Paging resets whenever the filters change.
+  const [paging, setPaging] = useState({ filterKey, limit: LIBRARY_PAGE_SIZE });
+  const limit = paging.filterKey === filterKey ? paging.limit : LIBRARY_PAGE_SIZE;
+  const tracks = useMemo(() => matching.slice(0, limit).map(fromCatalogTrack), [matching, limit]);
+  const hasMore = matching.length > limit;
   const loadMore = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+    if (hasMore) setPaging({ filterKey, limit: limit + LIBRARY_PAGE_SIZE });
+  }, [hasMore, filterKey, limit]);
+
+  const offline = sync.isError && !!rows && rows.length > 0;
+  const onOfflineRef = useRef(onOffline);
+  onOfflineRef.current = onOffline;
+  useEffect(() => {
+    if (offline) onOfflineRef.current?.();
+  }, [offline]);
 
   const refresh = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: libraryKeys.all });
   }, [queryClient]);
 
   return {
-    tracks: fromCache ? cached.tracks : tracks,
-    tags: tags.data ?? (fromCache ? cached.tags : []),
-    stats: stats.data ?? (fromCache ? cached.stats : EMPTY_STATS),
-    isLoading: songs.isFetching && (!songs.data || songs.isPlaceholderData || isFetchingNextPage),
-    hasMore: !fromCache && !!hasNextPage,
+    tracks,
+    tags,
+    stats,
+    isLoading: enabled && (!rows || (sync.isFetching && rows.length === 0)),
+    hasMore,
     loadMore,
-    backendStatus: songs.isSuccess ? 'up' : songs.isError ? 'down' : 'checking',
-    fromCache,
+    backendStatus: sync.isError ? 'down' : sync.isSuccess ? 'up' : 'checking',
+    offline,
     refresh,
   };
-}
-
-/** Apply `updates` to a track in every cached library page. */
-export function patchLibraryTrack(queryClient: QueryClient, id: string, updates: Partial<PlaylistTrack>): void {
-  queryClient.setQueriesData<SongPages>({ queryKey: ['library', 'songs'] }, (data) => data && {
-    ...data,
-    pages: data.pages.map((page) => page.map((t) => (t.id === id ? { ...t, ...updates } : t))),
-  });
-}
-
-/** Drop a track from every cached library page. */
-export function removeLibraryTrack(queryClient: QueryClient, id: string): void {
-  queryClient.setQueriesData<SongPages>({ queryKey: ['library', 'songs'] }, (data) => data && {
-    ...data,
-    pages: data.pages.map((page) => page.filter((t) => t.id !== id)),
-  });
 }

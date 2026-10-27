@@ -3,17 +3,20 @@ import { makeEngine, track } from './helpers/fakeEngine';
 import {
   POSITION_STORAGE_KEY, persistPlayerState, readSavedPosition,
 } from '../src/player/persistence';
-import { loadQueueFromStorage } from '../src/storage/queueStorage';
+import type { QueueState } from '../src/storage/queueStorage';
 
 // #258 bug 4: the resume position was never saved (the save interval was torn
 // down by every timeupdate render). It is now written from the engine clock.
 
 const savedPosition = () => JSON.parse(localStorage.getItem(POSITION_STORAGE_KEY) ?? 'null');
+let savedQueue: QueueState | null = null;
+const loadSavedQueue = () => savedQueue;
 
 describe('resume position (#258 bug 4)', () => {
   const cleanups: Array<() => void> = [];
   beforeEach(() => {
     localStorage.clear();
+    savedQueue = null;
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
   });
   afterEach(() => {
@@ -23,7 +26,9 @@ describe('resume position (#258 bug 4)', () => {
 
   async function playing(options = { position: true, queue: true }, readSaved = readSavedPosition) {
     const env = makeEngine({ readSavedPosition: (id) => readSaved(id) });
-    cleanups.push(env.detach, persistPlayerState(env.engine.clock, env.store, options));
+    cleanups.push(env.detach, persistPlayerState(env.engine.clock, env.store, {
+      ...options, saveQueue: (queue) => { savedQueue = queue; },
+    }));
     await env.flush();
     env.engine.playQueue([track('song-1'), track('song-2')], 0);
     await env.flush();
@@ -54,7 +59,7 @@ describe('resume position (#258 bug 4)', () => {
     window.dispatchEvent(new Event('pagehide'));
     first.detach();
 
-    const saved = loadQueueFromStorage();
+    const saved = loadSavedQueue();
     expect(saved?.tracks.map((t) => t.id)).toEqual(['song-1', 'song-2']);
     const reloaded = makeEngine({ readSavedPosition: (id) => readSavedPosition(id) });
     cleanups.push(reloaded.detach);
@@ -71,14 +76,14 @@ describe('resume position (#258 bug 4)', () => {
     vi.advanceTimersByTime(6000);
     window.dispatchEvent(new Event('pagehide'));
     expect(savedPosition()).toBeNull();
-    expect(loadQueueFromStorage()).toBeNull();
+    expect(loadSavedQueue()).toBeNull();
   });
 
   it('never persists local files', async () => {
     const env = await playing();
     const file = new File(['x'], 'local.flac');
     env.engine.enqueue({ id: 'local-1', source: 'local', file, name: 'local.flac', url: 'blob:x' });
-    const saved = loadQueueFromStorage();
+    const saved = loadSavedQueue();
     expect(saved?.tracks.map((t) => t.id)).toEqual(['song-1', 'song-2']);
     expect(JSON.stringify(saved)).not.toContain('blob:');
   });

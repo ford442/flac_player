@@ -215,18 +215,18 @@ export const GenerationPanel: React.FC<GenerationPanelProps> = ({
         <label className="block text-sm text-gray-300">Prompt
           <textarea value={prompt} onChange={event => setPrompt(event.target.value)} rows={6}
             className="mt-1 w-full px-3 py-2 bg-black/20 border border-white/20 rounded-lg text-white" placeholder="Describe genre, mood, instrumentation, structure, and production..." />
-          <span className={`block text-right text-xs mt-1 ${promptTokens > promptLimit ? 'text-red-400' : 'text-gray-500'}`}>{promptTokens}/{promptLimit} tokens</span>
+          <span className={`block text-right text-xs mt-1 ${promptTokens > promptLimit ? 'text-red-400' : 'text-gray-400'}`}>{promptTokens}/{promptLimit} tokens</span>
         </label>
         {service === 'minimax' && <>
-          <label className="block text-sm text-gray-300">Lyrics <span className="text-gray-500">(optional)</span>
+          <label className="block text-sm text-gray-300">Lyrics <span className="text-gray-400">(optional)</span>
             <textarea value={lyrics} onChange={event => setLyrics(event.target.value)} rows={7}
               className="mt-1 w-full px-3 py-2 bg-black/20 border border-white/20 rounded-lg text-white" />
-            <span className={`block text-right text-xs mt-1 ${lyricsTokens > 512 || lyrics.length > 3500 ? 'text-red-400' : 'text-gray-500'}`}>{lyricsTokens}/512 tokens · {lyrics.length}/3500 chars</span>
+            <span className={`block text-right text-xs mt-1 ${lyricsTokens > 512 || lyrics.length > 3500 ? 'text-red-400' : 'text-gray-400'}`}>{lyricsTokens}/512 tokens · {lyrics.length}/3500 chars</span>
           </label>
-          <label className="block text-sm text-gray-300">Style <span className="text-gray-500">(optional)</span>
+          <label className="block text-sm text-gray-300">Style <span className="text-gray-400">(optional)</span>
             <textarea value={style} onChange={event => setStyle(event.target.value)} rows={3}
               className="mt-1 w-full px-3 py-2 bg-black/20 border border-white/20 rounded-lg text-white" />
-            <span className={`block text-right text-xs mt-1 ${style.length > 2000 ? 'text-red-400' : 'text-gray-500'}`}>{style.length}/2000 chars</span>
+            <span className={`block text-right text-xs mt-1 ${style.length > 2000 ? 'text-red-400' : 'text-gray-400'}`}>{style.length}/2000 chars</span>
           </label>
         </>}
 
@@ -236,7 +236,7 @@ export const GenerationPanel: React.FC<GenerationPanelProps> = ({
           <span>{statusLabel || job.status}</span><span>{job.progress !== undefined ? `${Math.round(job.progress)}%` : `Job ${job.job_id}`}</span>
         </div>}
         <button type="button" onClick={handleSubmit} disabled={!!validationError || isSubmitting}
-          className="w-full px-4 py-3 rounded-lg bg-purple-500 text-white font-semibold hover:bg-purple-400 disabled:opacity-40 disabled:cursor-not-allowed">
+          className="w-full px-4 py-3 rounded-lg bg-purple-600 text-white font-semibold hover:bg-purple-400 disabled:opacity-40 disabled:cursor-not-allowed">
           {isSubmitting ? 'Generating…' : 'Generate track'}
         </button>
       </div>

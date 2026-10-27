@@ -1,5 +1,6 @@
-import React, { useRef, useCallback } from 'react';
-import './ShaderGUI.css';
+import React, { useRef } from 'react';
+import { sliderKeyValue } from '../../utils/sliderKeys';
+import './ShaderGUI.layout.css';
 
 interface VolumeSliderProps {
   value: number;
@@ -9,42 +10,55 @@ interface VolumeSliderProps {
 const TICK_COUNT = 11;
 
 export const VolumeSlider: React.FC<VolumeSliderProps> = ({ value, onChange }) => {
-  const trackRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
+  const percent = Math.round(value * 100);
 
-  const computeValueFromMouse = useCallback((clientY: number) => {
-    if (!trackRef.current) return value;
-    const rect = trackRef.current.getBoundingClientRect();
-    const ratio = (rect.bottom - clientY) / rect.height;
-    return Math.max(0, Math.min(1, ratio));
-  }, [value]);
+  const valueAt = (track: HTMLElement, clientY: number) => {
+    const rect = track.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (rect.bottom - clientY) / rect.height));
+  };
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging.current) return;
-    onChange(computeValueFromMouse(e.clientY));
-  }, [computeValueFromMouse, onChange]);
-
-  const handleMouseUp = useCallback(() => {
-    isDragging.current = false;
-    window.removeEventListener('mousemove', handleMouseMove);
-    window.removeEventListener('mouseup', handleMouseUp);
-  }, [handleMouseMove]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.currentTarget.focus();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     isDragging.current = true;
-    onChange(computeValueFromMouse(e.clientY));
-    window.addEventListener('mousemove', handleMouseMove);
-    window.addEventListener('mouseup', handleMouseUp);
-  }, [computeValueFromMouse, handleMouseMove, handleMouseUp, onChange]);
+    onChange(valueAt(e.currentTarget, e.clientY));
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDragging.current) onChange(valueAt(e.currentTarget, e.clientY));
+  };
+
+  const endDrag = () => { isDragging.current = false; };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const next = sliderKeyValue(e.key, value, { step: 0.05, page: 0.2 });
+    if (next === null) return;
+    e.preventDefault();
+    onChange(next);
+  };
 
   return (
     <div className="volume-slider-container">
-      <span className="volume-label">VOLUME</span>
+      <span className="volume-label" aria-hidden="true">VOLUME</span>
       <div className="volume-slider-track-wrapper">
         <div
-          ref={trackRef}
           className="volume-track-vertical"
-          onMouseDown={handleMouseDown}
+          role="slider"
+          tabIndex={0}
+          aria-label="Volume"
+          aria-orientation="vertical"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percent}
+          aria-valuetext={`${percent}%`}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={endDrag}
+          onPointerCancel={endDrag}
+          onKeyDown={handleKeyDown}
         >
           <div
             className="volume-fill-vertical"
@@ -55,7 +69,7 @@ export const VolumeSlider: React.FC<VolumeSliderProps> = ({ value, onChange }) =
             style={{ bottom: `${value * 100}%` }}
           />
         </div>
-        <div className="volume-ticks">
+        <div className="volume-ticks" aria-hidden="true">
           {Array.from({ length: TICK_COUNT }).map((_, i) => (
             <div
               key={i}
@@ -67,7 +81,7 @@ export const VolumeSlider: React.FC<VolumeSliderProps> = ({ value, onChange }) =
           ))}
         </div>
       </div>
-      <span className="volume-value">{Math.round(value * 100)}%</span>
+      <span className="volume-value" aria-hidden="true">{percent}%</span>
     </div>
   );
 };

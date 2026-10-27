@@ -25,7 +25,7 @@ export class ErrorBoundary extends React.Component<{ children?: React.ReactNode 
     const { error } = this.state;
     if (!error) return this.props.children;
     return (
-      <div role="alert" className="min-h-screen flex items-center justify-center bg-[#0f0f1e] text-white p-6">
+      <div role="alert" className="min-h-screen flex items-center justify-center bg-surface text-white p-6">
         <div className="max-w-md w-full rounded-xl border border-red-500/40 bg-red-950/40 p-6 space-y-4">
           <h1 className="text-lg font-semibold text-red-200">Something went wrong</h1>
           <p className="text-sm text-red-100/80 break-words">{error.message || String(error)}</p>

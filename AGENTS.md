@@ -21,8 +21,8 @@ FLAC Player is a high-fidelity audio player web application with a **React/TypeS
 
 | Category | Technology |
 |----------|------------|
-| Frontend | React 18, TypeScript, CSS3 (Tailwind-like utility classes in `Player.css` and `ShaderGUI.css`) |
-| Build System | Webpack 5, Babel, ESLint |
+| Frontend | React 18, TypeScript, Tailwind CSS v4 (`src/index.css`, via `postcss-loader`) plus hand-written component CSS (ShaderGUI) |
+| Build System | Webpack 5 (ts-loader, postcss-loader), ESLint |
 | Audio (Native) | Web Audio API (`AudioContext`, `AnalyserNode`, `BufferSourceNode`) |
 | Audio (Worklet) | `AudioWorkletNode` running `flacProcessor.ts` (bundled worklet entry); SharedArrayBuffer play + tap rings, `chunk` message fallback; AudioWorklet required |
 | Audio (WASM) | SDL3 compiled via Emscripten |
@@ -48,8 +48,9 @@ flac_player/
 ├── src/
 │   ├── components/
 │   │   ├── Player.tsx          # Main player UI component (~446 lines)
-│   │   ├── Player.css          # Player styles (utility-first)
-│   │   ├── LibraryView.tsx     # Grid/list library display with inline editing (~488 lines)
+│   │   ├── Player.css          # Shared .track-info / .track-name / .spinner (layout is Tailwind)
+│   │   ├── LibraryView.tsx     # Grid/list library containers
+│   │   ├── library/            # TrackCard, TrackRow, TrackEditor, useTrackEditing
 │   │   ├── QueuePanel.tsx      # Queue sidebar/panel with drag-to-reorder (~236 lines)
 │   │   ├── StarRating.tsx      # Reusable star rating widget (with trash option)
 │   │   ├── TagInput.tsx        # Autocomplete tag input
@@ -61,11 +62,13 @@ flac_player/
 │   │       ├── Button.tsx      # Hardware-style buttons
 │   │       ├── VolumeSlider.tsx# Vertical fader
 │   │       ├── Chassis.tsx     # Outer chassis shell
-│   │       └── ShaderGUI.css   # GUI-specific styles
+│   │       ├── ShaderGUI.layout.css   # Chassis/grid/knobs/buttons (mirrored by WAVEFORM_LAYOUT)
+│   │       └── ShaderGUI.overlays.css # Screen overlays, tooltip, URL popover
 │   ├── hooks/
-│   │   ├── useKeyboardShortcuts.ts # Global keyboard shortcuts (Space/Arrows/N/P/R/Q/S/Ctrl+K)
+│   │   ├── keyboardShortcutMap.ts  # The key map (also renders KeyboardHelpModal)
+│   │   ├── useKeyboardShortcuts.ts # Dispatches the map; yields keys a focused control uses
 │   │   ├── useBeatDetection.ts     # 5-band spectrum analysis + simple beat detection
-│   │   ├── useKnob.ts              # Drag interaction hook for rotary knobs
+│   │   ├── useKnob.ts              # Rotary knob: pointer drag + ARIA slider keys
 │   │   └── useShaderUniforms.ts    # Shader uniform state management
 │   ├── sdl/
 │   │   ├── audio_engine.cpp    # SDL3 C++ audio engine
@@ -182,7 +185,8 @@ Copy `.env.example` to `.env` for local development.
 ## Code Style Guidelines
 
 ### TypeScript/JavaScript
-- **ESLint**: `eslint:recommended`, `plugin:react/recommended`, `@typescript-eslint/recommended`
+- **ESLint**: `eslint:recommended`, `plugin:react/recommended`, `@typescript-eslint/recommended`, `plugin:jsx-a11y/recommended`
+  (a disable needs a reason comment). `tests/a11y.spec.ts` fails on serious/critical axe violations.
 - **React**: Functional components with hooks
 - **Strict Mode**: React `StrictMode` enabled in development (`src/index.tsx`)
 - **Types**: TypeScript strict mode is ON (`"strict": true` in `tsconfig.json`)
@@ -192,7 +196,9 @@ Copy `.env.example` to `.env` for local development.
 ### Naming Conventions
 - Components: PascalCase (e.g., `Player.tsx`, `LibraryView.tsx`)
 - Utilities: camelCase (e.g., `api/songApi.ts`, `audio/flacDecoder.ts`)
-- CSS classes: Tailwind-like utility classes are used inside `Player.css` and `ShaderGUI.css` (e.g., `bg-white/10`, `flex`, `gap-2`)
+- CSS classes: Tailwind v4 utilities in JSX (`flex`, `gap-2`, `bg-white/10`); app colors are `@theme` tokens in `src/index.css`
+  (`bg-surface`, `bg-surface-raised`, `--color-gui-*`), not arbitrary `bg-[#…]` values. Hand-written CSS is unlayered, so it
+  beats a utility on the same property; ShaderGUI's chassis keeps `box-sizing: content-box`.
 - Interfaces: PascalCase with descriptive names (e.g., `TransportState`, `AudioPlaybackState`, `FlacDecoderResult`)
 
 ### Strict TypeScript Policy
@@ -274,15 +280,15 @@ The `ShaderGUI` component (`src/components/ShaderGUI/ShaderGUI.tsx`) is a hardwa
 - **Hidden 3D Mode**: Double-click the top screen to toggle between the GUI shader and the 3D rotating cube visualizer
 
 **Critical Note — Shader-to-CSS Alignment:**
-Knob/LED glow UV coordinates and palette colors live in **`src/visuals/waveformContract.ts`** (`WAVEFORM_LAYOUT`). Both the WGSL and GLSL waveform shaders inject these values at build time. If you modify `.shader-gui-layout`, `.shader-gui-top-right`, knob positions, or button positions in `ShaderGUI.css`, update `WAVEFORM_LAYOUT` once — do not hardcode UVs in either shader file.
+Knob/LED glow UV coordinates and palette colors live in **`src/visuals/waveformContract.ts`** (`WAVEFORM_LAYOUT`). Both the WGSL and GLSL waveform shaders inject these values at build time. If you modify `.shader-gui-layout`, `.shader-gui-top-right`, knob positions, or button positions in `ShaderGUI.layout.css`, update `WAVEFORM_LAYOUT` once — do not hardcode UVs in either shader file.
 
 ### Backend API (`server/app.py`)
 The local FastAPI dev backend provides the following endpoints (verified from `server/app.py`); production is `contabo_storage_manager`:
 
 - **Health**: `GET /`, `GET /api/health`
 - **Library**: `GET /api/songs` (filtering, sorting, pagination), `GET /api/library/songs`
-- **Tags**: `GET /api/songs/tags`
-- **Stats**: `GET /api/songs/stats`
+- **Tags**: `GET /api/songs/tags` (the frontend computes tags from its catalog instead)
+- **Stats**: `GET /api/songs/stats` (likewise computed locally)
 - **CRUD**: `GET /api/songs/{id}`, `POST /api/upload/songs`, `PUT /api/songs/{id}`, `PATCH /api/songs/{id}`, `DELETE /api/songs/{id}`
 - **Plays**: `POST /api/songs/{id}/play` (increments `play_count`)
 - **Trash**: `POST /api/songs/{id}/trash` (sets `rating=0`, adds `trash` tag)

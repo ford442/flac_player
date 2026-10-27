@@ -163,7 +163,7 @@ export const EQPanel: React.FC<EQPanelProps> = ({
                 >
                   {band.label}
                 </span>
-                <span className={`text-xs font-mono ${gain > 0 ? 'text-purple-300' : gain < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                <span className={`text-xs font-mono ${gain > 0 ? 'text-purple-300' : gain < 0 ? 'text-red-400' : 'text-gray-400'}`}>
                   {gain >= 0 ? '+' : ''}{gain.toFixed(1)}
                 </span>
               </div>
@@ -245,7 +245,7 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             Prevent clipping (peak-aware limiter)
           </label>
         )}
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-gray-400 mt-2">
           Applies before the master volume fader. Gain is clamped to ±12 dB.
           SDL3 applies EQ and gain in WASM on the speaker path; crossfade overlap may briefly mismatch levels.
         </p>
@@ -293,36 +293,36 @@ export const EQPanel: React.FC<EQPanelProps> = ({
               ))}
             </div>
             {!audioOutput.renderSize.supported && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-400 mt-1">
                 This browser has no <code>renderSizeHint</code>; the graph always runs 128-frame quanta.
               </p>
             )}
           </div>
         )}
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-gray-400 mt-2">
           Recreates the shared AudioContext. Same-rate albums stay gapless; a rate, latency or
           render-quantum change may produce a brief audible gap. SDL3 output ignores these and the
           output device below (Emscripten opens the default device).
         </p>
         {audioOutput && (
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1 mt-3 text-xs">
-            <dt className="text-gray-500">Context rate</dt>
+            <dt className="text-gray-400">Context rate</dt>
             <dd className="font-mono text-purple-300">
               {audioOutput.info ? `${audioOutput.info.sampleRate} Hz` : 'not open'}
             </dd>
-            <dt className="text-gray-500">Base latency</dt>
+            <dt className="text-gray-400">Base latency</dt>
             <dd className="font-mono text-purple-300">{formatMs(audioOutput.info?.baseLatency ?? null)}</dd>
-            <dt className="text-gray-500">Output latency</dt>
+            <dt className="text-gray-400">Output latency</dt>
             <dd className="font-mono text-purple-300">{formatMs(audioOutput.info?.outputLatency ?? null)}</dd>
-            <dt className="text-gray-500">Render quantum</dt>
+            <dt className="text-gray-400">Render quantum</dt>
             <dd className="font-mono text-purple-300">
               {audioOutput.info?.renderQuantumSize != null
                 ? `${audioOutput.info.renderQuantumSize} frames`
                 : '128 frames'}
             </dd>
-            <dt className="text-gray-500">Channels</dt>
+            <dt className="text-gray-400">Channels</dt>
             <dd className="font-mono text-purple-300">{audioOutput.info?.channelCount ?? '—'}</dd>
-            <dt className="text-gray-500">EQ / limiter</dt>
+            <dt className="text-gray-400">EQ / limiter</dt>
             <dd
               className="font-mono text-purple-300"
               title="Who runs EQ, ReplayGain and the limiter. WASM = dsp_chain.h, the same code on SDL and Web Audio."
@@ -392,12 +392,12 @@ export const EQPanel: React.FC<EQPanelProps> = ({
               )}
             </div>
           ) : (
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-400 mt-2">
               This browser cannot route Web Audio to another device; the system default is used.
             </p>
           )}
           {audioOutput.externalPlayback && (
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-400 mt-2">
               SDL3 opens its own device; this choice applies to streaming, Web Audio, and worklet.
             </p>
           )}
@@ -448,7 +448,7 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             />
           </div>
         )}
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-gray-400 mt-2">
           {gaplessMode === 'gapless'
             ? 'Pre-buffers the next track for seamless playback on streaming and buffered backends.'
             : gaplessMode === 'crossfade'

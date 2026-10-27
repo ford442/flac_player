@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
 import type { PlaylistTrack } from '../types/library';
-import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { GenerationPanel } from './GenerationPanel';
 import { ConvertPanel } from './ConvertPanel';
 import type { PlaylistsController } from '../types/playlist';
@@ -23,7 +22,8 @@ import { RoomBadge, ViewTab, LibraryViewMode } from './player-fallback/types';
  * view state, library data and settings only.
  */
 export interface PlayerFallbackViewProps {
-  showHelp: boolean;
+  /** Rendered by Player from the wired shortcut map; `false` when closed. */
+  helpModal: React.ReactNode;
   setShowHelp: (v: boolean) => void;
   showQueue: boolean;
   setShowQueue: (v: boolean) => void;
@@ -45,7 +45,7 @@ export interface PlayerFallbackViewProps {
 }
 
 export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = ({
-  showHelp, setShowHelp, showQueue, setShowQueue,
+  helpModal, setShowHelp, showQueue, setShowQueue,
   library, playlists,
   activeTab, setActiveTab, libraryViewMode, setLibraryViewMode, searchInputRef,
   audio, audioOutput,
@@ -79,8 +79,8 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = ({
   };
 
   return (
-    <div className="player min-h-screen bg-[#0f0f1e] text-white flex flex-col">
-      {showHelp && <KeyboardHelpModal onClose={() => setShowHelp(false)} />}
+    <div className="min-h-screen bg-surface text-white flex flex-col">
+      {helpModal}
 
       {backendStatus === 'down' && (
         <div className="bg-red-500/20 border-b border-red-500/30 px-6 py-3 text-center">

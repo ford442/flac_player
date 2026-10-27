@@ -26,12 +26,12 @@ export const PlayerFallbackHeader: React.FC<PlayerFallbackHeaderProps> = ({
 }) => {
   const queueCount = useQueue((q) => q.tracks.length);
   return (
-    <header className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-[#0f0f1e]/95 backdrop-blur">
+    <header className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-surface/95 backdrop-blur">
       <div className="flex items-center gap-4">
-        <button onClick={() => onSetShowHtmlFallback(false)} className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors text-sm font-bold tracking-wider">
+        <button onClick={() => onSetShowHtmlFallback(false)} className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors text-sm font-bold tracking-wider whitespace-nowrap">
           ← Back to GUI Player
         </button>
-        <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+        <h1 className="text-xl font-bold whitespace-nowrap bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
           {isSharedPlaylist && sharedPlaylistTitle ? sharedPlaylistTitle : '🎵 FLAC Player'}
         </h1>
         {room?.role && (
@@ -40,16 +40,16 @@ export const PlayerFallbackHeader: React.FC<PlayerFallbackHeaderProps> = ({
             {room.role === 'guest' && room.driftMs !== null && ` · ${Math.round(room.driftMs)} ms`}
           </span>
         )}
-        <div className="hidden md:flex items-center gap-4 text-sm text-gray-400">
+        <div className="hidden 2xl:flex items-center gap-4 text-sm text-gray-400 whitespace-nowrap">
           <span>{stats.total_tracks} tracks</span>
           <span className="text-purple-400">{stats.rated_4plus} rated 4+</span>
           <span>{stats.total_duration_hours}h total</span>
         </div>
       </div>
-      <div className="flex-1 max-w-md mx-4">
+      <div className="flex-1 min-w-48 max-w-md mx-4">
         <input ref={searchInputRef} type="text" value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search tracks... (Ctrl+K)"
+          placeholder="Search tracks... (Ctrl+K)" aria-label="Search tracks"
           className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-purple-500"
         />
       </div>
@@ -66,10 +66,10 @@ export const PlayerFallbackHeader: React.FC<PlayerFallbackHeaderProps> = ({
             </a>
           </>
         )}
-        <button onClick={() => setShowHelp(true)} className="px-3 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm" title="Keyboard shortcuts (?)">⌨️ ?</button>
+        <button onClick={() => setShowHelp(true)} className="px-3 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">⌨️ ?</button>
         <button onClick={() => setShowQueue(true)} className="relative px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-colors text-sm">
           📋 Queue
-          {queueCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-purple-500 rounded-full text-xs flex items-center justify-center">{queueCount}</span>}
+          {queueCount > 0 && <span className="absolute -top-1 -right-1 w-5 h-5 bg-purple-600 rounded-full text-xs flex items-center justify-center">{queueCount}</span>}
         </button>
       </div>
     </header>
