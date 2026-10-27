@@ -118,6 +118,57 @@ describe('AudioContextManager native-rate recreate', () => {
     expect(RecordingAudioContext.instances).toHaveLength(1);
   });
 
+  describe('renderSizeHint', () => {
+    const proto = RecordingAudioContext.prototype as unknown as { renderQuantumSize?: number };
+    afterEach(() => {
+      delete proto.renderQuantumSize;
+    });
+
+    it('is omitted where the browser has no renderQuantumSize', async () => {
+      restore = installRecordingAudioContext();
+      allowAllSampleRates();
+      const manager = new AudioContextManager();
+      await manager.setRenderSizeMode('512');
+      await manager.ensureForTrack({ sampleRate: 48000 });
+      expect(RecordingAudioContext.instances[0].constructorOptions).not.toHaveProperty('renderSizeHint');
+      expect(manager.getOutputInfo()?.renderSizeHint).toBeUndefined();
+    });
+
+    it('is passed when supported and recreates the graph on change', async () => {
+      restore = installRecordingAudioContext();
+      allowAllSampleRates();
+      proto.renderQuantumSize = 128;
+      const manager = new AudioContextManager();
+      await manager.setRenderSizeMode('hardware');
+      await manager.ensureForTrack({ sampleRate: 48000 });
+      expect(RecordingAudioContext.instances[0].constructorOptions).toMatchObject({
+        renderSizeHint: 'hardware',
+        sampleRate: 48000,
+      });
+      await manager.setRenderSizeMode('256');
+      expect(RecordingAudioContext.instances).toHaveLength(2);
+      expect(manager.getOutputInfo()).toMatchObject({ renderSizeHint: 256, sampleRate: 48000 });
+    });
+
+    it('a rejected hint does not prevent graph create and keeps the native rate', async () => {
+      restore = installRecordingAudioContext();
+      allowAllSampleRates();
+      proto.renderQuantumSize = 128;
+      RecordingAudioContext.rejectOptions = (o) =>
+        (o as { renderSizeHint?: unknown }).renderSizeHint !== undefined;
+      const manager = new AudioContextManager();
+      await manager.setRenderSizeMode('512');
+      await manager.ensureForTrack({ sampleRate: 96000 });
+      expect(RecordingAudioContext.instances).toHaveLength(1);
+      expect(manager.getContext().sampleRate).toBe(96000);
+      expect(manager.getOutputInfo()?.renderSizeHint).toBeUndefined();
+
+      // Not retried on the next same-rate track.
+      await manager.ensureForTrack({ sampleRate: 96000 });
+      expect(RecordingAudioContext.instances).toHaveLength(1);
+    });
+  });
+
   it('falls back from a numeric latencyHint without recreating on every track', async () => {
     restore = installRecordingAudioContext();
     allowAllSampleRates();

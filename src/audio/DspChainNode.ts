@@ -1,4 +1,5 @@
 import { DEFAULT_EQ_BANDS } from './EQChain';
+import { assetUrl } from '../utils/publicPath';
 import { createAnalysisRingBuffer, readerForRingBuffer, type AnalysisRingReader } from './analysisRing';
 import {
   DSP_CHAIN_PROCESSOR_NAME,
@@ -23,7 +24,7 @@ import {
  */
 
 const DSP_CHAIN_PROCESSOR_URL = new URL('./worklets/dspChainProcessor.js', import.meta.url);
-export const DSP_CHAIN_WASM_URL = '/dsp-chain.wasm';
+export const DSP_CHAIN_WASM_URL = assetUrl('dsp-chain.wasm');
 /** dsp_chain.h DSP_MAX_CHANNELS. */
 export const DSP_MAX_CHANNELS = 8;
 const READY_TIMEOUT_MS = 3000;

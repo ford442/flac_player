@@ -19,7 +19,7 @@ export function getRoomIdFromLocation(search: string, pathname: string): string 
   const fromQuery = new URLSearchParams(search).get('room');
   if (fromQuery !== null) return ROOM_ID.test(fromQuery) ? fromQuery : null;
   const match = pathname.match(ROOM_PATH);
-  return match ? match[2] : null;
+  return match?.[2] ?? null;
 }
 
 export function getCurrentRoomId(): string | null {

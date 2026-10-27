@@ -10,6 +10,11 @@ import {
   type RangeFetchProgress,
 } from '../utils/rangeFetch';
 import { locateFrame, readFlacHeader, syntheticFlacPrefix, type FlacStreamHeader } from './flacSeek';
+import { convertAudioBufferToDecoderResult, decodeFlacNatively } from './audioDecoder';
+import type { FlacDecoderResult } from './flacDecoder';
+
+/** Frames per onPcmChunk call when feeding a native (fallback) decode. */
+const FALLBACK_PUSH_FRAMES = 16384;
 
 export interface HifiTrackSource {
   url: string;
@@ -26,7 +31,47 @@ export interface OpenedHifiTrack {
   header: FlacStreamHeader | null;
   /** Exact duration from STREAMINFO, when the encoder recorded total samples. */
   duration: number | null;
+  /**
+   * Set once the WASM decoder reports frame errors on this track
+   * (@wasm-audio-decoders/flac fails on some valid files). Later runs (seeks,
+   * re-splices) skip WASM and use the native decode below.
+   */
+  wasmUnusable?: boolean;
+  /** Cached decodeAudioData result for a `wasmUnusable` track. */
+  nativeDecode?: Promise<FlacDecoderResult>;
 }
+
+async function readWholeTrack(opened: OpenedHifiTrack, signal?: AbortSignal): Promise<ArrayBuffer> {
+  const reader = opened.reader;
+  if (reader && reader.size !== null) {
+    const bytes = await reader.read(0, reader.size, signal);
+    return bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength
+      ? bytes.buffer as ArrayBuffer
+      : bytes.slice().buffer;
+  }
+  const response = await fetch(opened.url, { signal });
+  if (!response.ok) throw new Error(`HTTP ${response.status} fetching ${opened.url}`);
+  return response.arrayBuffer();
+}
+
+/**
+ * Whole-file decodeAudioData for a track the WASM decoder cannot handle,
+ * cached on `opened` so seeks do not refetch/re-decode. A failed or aborted
+ * attempt is not cached.
+ */
+function nativeDecodeFor(opened: OpenedHifiTrack, signal?: AbortSignal): Promise<FlacDecoderResult> {
+  if (!opened.nativeDecode) {
+    const pending = readWholeTrack(opened, signal)
+      .then((bytes) => decodeFlacNatively(bytes))
+      .then(convertAudioBufferToDecoderResult);
+    opened.nativeDecode = pending;
+    pending.catch(() => {
+      if (opened.nativeDecode === pending) opened.nativeDecode = undefined;
+    });
+  }
+  return opened.nativeDecode;
+}
+
 
 export async function openHifiTrack(source: HifiTrackSource, signal?: AbortSignal): Promise<OpenedHifiTrack> {
   let reader: RangeByteReader | null = null;
@@ -75,7 +120,10 @@ export interface HifiStreamPipelineOptions {
 
 /**
  * Fetch FLAC in HTTP Range chunks → WASM decodeChunk → PCM callbacks.
- * Never materializes the full compressed file in memory.
+ * Never materializes the full compressed file in memory — except on fallback:
+ * when the WASM decoder reports frame errors, streaming stops and the rest of
+ * the track comes from a whole-file decodeAudioData, resuming at the first
+ * sample not yet delivered.
  *
  * With `startSeconds`, the decoder starts at the frame located by flacSeek.ts
  * (behind a synthetic `fLaC` + STREAMINFO prefix) and the leading
@@ -124,13 +172,31 @@ export async function runHifiStreamPipeline(options: HifiStreamPipelineOptions):
     }
 
     let metadataSent = false;
+    const sendMetadata = async (channels: number, sampleRate: number) => {
+      if (metadataSent || !(sampleRate > 0) || !(channels > 0)) return;
+      metadataSent = true;
+      await options.onMetadata?.({ channels, sampleRate });
+    };
+    /** WASM decode is broken for this track → finish via decodeAudioData. */
+    let wasmFailed = opened.wasmUnusable === true;
+    /** Frames handed to onPcmChunk (all at or after the start position). */
+    let deliveredFrames = 0;
 
     dec.onChunkDecoded(async (chunk) => {
-      if (signal?.aborted) return;
-      if (!metadataSent && chunk.sampleRate > 0 && chunk.channels > 0) {
-        metadataSent = true;
-        await options.onMetadata?.({ channels: chunk.channels, sampleRate: chunk.sampleRate });
+      if (signal?.aborted || wasmFailed) return;
+      if (chunk.errors > 0) {
+        // The chunk's PCM is missing frames: drop it and resume natively from
+        // `deliveredFrames`.
+        wasmFailed = true;
+        opened.wasmUnusable = true;
+        console.warn('[hifiStream] WASM FLAC decode errors; falling back to decodeAudioData', {
+          url: opened.url,
+          errors: chunk.errors,
+          deliveredFrames,
+        });
+        return;
       }
+      await sendMetadata(chunk.channels, chunk.sampleRate);
       let pcm = chunk.interleavedBuffer;
       const channels = Math.max(1, chunk.channels);
       if (skipFrames === null) skipFrames = Math.round(startSeconds * chunk.sampleRate);
@@ -143,10 +209,15 @@ export async function runHifiStreamPipeline(options: HifiStreamPipelineOptions):
         pcm = pcm.subarray(skipFrames * channels);
         skipFrames = 0;
       }
-      if (pcm.length > 0) await options.onPcmChunk(pcm);
+      if (pcm.length > 0) {
+        deliveredFrames += Math.floor(pcm.length / channels);
+        await options.onPcmChunk(pcm);
+      }
     });
 
-    dec.onEnded(() => options.onEnded());
+    dec.onEnded(() => {
+      if (!wasmFailed) options.onEnded();
+    });
     dec.onError((err) => options.onError(err));
 
     const streamOptions = {
@@ -154,18 +225,37 @@ export async function runHifiStreamPipeline(options: HifiStreamPipelineOptions):
       onProgress: options.onProgress,
     };
 
-    if (prefix) await dec.appendChunk(prefix);
+    if (!wasmFailed) {
+      if (prefix) await dec.appendChunk(prefix);
 
-    const chunks = opened.reader
-      ? streamFromReader(opened.reader, startByte, streamOptions)
-      : streamRemoteAudio(opened.url, streamOptions);
-    for await (const raw of chunks) {
+      const chunks = opened.reader
+        ? streamFromReader(opened.reader, startByte, streamOptions)
+        : streamRemoteAudio(opened.url, streamOptions);
+      for await (const raw of chunks) {
+        if (signal?.aborted) return;
+        await dec.appendChunk(raw);
+        if (wasmFailed) break;
+      }
       if (signal?.aborted) return;
-      await dec.appendChunk(raw);
+
+      if (!wasmFailed) await dec.flush();
+    }
+    if (!wasmFailed || signal?.aborted) return;
+
+    const native = await nativeDecodeFor(opened, signal);
+    if (signal?.aborted) return;
+    const ch = native.channels;
+    await sendMetadata(ch, native.sampleRate);
+    const totalFrames = Math.floor(native.interleavedBuffer.length / ch);
+    const from = Math.min(totalFrames, Math.round(startSeconds * native.sampleRate) + deliveredFrames);
+    for (let f = from; f < totalFrames; f += FALLBACK_PUSH_FRAMES) {
+      if (signal?.aborted) return;
+      const end = Math.min(totalFrames, f + FALLBACK_PUSH_FRAMES);
+      // Copy: sinks may keep or transfer what they are given; the cached decode is reused.
+      await options.onPcmChunk(native.interleavedBuffer.slice(f * ch, end * ch));
     }
     if (signal?.aborted) return;
-
-    await dec.flush();
+    options.onEnded();
   } catch (err) {
     if (signal?.aborted) return;
     options.onError(err instanceof Error ? err : new Error(String(err)));

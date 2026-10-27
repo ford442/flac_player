@@ -5,12 +5,31 @@ const { InjectManifest } = require('workbox-webpack-plugin');
 const webpack = require('webpack');
 const fs = require('fs');
 
-require('dotenv').config();
+// Deployment base path ("/" at a domain root, "/flac-player/" under a subpath).
+// Keep normalization in sync with src/utils/publicPath.ts.
+function normalizePublicPath(raw) {
+  const trimmed = (raw || '').trim();
+  if (trimmed === '' || trimmed === '/') return '/';
+  const p = /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? new URL(trimmed).pathname : trimmed;
+  return `/${p.replace(/^\/+|\/+$/g, '')}/`;
+}
 
-const envVars = {};
-['REACT_APP_API_URL', 'REACT_APP_PLAYLIST_API_URL', 'REACT_APP_ROOMS_API_URL', 'REACT_APP_WS_URL', 'REACT_APP_GA_ID', 'REACT_APP_MIXPANEL_TOKEN', 'REACT_APP_DEBUG'].forEach(key => {
-  envVars[`process.env.${key}`] = JSON.stringify(process.env[key] || '');
-});
+// ts-loader is the only TypeScript pipeline (no Babel). Worklet processors under
+// src/audio/worklets are static JS modules and are not bundled through it.
+
+// `.env.<mode>` then `.env`. dotenv never overrides a variable that is already set, so
+// precedence is shell > .env.<mode> > .env.
+function loadEnv(mode) {
+  const dotenv = require('dotenv');
+  dotenv.config({ path: path.resolve(__dirname, `.env.${mode}`) });
+  dotenv.config({ path: path.resolve(__dirname, '.env') });
+  const publicPath = normalizePublicPath(process.env.PUBLIC_PATH);
+  const envVars = { 'process.env.PUBLIC_PATH': JSON.stringify(publicPath) };
+  ['REACT_APP_API_URL', 'REACT_APP_PLAYLIST_API_URL', 'REACT_APP_ROOMS_API_URL', 'REACT_APP_WS_URL', 'REACT_APP_GA_ID', 'REACT_APP_MIXPANEL_TOKEN', 'REACT_APP_DEBUG'].forEach(key => {
+    envVars[`process.env.${key}`] = JSON.stringify(process.env[key] || '');
+  });
+  return { PUBLIC_PATH: publicPath, envVars };
+}
 
 const SDL_ARTIFACTS = [
   'sdl-audio.js',
@@ -22,6 +41,7 @@ function wasmArtifactsPresent(publicDir) {
 }
 
 module.exports = (env = {}, argv = {}) => {
+  const { PUBLIC_PATH, envVars } = loadEnv(argv.mode === 'production' ? 'production' : 'development');
   const skipWasm = env.skipWasm === true || env.skipWasm === 'true';
   const publicDir = path.resolve(__dirname, 'public');
   const hasWasm = wasmArtifactsPresent(publicDir);
@@ -64,16 +84,29 @@ module.exports = (env = {}, argv = {}) => {
     output: {
       path: path.resolve(__dirname, 'dist'),
       filename: 'bundle.[contenthash].js',
+      // Fixed (not 'auto'): the flac-processor worklet chunk has no document or
+      // importScripts to detect it from. Set PUBLIC_PATH for subpath deployments.
+      publicPath: PUBLIC_PATH,
+      // AudioWorkletGlobalScope has no `self` (dev HMR runtime in the worklet chunk).
+      globalObject: 'globalThis',
       clean: true,
     },
     resolve: {
       extensions: ['.tsx', '.ts', '.js', '.jsx'],
     },
     module: {
+      parser: {
+        javascript: {
+          // `context.audioWorklet.addModule(new URL('…flacProcessor.ts', import.meta.url))`
+          // becomes its own bundled entry, so the processor can import shared modules.
+          worker: ['*context.audioWorklet.addModule()', '...'],
+        },
+      },
       rules: [
         {
           test: /\.tsx?$/,
-          use: 'ts-loader',
+          // tsconfig has noEmit: true (tsc is type-check only); ts-loader must emit.
+          use: { loader: 'ts-loader', options: { compilerOptions: { noEmit: false } } },
           exclude: /node_modules|src\/sdl\/build/,
         },
         {
@@ -91,6 +124,7 @@ module.exports = (env = {}, argv = {}) => {
       new HtmlWebpackPlugin({
         template: './public/index.html',
         filename: 'index.html',
+        templateParameters: { publicPath: PUBLIC_PATH },
       }),
       new webpack.DefinePlugin(envVars),
       new CopyPlugin({ patterns: copyPatterns }),
@@ -107,9 +141,9 @@ module.exports = (env = {}, argv = {}) => {
             // add-to-cache-list-conflicting-entries throw on SW install.
             exclude: [/^icons\//, /^manifest\.json$/],
             additionalManifestEntries: [
-              { url: '/manifest.json', revision: null },
-              { url: '/icons/icon-192.png', revision: null },
-              { url: '/icons/icon-512.png', revision: null },
+              { url: `${PUBLIC_PATH}manifest.json`, revision: null },
+              { url: `${PUBLIC_PATH}icons/icon-192.png`, revision: null },
+              { url: `${PUBLIC_PATH}icons/icon-512.png`, revision: null },
             ],
           }),
         ]

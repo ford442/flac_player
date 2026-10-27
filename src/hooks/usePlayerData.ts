@@ -3,8 +3,9 @@ import {
   loadQueueFromStorage,
   AudioLoader, PlaylistTrack, SortBy, RepeatMode, LibraryStats, TagInfo,
   saveQueueToStorage, clearQueueStorage, getCachedLibrary, setCachedLibrary
-} from '../audioLoader';
+} from '../api/audioLoader';
 import { checkBackendHealth } from '../utils/healthCheck';
+import { clearMetadataCache } from '../storage/metadataCache';
 import {
   addTrackToQueue, playNextTrack, removeFromQueue as removeFromQueueUtil, reorderQueueIndex
 } from '../utils/queueUtils';
@@ -139,6 +140,7 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
           : 'Library rescan completed. Refreshing catalog...',
         'success'
       );
+      void clearMetadataCache(); // files may have been retagged; re-read tags on next play
       const healthy = await checkBackend();
       if (healthy) await Promise.all([loadLibrary(), loadTags(), loadStats()]);
       else addToast('Rescan initiated, but catalog refresh failed - backend is currently unreachable', 'info');
@@ -164,11 +166,16 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
         }
       }
     });
+    // Mount-only initial load: loadLibrary/loadTags/loadStats change with filters/library state, so listing
+    // them would refetch (or loop) on every change; later refreshes are driven explicitly by callers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (isSharedPlaylist) return;
     loadTags(); loadStats();
+    // Mount-only initial fetch; loadTags/loadStats are recreated when addToast changes and must not refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -212,6 +219,7 @@ export function usePlayerData({ loader, addToast, setError, setCurrentTrack, isS
     setQueue(prev => {
       const next = [...prev];
       const [removed] = next.splice(startIndex, 1);
+      if (removed === undefined) return prev;
       next.splice(endIndex, 0, removed);
       return next;
     });

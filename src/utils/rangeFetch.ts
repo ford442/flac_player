@@ -87,6 +87,70 @@ export async function fetchByteRange(
   return response.arrayBuffer();
 }
 
+export interface RangeBytes {
+  bytes: Uint8Array;
+  /** Full resource size from `Content-Range` (null when absent or not CORS-exposed). */
+  total: number | null;
+}
+
+/**
+ * Fetch bytes [start, end) without ever pulling more than that over the wire.
+ * Unlike `fetchByteRange`, a 200 reply (server ignored `Range`) is read as a stream
+ * and cancelled once `end` is reached instead of buffering the whole file.
+ */
+export async function fetchRangeBytes(
+  url: string,
+  start: number,
+  end: number,
+  signal?: AbortSignal
+): Promise<RangeBytes> {
+  const response = await fetch(url, {
+    method: 'GET',
+    mode: 'cors',
+    credentials: 'omit',
+    headers: { Range: `bytes=${start}-${end - 1}` },
+    signal,
+  });
+
+  if (response.status === 416) return { bytes: new Uint8Array(0), total: null };
+  if (response.status !== 206 && response.status !== 200) {
+    throw new Error(`Range fetch failed: ${response.status} ${response.statusText}`);
+  }
+
+  const rangeTotal = /\/(\d+)\s*$/.exec(response.headers.get('content-range') || '');
+  const wholeBody = response.status === 200;
+  const total = rangeTotal
+    ? parseInt(rangeTotal[1]!, 10)
+    : wholeBody ? parseContentLength(response.headers.get('content-length')) : null;
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const all = new Uint8Array(await response.arrayBuffer());
+    return { bytes: wholeBody ? all.subarray(start, end) : all, total };
+  }
+
+  const wanted = wholeBody ? end : end - start;
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  while (received < wanted) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.byteLength;
+  }
+  void reader.cancel().catch(() => {});
+
+  const joined = new Uint8Array(Math.min(received, wanted));
+  let offset = 0;
+  for (const chunk of chunks) {
+    const take = Math.min(chunk.byteLength, joined.byteLength - offset);
+    if (take <= 0) break;
+    joined.set(chunk.subarray(0, take), offset);
+    offset += take;
+  }
+  return { bytes: wholeBody ? joined.subarray(Math.min(start, joined.byteLength)) : joined, total };
+}
+
 /**
  * Stream a remote audio URL in fixed-size chunks via HTTP Range requests.
  * Falls back to a single full GET when the server does not advertise ranges.
@@ -206,7 +270,7 @@ export async function confirmRangeSupport(probe: RemoteAudioProbe, signal?: Abor
     const match = /\/(\d+)\s*$/.exec(response.headers.get('content-range') || '');
     void response.body?.cancel();
     if (response.status === 206 && match) {
-      return { ...probe, acceptsRanges: true, contentLength: parseInt(match[1], 10) };
+      return { ...probe, acceptsRanges: true, contentLength: parseInt(match[1]!, 10) };
     }
   } catch (err) {
     if (signal?.aborted) throw err;

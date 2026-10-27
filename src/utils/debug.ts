@@ -6,6 +6,7 @@ const DEBUG = process.env.REACT_APP_DEBUG === 'true';
 
 export const debug = {
   log: (label: string, data?: unknown) => {
+    // eslint-disable-next-line no-console -- the one sanctioned console.log sink
     if (DEBUG) console.log(`[FLAC:${label}]`, data);
   },
   error: (label: string, data?: unknown) => {

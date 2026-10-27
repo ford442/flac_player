@@ -4,11 +4,14 @@
 
 The API backend is **storage.noahcohn.com** (not a local server).
 `REACT_APP_API_URL=https://storage.noahcohn.com` in `.env` and `.env.production`.
+webpack loads `.env.<mode>` then `.env` (shell variables win). The dev server's
+`/api → localhost:7860` proxy only matters with `REACT_APP_API_URL=` empty, i.e. when
+running the optional local backend in `server/` (see `server/README.md`).
 
 Songs come from `GET /api/songs` on that host. Audio files are served as static files
 from `https://storage.noahcohn.com/files/audio/music/{filename}`.
 
-## How songs load (audioLoader.ts)
+## How songs load (api/audioLoader.ts)
 
 ```
 fetchLibrary()
@@ -61,7 +64,7 @@ sync. Writers only memcpy — FFT / analysis runs on reader threads (`src/sdl/ds
 
 **Buffered (web-audio, worklet, SDL):**
 ```
-fetch(url) → ArrayBuffer → flacDecoder / audioDecoder → AudioBuffer or worklet ring
+fetch(url) → ArrayBuffer → audio/flacDecoder / audio/audioDecoder → AudioBuffer or worklet ring
            → backend-specific nodes → AudioContextManager → speakers
 ```
 
@@ -81,27 +84,34 @@ AnalyserNode → VisualizerShell
 
 ```
 Player.tsx → useListeningRoomBridge (next to usePlaybackController) → useListeningRoom
-  host:  HostPublisher.observe(SyncClock) → WS → rooms.py → guests
+  host:  HostPublisher.observe(SyncClock) → WS → server/rooms.py → guests
   guest: GuestSync.reconcile → playTrack({autoplay:false}) / play / seek / nudge rate
 ```
 
 - Join links are `?room={id}` (relative asset paths break deep `/room/{id}` reloads); host token in sessionStorage only
 - Rooms lock the backend to `streaming` and force its native `<audio>` path (`setNativeOnly`, `getSyncClock`)
-- Server: `rooms.py` router mounted in `app.py` (in-memory → one uvicorn worker); production bridge port pending
+- Server: `server/rooms.py` router mounted in `server/app.py` (in-memory → one uvicorn worker); production bridge port pending
 - Details: `docs/LISTENING_ROOMS.md`
 
 ## Debug logging
 
 Off by default. Enable with `REACT_APP_DEBUG=true` in `.env` (webpack DefinePlugin).
-Helper: `src/utils/debug.ts` — used by `audioLoader.ts` and `api/songApi.ts`.
+Helper: `src/utils/debug.ts` — used by `api/audioLoader.ts` and `api/songApi.ts`.
 
 ## Key invariants to maintain
 
-- `audioLoader.ts` line ~203: fallback URL is `${API_BASE_URL}/api/music/${item.id}`
+- `api/audioLoader.ts` line ~289: fallback URL is `${API_BASE_URL}/api/music/${item.id}`
   — this only fires when the backend sends a song with no URL (shouldn't happen normally)
 - `loadFromURL()` only handles `http`, `https`, `gs://` schemes — don't pass relative paths
 - The backend must always return absolute `https://` URLs in the `url` field
 - Default output mode is `streaming` (`usePlayerState.ts`)
+
+## Deployment base path
+
+Root-hosted by default. For a subpath (e.g. `https://host/flac-player/`) build with
+`PUBLIC_PATH=/flac-player/ npm run build`. It feeds webpack `publicPath`, the HTML
+template, the SW precache/scope, and runtime asset URLs (`src/utils/publicPath.ts`).
+Server rewrites must serve `<base>/service-worker.js` as JS, not the SPA fallback.
 
 ## WASM builds
 
@@ -112,6 +122,11 @@ npm run build:wasm:dsp     # dsp_chain.h + dsp_fft.h → public/dsp-chain.wasm (
 npm run build:projectm     # optional Milkdrop host
 npm run verify:wasm        # CI artifact check
 ```
+
+All four are built with the emsdk in `scripts/emsdk-version` (the build refuses any other
+emcc; if `$EMSDK` points at another release, `export EMSDK=$PWD/emsdk`). SDL3 and
+`dsp-chain` both compile `src/sdl/dsp_chain.h` — rebuild both when it changes. Never merge
+`public/*.wasm` or `*.sha256` textually; rebuild them.
 
 Production webpack (`npm run build`) copies prebuilt artifacts from `public/` — no emsdk required.
 

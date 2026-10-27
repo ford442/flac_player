@@ -27,17 +27,18 @@ class SdlPcmTapProcessor extends AudioWorkletProcessor {
     if (!output || output.length === 0) return true;
 
     const chCount = output.length;
-    const frames = output[0].length;
+    const frames = /** @type {Float32Array} */ (output[0]).length;
     const wp = Atomics.load(this.writeIdx, 0) >>> 0;
     let rp = this.localReadPos;
 
     for (let i = 0; i < frames; i++) {
       for (let ch = 0; ch < chCount; ch++) {
+        const dst = /** @type {Float32Array} */ (output[ch]);
         if (rp < wp) {
-          output[ch][i] = this.pcmData[rp % this.capacity];
+          dst[i] = /** @type {number} */ (this.pcmData[rp % this.capacity]);
           rp++;
         } else {
-          output[ch][i] = 0;
+          dst[i] = 0;
         }
       }
     }

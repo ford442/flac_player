@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useLayoutEffect, useState } from 'react';
 import type { VisualizerBackend } from '../../visuals/types';
 import type { WebGPUProbeBreadcrumb } from '../../visuals/webgpuProbe';
 import './ShaderGUI.css';
@@ -8,7 +8,15 @@ interface TopScreenProps {
   canvasSessionKey?: string;
   artist?: string;
   title?: string;
+  /** Album (and year) line shown over the bottom of the screen. */
+  album?: string;
+  /** Cover art URL (embedded art, or the backend's cover_url fallback). */
+  artworkUrl?: string | null;
+  /** Spec badges, e.g. ['FLAC', '44.1 kHz', '16-bit', 'Stereo']. */
+  specs?: string[];
   activeBackend?: VisualizerBackend;
+  /** Loud label shown whenever a non-WebGPU (opt-in) renderer is selected; null for WebGPU. */
+  rendererBadge?: string | null;
   probeFailure?: WebGPUProbeBreadcrumb | null;
   onCanvasResize?: () => void;
   onCanvasDoubleClick?: () => void;
@@ -20,7 +28,11 @@ export const TopScreen: React.FC<TopScreenProps> = ({
   canvasSessionKey = 'webgpu',
   artist,
   title,
+  album,
+  artworkUrl,
+  specs,
   activeBackend,
+  rendererBadge = null,
   probeFailure,
   onCanvasResize,
   onCanvasDoubleClick,
@@ -30,6 +42,24 @@ export const TopScreen: React.FC<TopScreenProps> = ({
   const displayText = isLoading
     ? 'LOADING...'
     : (title ? (artist ? `${artist} — ${title}` : title) : 'No track loaded');
+
+  // Scroll only when the title is wider than its box; otherwise show it whole and still.
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
+  const [scrollSeconds, setScrollSeconds] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const overlay = overlayRef.current;
+    const measure = measureRef.current;
+    if (!overlay || !measure) return;
+    const update = () => {
+      const textWidth = measure.offsetWidth;
+      setScrollSeconds(textWidth > overlay.clientWidth ? Math.max(6, textWidth / 40) : null);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(overlay);
+    return () => observer.disconnect();
+  }, [displayText, probeFailure, isLoading]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -63,7 +93,10 @@ export const TopScreen: React.FC<TopScreenProps> = ({
   }, [canvasRef, canvasSessionKey, onCanvasResize]);
 
   return (
-    <div ref={containerRef} className="shader-screen top-screen">
+    <div
+      ref={containerRef}
+      className={`shader-screen top-screen${rendererBadge && !probeFailure ? ' top-screen--badged' : ''}`}
+    >
       {/* The canvas remains mounted so probe failures can be shown in this slot. */}
       <canvas
         key={canvasSessionKey}
@@ -119,15 +152,41 @@ export const TopScreen: React.FC<TopScreenProps> = ({
           <div className="webgpu-fatal-panel__playback">Audio playback remains available.</div>
         </div>
       )}
-      {!probeFailure && <div className="artist-title-overlay">
+      {rendererBadge && !probeFailure && (
+        <div className="renderer-badge" role="status" data-testid="renderer-badge">
+          {rendererBadge}
+        </div>
+      )}
+      {!probeFailure && <div
+        ref={overlayRef}
+        className={`artist-title-overlay${scrollSeconds !== null && !isLoading ? ' artist-title-overlay--scrolling' : ''}`}
+      >
         {isLoading ? (
           <div className="loading-text">{displayText}</div>
-        ) : (
-          <div className="artist-title-marquee">
+        ) : scrollSeconds !== null ? (
+          <div className="artist-title-marquee" style={{ animationDuration: `${scrollSeconds}s` }}>
             {displayText}&nbsp;&nbsp;&nbsp;&nbsp;{displayText}&nbsp;&nbsp;&nbsp;&nbsp;
           </div>
+        ) : (
+          <div className="artist-title-static">{displayText}</div>
         )}
+        <span ref={measureRef} className="artist-title-measure" aria-hidden="true">{displayText}</span>
       </div>}
+      {!probeFailure && !isLoading && (album || artworkUrl || (specs && specs.length > 0)) && (
+        <div className="track-meta-overlay" data-testid="track-meta-overlay">
+          {artworkUrl && (
+            <img
+              className="track-meta-art"
+              src={artworkUrl}
+              alt={`${album || title || 'Track'} cover art`}
+            />
+          )}
+          <div className="track-meta-text">
+            {album && <div className="track-meta-album">{album}</div>}
+            {specs && specs.length > 0 && <div className="track-meta-specs">{specs.join(' · ')}</div>}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

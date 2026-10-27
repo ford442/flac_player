@@ -9,7 +9,12 @@ function parseBackend(value: string | null | undefined): VisualizerBackend | nul
   return VALID_BACKENDS.has(normalized) ? normalized : null;
 }
 
-/** Read preferred backend from URL `?visualizer=`, localStorage, or `window.DEBUG_VISUALIZER`. */
+/** `?webgl2=1` (or `=true`): the short WebGL2 opt-in. Anything else is not an opt-in. */
+function isWebGL2Flag(value: string | null): boolean {
+  return value === '1' || value?.toLowerCase() === 'true';
+}
+
+/** Read preferred backend from URL `?visualizer=` / `?webgl2=1`, localStorage, or `window.DEBUG_VISUALIZER`. */
 export function readVisualizerPreference(): VisualizerBackend | null {
   if (typeof window === 'undefined') return null;
 
@@ -22,6 +27,8 @@ export function readVisualizerPreference(): VisualizerBackend | null {
   // Alias: ?renderer= from sibling projects
   const rendererParam = parseBackend(new URLSearchParams(window.location.search).get('renderer'));
   if (rendererParam) return rendererParam;
+
+  if (isWebGL2Flag(new URLSearchParams(window.location.search).get('webgl2'))) return 'webgl2';
 
   try {
     return parseBackend(localStorage.getItem(STORAGE_KEY));
@@ -44,6 +51,35 @@ export function clearVisualizerPreference(): void {
   } catch {
     /* ignore */
   }
+}
+
+export type RendererStatus = 'pending' | 'ready' | 'failed';
+
+export interface RendererLabel {
+  /** document.title for the renderer actually in use. */
+  title: string;
+  /** Loud on-screen badge for opt-in renderers; null for the default WebGPU path. */
+  badge: string | null;
+}
+
+const RENDERER_NAMES: Record<VisualizerBackend, string> = {
+  webgpu: 'WebGPU',
+  webgl2: 'WebGL2',
+  canvas2d: 'Canvas2D',
+};
+
+/**
+ * Title and badge text for a renderer. The title never claims WebGPU unless a WebGPU
+ * visualizer is actually running; a non-WebGPU renderer is badged from the moment it is selected.
+ */
+export function getRendererLabel(backend: VisualizerBackend, status: RendererStatus): RendererLabel {
+  const name = RENDERER_NAMES[backend];
+  const kind = backend === 'webgl2' ? 'compatibility renderer' : 'debug renderer';
+  const optInBadge = backend === 'webgpu' ? null : `${name} ${kind} — not WebGPU`;
+  if (status === 'pending') return { title: 'FLAC Player', badge: optInBadge };
+  if (status === 'failed') return { title: `FLAC Player — ${name} unavailable`, badge: null };
+  if (backend === 'webgpu') return { title: 'FLAC Player with WebGPU', badge: null };
+  return { title: `FLAC Player with ${name} (${kind})`, badge: optInBadge };
 }
 
 export function isWebGPUAvailable(): boolean {
@@ -75,12 +111,10 @@ export function subscribeVisualizerPreference(
 
   window.addEventListener('storage', handler);
   window.addEventListener('flac-player-visualizer-change', handler);
-  window.addEventListener('visualizer-fallback', handler);
 
   return () => {
     window.removeEventListener('storage', handler);
     window.removeEventListener('flac-player-visualizer-change', handler);
-    window.removeEventListener('visualizer-fallback', handler);
   };
 }
 

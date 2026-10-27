@@ -187,8 +187,9 @@ export function waveformLayoutTokens(lang: WaveformShaderLanguage): Record<strin
 /** Replace every double-brace token; throws on unknown or leftover placeholders. */
 export function injectShaderTokens(source: string, tokens: Record<string, string>): string {
   const out = source.replace(/\{\{(\w+)\}\}/g, (_, name: string) => {
-    if (!(name in tokens)) throw new Error(`waveform shader: unknown placeholder {{${name}}}`);
-    return tokens[name];
+    const value = tokens[name];
+    if (value === undefined) throw new Error(`waveform shader: unknown placeholder {{${name}}}`);
+    return value;
   });
   return out;
 }

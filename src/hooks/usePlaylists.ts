@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import type { AudioLoader } from '../audioLoader';
+import type { AudioLoader } from '../api/audioLoader';
 import { playlistStore, type PlaylistStore } from '../storage/playlistStore';
 import type { CloudPlaylist, PlaylistTrack } from '../types/library';
 import type { LocalPlaylist, PlaylistsController } from '../types/playlist';

@@ -112,6 +112,31 @@ describe('SpeexDSP resampler vs linear', () => {
     expect(thdnDb(joined, 2, 1000, 48000)).toBeGreaterThan(40);
   });
 
+  it('one-shot resamples input larger than the 16 MiB WASM heap cap (sliced)', async () => {
+    let heap: Float32Array | null = null;
+    const tracked: SpeexResamplerFactory = async () => {
+      const m = await speexFactory();
+      heap = m.HEAPF32;
+      return m;
+    };
+    // 10 s × 8 ch: ~14 MB in + ~15 MB out, far past MAXIMUM_MEMORY if staged whole.
+    const input = sine(1000, 44100, 10, 8);
+    const out = await resampleInterleaved(input, 8, 44100, 48000, { factory: tracked });
+    expect(out.length).toBe(48000 * 10 * 8);
+    expect(thdnDb(out, 8, 1000, 48000)).toBeGreaterThan(120);
+    // Slices fit in the 4 MiB INITIAL_MEMORY: no heap growth at all.
+    expect(heap!.buffer.byteLength).toBe(4 * 1024 * 1024);
+  });
+
+  it('rejects out-of-range channel counts and falls back to linear', async () => {
+    const m = await speexFactory();
+    expect(m._rs_create(9, 44100, 48000, 10)).toBe(0);
+    expect(m._rs_create(0, 44100, 48000, 10)).toBe(0);
+    expect(m._rs_create(2, 0, 48000, 10)).toBe(0);
+    const rs = await createStreamResampler(9, 44100, 48000, { factory: speexFactory });
+    expect(rs.kind).toBe('linear');
+  });
+
   it('does not touch the buffer when rates already match', async () => {
     const input = sine(1000, 48000, 0.1);
     expect(await resampleInterleaved(input, 2, 48000, 48000, { factory: speexFactory })).toBe(input);
