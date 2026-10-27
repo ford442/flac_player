@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { METER_HZ, reduceRms } from '../gpu-chores';
 import type { GpuChoreBackend } from '../gpu-chores';
 import { formatTime } from '../utils/audioUtils';
+import { usePlaybackTime } from '../hooks/usePlaybackEngine';
 import './WaveformOverview.css';
 
 export interface WaveformOverviewProps {
@@ -196,6 +197,15 @@ export const WaveformOverview: React.FC<WaveformOverviewProps> = ({
       </div>
     </div>
   );
+};
+
+/**
+ * WaveformOverview on the PlaybackEngine clock. Only this leaf re-renders per
+ * `timeupdate`; its parents (ShaderGUI, transport bar) stay put.
+ */
+export const LiveWaveformOverview: React.FC<Omit<WaveformOverviewProps, 'currentTime'>> = (props) => {
+  const currentTime = usePlaybackTime();
+  return <WaveformOverview {...props} currentTime={currentTime} />;
 };
 
 export default WaveformOverview;

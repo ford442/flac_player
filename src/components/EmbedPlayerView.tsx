@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { PlaylistTrack } from '../audioLoader';
 import { formatTime } from '../utils/audioUtils';
+import { usePlaybackTime } from '../hooks/usePlaybackEngine';
 
 /**
  * Compact, audio-only transport UI for Project-M embed mode (?projectm=1).
@@ -16,7 +17,6 @@ export interface EmbedPlayerViewProps {
   currentTrack: PlaylistTrack | null;
   isPlaying: boolean;
   isLoading: boolean;
-  currentTime: number;
   duration: number;
   onPlay: () => void;
   onStop: () => void;
@@ -30,7 +30,6 @@ export const EmbedPlayerView: React.FC<EmbedPlayerViewProps> = ({
   currentTrack,
   isPlaying,
   isLoading,
-  currentTime,
   duration,
   onPlay,
   onStop,
@@ -40,6 +39,7 @@ export const EmbedPlayerView: React.FC<EmbedPlayerViewProps> = ({
   onFileSelect,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const currentTime = usePlaybackTime();
 
   // Hint that this tab is acting as an audio feeder for Project-M.
   useEffect(() => {

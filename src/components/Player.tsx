@@ -8,6 +8,7 @@ import { isOutputPickerSupported, useAudioSettings } from '../hooks/useAudioSett
 import { useAudioOutputInfo, useOutputDevices } from '../hooks/useAudioOutputInfo';
 import { usePlayerData } from '../hooks/usePlayerData';
 import { usePlaybackController } from '../hooks/usePlaybackController';
+import { PlaybackEngineContext } from '../hooks/usePlaybackEngine';
 import { usePlaylists } from '../hooks/usePlaylists';
 import { isAudioContextSinkSupported, sharedAudioContextManager } from '../audio/AudioContextManager';
 import type { AudioOutputControls } from './EQPanel';
@@ -44,12 +45,11 @@ export const Player: React.FC = () => {
   const isRoomGuestRoute = useMemo(() => routeRoomId !== null && loadHostToken(routeRoomId) === null, [routeRoomId]);
   const isSharedPlaylist = sharedPlaylistId !== null || isRoomGuestRoute;
 
-  const { playerState, setPlayerState, outputMode, setOutputMode, setError, currentTrack, setCurrentTrack, loadingTrackId, setLoadingTrackId, backendStatus, setBackendStatus } = usePlayerState();
+  const { outputMode, setOutputMode, setError, currentTrack, setCurrentTrack, loadingTrackId, setLoadingTrackId, backendStatus, setBackendStatus } = usePlayerState();
   const { toasts, addToast, removeToast } = useToastNotifications();
   const {
     eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate,
     gaplessSettings, setGaplessMode, crossfadeMs, setCrossfadeMs,
-    crossfadeEnabled,
     replayGainMode, setReplayGainMode, replayGainLimiter, setReplayGainLimiter,
     replayGainSettings,
     latencyMode, setLatencyMode,
@@ -73,27 +73,28 @@ export const Player: React.FC = () => {
   } = data;
 
   const playback = usePlaybackController({
-    loader, outputMode, setOutputMode,
-    playerState, setPlayerState, setError,
+    loader, outputMode, setOutputMode, setError,
     currentTrack, setCurrentTrack, setLoadingTrackId,
     queue, queueCurrentIndex, setQueueCurrentIndex,
     shuffle, repeatMode, volume, muted, setVolume, setMuted, prevVolumeRef,
-    eqGains, playbackRate, gaplessSettings, crossfadeEnabled, replayGainSettings,
+    eqGains, playbackRate, gaplessSettings, replayGainSettings,
     addToast, loadStats, isSharedPlaylist,
   });
 
+  // Transport status only (no position): Player does not re-render on timeupdate.
   const {
+    engine, status: playerState,
     currentFile, playbackPath, capabilities, prebufferingNext,
     playTrack, playNextInQueue, playPreviousInQueue, togglePlayback,
     handleLocalFiles, handleVolumeChange, toggleMute,
-    getAnalyser, getDecodedPcm, stop, seek,
+    getAnalyser, getDecodedPcm, stop, seek, pause,
   } = playback;
 
   const room = useListeningRoomBridge({
     initialRoomId: routeRoomId,
-    loader, playback,
+    loader, playback, backendGeneration: playerState.backendGeneration,
     currentTrack, loadingTrackId,
-    isPlaying: playerState.isPlaying, isLoading: playerState.isLoading, currentTime: playerState.currentTime,
+    isPlaying: playerState.isPlaying, isLoading: playerState.isLoading,
     queue, queueCurrentIndex, shuffle, repeatMode, library,
     setQueue, setQueueCurrentIndex, setShuffle, setRepeatMode,
     outputMode, setOutputMode, addToast,
@@ -318,10 +319,10 @@ export const Player: React.FC = () => {
   useKeyboardShortcuts({
     onPlayPause: transportToggle,
     onSeekForward: canSeek
-      ? () => seek(Math.min(playerState.currentTime + 10, playerState.duration))
+      ? () => seek(Math.min(engine.getTime() + 10, playerState.duration))
       : undefined,
     onSeekBackward: canSeek
-      ? () => seek(Math.max(playerState.currentTime - 10, 0))
+      ? () => seek(Math.max(engine.getTime() - 10, 0))
       : undefined,
     onNext: transportNext,
     onPrevious: transportPrevious,
@@ -337,11 +338,11 @@ export const Player: React.FC = () => {
   useMediaSession({
     currentTrack,
     isPlaying: playerState.isPlaying,
-    currentTime: playerState.currentTime,
+    clock: engine,
     duration: playerState.duration,
     playbackRate,
     onPlay: () => { if (!playerState.isPlaying) transportToggle(); },
-    onPause: () => { if (isRoomGuest) notifyHostControls(); else playback.playerRef.current?.pause(); },
+    onPause: () => { if (isRoomGuest) notifyHostControls(); else pause(); },
     onNext: transportNext,
     onPrevious: transportPrevious,
     onSeek,
@@ -395,13 +396,12 @@ export const Player: React.FC = () => {
 
   if (IS_PROJECTM_EMBED) {
     return (
-      <>
+      <PlaybackEngineContext.Provider value={engine}>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         <EmbedPlayerView
           currentTrack={currentTrack}
           isPlaying={playerState.isPlaying}
           isLoading={playerState.isLoading}
-          currentTime={playerState.currentTime}
           duration={playerState.duration}
           onPlay={togglePlayback}
           onStop={stop}
@@ -410,13 +410,13 @@ export const Player: React.FC = () => {
           onPrevious={playPreviousInQueue}
           onFileSelect={handleLocalFiles}
         />
-      </>
+      </PlaybackEngineContext.Provider>
     );
   }
 
   if (!showHtmlFallback) {
     return (
-      <>
+      <PlaybackEngineContext.Provider value={engine}>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         {roomPanel}
         {!isSharedPlaylist && (
@@ -463,7 +463,7 @@ export const Player: React.FC = () => {
           analyser={getAnalyser()}
           currentTrack={currentTrack} queue={queue} queueCurrentIndex={queueCurrentIndex}
           isPlaying={playerState.isPlaying} isLoading={playerState.isLoading}
-          currentTime={playerState.currentTime} duration={playerState.duration}
+          duration={playerState.duration}
           volume={volume} muted={muted}
           onPlay={transportToggle} onStop={transportStop}
           onSeek={onSeek}
@@ -479,11 +479,12 @@ export const Player: React.FC = () => {
           overviewBackend={gpuOverview.backend}
           overviewReason={gpuOverview.reason}
         />
-      </>
+      </PlaybackEngineContext.Provider>
     );
   }
 
   return (
+    <PlaybackEngineContext.Provider value={engine}>
     <AudioCapabilitiesContext.Provider value={capabilities}>
     {roomPanel}
     <PlayerFallbackView
@@ -498,7 +499,7 @@ export const Player: React.FC = () => {
       isResyncingLibrary={isResyncingLibrary} onTriggerResync={triggerLibraryResync}
       currentTrack={currentTrack} currentFile={currentFile} loadingTrackId={loadingTrackId}
       isPlaying={playerState.isPlaying} isLoading={playerState.isLoading}
-      currentTime={playerState.currentTime} duration={playerState.duration}
+      duration={playerState.duration}
       library={library} displayedLibrary={displayedLibrary}
       allTags={allTags} stats={stats} isLoadingLibrary={isLoadingLibrary}
       fastMirrorCount={fastMirrorCount}
@@ -552,5 +553,6 @@ export const Player: React.FC = () => {
       room={roomBadge}
     />
     </AudioCapabilitiesContext.Provider>
+    </PlaybackEngineContext.Provider>
   );
 };

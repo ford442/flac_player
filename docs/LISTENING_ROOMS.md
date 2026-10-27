@@ -183,6 +183,7 @@ Join links use **`?room={id}`** (like `?share=`): the bundle loads with relative
 |------|---------|
 | `setListeningSyncMode('off' \| 'host' \| 'guest')` | Any role → `StreamingAudioPlayer.setNativeOnly(true)`. Guest → no queue auto-advance, no gapless preload. |
 | `getSyncClock()` | `SyncClock` of the native `<audio>` path, else `null`. |
+| `engine` | The `PlaybackEngine`. The bridge sends play/pause/seek through it (overlapping `play()` from a click, Media Session and the room collapse into one) and publishes host samples on its clock ticks (`subscribePlayback`), not on React re-renders. |
 | `playTrack(track, index, { autoplay, restorePosition, startAt })` | Guests load without playing; hosts reload in place. Resolves `true` on success. |
 
 ```typescript

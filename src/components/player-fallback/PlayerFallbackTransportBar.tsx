@@ -2,7 +2,7 @@ import React from 'react';
 import { PlaylistTrack } from '../../audioLoader';
 import { AudioOutputMode } from '../../hooks/usePlayerState';
 import { MetadataPanel } from '../MetadataPanel';
-import { WaveformOverview } from '../WaveformOverview';
+import { LiveWaveformOverview } from '../WaveformOverview';
 import { getNextQueueIndex, getPreviousQueueIndex } from '../../utils/queueUtils';
 import { OverviewData, PlaybackModeState, TransportControls, TransportState } from './types';
 
@@ -24,7 +24,7 @@ export const PlayerFallbackTransportBar: React.FC<PlayerFallbackTransportBarProp
   currentTrack, currentFile, analyser, transportState, transportControls, overview,
   playbackMode, queueLength, queueCurrentIndex, outputMode, setOutputMode,
 }) => {
-  const { isPlaying, isLoading, currentTime, duration, volume, muted } = transportState;
+  const { isPlaying, isLoading, duration, volume, muted } = transportState;
   const { onPlay, onNext, onPrevious, onSeek, onMute } = transportControls;
   const { shuffle, setShuffle, repeatMode, setRepeatMode } = playbackMode;
 
@@ -67,9 +67,8 @@ export const PlayerFallbackTransportBar: React.FC<PlayerFallbackTransportBarProp
               aria-label="Next track">⏭</button>
           </div>
           <div className="w-full max-w-md">
-            <WaveformOverview
+            <LiveWaveformOverview
               minmax={overview.minmax ?? null}
-              currentTime={currentTime}
               duration={duration}
               onSeek={onSeek}
               analyser={analyser}

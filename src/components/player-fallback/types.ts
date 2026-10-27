@@ -8,7 +8,7 @@ export type LibraryViewMode = 'grid' | 'list';
 export interface TransportState {
   isPlaying: boolean;
   isLoading: boolean;
-  currentTime: number;
+  /** Position is not here: leaves read it from the PlaybackEngine clock. */
   duration: number;
   volume: number;
   muted: boolean;

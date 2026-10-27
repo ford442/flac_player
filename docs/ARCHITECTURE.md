@@ -75,7 +75,7 @@ flowchart TB
 ```
 User selects track in LibraryView / QueuePanel
     ↓
-Player.tsx → usePlaybackController → createAudioBackend()
+Player.tsx → usePlaybackController → PlaybackEngine.load() → createAudioBackend()
     ↓
 GET https://storage.noahcohn.com/api/songs  (or REACT_APP_API_URL)
     ↓
@@ -127,7 +127,7 @@ No full-file download before playback starts. Requires CORS + `Accept-Ranges` on
 
 Backend factory: `src/audio/createAudioBackend.ts` (dynamic `import()` — WASM chunks load lazily).
 
-Shared lifecycle guards (destroyed checks, volume/ReplayGain, state callbacks) live in `src/audio/backends/BaseAudioBackend.ts`. Playback lifecycle and queue advance are owned by `src/hooks/usePlaybackController.ts`; `Player.tsx` composes hooks + views only.
+Shared lifecycle guards (destroyed checks, volume/ReplayGain, state callbacks) live in `src/audio/backends/BaseAudioBackend.ts`. The transport is `src/audio/PlaybackEngine.ts`: backend lifecycle, the one `load()` path (generation counter; stops the path it leaves), play/pause/seek, the clock, settings re-applied to each new backend, gapless `preloadNext` forwarding and throttled resume-position saves. React reads it as an external store (`src/hooks/usePlaybackEngine.ts`): `usePlaybackStatus` changes only on discrete transport changes, and only time-showing leaves (`LiveWaveformOverview`, `EmbedPlayerView`) subscribe to the clock, so the library, EQ panel and visualizer do not re-render on `timeupdate`. `src/hooks/usePlaybackController.ts` maps queue / settings / room role onto engine commands; `Player.tsx` composes hooks + views only.
 
 See [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) for selection guidance.
 

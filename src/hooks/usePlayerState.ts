@@ -1,12 +1,10 @@
 import { useState } from 'react';
-import type { PlayerUIState } from '../types/player';
 import type { PlaylistTrack } from '../types/library';
 
 export type AudioOutputMode = 'streaming' | 'web-audio' | 'worklet' | 'sdl';
 
+/** UI state around playback. Transport state (playing, time, duration) lives in PlaybackEngine. */
 export interface UsePlayerStateResult {
-  playerState: PlayerUIState;
-  setPlayerState: (state: PlayerUIState | ((prev: PlayerUIState) => PlayerUIState)) => void;
   outputMode: AudioOutputMode;
   setOutputMode: (mode: AudioOutputMode | ((prev: AudioOutputMode) => AudioOutputMode)) => void;
   error: string;
@@ -20,12 +18,6 @@ export interface UsePlayerStateResult {
 }
 
 export const usePlayerState = (): UsePlayerStateResult => {
-  const [playerState, setPlayerState] = useState<PlayerUIState>({
-    isPlaying: false,
-    currentTime: 0,
-    duration: 0,
-    isLoading: false
-  });
   const [outputMode, setOutputMode] = useState<AudioOutputMode>('streaming');
   const [error, setError] = useState<string>('');
   const [currentTrack, setCurrentTrack] = useState<PlaylistTrack | null>(null);
@@ -33,8 +25,6 @@ export const usePlayerState = (): UsePlayerStateResult => {
   const [backendStatus, setBackendStatus] = useState<'checking' | 'up' | 'down'>('checking');
 
   return {
-    playerState,
-    setPlayerState,
     outputMode,
     setOutputMode,
     error,
