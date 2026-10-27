@@ -1,4 +1,5 @@
 /** Lazy-load Emscripten glue scripts from public/ (not bundled into the main JS chunk). */
+import { publicUrl } from '../utils/publicUrl';
 
 const loaded = new Set<string>();
 
@@ -25,8 +26,8 @@ export function loadWasmScript(url: string): Promise<void> {
 }
 
 export const WASM_ASSETS = {
-  sdl3: '/sdl-audio.js',
-  scriptProcessorShim: '/script-processor-shim.js',
-  projectmHost: '/projectm/projectm-host.js',
-  speexResampler: '/speex-resampler.js',
+  sdl3: publicUrl('sdl-audio.js'),
+  scriptProcessorShim: publicUrl('script-processor-shim.js'),
+  projectmHost: publicUrl('projectm/projectm-host.js'),
+  speexResampler: publicUrl('speex-resampler.js'),
 } as const;

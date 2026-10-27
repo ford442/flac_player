@@ -117,6 +117,8 @@ Helper: `src/utils/debug.ts` — used by `audioLoader.ts` and `api/songApi.ts`.
 - The shared `AudioContext`'s run state belongs to `AudioContextManager`: use `whenRunning()`, never `context.suspend()`
   (refused; the context is shared with every backend and the visualizer tap). Never leave a `DynamicsCompressorNode`
   in the speaker chain while the limiter is off (spec clamps it to 2 channels)
+- Files copied into the build root (`*.wasm`, glue scripts, icons, `service-worker.js`) are located with `publicUrl()`
+  (`src/utils/publicUrl.ts`), not `'/name'` literals, so a sub-path deploy finds them
 
 ## WASM builds
 

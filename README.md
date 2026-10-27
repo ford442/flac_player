@@ -224,7 +224,7 @@ Cross-Origin-Embedder-Policy: require-corp
 ```
 
 - Development: the dev server (`webpack-dev-server`) adds these headers automatically when running `npm start`.
-- Production: configure your hosting provider to emit the headers above. For example:
+- Production: configure your hosting provider to emit the headers above on every response from the app's origin, including when it is served from a sub-path (the service worker does not add them). For example:
   - Netlify: use `_headers` file or Netlify headers config
   - Vercel: configure headers in `vercel.json` or platform settings
   - S3/CloudFront: configure CloudFront response headers or Lambda@Edge

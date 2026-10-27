@@ -1,3 +1,4 @@
+import { publicUrl } from '../utils/publicUrl';
 import {
   isSWServerMessage,
   type SWClientMessage,
@@ -24,6 +25,16 @@ export function isServiceWorkerSupported(): boolean {
   return typeof navigator !== 'undefined' && 'serviceWorker' in navigator;
 }
 
+/**
+ * Where the worker is served and the scope it may control: the directory that
+ * holds the bundle, which is the site root unless the app is deployed under a path.
+ */
+export function serviceWorkerLocation(): { scriptUrl: string; scope: string } {
+  const scriptUrl = publicUrl('service-worker.js');
+  const scope = new URL('./', new URL(scriptUrl, document.baseURI)).pathname;
+  return { scriptUrl, scope };
+}
+
 export function getServiceWorkerRegistration(): ServiceWorkerRegistration | null {
   return registration;
 }
@@ -38,7 +49,8 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   }
 
   try {
-    registration = await navigator.serviceWorker.register('/service-worker.js', { scope: '/' });
+    const { scriptUrl, scope } = serviceWorkerLocation();
+    registration = await navigator.serviceWorker.register(scriptUrl, { scope });
 
     navigator.serviceWorker.addEventListener('message', (event: MessageEvent) => {
       dispatchMessage(event.data);

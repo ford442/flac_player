@@ -237,16 +237,28 @@ Key endpoints: `GET /api/songs`, `POST /api/songs/{id}/play`, `POST /api/share`,
 
 CI runs `npm run verify:wasm` against `public/wasm-source.sha256`. Production webpack uses `--env skipWasm=true` and copies prebuilt binaries.
 
-## Cross-origin isolation
+## Cross-origin isolation and hosting
 
-Required for AudioWorklet, SharedArrayBuffer, SDL pthread builds, and projectM WASM:
+Send these on every response from the app's origin: the dev server (`webpack.config.js`), `netlify.toml`, `vercel.json`, and any other host, including a deploy under a sub-path such as `/flac-player/`:
 
 ```
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-Configured in `webpack.config.js` (dev), `netlify.toml`, and `vercel.json`.
+The page's own headers isolate it. The service worker does not provide them (it only adds `Cross-Origin-Resource-Policy` to cached responses so they stay loadable under `require-corp`), so a worker that fails to register costs offline caching and background downloads, not isolation.
+
+| Context | Needs isolation? | Without it |
+|---------|------------------|------------|
+| Shared `AudioContext` + `dsp-chain` worklet | Only for the analysis ring (`SharedArrayBuffer`); the module itself is built without pthreads | Audio and speaker DSP work; `getAnalysisTap()` is null and analysis consumers read the `AnalyserNode` |
+| SDL3 private context | Yes: `-pthread` build, play ring in shared memory | SDL backends cannot initialize; use `streaming` |
+| `GPUDevice` + canvas (WebGPU) | No | — |
+| WebGL2 visualizer | No | — |
+| projectM host | No `SharedArrayBuffer` use (built without pthreads) | — |
+
+## Serving from a sub-path
+
+Webpack's `publicPath` is `auto`, so the bundle finds its chunks next to `index.html`, and everything else that is loaded by URL is located the same way through `publicUrl()` (`src/utils/publicUrl.ts`): the service worker (`serviceWorkerLocation()` registers `service-worker.js` with the bundle's directory as scope), `WASM_ASSETS`, `DSP_CHAIN_WASM_URL`, the ffmpeg glue and the media-session icons. `index.html`, `manifest.json` and the precache entries in `webpack.config.js` use relative URLs. At the site root all of these resolve to the same root-relative paths as before. Do not add `'/something.wasm'` literals; deep links use the query string (`?room=`), not a path.
 
 ## Testing
 
