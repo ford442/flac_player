@@ -71,12 +71,12 @@ registerRoute(
   }),
 );
 
-/** Static WASM / SDL glue – cache-first for offline SDL backends. */
+/** Static WASM glue – cache-first for offline SDL / projectM. */
 registerRoute(
   ({ url, request }) => request.method === 'GET'
     && url.origin === self.location.origin
     && /\.(wasm|js)$/.test(url.pathname)
-    && /\/(sdl-audio|script-processor|projectm)/.test(url.pathname),
+    && /\/(sdl-audio|projectm)/.test(url.pathname),
   new CacheFirst({
     cacheName: 'flac-player-wasm-v2',
     plugins: [

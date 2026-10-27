@@ -1,6 +1,7 @@
 /** Emscripten module surface for the in-app projectM host. */
 import { WASM_ASSETS, loadWasmScript } from '../audio/wasmLoader';
 import { loseCanvasGlContext } from '../visuals/webgl2/glContext';
+import { publicUrl } from '../utils/publicUrl';
 export interface ProjectMWasmModule {
   _pm_init(width: number, height: number): number;
   _pm_resize(width: number, height: number): void;
@@ -18,8 +19,18 @@ export interface ProjectMWasmModule {
 }
 
 declare global {
-  function createProjectMModule(opts?: { canvas?: HTMLCanvasElement }): Promise<ProjectMWasmModule>;
+  function createProjectMModule(opts?: {
+    canvas?: HTMLCanvasElement;
+    locateFile?: (path: string, prefix: string) => string;
+  }): Promise<ProjectMWasmModule>;
 }
+
+/**
+ * The file packager fetches `projectm-host.data` relative to the page, not the
+ * script, so without this the presets 404 at the site root. Every host file
+ * lives next to projectm-host.js under the public path.
+ */
+const locateProjectMFile = (path: string) => publicUrl(`projectm/${path}`);
 
 export type ProjectMEngineStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -65,7 +76,7 @@ export class ProjectMEngine {
       }
       if (seq !== this.loadSeq) return false;
 
-      const module = await window.createProjectMModule({ canvas });
+      const module = await window.createProjectMModule({ canvas, locateFile: locateProjectMFile });
       // Superseded before _pm_init: nothing was created on the canvas, so just drop it.
       if (seq !== this.loadSeq) return false;
 

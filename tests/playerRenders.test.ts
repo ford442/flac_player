@@ -69,7 +69,7 @@ vi.mock('../src/audio/createAudioBackend', () => ({
     setOnEndedCallback: () => {},
     setStateChangeCallback: (callback) => { backendHandle.emit = callback; },
     getState: () => ({ isPlaying: false, currentTime: 0, duration: 0, isLoading: false }),
-    getCapabilities: () => ({ seek: true, playbackRate: true, gapless: true, crossfade: true, sinkId: false }),
+    getCapabilities: () => ({ playable: true, seek: true, playbackRate: true, gapless: true, crossfade: true, sinkId: false }),
   }),
 }));
 

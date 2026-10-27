@@ -1,12 +1,29 @@
 #!/usr/bin/env bash
 # Build in-app projectM WASM host (libprojectM + projectm_host.cpp).
 #
-# Host is a GL/SDL2 video module (USE_SDL=2, WebGL2, FULL_ES2/ES3, preset
+# Host is a GL/SDL2 video module (USE_SDL=2, WebGL2, FULL_ES2, preset
 # preload). -O2 is the Emscripten default for large CMake/static-lib links:
 # faster compiles, less brittle inlining across libprojectM, and the host is
 # not on the audio callback. SDL audio uses -O3 because the pthread callback
 # + ring copy is the hot path. Do not copy SDL's -O3 (or a future pinned-emsdk
 # -flto) here without a dedicated projectM size/perf measurement.
+#
+# GL emulation: FULL_ES2 only. FULL_ES3 implies FULL_ES2 and adds emulation for
+# glMapBufferRange / glGetBufferSubData / client-side u32 indices; libprojectM
+# v4.1.6 calls none of them (VAOs + VBO offsets, glBufferSubData, glTexImage3D
+# are native WebGL2). FULL_ES2 stays for ES2 buffer-name semantics.
+#
+# Heap: growth is capped at PM_MAXIMUM_MEMORY. Without a cap Emscripten lets
+# the heap grow to 2 GiB (the same footgun #212 fixed for playback). Measured
+# with v4.1.6 + the bundled presets: see docs/WASM_TOOLCHAIN.md. Measure before
+# raising it.
+#
+# Reproducibility: built with the emsdk pinned in scripts/emsdk-version. The
+# cached checkout / static libs under .build/projectm are stamped with
+# PROJECTM_TAG + emcc version and rebuilt when either changes.
+# public/projectm/projectm-source.sha256 (scripts/projectm-source-hash.sh) is
+# checked by npm run verify:wasm. Overriding PROJECTM_TAG builds a
+# non-canonical artifact and does not update that hash.
 #
 # Outputs to public/projectm/:
 #   projectm-host.js, projectm-host.wasm, projectm-host.data (presets)
@@ -22,7 +39,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_ROOT="$PROJECT_ROOT/.build/projectm"
 OUT_DIR="$PROJECT_ROOT/public/projectm"
-PROJECTM_TAG="${PROJECTM_TAG:-v4.1.6}"
+PROJECTM_DEFAULT_TAG="v4.1.6"
+PROJECTM_TAG="${PROJECTM_TAG:-$PROJECTM_DEFAULT_TAG}"
 HOST_CPP="$PROJECT_ROOT/src/projectm/projectm_host.cpp"
 DEBUG=0
 
@@ -46,6 +64,16 @@ mkdir -p "$OUT_DIR" "$BUILD_ROOT"
 
 PROJECT_ROOT="$PROJECT_ROOT" source "$SCRIPT_DIR/emsdk-env.sh"
 
+STAMP_FILE="$BUILD_ROOT/build-stamp"
+STAMP="PROJECTM_TAG=$PROJECTM_TAG EMCC=$(emcc -dumpversion)"
+if [ "$(cat "$STAMP_FILE" 2>/dev/null || true)" != "$STAMP" ]; then
+  echo "projectM build cache stale or unstamped ($STAMP); rebuilding libprojectM."
+  rm -rf "$BUILD_ROOT/cmake-build"
+  if [ -d "$BUILD_ROOT/src" ] && [ "$(git -C "$BUILD_ROOT/src" describe --tags 2>/dev/null || true)" != "$PROJECTM_TAG" ]; then
+    rm -rf "$BUILD_ROOT/src"
+  fi
+fi
+
 if [ ! -d "$BUILD_ROOT/src" ]; then
   echo "Cloning projectM $PROJECTM_TAG..."
   git clone --depth 1 --branch "$PROJECTM_TAG" \
@@ -58,6 +86,8 @@ if [ -f .gitmodules ] && [ ! -d vendor/projectm-eval/.git ]; then
   git submodule update --init --recursive --depth 1
 fi
 cd "$PROJECT_ROOT"
+
+printf '%s\n' "$STAMP" > "$STAMP_FILE"
 
 LIB_BUILD="$BUILD_ROOT/cmake-build"
 LIB_PROJECTM="$LIB_BUILD/src/libprojectM/libprojectM-4.a"
@@ -93,6 +123,8 @@ else
   PM_OPT_FLAGS=(-O2)
 fi
 
+PM_MAXIMUM_MEMORY=268435456   # 256 MiB
+
 echo "Compiling projectm_host.cpp -> $OUT_DIR/projectm-host.js"
 em++ "$HOST_CPP" \
   -I"$LIB_BUILD/src/api/include" \
@@ -106,8 +138,8 @@ em++ "$HOST_CPP" \
   -s MIN_WEBGL_VERSION=2 \
   -s MAX_WEBGL_VERSION=2 \
   -s FULL_ES2=1 \
-  -s FULL_ES3=1 \
   -s ALLOW_MEMORY_GROWTH=1 \
+  -s MAXIMUM_MEMORY="$PM_MAXIMUM_MEMORY" \
   -s MODULARIZE=1 \
   -s EXPORT_NAME="createProjectMModule" \
   -s ENVIRONMENT=web \
@@ -116,6 +148,14 @@ em++ "$HOST_CPP" \
   $( [ -d "$PRESETS_DIR" ] && echo "--preload-file ${PRESETS_DIR}@/presets" ) \
   "${PM_OPT_FLAGS[@]}" \
   -o "$OUT_DIR/projectm-host.js"
+
+if [ "$PROJECTM_TAG" = "$PROJECTM_DEFAULT_TAG" ]; then
+  "$SCRIPT_DIR/projectm-source-hash.sh" > "$OUT_DIR/projectm-source.sha256"
+  echo "Updated $OUT_DIR/projectm-source.sha256"
+else
+  echo "Warning: PROJECTM_TAG=$PROJECTM_TAG is not the pinned $PROJECTM_DEFAULT_TAG;" >&2
+  echo "         projectm-source.sha256 not updated. Do not commit these artifacts." >&2
+fi
 
 echo "projectM build finished."
 ls -lh "$OUT_DIR" || true

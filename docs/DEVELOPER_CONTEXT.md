@@ -4,7 +4,7 @@ Last updated: September 2026
 
 ## 1. High-Level Architecture & Intent
 
-*   **Core Purpose:** High-performance in-browser audio player for FLAC/WAV and library-backed streaming. Features a **four-backend audio engine** (streaming, Web Audio, AudioWorklet, SDL3 WASM), a fail-closed WebGPU ShaderGUI, and an optional projectM Milkdrop host.
+*   **Core Purpose:** High-performance in-browser audio player for FLAC/WAV and library-backed streaming. Features a **four-backend audio engine** (streaming, Web Audio, AudioWorklet, C++ WASM engine), a fail-closed WebGPU ShaderGUI, and an optional projectM Milkdrop host.
 *   **Tech Stack:**
     *   **Frontend:** React 18, TypeScript, CSS3.
     *   **Build:** Webpack 5, Babel, lazy dynamic imports for WASM backends.
@@ -27,9 +27,8 @@ Last updated: September 2026
 | Streaming (default) | `src/audio/backends/StreamingAudioPlayer.ts` |
 | Buffered Web Audio | `src/audio/backends/WebAudioPlayer.ts` |
 | AudioWorklet + PCM tap | `src/audio/backends/worklet/WorkletAudioPlayer.ts`, processor `src/audio/worklets/flacProcessor.js` |
-| SDL3 WASM | `src/audio/backends/Sdl3AudioPlayer.ts` |
-| SDL → analyser bridge | `src/audio/SdlPcmBridge.ts`, `src/sdl/pcm_ring.h` |
-| SDL3 play ring | `src/sdl/play_ring.h`, `src/audio/playRingBackpressure.ts` |
+| SDL engine (`sdl` mode) | `src/audio/backends/Sdl3AudioPlayer.ts`, `src/sdl/audio_engine.cpp`, processor `src/audio/worklets/sdlEngineProcessor.js` |
+| SDL engine transport / play ring | `src/sdl/engine_state.h`, `src/sdl/play_ring.h`, `src/audio/playRingBackpressure.ts` |
 | Library / API client | `src/api/songApi.ts`, `src/audioLoader.ts` |
 | Offline cache | `src/storage/trackCache.ts`, `src/components/OfflineCache.tsx` |
 | Queue persistence | `src/storage/queueStorage.ts` |
@@ -45,14 +44,15 @@ Last updated: September 2026
 ## 3. Complexity Hotspots
 
 *   **WASM memory interop (`Sdl3AudioPlayer.ts` under `src/audio/backends/`):**
-    *   Manual `malloc`, HEAP views, channel interleaving. PTHREADS builds expose memory differently (`wasmMemory.buffer` vs `HEAPU8.buffer`). `heapF32()` re-reads `HEAPF32` / `wasmMemory.buffer` after grow.
-    *   **`INITIAL_MEMORY` is 64 MiB** (`67108864`) with `ALLOW_MEMORY_GROWTH=1` and **`MAXIMUM_MEMORY` 512 MiB** (`536870912`). Without the explicit cap, pthreads+growth still set `Memory.maximum` to 32768 pages (**2 GiB**). The 512 MiB flag **lowers** that SAB max. SDL3 stream mode uses `play_ring.h` (~1.5 MiB); buffered `_create_audio_buffer` rejects >384 MiB of f32 PCM. Debug: `scripts/build-wasm.sh --debug` (`-O0 -g ASSERTIONS SAFE_HEAP`, 32 MiB floor, same 512 MiB max).
-    *   **Keep `-pthread`:** JS `_push_pcm` (main thread) and the SDL audio callback (pthread) share the play ring atomics. The viz tap (`SdlPcmBridge`) uses `Atomics` on `wasmMemory`. Dropping pthreads would require posting PCM onto the audio thread or polling non-shared HEAP. COOP/COEP is still required for AudioWorklet even without SDL pthreads.
-*   **SDL PCM ring → AudioWorklet (`SdlPcmBridge.ts`):**
-    *   Viz ring written in the SDL audio callback; JS worklet reads and feeds `AnalyserNode`. Separate from the play ring (`play_ring.h`).
+    *   Manual `malloc`, HEAP views, channel interleaving. `heapF32()` rebuilds its view when `wasmMemory.buffer` changes (a shared Memory hands out a new, longer buffer after it grows); the `sdl-engine` processor holds the `WebAssembly.Memory` itself and remaps when a buffered track lies past its view.
+    *   **`INITIAL_MEMORY` is 64 MiB** (`67108864`) with `ALLOW_MEMORY_GROWTH=1` and **`MAXIMUM_MEMORY` 512 MiB** (`536870912`). Without the explicit cap, pthreads+growth still set `Memory.maximum` to 32768 pages (**2 GiB**). The 512 MiB flag **lowers** that SAB max. Stream mode uses `play_ring.h` (2 MiB); buffered `_create_audio_buffer` rejects >384 MiB of f32 PCM. Debug: `scripts/build-wasm.sh --debug` (`-O0 -g ASSERTIONS SAFE_HEAP`, 32 MiB floor, same 512 MiB max).
+    *   **Keep `-pthread`:** it is what makes `wasmMemory` a SharedArrayBuffer, so JS `_push_pcm` (main thread) and the `sdl-engine` processor (audio thread) share the play ring and the transport block with `Atomics`. No thread is ever started. Dropping it would mean posting PCM to the audio thread.
+*   **SDL engine → AudioWorklet (`sdlEngineProcessor.js`):**
+    *   Epoch protocol in `engine_state.h`: exports write a change, then bump `epoch`; the processor applies it at the start of a quantum and publishes `ackEpoch`. Word indices are mirrored in `sdlEngineMessages.ts` and the processor (checked by `tests/sdlEngineProcessor.test.ts`).
+    *   One node per load (`_set_output_owner` first); `_rebase()` + a new node on graph recreate.
     *   Decoder high-water: pause JS decode when play-ring fill &gt; 75% (`src/audio/playRingBackpressure.ts`).
 *   **Cross-origin isolation (`webpack.config.js`, hosting headers):**
-    *   COOP/COEP required for AudioWorklet, SharedArrayBuffer, SDL pthreads, projectM WASM.
+    *   COOP/COEP required for SharedArrayBuffer: the analysis ring and the `sdl` engine (which reports `playable: false` without it).
 *   **WebGPU lifecycle (`webgpuVisualizer.ts`):**
     *   `webgpuProbe.ts` acquires the exact adapter/device/context consumed by `WebGPUVisualizer`; the visualizer must not request a second device.
     *   gpu-chores **adopts** that same device (`adoptVisualizerDevice`) for peak/RMS compute and never calls `requestDevice()`. Kill switch: `?no_gpu_compute`.

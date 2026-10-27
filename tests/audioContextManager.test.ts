@@ -41,7 +41,7 @@ describe('AudioContextManager native-rate recreate', () => {
     expect(manager.getContext().sampleRate).toBe(48000);
   });
 
-  it('recreates on rate mismatch and restores volume, EQ, ReplayGain, and mute', async () => {
+  it('recreates on rate mismatch and restores volume, EQ, and ReplayGain', async () => {
     restore = installRecordingAudioContext();
     allowAllSampleRates();
     const manager = new AudioContextManager();
@@ -51,7 +51,6 @@ describe('AudioContextManager native-rate recreate', () => {
     manager.setEQGains([1, 2, 3, 4, 5]);
     manager.setReplayGainLinear(0.5);
     manager.setReplayGainLimiter(true);
-    manager.setExternalPlaybackActive(true);
 
     let notified = 0;
     manager.subscribeGraphRecreated(() => {
@@ -69,10 +68,10 @@ describe('AudioContextManager native-rate recreate', () => {
     const ctx = RecordingAudioContext.instances[1];
     expect(ctx.gainNodes[0].gain.value).toBeCloseTo(0.5, 6);
     expect(ctx.gainNodes[1].gain.value).toBeCloseTo(0.42, 6);
-    expect(ctx.gainNodes[2].gain.value).toBe(0);
+    // Speaker gain: no backend mutes it any more (#268: SDL plays through this graph).
+    expect(ctx.gainNodes[2].gain.value).toBe(1);
     expect(ctx.compressorNodes[0].threshold.value).toBe(-1);
     expect(manager.getEQGains()).toEqual([1, 2, 3, 4, 5]);
-    expect(manager.isExternalPlaybackActive()).toBe(true);
   });
 
   it('keeps the same context for a same-rate follow-up track', async () => {

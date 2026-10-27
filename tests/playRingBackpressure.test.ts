@@ -8,7 +8,7 @@ import {
 
 describe('playRingBackpressure', () => {
   it('documents the C++ play ring capacity', () => {
-    expect(PLAY_RING_CAPACITY_FLOATS).toBe(384000);
+    expect(PLAY_RING_CAPACITY_FLOATS).toBe(524288);
   });
 
   it('pauses the decoder above 75% fill', () => {

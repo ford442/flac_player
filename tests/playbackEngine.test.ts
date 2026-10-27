@@ -49,7 +49,7 @@ function fakeBackend({ manualLoads = false } = {}): FakeBackend {
     setOnEndedCallback: (cb) => { onEnded = cb; },
     setStateChangeCallback: (cb) => { onState = cb; },
     getState: () => state,
-    getCapabilities: () => ({ seek: true, playbackRate: true, gapless: true, crossfade: true, sinkId: false }),
+    getCapabilities: () => ({ playable: true, seek: true, playbackRate: true, gapless: true, crossfade: true, sinkId: false }),
   };
   return backend;
 }
@@ -185,6 +185,24 @@ describe('PlaybackEngine', () => {
     backend.emit({ currentTime: 2 });
     expect(engine.getStatus()).toBe(status);
     expect(engine.getTime()).toBe(2);
+    engine.destroy();
+  });
+
+  it('fails closed for a backend that cannot play in this browser: nothing is fetched or loaded', async () => {
+    const backend = fakeBackend();
+    const capabilities = backend.getCapabilities();
+    backend.getCapabilities = () => ({ ...capabilities, playable: false });
+    const probe = vi.spyOn(loader, 'probeAudioUrl');
+    const fetchBytes = vi.spyOn(loader, 'loadFromURL');
+    const engine = makeEngine([backend]);
+    await engine.setOutputMode('worklet');
+    expect(engine.getCapabilities().playable).toBe(false);
+
+    await expect(engine.load(TRACK)).rejects.toThrow(/worklet output cannot play in this browser/);
+    expect(probe).not.toHaveBeenCalled();
+    expect(fetchBytes).not.toHaveBeenCalled();
+    expect(backend.loadCalls).toEqual([]);
+    expect(engine.getStatus().isLoading).toBe(false);
     engine.destroy();
   });
 });

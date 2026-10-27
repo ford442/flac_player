@@ -36,7 +36,7 @@ Call from UI/overview code only — **never inside an audio callback**. File ove
 
 The `auto` break-even below applies unchanged; small live windows go CPU unless the caller passes `prefer: 'webgpu'`.
 
-**Live ShaderGUI (opt-in `?gpu_fft=1`):** `useLiveGpuSpectrum` reads the newest 2048 frames of the **analysis ring** (`getAnalysisTap()` — interleaved post-DSP PCM from SDL's callback or the dsp-chain worklet; see `docs/AUDIO_BACKENDS.md` → Analysis ring) at ≤ `METER_HZ` (30 Hz, main thread, never the audio callback), falling back to the analyser's mono time-domain window when no ring is published. It runs `fft_spectrum` with `prefer: 'webgpu'` and compares against the `dsp_fft.h` WASM golden at ~1 Hz (the JS golden until the module loads). The 🎛 HUD shows backend, PCM source, golden kind and Δ. `AnalyserNode` still feeds the shader until the goldens are trusted.
+**Live ShaderGUI (opt-in `?gpu_fft=1`):** `useLiveGpuSpectrum` reads the newest 2048 frames of the **analysis ring** (`getAnalysisTap()` — interleaved post-DSP PCM from the dsp-chain worklet; see `docs/AUDIO_BACKENDS.md` → Analysis ring) at ≤ `METER_HZ` (30 Hz, main thread, never the audio callback), falling back to the analyser's mono time-domain window when no ring is published. It runs `fft_spectrum` with `prefer: 'webgpu'` and compares against the `dsp_fft.h` WASM golden at ~1 Hz (the JS golden until the module loads). The 🎛 HUD shows backend, PCM source, golden kind and Δ. `AnalyserNode` still feeds the shader until the goldens are trusted.
 
 ## Backend order (`prefer: 'auto'`)
 

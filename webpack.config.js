@@ -34,7 +34,6 @@ module.exports = (env = {}, argv = {}) => {
   }
 
   const copyPatterns = [
-    { from: 'public/script-processor-*.js', to: '[name][ext]' },
     { from: 'public/manifest.json', to: 'manifest.json' },
     { from: 'public/icons', to: 'icons' },
     // Small UMD wrapper + worker for client-side convert (core WASM loaded from CDN).

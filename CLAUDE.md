@@ -48,16 +48,17 @@ track.url → HTMLAudioElement → MediaElementSource → AudioContextManager �
 (crossfade uses a second <audio> element; no full-file download)
 ```
 
-Streaming / web-audio / worklet speaker DSP (ReplayGain → limiter → volume → EQ) is the
-`dsp-chain` AudioWorklet running `src/sdl/dsp_chain.h` as WASM — the same code SDL runs in
-its callback. `EQChain` / `ReplayGainNode` are the fallback when it fails to load
-(`?dsp=webaudio` forces the fallback). Keep `DEFAULT_EQ_BANDS` the single band layout.
+Every backend's speaker DSP (ReplayGain → limiter → volume → EQ) is the `dsp-chain`
+AudioWorklet running `src/sdl/dsp_chain.h` as WASM (`public/dsp-chain.wasm`), one instance per
+context. `EQChain` / `ReplayGainNode` are the fallback when it fails to load (`?dsp=webaudio`
+forces the fallback). Keep `DEFAULT_EQ_BANDS` the single band layout; never reimplement the RBJ
+EQ in TS.
 
-**Analysis ring (shared post-DSP PCM tap):** SDL's callback (`src/sdl/analysis_ring.h`) and the
-dsp-chain worklet (`dspChainProcessor.js`) write the same 8 × u32 header + data layout into a
-SharedArrayBuffer; `src/audio/analysisRing.ts` reads it (`getAnalysisTap()`). Keep the three in
-sync. Writers only memcpy — FFT / analysis runs on reader threads (`src/sdl/dsp_fft.h` via
-`src/audio/wasmFft.ts`, or gpu-chores WebGPU), never in an audio callback.
+**Analysis ring (shared post-DSP PCM tap):** the dsp-chain worklet (`dspChainProcessor.js`) writes
+an 8 × u32 header + data into a SharedArrayBuffer; `src/audio/analysisRing.ts` reads it
+(`getAnalysisTap()`). Keep the two in sync; the layout must not change. Writers only memcpy —
+FFT / analysis runs on reader threads (`src/sdl/dsp_fft.h` via `src/audio/wasmFft.ts`, or
+gpu-chores WebGPU), never in an audio callback.
 
 **Buffered (web-audio, worklet, SDL):**
 ```
@@ -66,6 +67,23 @@ fetch(url) → ArrayBuffer → flacDecoder / audioDecoder → AudioBuffer or wor
 ```
 
 No `<audio>` element for buffered modes. Streaming uses `<audio>` exclusively.
+
+**SDL mode (`sdl`, labelled "WASM engine"; links no SDL since #268):**
+```
+audio_engine.cpp (main-thread exports: PCM + transport words, engine_state.h / play_ring.h)
+  → module's shared memory → `sdl-engine` AudioWorkletProcessor (sdlEngineProcessor.js)
+  → AudioContextManager.connectInput → dsp-chain → analyser → speakers
+```
+- The processor reads whole frames on the audio thread; JS only advances `writePos`, the
+  processor only `readPos` and its progress words. Changes go through the epoch protocol in
+  `engine_state.h`; word indices are mirrored in `sdlEngineMessages.ts` and the processor
+  (`tests/sdlEngineProcessor.test.ts` checks them against the static_asserts).
+- One node per load, owner id set first (`_set_output_owner`); a graph recreate calls `_rebase()`
+  and attaches a new node.
+- Worklet `.js` processors stay classic `@ts-check` scripts with a sibling `*Messages.ts`; do not
+  bundle them into the React chunk.
+- No main-thread audio: no ScriptProcessor anywhere. A backend that cannot start a worklet reports
+  `getCapabilities().playable === false` and `PlaybackEngine` rejects loads before fetching.
 
 Worklet backend exposes `setPCMCallback()` for projectM PCM (`createProjectMPCMFeed` in `projectMBridge.ts`).
 
@@ -123,14 +141,19 @@ Helper: `src/utils/debug.ts` — used by `audioLoader.ts` and `api/songApi.ts`.
 ## WASM builds
 
 ```bash
-npm run build:wasm:sdl3    # or bash src/sdl/build.sh
+npm run build:wasm:sdl3    # engine → public/sdl-audio.* (or bash src/sdl/build.sh)
 npm run build:wasm:resampler  # SpeexDSP HQ resampler (worklet rate mismatch)
 npm run build:wasm:dsp     # dsp_chain.h + dsp_fft.h → public/dsp-chain.wasm (EQ/ReplayGain worklet, fft_spectrum)
 npm run build:projectm     # optional Milkdrop host
 npm run verify:wasm        # CI artifact check
 ```
 
+Emscripten is pinned in `scripts/emsdk-version` (6.0.11); the build scripts refuse any other `emcc`
+and every source hash covers the pin. Per-graph flags and heap caps: `docs/WASM_TOOLCHAIN.md`.
+
 Production webpack (`npm run build`) copies prebuilt artifacts from `public/` — no emsdk required.
+Host-clang tests for the engine headers: `npm run test:native` (CMake, `-Wall -Wextra -Werror`;
+writes `.build/native/compile_commands.json` for clangd).
 
 ## Related docs
 
@@ -138,4 +161,5 @@ Production webpack (`npm run build`) copies prebuilt artifacts from `public/` �
 - `docs/AUDIO_BACKENDS.md` — backend selection
 - `docs/API.md` — REST + projectM embed
 - `docs/LISTENING_ROOMS.md` — synced listening rooms
+- `docs/WASM_TOOLCHAIN.md` — emsdk pin, compile commands, heap caps
 - `AGENTS.md` — full agent reference

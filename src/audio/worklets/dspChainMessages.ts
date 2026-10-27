@@ -35,7 +35,7 @@ export interface DspChainOptions {
   analysisRing: SharedArrayBuffer | null;
 }
 
-/** EQ type codes shared with dsp_chain.h (DspEqType) and the SDL `_set_eq_band` export. */
+/** EQ type codes shared with dsp_chain.h (DspEqType). */
 export const DSP_EQ_TYPE_CODES: Partial<Record<BiquadFilterType, number>> = {
   lowshelf: 0,
   peaking: 1,

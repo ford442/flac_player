@@ -1,10 +1,11 @@
-// Hi-fi streaming (worklet ring + SDL3 play ring): seek accuracy, seek while the
+// Hi-fi streaming (worklet ring + SDL engine play ring): seek accuracy, seek while the
 // ring is full (backpressure parked), and gapless splice of the next queue item.
 // Fixtures are index-coded (scripts/make-seek-fixtures.mjs): every frame carries
 // its absolute sample index, so positions are checked exactly, not by ear.
 // Served by the vitest dev server with HTTP Range support → the real Range path.
 import { describe, expect, it } from 'vitest';
 import { AudioContextManager } from '../../src/audio/AudioContextManager';
+import { getAnalysisTap } from '../../src/audio/analysisRing';
 import { createAudioBackend } from '../../src/audio/createAudioBackend';
 import type { ConfigurableAudioBackend } from '../../src/types/audio';
 import type { AudioOutputMode } from '../../src/hooks/usePlayerState';
@@ -80,28 +81,19 @@ function firstFrameNear(frames: number[], targetSample: number): number | null {
 
 interface SdlInternals {
   module: {
-    _get_pcm_ring_state(): number;
-    _get_pcm_ring_data(): number;
     _get_play_ring_fill(): number;
     _get_play_ring_capacity(): number;
-    HEAPF32?: Float32Array;
-    wasmMemory?: WebAssembly.Memory;
   };
 }
 
-/** SDL: newest `frames` frames of the viz ring (post-DSP samples handed to SDL). */
-function sdlRecentIndices(backend: ConfigurableAudioBackend, frames: number): number[] {
-  const m = (backend as unknown as SdlInternals).module;
-  const buffer = (m.HEAPF32 ?? new Float32Array(m.wasmMemory!.buffer)).buffer;
-  const state = m._get_pcm_ring_state();
-  const u32 = new Uint32Array(buffer, state, 3);
-  const writePos = Atomics.load(u32, 0);
-  const cap = u32[2];
-  const data = new Float32Array(buffer, m._get_pcm_ring_data(), cap);
-  const count = Math.min(frames * 2, cap, writePos);
-  const pcm = new Float32Array(count);
-  for (let i = 0; i < count; i++) pcm[i] = data[(writePos - count + i) % cap];
-  return indicesOf(pcm, 2);
+/**
+ * SDL: newest `frames` frames of the analysis ring, i.e. the dsp-chain
+ * worklet's output (the engine plays through the shared graph). Flat EQ,
+ * unity volume and ReplayGain leave the index coding bit-exact.
+ */
+function sdlRecentIndices(frames: number): number[] {
+  const snapshot = getAnalysisTap()?.reader.readLatest(frames);
+  return snapshot ? indicesOf(snapshot.pcm, snapshot.channels) : [];
 }
 
 describe('hi-fi stream seek', () => {
@@ -132,7 +124,7 @@ describe('hi-fi stream seek', () => {
     });
   });
 
-  it('SDL3: seeks via _seek_stream and the UI clock tracks audible output', async () => {
+  it('SDL: seeks via _seek_stream and the UI clock tracks audible output', async () => {
     await withBackend('sdl', async (backend) => {
       await backend.loadFromURLStreaming!(seekUrl, { expectedDuration: 39 });
       expect(backend.getCapabilities().seek).toBe(true);
@@ -143,7 +135,7 @@ describe('hi-fi stream seek', () => {
         expect(backend.getCurrentTime()).toBeCloseTo(target, 3);
         // Settled = audio flowing again at the new position.
         await waitFor(() => backend.getCurrentTime() > target + 0.15);
-        const recent = sdlRecentIndices(backend, 512).filter((n) => n >= 0);
+        const recent = sdlRecentIndices(512).filter((n) => n >= 0);
         expect(recent.length, `target ${target} state ${JSON.stringify(backend.getState())}`).toBeGreaterThan(0);
         const audible = recent.at(-1)! / RATE;
         expect(audible).toBeGreaterThanOrEqual(target);
@@ -152,7 +144,7 @@ describe('hi-fi stream seek', () => {
     });
   });
 
-  it('SDL3: seek while the push loop is parked on a full ring does not deadlock', async () => {
+  it('SDL: seek while the push loop is parked on a full ring does not deadlock', async () => {
     await withBackend('sdl', async (backend) => {
       await backend.loadFromURLStreaming!(seekUrl, { expectedDuration: 40 });
       backend.pause();
@@ -164,7 +156,7 @@ describe('hi-fi stream seek', () => {
       backend.seek(25); // back-to-back: the first restart is aborted mid-flight
       backend.play();
       await waitFor(() => backend.getCurrentTime() > 25.2);
-      const recent = sdlRecentIndices(backend, 512).filter((n) => n >= 0);
+      const recent = sdlRecentIndices(512).filter((n) => n >= 0);
       const audible = recent.at(-1)! / RATE;
       expect(audible).toBeGreaterThanOrEqual(25);
       expect(audible).toBeLessThan(26);
@@ -220,7 +212,7 @@ describe('hi-fi gapless splice', () => {
     });
   });
 
-  it('SDL3: next same-format track follows with no gap and the clock restarts', async () => {
+  it('SDL: next same-format track follows with no gap and the clock restarts', async () => {
     await withBackend('sdl', async (backend) => {
       const events: Array<{ alreadyPlayingNext?: boolean }> = [];
       backend.setOnEndedCallback((e) => events.push({ alreadyPlayingNext: e?.alreadyPlayingNext }));
@@ -229,10 +221,10 @@ describe('hi-fi gapless splice', () => {
       backend.preloadNext!({ url: gaplessB, duration: 3 });
       backend.seek(2.5);
 
-      // The viz ring holds ~0.7 s; snapshot it while the boundary passes.
+      // The analysis ring holds ~1.4 s; snapshot it while the boundary passes.
       let spliceWindow: number[] | null = null;
       await waitFor(() => {
-        const recent = sdlRecentIndices(backend, 16384);
+        const recent = sdlRecentIndices(16384);
         if (recent.includes(3 * RATE) && recent.includes(3 * RATE - 1)) spliceWindow = recent;
         return spliceWindow !== null && events.length > 0;
       }, 10_000);

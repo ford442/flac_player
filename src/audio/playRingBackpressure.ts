@@ -1,5 +1,5 @@
-/** Matches C++ PLAY_RING_CAPACITY: ~2 s stereo f32 at 96 kHz. */
-export const PLAY_RING_CAPACITY_FLOATS = 96000 * 2 * 2;
+/** Matches C++ PLAY_RING_CAPACITY (play_ring.h): 2^19 floats, ~2.7 s of 96 kHz stereo. */
+export const PLAY_RING_CAPACITY_FLOATS = 1 << 19;
 
 /** Pause the JS decoder when the C++ play ring is above this fraction full. */
 export const PLAY_RING_HIGH_WATER = 0.75;

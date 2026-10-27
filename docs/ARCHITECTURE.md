@@ -22,7 +22,7 @@ flowchart TB
     Streaming["StreamingAudioPlayer<br/>default — HTMLAudio + range requests"]
     WebAudio["WebAudioPlayer<br/>buffered Web Audio API"]
     Worklet["WorkletAudioPlayer<br/>worklet + libflac decode"]
-    SDL3["Sdl3AudioPlayer<br/>SDL3 WASM"]
+    SDL3["Sdl3AudioPlayer<br/>C++ WASM engine + sdl-engine worklet"]
   end
 
   subgraph Load["Loading & library"]
@@ -65,7 +65,6 @@ flowchart TB
   Probe -->|failure without GL opt-in; audio unaffected| Fatal
   Analyser -->|visualizer=webgl2 or Settings| WebGL2
   Worklet -->|PCM tap| ProjectM
-  SDL3 -->|PCM ring bridge| Analyser
 ```
 
 ## Audio data flow
@@ -123,7 +122,7 @@ No full-file download before playback starts. Requires CORS + `Accept-Ranges` on
 | `streaming` (default) | `audio/backends/StreamingAudioPlayer.ts` | URL → `<audio>` | Large library, instant start, crossfade |
 | `web-audio` | `audio/backends/WebAudioPlayer.ts` | Full fetch + decode | Simple buffered playback, debugging |
 | `worklet` | `audio/backends/worklet/WorkletAudioPlayer.ts` | Fetch/decode → worklet ring | Low latency, projectM PCM tap, EQ |
-| `sdl` | `audio/backends/Sdl3AudioPlayer.ts` | Range + play ring (large) or full fetch (small) | Experimental WASM output; 512 MiB heap cap |
+| `sdl` | `audio/backends/Sdl3AudioPlayer.ts` | Range + play ring (large) or full fetch (small) | Experimental C++ engine (play ring + transport) read by an AudioWorklet; 512 MiB heap cap |
 
 Backend factory: `src/audio/createAudioBackend.ts` (dynamic `import()` — WASM chunks load lazily).
 
@@ -196,19 +195,18 @@ In-app ProjectMHost OR postMessage / BroadcastChannel('projectm-audio')
 ### AudioContextManager (`src/audio/AudioContextManager.ts`)
 
 - Single shared `AudioContext`
-- Speaker DSP (ReplayGain → limiter → volume → 5-band EQ) in the `dsp-chain` AudioWorklet: `src/sdl/dsp_chain.h` compiled to `public/dsp-chain.wasm`, the same code SDL runs; `EQChain.ts` / `ReplayGainNode.ts` when it cannot load (see `docs/AUDIO_BACKENDS.md` → Speaker-path DSP)
+- Speaker DSP (ReplayGain → limiter → volume → 5-band EQ) in the `dsp-chain` AudioWorklet: `src/sdl/dsp_chain.h` compiled to `public/dsp-chain.wasm`, for every backend; `EQChain.ts` / `ReplayGainNode.ts` when it cannot load (see `docs/AUDIO_BACKENDS.md` → Speaker-path DSP)
 - Analyser policy (`fftSize`, smoothing, dB range) set explicitly from `analyserPolicy.ts`
 - Application-lifetime device: backends connect/disconnect sources and never `suspend()` it
-- `connectInput()` / `connectVisualizerFeed()` routing
-- SDL backends mute Web Audio destination while WASM owns speakers; PCM is tapped back for the analyser
+- `connectInput()` routing for every backend's source node
 
-### SDL PCM bridge (`src/audio/SdlPcmBridge.ts`)
+### SDL engine (`src/audio/backends/Sdl3AudioPlayer.ts`)
 
-Visualizer tap only: lock-free ring in C++ (`src/sdl/pcm_ring.h`, 65536 floats) → AudioWorklet → `AnalyserNode` for SDL3. SDL3 **playback** uses a separate play ring (`src/sdl/play_ring.h`, 384000 floats) fed by `_push_pcm`.
+The C++ engine (`src/sdl/audio_engine.cpp`) holds the buffered track or the play ring (`src/sdl/play_ring.h`, 2^19 floats, fed by `_push_pcm`) and a transport block (`src/sdl/engine_state.h`) in `-pthread` shared memory. The `sdl-engine` AudioWorkletProcessor (`src/audio/worklets/sdlEngineProcessor.js`) reads whole frames out of it on the audio thread and feeds `connectInput()`, so speaker DSP and the analysis ring are the shared graph's. SDL itself (a ScriptProcessor on the main thread in a second `AudioContext`) left the path in #268.
 
 ### Analysis ring (`src/audio/analysisRing.ts`)
 
-Broadcast SharedArrayBuffer tap of post-DSP PCM for analysis consumers: written by the SDL callback (`src/sdl/analysis_ring.h`) or the `dsp-chain` worklet, read at UI rate by `AnalysisRingReader` (`getAnalysisTap()` picks the live writer). Feeds the `?gpu_fft=1` live spectrum and its `dsp_fft.h` WASM golden (`src/audio/wasmFft.ts`). See `docs/AUDIO_BACKENDS.md` → Analysis ring.
+Broadcast SharedArrayBuffer tap of post-DSP PCM for analysis consumers: written by the `dsp-chain` worklet (every backend passes through it), read at UI rate by `AnalysisRingReader` (`getAnalysisTap()`). Feeds the `?gpu_fft=1` live spectrum and its `dsp_fft.h` WASM golden (`src/audio/wasmFft.ts`). See `docs/AUDIO_BACKENDS.md` → Analysis ring.
 
 ## Library & storage (client)
 
@@ -232,7 +230,7 @@ Key endpoints: `GET /api/songs`, `POST /api/songs/{id}/play`, `POST /api/share`,
 
 | Artifact | Build command | Committed in `public/` |
 |----------|---------------|------------------------|
-| SDL3 | `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh` (`--debug` via `scripts/build-wasm.sh --debug --sdl3`) | `sdl-audio.js`, `sdl-audio.wasm` |
+| SDL engine | `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh` (`--debug` via `scripts/build-wasm.sh --debug --sdl3`) | `sdl-audio.js`, `sdl-audio.wasm` |
 | projectM | `npm run build:projectm` | `projectm/projectm-host.*` (optional; separate `USE_SDL=2` video host) |
 
 CI runs `npm run verify:wasm` against `public/wasm-source.sha256`. Production webpack uses `--env skipWasm=true` and copies prebuilt binaries.
@@ -251,7 +249,7 @@ The page's own headers isolate it. The service worker does not provide them (it 
 | Context | Needs isolation? | Without it |
 |---------|------------------|------------|
 | Shared `AudioContext` + `dsp-chain` worklet | Only for the analysis ring (`SharedArrayBuffer`); the module itself is built without pthreads | Audio and speaker DSP work; `getAnalysisTap()` is null and analysis consumers read the `AnalyserNode` |
-| SDL3 private context | Yes: `-pthread` build, play ring in shared memory | SDL backends cannot initialize; use `streaming` |
+| `sdl` engine worklet | Yes: `-pthread` build, PCM and transport in shared memory read by the worklet | The backend reports `playable: false` and loads reject; use `streaming` |
 | `GPUDevice` + canvas (WebGPU) | No | — |
 | WebGL2 visualizer | No | — |
 | projectM host | No `SharedArrayBuffer` use (built without pthreads) | — |

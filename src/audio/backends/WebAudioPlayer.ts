@@ -423,6 +423,7 @@ export class WebAudioPlayer extends BaseAudioBackend {
 
   getCapabilities(): AudioBackendCapabilities {
     return {
+      playable: true,
       seek: true,
       playbackRate: true,
       gapless: true,

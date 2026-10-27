@@ -4,7 +4,7 @@ A high-quality React application for playing FLAC and WAV audio files with WebGP
 
 ## Features
 
-- **Four audio backends**: Streaming (default), Web Audio, AudioWorklet, SDL3 WASM — see [docs/AUDIO_BACKENDS.md](docs/AUDIO_BACKENDS.md)
+- **Four audio backends**: Streaming (default), Web Audio, AudioWorklet, C++ WASM engine — see [docs/AUDIO_BACKENDS.md](docs/AUDIO_BACKENDS.md)
 - **FLAC and WAV Support**: Decode and play via Web Audio, libflac WASM, or CDN streaming (HTTP range requests)
 - **Streaming playback (default)**: Instant start on remote files without full download; optional **crossfade / gapless** between queue tracks
 - **5-band EQ** (60 / 250 / 1k / 4k / 12k Hz) and playback-rate control (`EQPanel`; speed is disabled on backends that cannot honor it)
@@ -70,10 +70,9 @@ npm test                # all four, in that order
 If you are developing with the SDL-based audio engine (Emscripten build), build the WASM bundles first:
 
 ```bash
-# One-time: install and activate Emscripten (from repo root)
+# One-time: install the pinned Emscripten (scripts/emsdk-version) into ./emsdk
 git clone https://github.com/emscripten-core/emsdk.git
-cd emsdk && ./emsdk install latest && ./emsdk activate latest
-source ./emsdk_env.sh
+cd emsdk && ./emsdk install "$(cat ../scripts/emsdk-version)" && ./emsdk activate "$(cat ../scripts/emsdk-version)"
 
 # Build SDL3 WASM artifacts into public/
 cd ..   # back to repo root
@@ -83,7 +82,7 @@ npm run build:wasm:sdl3         # same as bash src/sdl/build.sh
 npm start
 ```
 
-**WASM policy:** C++ sources live in `src/sdl/`; compiled `public/sdl-audio.*` is committed to the repo. CI runs `npm run verify:wasm` to ensure the source hash in `public/wasm-source.sha256` matches. PRs that touch SDL sources also run an optional emsdk build job. SDL2 playback was retired (#212); projectM uses a separate `USE_SDL=2` video host.
+**WASM policy:** C++ sources live in `src/sdl/`, `src/dsp/`, `src/resampler/` and `src/projectm/`; the compiled `public/*.wasm` are committed. Every graph is built with the Emscripten release in `scripts/emsdk-version` (the build scripts refuse any other `emcc`; see [docs/WASM_TOOLCHAIN.md](docs/WASM_TOOLCHAIN.md)). CI runs `npm run verify:wasm` (source hashes, which include the pin) and, on PRs that touch a graph, rebuilds it with the pinned emsdk and fails on any byte difference. SDL2 playback was retired (#212); projectM uses a separate `USE_SDL=2` video host.
 
 **Production webpack build** does not compile WASM (no emsdk required). It copies prebuilt artifacts from `public/`:
 
@@ -92,7 +91,7 @@ npm run build                   # webpack only (--env skipWasm=true in CI)
 npm run build:all               # build:wasm + webpack
 ```
 
-SDL WASM glue is **not** in the main JS bundle — the SDL3 backend and Emscripten scripts load only when the user selects SDL3.
+The engine's WASM glue is **not** in the main JS bundle — the `sdl` backend and its Emscripten script load only when the user selects "WASM engine".
 
 This will open the app at `http://localhost:3000`
 
@@ -229,7 +228,7 @@ Cross-Origin-Embedder-Policy: require-corp
   - Vercel: configure headers in `vercel.json` or platform settings
   - S3/CloudFront: configure CloudFront response headers or Lambda@Edge
 
-Without these headers, the browser will block the AudioWorklet/SharedArrayBuffer functionality and the SDL audio backend may fall back to ScriptProcessor or fail to initialize. If you cannot set these headers, the project includes a ScriptProcessor→AudioWorklet shim as a fallback, but enabling COOP/COEP is the recommended path for best audio performance.
+Without these headers, the browser will block the AudioWorklet/SharedArrayBuffer functionality and the `sdl` engine reports itself unplayable (there is no ScriptProcessor fallback). If you cannot set these headers, the project includes a ScriptProcessor→AudioWorklet shim as a fallback, but enabling COOP/COEP is the recommended path for best audio performance.
 
 ## Project-M Visualizer Integration
 
@@ -244,7 +243,7 @@ When the **AudioWorklet** backend is active (the default for modern browsers), t
 1. `window.opener.postMessage` / `window.parent.postMessage` – cross-origin safe; works for popups opened with `window.open` and for `<iframe>` embeds.
 2. `BroadcastChannel('projectm-audio')` – same-origin fallback for multi-tab or worker usage.
 
-For non-worklet modes (streaming, SDL, ScriptProcessor fallback) the existing AnalyserNode + `requestAnimationFrame` path is used instead (~60 fps, mono).
+For non-worklet modes (streaming, web-audio, `sdl`) the existing AnalyserNode + `requestAnimationFrame` path is used instead (~60 fps, mono).
 
 ### Receiving PCM in projectM
 
