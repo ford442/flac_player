@@ -5,7 +5,7 @@ import { PlaybackScrubber } from '../PlaybackScrubber';
 import { useActions } from '../PlayerActionsContext';
 import { selectIsLoading, selectIsPlaying, useQueue, useSettings, useTransport } from '../../player/selectors';
 import { getNextQueueIndex, getPreviousQueueIndex } from '../../utils/queueUtils';
-import { OUTPUT_MODE_LABELS } from './types';
+import { OutputModeOptions } from './OutputModeOptions';
 
 /** Bottom transport bar; reads the player store, so it takes no props. */
 export const PlayerFallbackTransportBar: React.FC = () => {
@@ -82,9 +82,7 @@ export const PlayerFallbackTransportBar: React.FC = () => {
           </button>
           <select value={outputMode} onChange={(e) => setOutputMode(e.target.value as AudioOutputMode)}
             className="px-3 py-1 bg-white/10 rounded text-sm" aria-label="Audio output mode">
-            {Object.entries(OUTPUT_MODE_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
+            <OutputModeOptions />
           </select>
           <span className="text-xs text-gray-400 w-12 text-right">{muted ? '🔇 0%' : `${Math.round(volume * 100)}%`}</span>
         </div>

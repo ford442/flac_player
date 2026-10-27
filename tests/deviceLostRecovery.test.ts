@@ -41,7 +41,7 @@ class FakeVisualizer implements RecoverableVisualizer {
   lostCb: ((reason: string) => void) | null = null;
   destroyed = false;
   setOnDeviceLost(cb: (reason: string) => void): void { this.lostCb = cb; }
-  async initialize(_a: AnalyserNode, boot: WebGPUProbeSuccess): Promise<boolean> {
+  async initialize(_a: AnalyserNode | null, boot: WebGPUProbeSuccess): Promise<boolean> {
     this.device = boot.device;
     return true;
   }
@@ -79,7 +79,7 @@ describe('WebGPU device-lost recovery', () => {
         visualizers.push(v);
         return v;
       },
-      analyser: {} as AnalyserNode,
+      getAnalyser: () => ({}) as AnalyserNode,
       cancelled: () => false,
       onReady: (vis, b) => ready.push({ vis, device: b.device }),
       onLost: (vis) => lost.push(vis),

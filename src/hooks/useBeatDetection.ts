@@ -1,4 +1,5 @@
 import { useRef, useCallback } from 'react';
+import { BEAT_BAND_EDGES_HZ, BandMapper, DEFAULT_SPECTRUM_RATE } from '../visuals/spectrumBands';
 
 export type BeatBands = [number, number, number, number, number];
 
@@ -10,34 +11,21 @@ export interface BeatDetectionState {
   /**
    * Bands + beat from a getByteFrequencyData-scaled spectrum (analyser or GPU bins
    * mapped by amplitudesToAnalyserBytes). `null` = no new spectrum this frame:
-   * bands hold, beatPhase keeps ramping.
+   * bands hold, beatPhase keeps ramping. `sampleRate` is the spectrum's context
+   * rate (Nyquist = last bin); omitted = 44.1 kHz.
    */
-  processBytes: (data: Uint8Array | null) => void;
+  processBytes: (data: Uint8Array | null, sampleRate?: number) => void;
 }
 
-/** 5 bands over the byte spectrum (bass / low-mid / mid / high-mid / treble), each 0..1. */
-export function spectrumBands(data: ArrayLike<number>): BeatBands {
-  const binCount = data.length;
-  const bandSizes = [
-    Math.floor(binCount * 0.02),   // Bass: bins 0-40
-    Math.floor(binCount * 0.05),   // Low-mid: bins 41-140
-    Math.floor(binCount * 0.15),   // Mid: bins 141-440
-    Math.floor(binCount * 0.30),   // High-mid: bins 441-1050
-    binCount - Math.floor(binCount * 0.52), // Treble: rest
-  ];
+const beatBandMapper = new BandMapper(() => BEAT_BAND_EDGES_HZ, 5);
 
-  let binIndex = 0;
-  const bands: BeatBands = [0, 0, 0, 0, 0];
-  for (let b = 0; b < 5; b++) {
-    let sum = 0;
-    const end = Math.min(binIndex + bandSizes[b]!, binCount);
-    for (let i = binIndex; i < end; i++) {
-      sum += data[i]!;
-    }
-    bands[b] = end > binIndex ? sum / ((end - binIndex) * 255) : 0;
-    binIndex = end;
-  }
-  return bands;
+/**
+ * 5 bands over the byte spectrum (bass / low-mid / mid / high-mid / treble), each
+ * 0..1, cut in Hz (BEAT_BAND_EDGES_HZ) so bass stays ~20–440 Hz at any context rate.
+ */
+export function spectrumBands(data: ArrayLike<number>, sampleRate = DEFAULT_SPECTRUM_RATE): BeatBands {
+  const out = beatBandMapper.map(data, sampleRate);
+  return [out[0]!, out[1]!, out[2]!, out[3]!, out[4]!];
 }
 
 export function useBeatDetection(): BeatDetectionState {
@@ -46,12 +34,14 @@ export function useBeatDetection(): BeatDetectionState {
   const lastBeatTime = useRef(0);
   const bassHistory = useRef<number[]>([]);
 
-  const processBytes = useCallback((data: Uint8Array | null) => {
+  const scratch = useRef<Uint8Array<ArrayBuffer>>(new Uint8Array(0));
+
+  const processBytes = useCallback((data: Uint8Array | null, sampleRate?: number) => {
     if (!data) {
       beatPhaseRef.current = Math.min(1, beatPhaseRef.current + 0.03);
       return;
     }
-    const bands = spectrumBands(data);
+    const bands = spectrumBands(data, sampleRate);
     spectrumRef.current = bands;
 
     // Simple beat detection using bass band
@@ -80,9 +70,11 @@ export function useBeatDetection(): BeatDetectionState {
       spectrumRef.current = [0, 0, 0, 0, 0];
       return;
     }
-    const data = new Uint8Array(analyser.frequencyBinCount);
-    analyser.getByteFrequencyData(data);
-    processBytes(data);
+    if (scratch.current.length !== analyser.frequencyBinCount) {
+      scratch.current = new Uint8Array(analyser.frequencyBinCount);
+    }
+    analyser.getByteFrequencyData(scratch.current);
+    processBytes(scratch.current, analyser.context?.sampleRate);
   }, [processBytes]);
 
   return {

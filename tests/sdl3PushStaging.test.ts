@@ -30,14 +30,14 @@ describe('Sdl3AudioPlayer push staging', () => {
   const win = window as unknown as Record<string, unknown>;
   afterEach(() => {
     delete win.createSdlAudioModule;
-    delete win.__sdl_script_processor_shim_loaded;
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it('reuses one heap block across push_pcm chunks and frees it on destroy', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const { mod, pushed } = fakeModule();
-    win.__sdl_script_processor_shim_loaded = true;
+    vi.stubGlobal('crossOriginIsolated', true); // the pthread build is gated on isolation
     win.createSdlAudioModule = async () => mod;
 
     const player = new Sdl3AudioPlayer(new AudioContextManager());

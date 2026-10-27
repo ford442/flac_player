@@ -1,4 +1,5 @@
 import { checkShaderCompilation } from './checkShaderCompilation';
+import { createRenderPipelineChecked, withValidationScope } from './pipelineErrors';
 
 export interface WaveformGpuResources {
   uniformBuffer: GPUBuffer;
@@ -6,6 +7,10 @@ export interface WaveformGpuResources {
   pipeline: GPURenderPipeline;
 }
 
+/**
+ * Mostly an intermediate: in 3D mode it renders into the cube's texture and the
+ * cube pass applies the canvas output conversion, so this shader stays sRGB.
+ */
 const WAVEFORM_SHADER = `
       struct Uniforms {
         resolution: vec2<f32>,
@@ -56,31 +61,36 @@ export async function createWaveformResources(
   device: GPUDevice,
   canvasFormat: GPUTextureFormat,
 ): Promise<WaveformGpuResources> {
-  const uniformBuffer = device.createBuffer({
-    size: 32,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-
-  const module = device.createShaderModule({ code: WAVEFORM_SHADER });
+  const module = device.createShaderModule({ code: WAVEFORM_SHADER, label: 'waveform' });
   await checkShaderCompilation(module, 'waveform');
 
-  const bindGroupLayout = device.createBindGroupLayout({
-    entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }],
+  const { uniformBuffer, bindGroup, layout } = await withValidationScope(device, 'waveform', () => {
+    const uniformBuffer = device.createBuffer({
+      label: 'waveform-uniforms',
+      size: 32,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    const bindGroupLayout = device.createBindGroupLayout({
+      entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }],
+    });
+    const bindGroup = device.createBindGroup({
+      layout: bindGroupLayout,
+      entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
+    });
+    const layout = device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] });
+    return { uniformBuffer, bindGroup, layout };
   });
 
-  const bindGroup = device.createBindGroup({
-    layout: bindGroupLayout,
-    entries: [{ binding: 0, resource: { buffer: uniformBuffer } }],
-  });
-
-  const layout = device.createPipelineLayout({ bindGroupLayouts: [bindGroupLayout] });
-
-  const pipeline = device.createRenderPipeline({
-    layout,
-    vertex: { module, entryPoint: 'vertex_main' },
-    fragment: { module, entryPoint: 'fragment_main', targets: [{ format: canvasFormat }] },
-    primitive: { topology: 'triangle-list' },
-  });
-
-  return { uniformBuffer, bindGroup, pipeline };
+  try {
+    const pipeline = await createRenderPipelineChecked(device, {
+      layout,
+      vertex: { module, entryPoint: 'vertex_main' },
+      fragment: { module, entryPoint: 'fragment_main', targets: [{ format: canvasFormat }] },
+      primitive: { topology: 'triangle-list' },
+    }, 'waveform');
+    return { uniformBuffer, bindGroup, pipeline };
+  } catch (error) {
+    uniformBuffer.destroy();
+    throw error;
+  }
 }

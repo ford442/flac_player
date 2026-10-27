@@ -611,9 +611,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       return;
     }
 
-    if (this.audioContext.state === 'suspended') {
-      void this.contextManager.resume();
-    }
+    void this.contextManager.resume(); // suspended (idle / autoplay) or interrupted (iOS)
 
     if (this.isStreaming) {
       if (this.streamFinished) {
@@ -652,8 +650,9 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     if (!this.isPlaying) return;
 
     if (this.isStreaming) {
-      // Never suspend the shared AudioContext (EQ, analyser, SDL tap live on it).
-      // The processor holds its ring position; the feeder stops the decoder.
+      // The backend never suspends the shared AudioContext; AudioContextManager does
+      // after IDLE_SUSPEND_MS of paused transport. The processor holds its ring
+      // position; the feeder stops the decoder.
       this.post({ type: 'pause' });
       this.streamFeeder?.setPaused(true);
       this.isPlaying = false;

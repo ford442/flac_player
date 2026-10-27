@@ -21,10 +21,18 @@ export class CanvasFallbackVisualizer {
   }
 
   initialize(analyser: AnalyserNode): boolean {
-    this.analyser = analyser;
-    this.freqData = new Uint8Array(analyser.frequencyBinCount);
-    this.waveData = new Uint8Array(analyser.frequencyBinCount);
+    this.setAnalyser(analyser);
     return true;
+  }
+
+  /** Swap the spectrum source (graph rebuilt at another rate). */
+  setAnalyser(analyser: AnalyserNode | null): void {
+    this.analyser = analyser;
+    const bins = analyser?.frequencyBinCount ?? 0;
+    if (this.freqData.length !== bins) {
+      this.freqData = new Uint8Array(bins);
+      this.waveData = new Uint8Array(bins);
+    }
   }
 
   render(): void {

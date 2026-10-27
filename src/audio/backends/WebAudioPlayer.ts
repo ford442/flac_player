@@ -2,6 +2,7 @@
 import { decodeAudioWithBuffer } from '../audioDecoder';
 import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextManager } from '../AudioContextManager';
 import { ensureContextForBuffer } from '../ensureContextForSource';
+import { resampleInterleaved } from '../resampler';
 import { getOrFetchTrack } from '../../storage/trackCache';
 import type { AudioBackendCapabilities, AudioPlaybackState, DecodedPcmView } from '../../types/audio';
 import {
@@ -53,7 +54,7 @@ export class WebAudioPlayer extends BaseAudioBackend {
   }
 
   async initialize(): Promise<void> {
-    /* Context is created in loadAudio via ensureForTrack (native file rate). */
+    /* Context is created in loadAudio via ensureForTrack (device rate; see bufferAtContextRate). */
   }
 
   private attachGraph(): AudioContext {
@@ -110,24 +111,11 @@ export class WebAudioPlayer extends BaseAudioBackend {
         );
         if (controller.signal.aborted) return;
 
-        if (nativeBuffer) {
-          this.nextAudioBuffer = nativeBuffer;
-        } else {
-          const frameCount = decoderResult.interleavedBuffer.length / decoderResult.channels;
-          const buffer = context.createBuffer(
-            decoderResult.channels,
-            frameCount,
-            decoderResult.sampleRate
-          );
-          const interleaved = decoderResult.interleavedBuffer;
-          for (let ch = 0; ch < decoderResult.channels; ch++) {
-            const channelData = buffer.getChannelData(ch);
-            for (let i = 0, idx = ch; i < frameCount; i++, idx += decoderResult.channels) {
-              channelData[i] = interleaved[idx]!;
-            }
-          }
-          this.nextAudioBuffer = buffer;
-        }
+        const nextBuffer = nativeBuffer?.sampleRate === context.sampleRate
+          ? nativeBuffer
+          : await bufferAtContextRate(context, decoderResult);
+        if (controller.signal.aborted) return;
+        this.nextAudioBuffer = nextBuffer;
 
         if (this.isPlaying) {
           this._scheduleNextIfNeeded();
@@ -181,24 +169,9 @@ export class WebAudioPlayer extends BaseAudioBackend {
       });
       const { context: live } = this.requireGraph();
 
-      if (nativeBuffer && live === context) {
-        this.audioBuffer = nativeBuffer;
-      } else {
-        const frameCount = decoderResult.interleavedBuffer.length / decoderResult.channels;
-        this.audioBuffer = live.createBuffer(
-          decoderResult.channels,
-          frameCount,
-          decoderResult.sampleRate
-        );
-
-        const interleaved = decoderResult.interleavedBuffer;
-        for (let ch = 0; ch < decoderResult.channels; ch++) {
-          const channelData = this.audioBuffer.getChannelData(ch);
-          for (let i = 0, idx = ch; i < frameCount; i++, idx += decoderResult.channels) {
-            channelData[i] = interleaved[idx]!;
-          }
-        }
-      }
+      this.audioBuffer = nativeBuffer && live === context && nativeBuffer.sampleRate === live.sampleRate
+        ? nativeBuffer
+        : await bufferAtContextRate(live, decoderResult);
 
       this.pausedAt = 0;
       this.notifyStateChange();
@@ -307,9 +280,7 @@ export class WebAudioPlayer extends BaseAudioBackend {
 
     const { context, gain } = this.requireGraph();
 
-    if (context.state === 'suspended') {
-      void this.contextManager.resume();
-    }
+    void this.contextManager.resume(); // suspended (idle / autoplay) or interrupted (iOS)
 
     this.sourceNode = context.createBufferSource();
     this.sourceNode.buffer = this.audioBuffer;
@@ -503,4 +474,28 @@ export class WebAudioPlayer extends BaseAudioBackend {
     this.gainNode = null;
     this.audioContext = null;
   }
+}
+
+/**
+ * Decoded PCM as an AudioBuffer at the context's rate. The context runs at the
+ * device rate (#259 A8); an AudioBufferSourceNode would otherwise resample a
+ * file-rate buffer itself, which Chromium does by linear interpolation, so a rate
+ * mismatch goes through the SpeexDSP q10 resampler first (linear only if the
+ * WASM module is missing, same as the worklet path).
+ */
+async function bufferAtContextRate(
+  context: BaseAudioContext,
+  decoded: { interleavedBuffer: Float32Array; channels: number; sampleRate: number },
+): Promise<AudioBuffer> {
+  const { channels } = decoded;
+  const interleaved = await resampleInterleaved(decoded.interleavedBuffer, channels, decoded.sampleRate, context.sampleRate);
+  const frameCount = Math.floor(interleaved.length / channels);
+  const buffer = context.createBuffer(channels, frameCount, context.sampleRate);
+  for (let ch = 0; ch < channels; ch++) {
+    const channelData = buffer.getChannelData(ch);
+    for (let i = 0, idx = ch; i < frameCount; i++, idx += channels) {
+      channelData[i] = interleaved[idx]!;
+    }
+  }
+  return buffer;
 }

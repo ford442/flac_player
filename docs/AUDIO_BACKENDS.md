@@ -36,10 +36,10 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 - **Pre-buffering:** The player calls `preloadNext()` ~8 s before track end (or immediately when the queue changes). The queue panel shows **pre-buffering next** while decode/fetch is in progress.
 - **Internal transitions:** When a backend has already started the next track, `onEnded` receives `{ alreadyPlayingNext: true }` so the UI advances the queue index without reloading audio.
 - **Hi-fi paths (worklet ring / SDL play ring):** see [Hi-fi stream seek and gapless](#hi-fi-stream-seek-and-gapless). **Crossfade overlap stays native-streaming + web-audio only**: the hi-fi rings hold one timeline, so crossfade mode is treated as gapless there. Buffered SDL (small files) has no queue; tracks stop at EOF and advance via `onEnded` → `playTrack`.
-- **Sample-rate policy (#194):** `AudioContextManager` opens the shared graph at the **file native rate** when `AudioContext.isSampleRateSupported` (or a construct/close probe) allows it. Otherwise `sampleRate` is omitted and the OS device default is used. A later track at a different rate **recreates** the graph (ReplayGain, master volume, EQ, analyser, `externalPlaybackActive` restored). Same-rate album queues stay gapless; a rate or latency change may produce a brief audible gap. Latency hint is Settings → **Output latency** (`flac_player_latency_mode`, default `playback`).
-  - **streaming (native `<audio>`):** media-element clock; analyser lives on the shared native-rate context.
-  - **web-audio:** `AudioBuffer` stays at file rate; `BufferSourceNode` lets the browser resample if the context could not match.
-  - **worklet:** PCM is consumed 1:1 with the context callback rate at 1× (see [Worklet transport and playback rate](#worklet-transport-and-playback-rate) for other speeds). The processor is given the file (or context) rate via `processorOptions`; if the device cannot open native rate, the SpeexDSP WASM resampler (`resampler.ts`, stateful across stream chunks) converts PCM, with linear interpolation as the load-failure fallback — see [Sample-rate conversion](#sample-rate-conversion). No resampler is created when the context already runs at the file rate. Seek uses the processor's own `this.sampleRate`.
+- **Sample-rate policy (#259 A8, was #194):** `AudioContextManager` opens **one** shared graph at the **output device's rate** and keeps it for the page's lifetime; tracks at other rates are converted into it (see [One context at the device rate](#decision-record-one-context-at-the-device-rate)). Only a latency-hint or render-quantum change rebuilds the graph (ReplayGain, master volume, EQ, analyser, `externalPlaybackActive` restored), with a brief gap. `?ctxrate=native` (or `setPolicy({ recreateOnSampleRateMismatch: true })`) restores the old open-at-file-rate behavior for A/B. Latency hint is Settings → **Output latency** (`flac_player_latency_mode`, default `playback`).
+  - **streaming (native `<audio>`):** media-element clock; the browser's media pipeline converts to the context rate.
+  - **web-audio:** a file-rate decode goes through the SpeexDSP resampler into an `AudioBuffer` at the context rate (Chromium's `AudioBufferSourceNode` would otherwise resample by linear interpolation). `decodeAudioData` results are already at the context rate.
+  - **worklet:** PCM is consumed 1:1 with the context callback rate at 1× (see [Worklet transport and playback rate](#worklet-transport-and-playback-rate) for other speeds). The processor is given the file (or context) rate via `processorOptions`; when the file rate differs from the context's, the SpeexDSP WASM resampler (`resampler.ts`, stateful across stream chunks) converts PCM, with linear interpolation as the load-failure fallback — see [Sample-rate conversion](#sample-rate-conversion). No resampler is created when the context already runs at the file rate. Seek uses the processor's own `this.sampleRate`.
   - **sdl:** WASM device opens at file rate. Large FLACs use the C++ play ring (`play_ring.h`); the analyser tap is still `SdlPcmBridge` at `context.sampleRate`. `_set_audio_data` / `_set_stream_format` return `1` on success; TypeScript rejects the load on `!== 1`. WASM heap is capped at 512 MiB (`MAXIMUM_MEMORY`).
 - **ReplayGain / loudness matching:** Settings → **Loudness (ReplayGain)** (`flac_player_replaygain_mode`, `flac_player_replaygain_limiter`). Applies a dedicated gain stage **before** the master volume fader on streaming, web-audio, and worklet backends. Every backend runs the same `dsp_chain.h` stage (plus the limiter) in WASM — see [Speaker-path DSP](#speaker-path-dsp-eq--replaygain). Client-side tag fetch uses a 64 KiB range request when API metadata is missing. Crossfade overlap may briefly mismatch levels when adjacent tracks have very different tags ([#184](https://github.com/ford442/flac_player/issues/184)).
 
@@ -98,7 +98,7 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 
 **How it works:** Decodes via `flacDecoder` / worker, feeds the `flac-processor` AudioWorklet. Buffered tracks are handed over whole; hi-fi streams go through a ring — shared memory under COOP/COEP, `chunk` messages otherwise (see [Worklet transport and playback rate](#worklet-transport-and-playback-rate)). Pause on the hi-fi path is a `pause` / `resume` port message — the shared `AudioContext` is never suspended — and the decoder is held while paused or while the ring is above 75 % full.
 
-**AudioWorklet is required.** There is no ScriptProcessor fallback: without `AudioWorklet` (insecure context, very old browser) every load rejects with an error the player shows, and `getCapabilities()` reports `playbackRate: false` / `gapless: false`. `public/script-processor-shim.js` is unrelated — it is loaded only by the SDL3 backend for Emscripten's audio.
+**AudioWorklet is required.** There is no ScriptProcessor fallback: without `AudioWorklet` (insecure context, very old browser) every load rejects with an error the player shows, and `getCapabilities()` reports `playbackRate: false` / `gapless: false`.
 
 **Use when:**
 - **projectM integration** — `setPCMCallback()` provides audio-clock-synchronized PCM
@@ -137,7 +137,7 @@ Buffered `_create_audio_buffer` rejects lengths above 384 MiB of f32 PCM and ret
 
 **Output device:** SDL opens its own Emscripten audio context, so Settings → **Output device** (`AudioContext.setSinkId`) does not apply; it uses the system default.
 
-**Build:** `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh`. Debug: `scripts/build-wasm.sh --debug --sdl3`. Release: `-O3 -DNDEBUG -msimd128` (stereo EQ uses f64x2 lanes; scalar fallback otherwise, bit-identical — `npm run test:dsp-golden`), `INITIAL_MEMORY=64 MiB`, `MAXIMUM_MEMORY=512 MiB`. SDL2 **playback** was retired (#212); projectM still uses a separate `USE_SDL=2` **video** host (`npm run build:projectm`).
+**Build:** `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh`. Debug: `scripts/build-wasm.sh --debug --sdl3`. Release: `-O3 -DNDEBUG -msimd128` (stereo EQ uses f64x2 lanes; scalar fallback otherwise, bit-identical — `npm run test:dsp-golden`), `INITIAL_MEMORY=64 MiB`, `MAXIMUM_MEMORY=512 MiB`. SDL2 **playback** was retired (#212); the projectM **video** host (`npm run build:projectm`) is plain WebGL2 with no SDL (#259).
 
 ---
 
@@ -222,7 +222,7 @@ decode worker ─► `chunk` postMessage ─► processor-local ring (same layou
 
 ## Sample-rate conversion
 
-Used only when the `AudioContext` cannot open the file's rate (`chooseContextSampleRate` / `ensureForTrack` fell back to the device rate) on the **worklet** path, for buffered PCM and for hi-fi stream chunks. SDL3 opens its stream at the file rate and lets SDL convert on bind.
+Used whenever a file's rate differs from the context's (the device rate, see the decision record below) on the **worklet** path (buffered PCM and hi-fi stream chunks) and the **web-audio** path (whole decoded buffers). SDL3 opens its stream at the file rate and lets SDL convert on bind.
 
 | Converter | Source | When |
 |-----------|--------|------|
@@ -295,16 +295,42 @@ Flat EQ, unity ReplayGain and volume are a bit-exact pass-through in the worklet
 ### Crossfade and multichannel (later phases)
 
 - Worklet / SDL "crossfade" is still a **gapless splice**: the hi-fi rings hold one timeline. An overlap fade in the processor waits on the SharedArrayBuffer play ring (crossfading `postMessage` chunks is fragile). Native `<audio>` streaming remains the only overlap fade.
-- `DSP_MAX_CHANNELS = 8`. The worklet follows the destination width, so a 5.1 file on a stereo device is folded down by Web Audio's `'speakers'` mix before the DSP; there is no surround / HRTF Settings UI yet.
+- `DSP_MAX_CHANNELS = 8`. The worklet follows the destination width, so a 5.1 file on a stereo device is folded down by Web Audio's `'speakers'` mix before the DSP; there is no surround / HRTF Settings UI yet. On a surround device the fallback chain keeps full width too: its limiter is out of the chain while off, and while on it runs one `DynamicsCompressorNode` per channel pair (the node is clamped to 2 channels), split and merged around them (`ReplayGainNode.ts`). `tests/browser/multichannel.test.ts` checks 5.1 / 7.1 on both engines.
 
 ## AudioContext lifecycle and output (`AudioContextManager`)
 
-- **Lazy, native-rate creation.** `ensureForTrack({ sampleRate, channels })` creates the context at the file rate. Volume / EQ / ReplayGain / sink setters, `getAnalyser()` (returns `null` before a graph) and `resume()` never open a graph. `getContext()` is the only lazy creator; calling it before `ensureForTrack` opens the device default rate and the first track may recreate.
+- **One context, created in the gesture.** The engine calls `unlock()` synchronously from user play commands (play, track click, next / previous), before any network await, so the context is created and resumed inside the gesture (WebKit otherwise starts it `suspended`). `ensureForTrack({ sampleRate, channels })` then reuses it. Volume / EQ / ReplayGain / sink setters, `getAnalyser()` (returns `null` before a graph) and `resume()` never open a graph. No throwaway context is ever opened to test a rate: `isSampleRateAccepted()` asks `AudioContext.isSampleRateSupported` where it exists, and the constructor relaxation below catches the rest.
+- **State machine.** `getState()` / `subscribeState()` report `none | running | suspended | interrupted | closed` from the context's `statechange`. `resume()` handles both `suspended` and WebKit's `interrupted` (a call or Siri took the session) and never rejects. The engine reports `setPlaybackActive(status is playing or loading)`. While playback is wanted, a suspended or interrupted context is resumed on `statechange`, on the next `pointerdown` / `pointerup` / `keydown` / `touchend` (installed once, capture + passive), and when the page becomes visible. `navigator.audioSession.type = 'playback'` is set where Safari's Audio Session API exists.
+- **Idle suspend.** Paused, stopped or ended for `IDLE_SUSPEND_MS` (10 s), the context is `suspend()`ed: the speaker DSP worklet / biquads, the analyser and the output stop rendering and the iOS audio session is released. The next play resumes it before the backend starts. A gesture alone does not wake an idled context.
 - **Constructor fallbacks.** If `new AudioContext(options)` throws, options are relaxed in order: numeric `latencyHint → 'interactive'`, drop `sinkId` (re-applied live via `setSinkId`), drop `renderSizeHint`, drop `sampleRate`. A rejected rate is remembered so later tracks at that rate do not retry. A rejected `renderSizeHint` is not retried either, until the setting changes.
 - **Render quantum.** Settings → **Output latency → Render quantum** persists `flac_player_render_size` (`default` = option omitted / 128 frames, `hardware`, `256`, `512`). It is sent as `AudioContextOptions.renderSizeHint` only when `AudioContext.prototype.renderQuantumSize` exists (Chromium). Elsewhere the buttons are disabled. Changing it recreates the graph. Larger quanta mean fewer worklet wakeups per second; `FlacProcessor` resizes its varispeed scratch for quanta above 128. The readout shows the live `renderQuantumSize`.
 - **Channels.** `destination.channelCount` follows the track (`max(2, channels)`, capped at `maxChannelCount`), `channelCountMode = 'explicit'`, `'speakers'` interpretation.
-- **Output device.** Settings → **Output device** persists `flac_player_output_device` (`{ id, label }`, `''` = default). Uses `navigator.mediaDevices.selectAudioOutput` where present, otherwise an `enumerateDevices()` list, applied with `AudioContext.setSinkId` (Chromium 110+) and passed as `sinkId` to future constructors. Browsers without `setSinkId` keep the default sink. A rejected device falls back to default with a toast. **SDL3 does not follow this setting:** Emscripten's SDL audio opens the default output device, so in SDL mode the sink, latency hint and render quantum apply only to the (muted) analyser graph.
+- **Output device.** Settings → **Output device** persists `flac_player_output_device` (`{ id, label }`, `''` = default). Uses `navigator.mediaDevices.selectAudioOutput` where present, otherwise an `enumerateDevices()` list, applied with `AudioContext.setSinkId` (Chromium 110+) and passed as `sinkId` to future constructors. Chromium may blank output ids until the page holds a media permission; the list then offers **Show devices…**, which takes a microphone permission, stops the stream at once and lists again. Browsers without `setSinkId` keep the default sink. A rejected device falls back to default with a toast; a context `error` event (device unplugged) falls back to default too, and `sinkchange` refreshes the readout.
+- **SDL3.** It opens its own option-less context and ScriptProcessor in the emsdk SDL port (#260 replaces it), so the sink, latency hint and render quantum apply only to the shared graph that feeds its analyser. While SDL owns the speakers that graph moves to a `{ type: 'none' }` sink (Chromium), so it renders for the visualizer without holding a second device open. SDL3 is a `-pthread` build: without cross-origin isolation the engine pickers show it disabled ("needs cross-origin isolation") instead of failing on load.
 - **Latency readout.** Settings → **Output latency** shows context rate, `baseLatency`, `outputLatency`, destination channels, and the speaker DSP engine (`useAudioOutputInfo`, polled each second, refreshed on graph recreate).
+
+### Decision record: one context at the device rate
+
+**Status:** adopted in #259 (A8). Supersedes the per-rate rebuild from #194.
+
+**Context.** Until #259 the shared graph was opened at each file's sample rate and rebuilt when the next track's rate differed. Each rebuild closed the context and recreated every node, which replaced the analyser (and so tore down the visualizer's `GPUDevice`, #259 W1), forced the engine to reload the track at `clock.now()`, left an audible gap between mixed-rate tracks, and, with `probeSampleRateSupported`, opened a throwaway context per track (#259 A2).
+
+**What a native-rate context buys.** Less than it seems. A context's `sampleRate` is not the device's: Chromium, Firefox and WebKit resample a context to the output device's rate (none of them switches the hardware rate for a page). So a 44.1 kHz context on a 48 kHz device is converted by the browser's output stage, and the result is bit-exact only when the device already runs at the file's rate. In that case a context opened at the device rate is bit-exact too. A native-rate context therefore only changes *which* resampler runs (the browser's output stage instead of ours), and it runs EQ and analysis at the file rate.
+
+**Options.**
+
+| | Rebuild per file rate (old) | One context at the device rate (chosen) |
+|---|---|---|
+| Bit-exact when device rate = file rate | yes | yes |
+| Resampler when they differ | browser output stage | SpeexDSP q10 (worklet, web-audio), media pipeline (streaming) |
+| Mixed-rate queue | gap + graph rebuild + engine reload per change | no rebuild; web-audio and native streaming stay gapless across rates (the hi-fi rings still splice only same-format successors) |
+| Visualizer / analyser | replaced per rate change | stable for the session |
+| Contexts per session | one per rate change (+ probes) | one |
+| Analyser bin width | varies with the file rate | fixed by the device rate |
+
+**Decision.** One context at the device rate. The stability gains are concrete, and the bit-exact path is unchanged where it ever existed. `?ctxrate=native` keeps the old behavior for listening tests. Revisit if a browser ever lets a page switch the device rate; until then, native rate belongs to SDL3 (#260), which opens its device stream at the file rate.
+
+**Consequences.** `tests/audioContextManager.test.ts` asserts a 10-track mixed-rate session constructs exactly one context, and the e2e smoke counts every constructed context (closed ones included). Hz-aware analyser bands (#259 A6) still matter: the device rate decides the bin width.
 
 ## Switching backends
 

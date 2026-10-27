@@ -16,6 +16,8 @@ export function browserEngineDeps(): EngineDeps {
   return {
     createBackend: (mode) => createAudioBackend(mode, sharedAudioContextManager),
     subscribeGraphRecreated: (listener) => sharedAudioContextManager.subscribeGraphRecreated(listener),
+    unlockAudio: () => sharedAudioContextManager.unlock(),
+    setPlaybackActive: (active) => sharedAudioContextManager.setPlaybackActive(active),
     candidateUrls: getPreferredStorageUrls,
     fetchTrackBytes,
     probeContentLength: async (url, signal) => (await probeRemoteAudio(url, signal)).contentLength,

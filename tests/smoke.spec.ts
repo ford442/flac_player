@@ -105,7 +105,7 @@ test.describe('FLAC Player Smoke Tests', () => {
     await page.goto('/');
     await openAdvancedLibrary(page);
 
-    // AudioContextManager creates the context lazily at the track's rate, so play first.
+    // AudioContextManager creates the context on the first play, so play first.
     await playLibraryTrack(page, 'Track One');
     await expect(page.getByRole('button', { name: 'Pause' })).toBeVisible({ timeout: 15_000 });
 
@@ -125,8 +125,8 @@ test.describe('FLAC Player Smoke Tests', () => {
       }).__audioGraphTest;
       return {
         ...testState.counters,
-        // probeSampleRateSupported() opens and closes throwaway contexts; only open ones count.
-        contexts: testState.contexts.filter(ctx => ctx.state !== 'closed').length,
+        // Every construction counts, closed ones included: there are no probe contexts (#259 A2).
+        contexts: testState.contexts.length,
         analyserCount: testState.analysers.length,
         analyserIsStable: testState.analysers.every(node => node === testState.analysers[0]),
       };
@@ -142,6 +142,54 @@ test.describe('FLAC Player Smoke Tests', () => {
       __audioGraphTest: { counters: { disconnects: number } };
     }).__audioGraphTest.counters.disconnects);
     expect(disconnects).toBeGreaterThanOrEqual(2);
+  });
+
+  test('a 10-track mixed-rate session constructs only the shared AudioContext (#259)', async ({ page }) => {
+    test.setTimeout(90_000);
+    await page.addInitScript(() => {
+      const Original = window.AudioContext;
+      const created: Array<number | null> = [];
+      class CountingAudioContext extends Original {
+        constructor(options?: AudioContextOptions) {
+          super(options);
+          created.push(options?.sampleRate ?? null);
+        }
+      }
+      Object.assign(window, { __contextsCreated: created });
+      Object.defineProperty(window, 'AudioContext', { configurable: true, value: CountingAudioContext });
+    });
+    // 1 s tracks alternating 44.1 / 48 kHz, so the queue plays through on its own.
+    const tracks = Array.from({ length: 10 }, (_, i) => ({
+      id: `rate-${i + 1}`,
+      name: `Rate ${i + 1}.flac`,
+      title: `Rate ${i + 1}`,
+      author: 'Test Artist',
+      url: `/fixtures/rate-${i + 1}-${i % 2 ? 48 : 44}k.flac`,
+      duration: 1,
+    }));
+    await mockLibraryApi(page, tracks);
+    const [flac44, flac48] = await Promise.all([
+      readFile('tests/fixtures/test.flac'),
+      readFile('tests/fixtures/gapless-48k.flac'),
+    ]);
+    // Distinct URLs per track so the offline cache cannot hide a load.
+    const loaded = new Set<string>();
+    await page.route('**/fixtures/rate-*.flac**', route => {
+      const match = /rate-(\d+)-(44|48)k\.flac/.exec(route.request().url())!;
+      loaded.add(match[1]!);
+      return route.fulfill({ status: 200, contentType: 'audio/flac', body: match[2] === '48' ? flac48 : flac44 });
+    });
+
+    await page.goto('/');
+    await openAdvancedLibrary(page);
+    await page.getByRole('button', { name: '📚 Library' }).click();
+    await page.getByRole('button', { name: /Play All \(10\)/ }).click();
+
+    // The queue played through: all ten tracks (both rates) were loaded.
+    await expect.poll(() => loaded.size, { timeout: 60_000 }).toBe(10);
+    const created = await page.evaluate(() => (window as unknown as { __contextsCreated: Array<number | null> }).__contextsCreated);
+    // One context, opened at the device rate (no sampleRate option), and no probe contexts.
+    expect(created).toEqual([null]);
   });
 
   test('queue controls respect repeat-all navigation at queue boundaries', async ({ page }) => {

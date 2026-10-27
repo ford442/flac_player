@@ -517,7 +517,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
 
   async play(): Promise<void> {
     if (this.activePath === 'native') {
-      if (this.audioContext?.state === 'suspended') await this.contextManager.resume();
+      await this.contextManager.resume(); // suspended (idle / autoplay) or interrupted (iOS)
       await this.audioElement.play();
       this.notifyStateChange();
       return;

@@ -7,6 +7,12 @@
 // F16_ENABLE / GLOW_T: `enable f16;` + `f16` when the device has
 // `shader-f16`, otherwise empty + `f32`. The glow math in sampleRealWaveform runs in
 // glow_t; everything else stays f32.
+//
+// OUTPUT_COLOR_FN: `toOutputColor` from src/visuals/webgpu/outputColor.ts — identity
+// on the default sRGB canvas, sRGB→Display P3 with ?p3=1.
+//
+// audioData is a uniform (64 bars as 16 vec4s), not a storage buffer: compatibility-
+// mode adapters may expose no storage buffers to fragment shaders.
 
 {{F16_ENABLE}}
 alias glow_t = {{GLOW_T}};
@@ -40,11 +46,17 @@ struct ShaderGUIUniforms {
 };
 
 struct AudioData {
-  values: array<f32, {{audioBins}}>,
+  values: array<vec4<f32>, AUDIO_BINS / 4>,
 };
 
 @group(0) @binding(0) var<uniform> uniforms: ShaderGUIUniforms;
-@group(0) @binding(1) var<storage, read> audioData: AudioData;
+@group(0) @binding(1) var<uniform> audioData: AudioData;
+
+fn audioBin(i: i32) -> f32 {
+  return audioData.values[i / 4][i % 4];
+}
+
+{{OUTPUT_COLOR_FN}}
 
 struct VertexOutput {
   @builtin(position) position: vec4<f32>,
@@ -87,8 +99,8 @@ fn sampleRealWaveform(uv: vec2<f32>) -> f32 {
   let i1 = clamp(i0 + 1, 0, AUDIO_BINS - 1);
   let frac = idx - f32(i0);
 
-  let v0 = audioData.values[i0];
-  let v1 = audioData.values[i1];
+  let v0 = audioBin(i0);
+  let v1 = audioBin(i1);
   let value = mix(v0, v1, frac);
 
   // Draw mirrored waveform (top and bottom) in glow_t (f16 when available).
@@ -154,7 +166,7 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
 
   if (debugMode == 3) {
     let bin = clamp(i32(uv.x * f32(AUDIO_BINS)), 0, AUDIO_BINS - 1);
-    let h = audioData.values[bin];
+    let h = audioBin(bin);
     let bar = step(uv.y, h) * step(0.02, uv.y);
     return vec4<f32>(vec3<f32>(0.2, 0.6, 1.0) * bar + vec3<f32>(0.05, 0.05, 0.1), 1.0);
   }
@@ -211,5 +223,5 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     finalColor = finalColor * (0.7 + uniforms.volume * 0.3);
   }
 
-  return vec4<f32>(finalColor, 1.0);
+  return vec4<f32>(toOutputColor(finalColor), 1.0);
 }

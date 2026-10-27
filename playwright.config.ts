@@ -3,6 +3,8 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   testMatch: '**/*.spec.ts',
+  // Production-build specs run against dist/ via playwright.prod.config.ts.
+  testIgnore: 'prod/**',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

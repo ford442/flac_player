@@ -60,10 +60,13 @@ describe('audio backend package layout', () => {
     const types = readFileSync(resolve(FALLBACK_DIR, 'types.ts'), 'utf8');
     expect(types).toMatch(/OUTPUT_MODE_LABELS[^=]*=\s*\{[\s\S]*?\bsdl: 'SDL3'/);
     expect(types).not.toMatch(/sdl2/);
+    const options = readFileSync(resolve(FALLBACK_DIR, 'OutputModeOptions.tsx'), 'utf8');
+    expect(options).toMatch(/Object\.entries\(OUTPUT_MODE_LABELS\)/);
+    expect(options).toMatch(/disabled=\{unavailable !== null\}/);
     for (const file of ['PlayerFallbackTransportBar.tsx', 'PlayerFallbackSettingsTab.tsx']) {
       const src = readFileSync(resolve(FALLBACK_DIR, file), 'utf8');
       // Both selects render the shared list; no hand-written engine options.
-      expect(src).toMatch(/Object\.entries\(OUTPUT_MODE_LABELS\)/);
+      expect(src).toMatch(/<OutputModeOptions \/>/);
       expect(src).not.toMatch(/<option value="(streaming|worklet|web-audio|sdl2?)"/);
     }
   });
