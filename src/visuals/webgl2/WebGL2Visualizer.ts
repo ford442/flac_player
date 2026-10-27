@@ -5,6 +5,7 @@ import { FULLSCREEN_VERTEX, GUI_FRAGMENT, FLAT_FRAGMENT } from './shaders/wavefo
 import { createDebugConfig, debugModeToUniform } from './debugModes';
 import { downsampleAudioData } from '../visualSync';
 import { DEFAULT_WAVEFORM_UNIFORMS } from '../waveformContract';
+import { loseGlContext, type GlContextHost } from './glContext';
 
 type GLPass = {
   program: WebGLProgram;
@@ -26,8 +27,10 @@ const FLAT_UNIFORM_NAMES = ['u_resolution', 'u_time', 'u_audioLevel'];
  * WebGL2 reference renderer for ShaderGUI waveform effects.
  * Mirrors WebGPUVisualizer's public API for drop-in backend switching.
  */
-export class WebGL2Visualizer {
+export class WebGL2Visualizer implements GlContextHost {
   private gl: WebGL2RenderingContext | null = null;
+  /** The canvas's context, kept past destroy() until releaseContext(). */
+  private ownedGl: WebGL2RenderingContext | null = null;
   private canvas: HTMLCanvasElement;
   private analyser: AnalyserNode | null = null;
   private guiPass: GLPass | null = null;
@@ -62,6 +65,7 @@ export class WebGL2Visualizer {
 
     try {
       this.gl = gl;
+      this.ownedGl = gl;
       this.analyser = analyser;
       this.guiPass = this.createPass(gl, FULLSCREEN_VERTEX, GUI_FRAGMENT, 'gui', GUI_UNIFORM_NAMES);
       this.flatPass = this.createPass(gl, FULLSCREEN_VERTEX, FLAT_FRAGMENT, 'flat', FLAT_UNIFORM_NAMES);
@@ -214,6 +218,10 @@ export class WebGL2Visualizer {
     return this.canvas;
   }
 
+  /**
+   * Free this visualizer's GL objects. The context stays with the canvas so the next
+   * initialize() on it works; {@link releaseContext} drops the context itself.
+   */
   destroy(): void {
     const gl = this.gl;
     if (gl) {
@@ -225,5 +233,15 @@ export class WebGL2Visualizer {
     this.flatPass = null;
     this.analyser = null;
     this.onTogglePlay = null;
+  }
+
+  /**
+   * Lose the GL context (WEBGL_lose_context) once the canvas is being replaced or unmounted.
+   * The canvas can host neither WebGL2 nor WebGPU afterwards: discard it.
+   */
+  releaseContext(): void {
+    this.destroy();
+    loseGlContext(this.ownedGl);
+    this.ownedGl = null;
   }
 }

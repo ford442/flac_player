@@ -57,6 +57,9 @@ Last updated: September 2026
     *   `webgpuProbe.ts` acquires the exact adapter/device/context consumed by `WebGPUVisualizer`; the visualizer must not request a second device.
     *   gpu-chores **adopts** that same device (`adoptVisualizerDevice`) for peak/RMS compute and never calls `requestDevice()`. Kill switch: `?no_gpu_compute`.
     *   Manual resource cleanup in `destroy()`; 60 fps rAF loop. Probe/init/device-loss failures remain local to the GPU surface.
+    *   `visuals/webgpuSession.ts` owns boot + device loss: an unexpected `device.lost` is re-requested through `probeWebGPU` on the same canvas (max 3 per minute), the new visualizer is rebound and `adoptVisualizerDevice` re-run. A `destroyed` loss we did not cause, an exhausted budget, or a failed re-request ends on the fatal `webgpu-device-lost` panel; audio is never touched.
+    *   A canvas keeps its context type for life and a lost GL context cannot be re-created on it: `WebGL2Visualizer.destroy()` keeps the context for same-canvas re-init, `releaseContext()` (`WEBGL_lose_context`) runs when ShaderGUI replaces or unmounts the canvas (`retireGlHost`), before the WebGPU probe touches the new one.
+    *   `ProjectMHost` unmount calls `ProjectMEngine.destroy(canvas)` (`_pm_destroy`, then loses the module's GL context once the canvas is detached).
 *   **ShaderGUI layout contract (`src/visuals/waveformContract.ts`):**
     *   Knob/LED glow UVs, palette colors, and intensity scales live in `WAVEFORM_LAYOUT`.
     *   Both WGSL (`src/shaders/waveform.wgsl`, injected by `waveform.ts`) and GLSL (`src/visuals/webgl2/shaders/waveform.ts`) inject these constants — change positions in **one** place.

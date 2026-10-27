@@ -44,7 +44,7 @@ The `auto` break-even below applies unchanged; small live windows go CPU unless 
 2. **Worker TS** reduce (chunked copies so playback PCM is never transferred)
 3. **Main-thread CPU** last (the golden used by unit tests)
 
-WebGL2 compute-via-FBO is **not** used. GLSL is an **opt-in** ShaderGUI render path (`?visualizer=webgl2`); it never shares a canvas or `GPUDevice` with WebGPU. Dual-hot GL + WebGPU on the same PCM working set is avoided by never allocating a second device and by skipping the WebGPU probe on the GL canvas.
+WebGL2 compute-via-FBO is **not** used. GLSL is an **opt-in** ShaderGUI render path (`?visualizer=webgl2`); it never shares a canvas or `GPUDevice` with WebGPU (switching away from it loses the GL context via `WEBGL_lose_context` before the next probe; on `device.lost` the probe re-requests the one device and chores re-adopt it). Dual-hot GL + WebGPU on the same PCM working set is avoided by never allocating a second device and by skipping the WebGPU probe on the GL canvas.
 
 Chrome vs Edge WebGPU flakes must not take down playback: compute failures fall through to Worker/CPU. Visualizer probe failure already leaves audio running.
 

@@ -99,7 +99,9 @@ export class WebGPUVisualizer {
       this.device.lost.then((info) => {
         console.warn('WebGPU device lost:', info.message, 'reason:', info.reason);
         this.device = null;
-        if (this.destroyed || info.reason === 'destroyed') return;
+        // Our own destroy() also resolves `lost` ('destroyed'); only an unexpected loss is reported,
+        // including a 'destroyed' someone else caused (the session shows the fatal panel, no retry).
+        if (this.destroyed) return;
         this.onDeviceLostCallback?.(info.reason);
       });
 
@@ -126,6 +128,8 @@ export class WebGPUVisualizer {
   }
 
   private cleanupPartial() {
+    // The device.destroy() below resolves `lost`; a failed initialize is not a device loss.
+    this.destroyed = true;
     this.destroyGpuBuffers();
     if (this.device) {
       this.device.destroy();
