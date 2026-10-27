@@ -109,8 +109,9 @@ module.exports = (env = {}, argv = {}) => {
           exclude: /node_modules|src\/sdl\/build/,
         },
         {
+          // Tailwind v4 via postcss.config.mjs; src/index.css is the entry.
           test: /\.css$/,
-          use: ['style-loader', 'css-loader'],
+          use: ['style-loader', { loader: 'css-loader', options: { importLoaders: 1 } }, 'postcss-loader'],
         },
         {
           // WGSL modules (src/shaders/*.wgsl) imported as `?raw` strings.

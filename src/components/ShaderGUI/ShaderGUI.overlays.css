@@ -1,0 +1,234 @@
+/* ShaderGUI overlays: screen status panels, track text/art, knob tooltip and the URL popover. */
+
+.webgpu-fatal-panel {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  padding: 12px 16px;
+  color: #fecaca;
+  background: linear-gradient(180deg, rgba(41, 8, 18, 0.96), rgba(17, 6, 15, 0.98));
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-size: 10px;
+}
+
+.webgpu-fatal-panel__title {
+  color: #f87171;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.webgpu-fatal-panel dl {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.webgpu-fatal-panel dl > div {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  gap: 6px;
+}
+
+.webgpu-fatal-panel dt {
+  color: #fca5a5;
+  text-transform: uppercase;
+}
+
+.webgpu-fatal-panel dd {
+  margin: 0;
+  overflow: hidden;
+  color: #fee2e2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.webgpu-fatal-panel__detail {
+  overflow: hidden;
+  color: #fda4af;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.webgpu-fatal-panel__playback {
+  color: #a7f3d0;
+}
+
+/* Opt-in (non-WebGPU) renderer: a full-width strip so it can't be mistaken for the default path. */
+.renderer-badge {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 3px 16px;
+  border-radius: 6px 6px 0 0;
+  color: #1c1203;
+  background: #fbbf24;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+/* Keep the scrolling artist/title clear of the badge strip. */
+.top-screen--badged .artist-title-overlay {
+  top: 28px;
+}
+
+.artist-title-overlay {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  right: 16px;
+  color: var(--color-gui-text);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  z-index: 3;
+  pointer-events: none;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Hidden copy used to measure the unclipped title width. */
+.artist-title-measure {
+  position: absolute;
+  visibility: hidden;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+/* Soft fade at both edges so glyphs are not chopped mid-stroke while scrolling. */
+.artist-title-overlay--scrolling {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+}
+
+.artist-title-marquee {
+  display: inline-block;
+  margin-left: 12px;
+  animation: marquee-scroll 10s linear infinite;
+}
+
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Album / cover art / specs strip along the bottom of the top screen */
+.track-meta-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  padding: 22px 16px 10px;
+  border-radius: 0 0 6px 6px;
+  background: linear-gradient(0deg, rgba(10, 10, 26, 0.8) 0%, rgba(10, 10, 26, 0) 100%);
+  pointer-events: none;
+}
+
+.track-meta-art {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid rgba(232, 213, 245, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.track-meta-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--color-gui-text);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+.track-meta-album,
+.track-meta-specs {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-meta-album {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.track-meta-specs {
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  color: rgba(232, 213, 245, 0.7);
+}
+
+/* Loading text in TopScreen */
+.loading-text {
+  color: var(--color-gui-cyan);
+  letter-spacing: 2px;
+  animation: loading-pulse 1s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-text { animation: none; }
+}
+
+@keyframes loading-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.knob-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(26, 10, 46, 0.9);
+  color: var(--color-gui-text);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Load-from-URL popover (opens below the 🔗 button) */
+.shader-url-wrap {
+  position: relative;
+}
+
+.shader-url-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  width: 260px;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--color-gui-panel);
+  border: 1px solid var(--color-gui-screen);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+}

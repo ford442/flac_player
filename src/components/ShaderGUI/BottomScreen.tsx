@@ -1,6 +1,6 @@
 import React from 'react';
 import type { PlaylistTrack } from '../../types/library';
-import './ShaderGUI.css';
+import './ShaderGUI.layout.css';
 
 interface BottomScreenProps {
   tracks: PlaylistTrack[];
@@ -22,15 +22,21 @@ export const BottomScreen: React.FC<BottomScreenProps> = ({
           <li
             key={track.id || index}
             className={`track-list-item ${index === currentIndex ? 'active' : ''}`}
-            onClick={() => onTrackClick(index)}
           >
-            <span className="track-number">{index + 1}.</span>
-            <span className="track-name">{track.title || track.name}</span>
-            {index === currentIndex && (
-              isLoading
-                ? <span className="track-loading-spinner" />
-                : <span className="track-play-overlay">&#9654;</span>
-            )}
+            <button
+              type="button"
+              className="track-list-button"
+              onClick={() => onTrackClick(index)}
+              aria-current={index === currentIndex ? 'true' : undefined}
+            >
+              <span className="track-number">{index + 1}.</span>
+              <span className="track-name">{track.title || track.name}</span>
+              {index === currentIndex && (
+                isLoading
+                  ? <span className="track-loading-spinner" aria-label="Loading" role="img" />
+                  : <span className="track-play-overlay" aria-hidden="true">&#9654;</span>
+              )}
+            </button>
           </li>
         ))}
         {tracks.length === 0 && (

@@ -39,7 +39,8 @@ import { useLiveGpuSpectrum } from '../../hooks/useLiveGpuSpectrum';
 import { ownsFile, useTrackMetadata } from '../../hooks/useTrackMetadata';
 import { formatSpecBadges } from '../../utils/trackMetadata';
 import { amplitudesToAnalyserBytes, resolveSpectrumSource } from '../../visuals/spectrumSource';
-import './ShaderGUI.css';
+import './ShaderGUI.layout.css';
+import './ShaderGUI.overlays.css';
 
 /**
  * The hardware-styled player. Transport, queue and volume come from the player
@@ -488,7 +489,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   }, []);
 
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen bg-black">
+    <div className="relative flex w-full flex-col items-center justify-center pt-14">
       {showFallbackToggle && onToggleFallback && (
         <button
           onClick={onToggleFallback}
@@ -556,7 +557,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
               {liveSpectrum.goldenMaxDiff === null ? '—' : liveSpectrum.goldenMaxDiff.toExponential(1)}
             </div>
           )}
-          <div className="mt-2 text-[10px] text-gray-500">
+          <div className="mt-2 text-[10px] text-gray-400">
             Handle: <code>window.currentVisualizer</code>
             {' · '}Chores: <code>window.__gpuChores</code>
           </div>

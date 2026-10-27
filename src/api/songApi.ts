@@ -1,13 +1,13 @@
 // API client for song/library management endpoints. Every request goes through
 // apiFetch (status check + valibot validation, see ./http.ts).
 
-import type { CloudPlaylist, PlaylistTrack, LibraryStats, TagInfo, ShareResponse, SortBy } from '../types/library';
+import type { CloudPlaylist, PlaylistTrack, ShareResponse, SortBy } from '../types/library';
 import { debug } from '../utils/debug';
 import { API_BASE_URL, PLAYLIST_API_URL, ApiError, apiFetch, apiRequest, resolveTrackUrl } from './http';
 import {
-  CloudPlaylistListSchema, CloudPlaylistSchema, LibraryStatsSchema, MusicBrainzSearchSchema, PlaylistHealthSchema,
+  CloudPlaylistListSchema, CloudPlaylistSchema, MusicBrainzSearchSchema, PlaylistHealthSchema,
   PlaylistTrackIdsSchema, ShareResponseSchema, SharedPlaylistSchema, SongListSchema, SuggestTagsSchema,
-  TagsResponseSchema, CatalogSongSchema, type CatalogSong,
+  CatalogSongSchema, type CatalogSong,
 } from './schemas';
 
 const SYNC_MUSIC_ENDPOINTS = [
@@ -86,6 +86,14 @@ export async function fetchSongs(
   return { tracks, total: tracks.length };
 }
 
+/**
+ * One page of the whole catalog for the catalog sync, oldest first, so songs added
+ * mid-walk land on a later page instead of shifting the pages already read.
+ */
+export async function fetchSongPage(offset: number, limit: number, signal?: AbortSignal): Promise<PlaylistTrack[]> {
+  return (await fetchSongs({ offset, limit, sortBy: 'date', sortDesc: false }, signal)).tracks;
+}
+
 export async function fetchSong(songId: string, signal?: AbortSignal): Promise<PlaylistTrack> {
   try {
     return toLibraryTrack(await apiFetch(`/api/songs/${encodeURIComponent(songId)}`, CatalogSongSchema, { signal }));
@@ -113,14 +121,6 @@ export async function findSimilarTracks(
     sortBy: 'random'
   });
   return tracks;
-}
-
-export function fetchTags(signal?: AbortSignal): Promise<TagInfo[]> {
-  return apiFetch('/api/songs/tags', TagsResponseSchema, { signal });
-}
-
-export function fetchStats(signal?: AbortSignal): Promise<LibraryStats> {
-  return apiFetch('/api/songs/stats', LibraryStatsSchema, { signal });
 }
 
 export async function triggerMusicResync(maxAttempts: number = 3): Promise<MusicResyncResult> {

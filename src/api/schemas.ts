@@ -3,12 +3,10 @@
 // hides the rest of the library.
 
 import * as v from 'valibot';
-import type { CloudPlaylist, LibraryStats, ShareResponse, TagInfo } from '../types/library';
+import type { CloudPlaylist, ShareResponse } from '../types/library';
 
 /** Optional field: missing, null or mistyped all read as undefined. */
 const maybe = <T>(schema: v.GenericSchema<unknown, T>) => v.fallback(v.optional(schema), undefined);
-
-const count = v.fallback(v.number(), 0);
 
 /** Array whose invalid items are dropped instead of failing the whole response. */
 export function lenientArray<T>(item: v.GenericSchema<unknown, T>) {
@@ -50,24 +48,6 @@ export const CatalogSongSchema = v.looseObject({
 export type CatalogSong = v.InferOutput<typeof CatalogSongSchema>;
 
 export const SongListSchema = lenientArray(CatalogSongSchema);
-
-const TagInfoSchema: v.GenericSchema<unknown, TagInfo> = v.object({ name: v.string(), count });
-
-export const TagsResponseSchema = v.pipe(
-  v.looseObject({ tags: v.fallback(lenientArray(TagInfoSchema), []) }),
-  v.transform((body): TagInfo[] => body.tags),
-);
-
-export const LibraryStatsSchema: v.GenericSchema<unknown, LibraryStats> = v.object({
-  total_tracks: count,
-  rated_4plus: count,
-  total_duration_hours: count,
-  total_play_count: count,
-  untagged_count: count,
-  trash_count: count,
-  unique_tags: count,
-  top_tags: v.fallback(lenientArray(TagInfoSchema), []),
-});
 
 export const SharedPlaylistSchema = v.object({
   title: v.fallback(v.string(), 'Shared Playlist'),

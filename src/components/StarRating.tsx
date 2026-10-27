@@ -76,6 +76,8 @@ export const StarRating: React.FC<StarRatingProps> = ({
   const radioClass = 'transition-colors rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-purple-400';
 
   return (
+    // Roving tabindex: the checked radio takes focus, not the group (APG radio group).
+    // eslint-disable-next-line jsx-a11y/interactive-supports-focus
     <div
       className={`star-rating inline-flex gap-0.5 cursor-pointer ${sizeClass}`}
       role="radiogroup"

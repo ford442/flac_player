@@ -26,10 +26,10 @@ flowchart TB
   end
 
   subgraph Load["Loading & library"]
-    Http["api/http.ts (apiFetch, resolveTrackUrl)<br/>api/library.ts (TanStack Query)"]
+    Http["api/http.ts (apiFetch, resolveTrackUrl)<br/>api/library.ts (sync query + live catalog)"]
     SongApi["api/songApi.ts"]
     TrackCache["storage/trackCache.ts"]
-    LibCache["storage/libraryCache.ts"]
+    LibCache["catalog/ (IndexedDB, Dexie)"]
   end
 
   subgraph FX["Shared audio graph"]
@@ -77,7 +77,7 @@ User selects track in LibraryView / QueuePanel
     ↓
 Player.tsx / views → useActions() → PlaybackEngine.load(track) (token, abort, one active path)
     ↓
-GET https://storage.noahcohn.com/api/songs  (or REACT_APP_API_URL)
+GET https://storage.noahcohn.com/api/songs  (or REACT_APP_API_URL), synced into the IndexedDB catalog
     ↓
 Each song.url is an absolute https:// URL to the audio file
     ↓
@@ -219,12 +219,13 @@ Broadcast SharedArrayBuffer tap of post-DSP PCM for analysis consumers: written 
 | Module | Role |
 |--------|------|
 | `api/songApi.ts` | REST client for songs, tags, share, upload, MusicBrainz |
-| `storage/libraryCache.ts` | TTL cache for `/api/songs` responses |
+| `catalog/` | IndexedDB catalog (Dexie): remote sync, local filters/tags/stats, albums/artists, legacy import |
 | `storage/trackCache.ts` | Cache API offline track storage (LRU, 500 MB default) |
 | `storage/metadataCache.ts` | Parsed tags/specs (localStorage) + cover art (Cache API `flac-player-artwork-v1`); 24 h TTL, 300-entry LRU, cleared on library resync |
 | `utils/trackMetadata.ts` | Tag/spec loading via Range reads (FLAC blocks walked, padding/seektable skipped); never downloads the whole file |
 | `hooks/useTrackMetadata.ts` | Memory → persisted → network, in-flight dedupe; feeds `MetadataPanel` and the ShaderGUI top screen |
-| `storage/queueStorage.ts` | Persisted queue + repeat/shuffle |
+| `storage/queueStorage.ts` | Persisted queue + repeat/shuffle (catalog `state.queue`) |
+| `storage/playlistStore.ts` | Local-first playlists (catalog `playlists` table) |
 | `components/OfflineCache.tsx` | Per-track download / evict UI |
 
 Production API: **`https://storage.noahcohn.com`** (`REACT_APP_API_URL`).

@@ -36,14 +36,14 @@ export function useQueueActions(engine: PlaybackEngine, store: PlayerStore, list
         if (omitted > 0) toast(`Left out ${omitted} non-library track${omitted === 1 ? '' : 's'} (links or local files)`, 'info');
         try {
           const shareResponse = await createShare(trackIds, 'Shared Playlist', 30);
-          await navigator.clipboard.writeText(shareResponse.short_url || shareResponse.full_url);
+          await window.navigator.clipboard.writeText(shareResponse.short_url || shareResponse.full_url);
           toast('Shareable playlist link copied to clipboard!', 'success');
           return;
         } catch {
           toast('Could not create shared playlist. Falling back to URL playlist.', 'error');
         }
         try {
-          await navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?tracks=${trackIds.join(',')}`);
+          await window.navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?tracks=${trackIds.join(',')}`);
           toast('Legacy playlist link copied to clipboard.', 'success');
         } catch {
           toast('Error copying link.', 'error');
