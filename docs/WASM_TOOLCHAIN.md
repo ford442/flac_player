@@ -54,7 +54,7 @@ fails until step 3 is done. Never bump the pin in the same PR as `-flto`.
 
 | Graph | Script | Output | Optimization | Heap |
 |---|---|---|---|---|
-| SDL playback (the template) | `scripts/build-wasm.sh` | `public/sdl-audio.*` | `-O3 -DNDEBUG -msimd128` | 64 MiB initial, growth, **512 MiB max** |
+| `sdl` engine (the template) | `scripts/build-wasm.sh` | `public/sdl-audio.*` | `-O3 -DNDEBUG -msimd128 -pthread` | 64 MiB initial, growth, **512 MiB max** |
 | Speaker DSP + FFT golden | `scripts/build-dsp-wasm.sh` | `public/dsp-chain.*` | `-O3 -DNDEBUG -msimd128` | 1 MiB fixed (`STANDALONE_WASM`, no growth) |
 | SpeexDSP resampler | `scripts/build-resampler-wasm.sh` | `public/speex-resampler.*` | `-O3 -DNDEBUG` | 4 MiB initial, growth, **32 MiB max** |
 | projectM host | `scripts/build-projectm-wasm.sh` | `public/projectm/projectm-host.*` | `-O2` | 16 MiB initial (default), growth, **256 MiB max** |
@@ -64,13 +64,18 @@ growth reach 2 GiB (and with `-pthread` reserves a 2 GiB SharedArrayBuffer
 maximum). #212 fixed that for playback; the resampler and projectM had the same
 footgun until #268.
 
-- **SDL playback.** `-pthread` makes `wasmMemory` a SharedArrayBuffer so the
-  play ring can be read with `Atomics`; it does not move audio off the main
-  thread (see `docs/AUDIO_BACKENDS.md`). Keep `-msimd128`: `dsp_chain.h` /
-  `dsp_fft.h` must compile to the same lanes here and in `dsp-chain.wasm`.
-- **DSP chain.** Same headers as SDL, same `-msimd128`. `npm run test:dsp-golden`
+- **`sdl` engine.** No SDL since #268 (`USE_SDL=3` and its ScriptProcessor
+  pump are gone; 825 KB → 26 KB of WASM). `-pthread` only makes `wasmMemory` a
+  SharedArrayBuffer, so the `sdl-engine` AudioWorklet reads the play ring and the
+  transport block (`engine_state.h`) with `Atomics` on the audio thread; no
+  thread is started. The engine has no DSP: the shared graph's `dsp-chain`
+  worklet runs `dsp_chain.h` for it.
+- **DSP chain.** `dsp_chain.h` / `dsp_fft.h`, `-msimd128`. `npm run test:dsp-golden`
   checks scalar vs SIMD bit-identity and runs in `wasm-build` whenever the
-  headers or `tests/native/` change.
+  headers or `tests/native/` change. Their host-clang tests (and the engine's
+  `play_ring.h` / `engine_state.h` / `pcm_scrub.h`) run with `npm run test:native`
+  (`tests/native/CMakeLists.txt`, `-Wall -Wextra -Werror`, compile database in
+  `.build/native` for clangd).
 - **Resampler.** `src/audio/resampler.ts` stages at most 16384 frames
   (512 KiB at 8 ch) each way per `rs_process` slice, so a whole buffered track
   resamples inside the 32 MiB cap (`tests/resampler.test.ts` resamples 42 MB of

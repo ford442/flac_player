@@ -2,40 +2,49 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
-// SPSC play-side ring of interleaved f32: JS push_pcm is the producer, the audio
-// callback the consumer. SDL3's Emscripten backend runs that callback from a
-// ScriptProcessorNode on the *main* thread; -pthread only puts writePos/readPos
-// in shared WASM memory so other threads can read them with Atomics.
+// SPSC play-side ring of interleaved f32. Producer: JS push_pcm on the main
+// thread. Consumer: the `sdl-engine` AudioWorkletProcessor on the audio thread
+// (src/audio/worklets/sdlEngineProcessor.js), which reads this header and the
+// data through a view of the module's SharedArrayBuffer. play_ring_read /
+// play_ring_read_frames below are the reference consumer: the processor
+// mirrors them, and tests/native exercises them. Requires -pthread so the
+// header and data live in shared WASM memory.
 //
 // Positions count floats and wrap at 2^32. The capacity is a power of two so
 // that wrap is invisible to `pos & (capacity - 1)`; with any other capacity the
 // index would jump when a position wraps (once per 2^32 floats, about 1.5 h of
-// 96 kHz 8-channel audio in one gapless run).
+// 96 kHz 8-channel audio in one gapless run). Positions are never rewound while
+// a consumer runs: a seek names a later start (engine_state.h `ringStart`).
 //
-// Reads that feed a frame-sized consumer go through play_ring_read_frames: a
-// producer may leave a partial frame at the tail (it writes whatever fits), and
-// handing that to SDL_PutAudioStreamData or dsp_process would rotate channels.
+// A consumer reads whole frames only: a producer may leave a partial frame at
+// the tail (it writes whatever fits), and playing that would rotate channels.
 
 static constexpr uint32_t PLAY_RING_CAPACITY = 1u << 19; // 524288 floats (2 MiB), ~2.7 s of 96 kHz stereo
 
+// Header words, mirrored in sdlEngineProcessor.js.
 struct PlayRingState {
-    alignas(8) std::atomic<uint32_t> writePos;
-    alignas(8) std::atomic<uint32_t> readPos;
-    uint32_t capacity;
-    uint32_t pad;
+    std::atomic<uint32_t> writePos; // 0  producer
+    std::atomic<uint32_t> readPos;  // 1  consumer
+    uint32_t capacity;              // 2  floats, power of two
+    std::atomic<uint32_t> ended;    // 3  producer: no more PCM for this stream
 };
+static_assert(sizeof(PlayRingState) == 16, "sdlEngineProcessor.js reads 4 u32 header words");
+static_assert(offsetof(PlayRingState, readPos) == 4, "word 1");
+static_assert(offsetof(PlayRingState, capacity) == 8, "word 2");
+static_assert(offsetof(PlayRingState, ended) == 12, "word 3");
 
 static PlayRingState g_playRing = {};
 static float* g_playRingData = nullptr;
-static std::atomic<int> g_streamEnded{0};
 
+// Only while no consumer runs (init / cleanup).
 inline void play_ring_reset() {
     g_playRing.writePos.store(0, std::memory_order_relaxed);
     g_playRing.readPos.store(0, std::memory_order_relaxed);
-    g_streamEnded.store(0, std::memory_order_relaxed);
+    g_playRing.ended.store(0, std::memory_order_relaxed);
 }
 
 inline void play_ring_init(uint32_t capacityFloats) {
@@ -68,12 +77,20 @@ inline uint32_t play_ring_fill() {
     return wp - rp;
 }
 
+inline uint32_t play_ring_write_pos() {
+    return g_playRing.writePos.load(std::memory_order_acquire);
+}
+
+inline uint32_t play_ring_read_pos() {
+    return g_playRing.readPos.load(std::memory_order_acquire);
+}
+
 inline void play_ring_set_ended(int ended) {
-    g_streamEnded.store(ended ? 1 : 0, std::memory_order_release);
+    g_playRing.ended.store(ended ? 1 : 0, std::memory_order_release);
 }
 
 inline int play_ring_ended() {
-    return g_streamEnded.load(std::memory_order_acquire);
+    return static_cast<int>(g_playRing.ended.load(std::memory_order_acquire));
 }
 
 // Non-blocking write. Returns number of floats actually stored (0 if full).

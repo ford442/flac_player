@@ -20,16 +20,13 @@ export interface AudioOutputControls {
   devices: OutputDeviceOption[];
   onSelectOutputDevice: (deviceId?: string, label?: string) => Promise<void>;
   info: AudioOutputInfo | null;
-  /** SDL owns the device; the Web Audio sink does not apply. */
-  externalPlayback: boolean;
 }
 
 function formatMs(seconds: number | null): string {
   return seconds === null ? '—' : `${(seconds * 1000).toFixed(1)} ms`;
 }
 
-function formatDspEngine({ info, externalPlayback }: AudioOutputControls): string {
-  if (externalPlayback) return 'SDL WASM';
+function formatDspEngine({ info }: AudioOutputControls): string {
   if (!info) return '—';
   return info.dspEngine === 'wasm' ? 'Worklet WASM' : 'Web Audio nodes';
 }
@@ -234,7 +231,7 @@ export const EQPanel: React.FC<EQPanelProps> = ({
         )}
         <p className="text-xs text-gray-500 mt-2">
           Applies before the master volume fader. Gain is clamped to ±12 dB.
-          SDL3 applies EQ and gain in WASM on the speaker path; crossfade overlap may briefly mismatch levels.
+          Crossfade overlap may briefly mismatch levels between tracks.
         </p>
       </div>
 
@@ -278,7 +275,7 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             <dt className="text-gray-500">EQ / limiter</dt>
             <dd
               className="font-mono text-purple-300"
-              title="Who runs EQ, ReplayGain and the limiter. WASM = dsp_chain.h, the same code on SDL and Web Audio."
+              title="Who runs EQ, ReplayGain and the limiter. WASM = dsp_chain.h in the dsp-chain worklet, for every output mode."
             >
               {formatDspEngine(audioOutput)}
             </dd>
@@ -338,11 +335,6 @@ export const EQPanel: React.FC<EQPanelProps> = ({
           ) : (
             <p className="text-xs text-gray-500 mt-2">
               This browser cannot route Web Audio to another device; the system default is used.
-            </p>
-          )}
-          {audioOutput.externalPlayback && (
-            <p className="text-xs text-gray-500 mt-2">
-              SDL3 opens its own device; this choice applies to streaming, Web Audio, and worklet.
             </p>
           )}
         </div>

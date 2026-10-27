@@ -45,7 +45,7 @@ export interface AudioOutputInfo {
   graphGeneration: number;
   /**
    * Who runs ReplayGain / limiter / volume / EQ for Web Audio backends:
-   * 'wasm' = dsp_chain.h in the `dsp-chain` worklet (same code as SDL),
+   * 'wasm' = dsp_chain.h in the `dsp-chain` worklet,
    * 'web-audio' = BiquadFilterNode / DynamicsCompressorNode fallback.
    */
   dspEngine: DspEngine;
@@ -81,14 +81,11 @@ export function isAudioContextSinkSupported(): boolean {
 /**
  * Owns the application-lifetime Web Audio graph.
  *
- * Web Audio backends connect disposable source/input nodes via {@link connectInput};
- * the speaker DSP -> Analyser -> destination chain is rebuilt when sample rate or
- * latency hint changes. Speaker DSP is the `dsp-chain` worklet (dsp_chain.h in
- * WASM, identical to SDL) once it loads, else ReplayGain -> master Gain -> EQ
- * as Web Audio nodes.
- * SDL backends tap PCM into the analyser via {@link connectVisualizerFeed} while
- * {@link setExternalPlaybackActive} mutes Web Audio speakers (SDL owns output and
- * runs its own EQ / ReplayGain in WASM — see docs/AUDIO_BACKENDS.md).
+ * Every backend (the `sdl` engine's worklet included) connects disposable
+ * source/input nodes via {@link connectInput}; the speaker DSP -> Analyser ->
+ * destination chain is rebuilt when sample rate or latency hint changes.
+ * Speaker DSP is the `dsp-chain` worklet (dsp_chain.h in WASM) once it loads,
+ * else ReplayGain -> master Gain -> EQ as Web Audio nodes.
  *
  * The context is created lazily at the track's native rate by {@link ensureForTrack}.
  * Setters (volume, EQ, ReplayGain, sink) only store state until a graph exists.
@@ -110,8 +107,6 @@ export class AudioContextManager {
   private inputGain: GainNode | null = null;
   private dspChain: DspChainNode | null = null;
   private dspAttach: Promise<void> = Promise.resolve();
-  private visualizerFeedGain: GainNode | null = null;
-  private externalPlaybackActive = false;
   private replayGainLinear = 1;
   private limiterEnabled = false;
   private volume = 1;
@@ -235,12 +230,6 @@ export class AudioContextManager {
     return this.dspChain ? 'wasm' : 'web-audio';
   }
 
-  /** Feed SDL PCM tap worklet into the analyser (parallel to masterGain path). */
-  connectVisualizerFeed(node: AudioNode): void {
-    this.getContext();
-    node.connect(this.visualizerFeedGain!);
-  }
-
   getSinkId(): string {
     return this.sinkId;
   }
@@ -286,18 +275,6 @@ export class AudioContextManager {
       graphGeneration: this.graphGeneration,
       dspEngine: this.getDspEngine(),
     };
-  }
-
-  /** Mute Web Audio speakers when SDL owns playback; analyser still receives PCM. */
-  setExternalPlaybackActive(active: boolean): void {
-    this.externalPlaybackActive = active;
-    if (this.speakerGain) {
-      this.speakerGain.gain.value = active ? 0 : 1;
-    }
-  }
-
-  isExternalPlaybackActive(): boolean {
-    return this.externalPlaybackActive;
   }
 
   /**
@@ -394,15 +371,12 @@ export class AudioContextManager {
     this.analyser = this.context.createAnalyser();
     applyAnalyserPolicy(this.analyser);
     this.speakerGain = this.context.createGain();
-    this.visualizerFeedGain = this.context.createGain();
-    this.visualizerFeedGain.gain.value = 1;
     this.inputGain = this.context.createGain();
 
     this.inputGain.connect(this.replayGain.input);
     this.replayGain.connect(this.masterGain);
     this.masterGain.connect(this.eqChain.input);
     this.eqChain.output.connect(this.analyser);
-    this.visualizerFeedGain.connect(this.analyser);
     this.analyser.connect(this.speakerGain);
     this.speakerGain.connect(this.context.destination);
 
@@ -543,9 +517,6 @@ export class AudioContextManager {
       this.replayGain.setLimiterEnabled(this.limiterEnabled);
     }
     if (this.eqChain) this.eqChain.setAllGains(this.eqGains);
-    if (this.speakerGain) {
-      this.speakerGain.gain.value = this.externalPlaybackActive ? 0 : 1;
-    }
   }
 
   /**
@@ -584,7 +555,6 @@ export class AudioContextManager {
     // speakerGain feeds the destination: cutting it is what makes the old context silent.
     this.speakerGain?.disconnect();
     this.inputGain?.disconnect();
-    this.visualizerFeedGain?.disconnect();
     this.analyser?.disconnect();
     this.replayGain?.disconnect();
     this.masterGain?.disconnect();
@@ -600,7 +570,6 @@ export class AudioContextManager {
     this.eqChain = null;
     this.analyser = null;
     this.speakerGain = null;
-    this.visualizerFeedGain = null;
     return { context };
   }
 

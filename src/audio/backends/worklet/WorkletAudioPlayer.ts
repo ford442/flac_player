@@ -1,7 +1,7 @@
 // Audio player using AudioWorkletNode (flac-processor) for buffered and hi-fi
-// streaming playback. Falls back to ScriptProcessorNode for buffered playback
-// when AudioWorklet is unavailable. The shared AudioContext is never suspended
-// here: pause is a message to the processor.
+// streaming playback. Without AudioWorklet it fails closed (`playable: false`,
+// loads reject) instead of running a ScriptProcessor on the main thread. The
+// shared AudioContext is never suspended here: pause is a message to the processor.
 import { decodeAudio } from '../../../audioDecoder';
 import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextManager } from '../../AudioContextManager';
 import { ensureContextForBuffer, ensureContextForUrl } from '../../ensureContextForSource';
@@ -26,17 +26,22 @@ import {
   type FlacProcessorOutbound,
 } from '../../worklets/flacProcessorMessages';
 import { HifiStreamFeeder } from './hifiStreamFeeder';
-import { createScriptProcessorPlayback, stopScriptProcessorPlayback } from './scriptProcessorFallback';
 
 /** Static same-origin processor module (emitted as an asset by webpack / served by Vite). */
 const FLAC_PROCESSOR_URL = new URL('../../worklets/flacProcessor.js', import.meta.url);
 
 const STREAM_RING_SECONDS = 30;
 
+const UNPLAYABLE_MESSAGE = 'The AudioWorklet output needs AudioWorklet, which this browser does not provide; use Streaming instead.';
+
+/** AudioWorklet exists here (secure contexts in current browsers). */
+function hasAudioWorklet(): boolean {
+  return typeof AudioWorkletNode === 'function';
+}
 
 export class WorkletAudioPlayer extends BaseAudioBackend {
   private audioContext: AudioContext | null = null;
-  private workletNode: AudioWorkletNode | ScriptProcessorNode | null = null;
+  private workletNode: AudioWorkletNode | null = null;
   private gainNode: GainNode | null = null;
   private audioBuffer: Float32Array | null = null;
   private channels: number = 0;
@@ -48,7 +53,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   private duration: number = 0;
   private currentTime: number = 0;
   private playbackRate: number = 1.0;
-  private useScriptProcessor: boolean = false;
+  private playable = hasAudioWorklet();
   private streamFeeder: HifiStreamFeeder | null = null;
   private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
   private playbackPath: PlaybackPathInfo | null = null;
@@ -84,8 +89,8 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   }
 
   private post(msg: FlacProcessorInbound, transfer?: Transferable[]): void {
-    if (!this.workletNode || this.useScriptProcessor) return;
-    const port = (this.workletNode as AudioWorkletNode).port;
+    if (!this.workletNode) return;
+    const port = this.workletNode.port;
     if (transfer) port.postMessage(msg, transfer);
     else port.postMessage(msg);
   }
@@ -101,12 +106,13 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
 
   getCapabilities(): AudioBackendCapabilities {
     return {
+      playable: this.playable,
       // Hi-fi streams restart the decoder at the target frame (hifiStreamPipeline.ts).
       seek: true,
       playbackRate: false,
       // Hi-fi streams splice same-format successors into the ring; crossfade mode
       // is treated as gapless here (overlap stays native-streaming / web-audio).
-      gapless: !this.useScriptProcessor,
+      gapless: true,
       crossfade: false,
       sinkId: isAudioContextSinkSupported(),
     };
@@ -121,23 +127,15 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     const ctx = this.contextManager.getContext();
     if (this.audioContext === ctx && this.gainNode) return ctx;
 
+    if (!ctx.audioWorklet) {
+      this.playable = false;
+      throw new Error(UNPLAYABLE_MESSAGE);
+    }
+    // A failed fetch of the module rejects this load; the next one retries.
+    await ctx.audioWorklet.addModule(FLAC_PROCESSOR_URL.href);
     this.audioContext = ctx;
     this.gainNode = ctx.createGain();
     this.contextManager.connectInput(this.gainNode);
-
-    if (this.audioContext.audioWorklet) {
-      try {
-        await this.audioContext.audioWorklet.addModule(FLAC_PROCESSOR_URL.href);
-        console.log('[AudioWorkletPlayer] Using AudioWorklet');
-        this.useScriptProcessor = false;
-      } catch (err) {
-        console.warn('[AudioWorkletPlayer] AudioWorklet failed, falling back to ScriptProcessor:', err);
-        this.useScriptProcessor = true;
-      }
-    } else {
-      console.log('[AudioWorkletPlayer] AudioWorklet not available, using ScriptProcessor');
-      this.useScriptProcessor = true;
-    }
     return ctx;
   }
 
@@ -234,7 +232,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   }
 
   private _sendQueuedBufferToWorklet(): void {
-    if (!this.pendingNextBuffer || !this.workletNode || this.useScriptProcessor || this.isStreaming) {
+    if (!this.pendingNextBuffer || !this.workletNode || this.isStreaming) {
       return;
     }
     this.post({
@@ -317,6 +315,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   }
 
   async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
+    if (!this.playable) throw new Error(UNPLAYABLE_MESSAGE);
     await ensureContextForBuffer(this.contextManager, arrayBuffer);
     const audioContext = await this.ensureWorkletGraph();
     if (!audioContext) throw new Error('AudioWorklet context failed to initialize');
@@ -384,14 +383,12 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       onProgress?: (loaded: number, total: number | null) => void;
     } = {}
   ): Promise<void> {
+    if (!this.playable) throw new Error(UNPLAYABLE_MESSAGE);
     // Set before any await: a preloadNext() racing this load goes to the session.
     this.playbackPath = describePlaybackPath('hifi-stream');
     this.adoptPreloadForStream(url);
     await ensureContextForUrl(this.contextManager, url);
     await this.ensureWorkletGraph();
-    if (this.useScriptProcessor) {
-      throw new Error('Hi-Fi streaming requires AudioWorklet (ScriptProcessor fallback unavailable)');
-    }
 
     this.cancelStream();
     this.stopNode();
@@ -499,11 +496,6 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
 
     await this.contextManager.whenRunning();
 
-    if (this.useScriptProcessor) {
-      console.warn('[AudioWorkletPlayer] Streaming mode requires AudioWorklet. ScriptProcessor fallback not supported for streaming.');
-      return;
-    }
-
     const node = this.createFlacNode(this.audioContext!, {
       sampleRate: this.sampleRate,
       channels,
@@ -529,7 +521,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   }
 
   appendChunk(interleavedBuffer: Float32Array): void {
-    if (!this.workletNode || this.useScriptProcessor || !this.isStreaming) return;
+    if (!this.workletNode || !this.isStreaming) return;
     const pcm = this.streamResampler ? this.streamResampler.process(interleavedBuffer) : interleavedBuffer;
     // A subarray view would transfer (and detach) its whole parent buffer.
     this.postPcm(pcm.byteOffset === 0 && pcm.byteLength === pcm.buffer.byteLength ? pcm : pcm.slice());
@@ -544,7 +536,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   }
 
   endStreaming(): void {
-    if (!this.workletNode || this.useScriptProcessor || !this.isStreaming) return;
+    if (!this.workletNode || !this.isStreaming) return;
     this.post({ type: 'endStreaming' });
   }
 
@@ -577,19 +569,13 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       return;
     }
 
-    const startSample = Math.floor(this.currentTime * this.sampleRate) * this.channels;
-
-    if (this.useScriptProcessor) {
-      this.createScriptProcessorNode(startSample);
-    } else {
-      this.createWorkletNode(startSample);
-    }
+    this.createWorkletNode(this.currentTime > 0);
 
     this.isPlaying = true;
     this.notifyStateChange();
   }
 
-  private createWorkletNode(startSample: number): void {
+  private createWorkletNode(fromPosition: boolean): void {
     if (!this.audioContext || !this.gainNode || !this.audioBuffer) return;
 
     const node = this.createFlacNode(this.audioContext, {
@@ -602,38 +588,16 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     this.attachWorkletPort(node);
     this._sendQueuedBufferToWorklet();
 
-    if (startSample > 0) {
+    if (fromPosition) {
       this.post({ type: 'seek', position: this.currentTime });
     }
-  }
-
-  private createScriptProcessorNode(startSample: number): void {
-    if (!this.audioContext || !this.gainNode || !this.audioBuffer) return;
-    this.workletNode = createScriptProcessorPlayback({
-      context: this.audioContext,
-      destination: this.gainNode,
-      pcm: this.audioBuffer,
-      channels: this.channels,
-      sampleRate: this.sampleRate,
-      startSample,
-      onTime: (t) => { this.currentTime = t; },
-      onEnded: () => {
-        if (!this.isPlaying) return;
-        this.isPlaying = false;
-        this.currentTime = 0;
-        this.notifyStateChange();
-        if (this.onEndedCallback) {
-          try { this.onEndedCallback(); } catch (err) { console.warn('onEnded threw', err); }
-        }
-      },
-    });
   }
 
   pause(): void {
     if (!this.isPlaying) return;
 
     if (this.isStreaming) {
-      // Never suspend the shared AudioContext (EQ, analyser, SDL tap live on it).
+      // Never suspend the shared AudioContext (EQ, analyser and the other backends share it).
       // The processor holds its ring position; the feeder stops the decoder.
       this.post({ type: 'pause' });
       this.streamFeeder?.setPaused(true);
@@ -661,12 +625,8 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
 
   private stopNode(): void {
     if (this.workletNode) {
-      if (this.useScriptProcessor) {
-        stopScriptProcessorPlayback(this.workletNode as ScriptProcessorNode);
-      } else {
-        this.post({ type: 'stop' });
-        this.workletNode.disconnect();
-      }
+      this.post({ type: 'stop' });
+      this.workletNode.disconnect();
       this.workletNode = null;
     }
   }

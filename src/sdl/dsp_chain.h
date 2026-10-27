@@ -1,15 +1,17 @@
 #pragma once
-// Speaker-path DSP for the SDL3 engine: ReplayGain -> limiter -> volume -> EQ.
+// Speaker-path DSP for every backend: ReplayGain -> limiter -> volume -> EQ,
+// compiled into public/dsp-chain.wasm and run by the `dsp-chain` AudioWorklet
+// on the shared graph (src/dsp/dsp_wasm_entry.cpp).
 //
-// Mirrors the Web Audio graph in AudioContextManager.ts (ReplayGainNode ->
-// master Gain -> EQChain) so SDL users hear the same EQ / loudness settings.
+// Mirrors the Web Audio fallback in AudioContextManager.ts (ReplayGainNode ->
+// master Gain -> EQChain) so both paths honour the same EQ / loudness settings.
 // Biquad coefficients follow the Web Audio spec (RBJ cookbook; shelves use S = 1
 // and ignore Q, exactly like BiquadFilterNode). Band layout is pushed from JS
 // (DEFAULT_EQ_BANDS) so there is one source of truth for frequencies and Q.
 //
-// Threading: setters run on the JS main thread and only write atomics + bump a
-// version; dsp_process() runs in the SDL audio callback, recomputes coefficients
-// when the version or stream format changes, and never allocates.
+// Threading: setters and dsp_process() both run on the worklet's audio thread
+// (the atomics are uncontended); dsp_process() recomputes coefficients when the
+// version or stream format changes, and never allocates.
 
 #include <algorithm>
 #include <atomic>

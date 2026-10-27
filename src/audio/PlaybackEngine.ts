@@ -4,7 +4,7 @@
 //        │  commands: load / play / pause / seek / stop
 //        ▼
 //   PlaybackEngine   ← one currentTime, fed by the backend state callback
-//        ├─ StreamingAudioPlayer | WebAudio | Worklet | SDL3
+//        ├─ StreamingAudioPlayer | WebAudio | Worklet | SDL engine
 //        └─ AudioContextManager (shared graph; the engine never suspends it)
 //
 // React reads it as an external store (`useSyncExternalStore`): `getStatus()`
@@ -354,6 +354,10 @@ export class PlaybackEngine {
       const backend = await this.backendReady;
       if (this.isStale(gen)) return 'superseded';
       if (!backend) throw new Error('Audio backend is not available');
+      // Fail closed before fetching anything: there is no main-thread fallback.
+      if (!backend.getCapabilities().playable) {
+        throw new Error(`The ${this.mode ?? 'selected'} output cannot play in this browser; switch to Streaming`);
+      }
       // A previous load may have started something after beginLoad's stop().
       backend.stop();
 

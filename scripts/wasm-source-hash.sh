@@ -1,21 +1,16 @@
 #!/usr/bin/env bash
 # Compute a single SHA-256 over SDL WASM source inputs (used for freshness checks).
 set -euo pipefail
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-
 (
   cd "$PROJECT_ROOT"
   sha256sum \
     scripts/build-wasm.sh \
     scripts/emsdk-version \
-    src/sdl/analysis_ring.h \
     src/sdl/audio_engine.cpp \
-    src/sdl/dsp_chain.h \
-    src/sdl/pcm_ring.h \
+    src/sdl/engine_state.h \
     src/sdl/pcm_scrub.h \
-    src/sdl/play_fill.h \
     src/sdl/play_ring.h \
     | sort | sha256sum | awk '{print $1}'
 )

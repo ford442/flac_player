@@ -173,8 +173,7 @@ export const Player: React.FC = () => {
     devices: outputDevices,
     onSelectOutputDevice,
     info: audioOutputInfo,
-    externalPlayback: outputMode === 'sdl',
-  }), [outputDevice, outputDevices, onSelectOutputDevice, audioOutputInfo, outputMode]);
+  }), [outputDevice, outputDevices, onSelectOutputDevice, audioOutputInfo]);
 
   const gpuOverview = useGpuChoresOverview({
     trackKey: currentTrack?.id ?? currentTrack?.url ?? null,

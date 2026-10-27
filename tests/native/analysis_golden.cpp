@@ -1,16 +1,13 @@
-// analysis_ring.h + dsp_fft.h checks for the C++ side (the SDL module itself
-// cannot run under node). Build + run: npm run test:dsp-golden
-//   - AnalysisRingState offsets match the u32 words src/audio/analysisRing.ts reads
-//   - analysis_ring_write wraps, keeps the newest floats of oversize blocks, and
-//     analysis_ring_reset / set_format bump the generation
-//   - dsp_fft.h SIMD stages are bit-identical to the scalar stages
+// dsp_fft.h, the FFT behind fft_spectrum (src/audio/wasmFft.ts), which reads
+// the analysis ring on the reader's thread: its SIMD stages are bit-identical
+// to the scalar ones. The ring itself has one writer since #268, the dsp-chain
+// worklet (tests/analysisRing.test.ts). Build + run: npm run test:dsp-golden
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <vector>
-#include "../../src/sdl/analysis_ring.h"
 #include "../../src/sdl/dsp_fft.h"
 
 #if !defined(__wasm_simd128__)
@@ -26,44 +23,6 @@ static int g_failures = 0;
             ++g_failures;                                                \
         }                                                                \
     } while (0)
-
-static void ring_layout() {
-    // analysisRing.ts: [0] writePos [1] generation [2] capacity [3] channels [4] sampleRate.
-    CHECK(offsetof(AnalysisRingState, writePos) == 0);
-    CHECK(offsetof(AnalysisRingState, generation) == 4);
-    CHECK(offsetof(AnalysisRingState, capacity) == 8);
-    CHECK(offsetof(AnalysisRingState, channels) == 12);
-    CHECK(offsetof(AnalysisRingState, sampleRate) == 16);
-    CHECK(sizeof(AnalysisRingState) == 32);
-}
-
-static void ring_writes() {
-    analysis_ring_init(1000); // not a power of two: refused
-    CHECK(analysis_ring_data() == nullptr);
-
-    analysis_ring_init(16);
-    const uint32_t gen0 = g_analysisRing.generation.load();
-    analysis_ring_set_format(2, 48000);
-    CHECK(g_analysisRing.generation.load() == gen0 + 1);
-    CHECK(g_analysisRing.channels.load() == 2 && g_analysisRing.sampleRate.load() == 48000);
-
-    float block[40];
-    for (int i = 0; i < 40; ++i) block[i] = (float)i;
-    analysis_ring_write(block, 10);
-    analysis_ring_write(block + 10, 10); // wraps at 16
-    CHECK(g_analysisRing.writePos.load() == 20);
-    const float* d = analysis_ring_data();
-    for (uint32_t p = 4; p < 20; ++p) CHECK(d[p & 15] == (float)p);
-
-    analysis_ring_write(block, 40); // oversize: newest 16 floats, writePos still counts all 40
-    CHECK(g_analysisRing.writePos.load() == 60);
-    for (uint32_t p = 44; p < 60; ++p) CHECK(d[p & 15] == (float)(p - 20));
-
-    analysis_ring_reset();
-    CHECK(g_analysisRing.writePos.load() == 0);
-    CHECK(g_analysisRing.generation.load() == gen0 + 2);
-    analysis_ring_cleanup();
-}
 
 static void fft_simd_matches_scalar() {
     std::vector<float> pcm(16384 * 2);
@@ -86,13 +45,11 @@ static void fft_simd_matches_scalar() {
 }
 
 int main() {
-    ring_layout();
-    ring_writes();
     fft_simd_matches_scalar();
     if (g_failures) {
         std::printf("analysis golden: %d failure(s)\n", g_failures);
         return 1;
     }
-    std::printf("analysis golden: analysis_ring.h layout/wrap/reset OK, dsp_fft.h SIMD == scalar\n");
+    std::printf("analysis golden: dsp_fft.h SIMD == scalar\n");
     return 0;
 }

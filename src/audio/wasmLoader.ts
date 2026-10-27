@@ -27,7 +27,6 @@ export function loadWasmScript(url: string): Promise<void> {
 
 export const WASM_ASSETS = {
   sdl3: publicUrl('sdl-audio.js'),
-  scriptProcessorShim: publicUrl('script-processor-shim.js'),
   projectmHost: publicUrl('projectm/projectm-host.js'),
   speexResampler: publicUrl('speex-resampler.js'),
 } as const;

@@ -9,7 +9,7 @@ A React/TypeScript high-fidelity audio player with **four interchangeable audio 
 ## Key Features
 
 ### Audio
-- **Four backends:** Streaming (default), Web Audio, AudioWorklet, SDL3 WASM
+- **Four backends:** Streaming (default), Web Audio, AudioWorklet, C++ WASM engine (`sdl`)
 - **FLAC/WAV/MP3** via browser decode, libflac WASM, or CDN streaming
 - **5-band EQ**, playback rate (streaming / Web Audio), volume
 - **Crossfade / gapless** (streaming mode, 3 s fade)
@@ -40,7 +40,7 @@ A React/TypeScript high-fidelity audio player with **four interchangeable audio 
 flac_player/
 ├── src/
 │   ├── components/       Player, LibraryView, QueuePanel, ShaderGUI, VisualizerShell, ProjectMHost
-│   ├── audio/            createAudioBackend, AudioContextManager, EQChain, SdlPcmBridge
+│   ├── audio/            createAudioBackend, AudioContextManager, EQChain, DspChainNode
 │   │   └── backends/     BaseAudioBackend + Streaming, WebAudio, Worklet, Sdl3
 │   ├── hooks/            usePlaybackController, usePlayerState, useAudioSettings
 │   ├── api/              songApi.ts
@@ -74,12 +74,12 @@ Live against **`https://storage.noahcohn.com`**:
 
 - **Library** — full catalog, CORS, tags, ratings, search, smart mix
 - **Streaming playback** — default backend; range requests against Contabo/static files
-- **Gapless / ReplayGain** — shipped on shared graph; SDL gapless still unsupported
+- **Gapless / ReplayGain** — shipped on shared graph; `sdl` gapless on hi-fi streams only
 - **Uploads** — storage admin → FLAC conversion → `songs.json` index
 
 Foundation refactor ([#193](https://github.com/ford442/flac_player/issues/193)) is **done**: playback backends live under `src/audio/backends/` with shared `BaseAudioBackend`, and playback lifecycle is owned by `usePlaybackController`. Native-rate `AudioContext` ([#194](https://github.com/ford442/flac_player/issues/194)) is **done**. WASM dual-backend hardening ([#212](https://github.com/ford442/flac_player/issues/212)) is **done** (512 MiB heap cap, configure ABI, SDL2 playback retired). See [ROADMAP.md](./ROADMAP.md).
 - **Shareable playlists** — `?share=<id>` loads from `/api/share/<id>`
-- **Four audio backends** — user-selectable; lazy-loaded SDL3 WASM chunk
+- **Four audio backends** — user-selectable; lazy-loaded WASM engine chunk
 - **Visualizer** — required WebGPU ShaderGUI + optional projectM split mode
 - **Offline cache** — per-track download via Cache API
 - **Tests** — Playwright smoke suite + decoder unit test
@@ -89,7 +89,7 @@ Foundation refactor ([#193](https://github.com/ford442/flac_player/issues/193)) 
 - Modern browser (Chrome 90+, Firefox 88+, Safari 14+)
 - Web Audio API (required)
 - WebGPU (required for ShaderGUI; audio remains available on probe failure)
-- HTTPS + COOP/COEP for AudioWorklet / SDL WASM / projectM
+- HTTPS + COOP/COEP for SharedArrayBuffer (analysis ring, `sdl` engine)
 
 ## Documentation Map
 

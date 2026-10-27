@@ -43,8 +43,8 @@ interface PcmWindow {
 }
 
 /**
- * Newest FFT window: the analysis ring (post-DSP PCM, interleaved, from SDL's
- * audio callback or the dsp-chain worklet) when one is published, else the
+ * Newest FFT window: the analysis ring (post-DSP PCM, interleaved, from the
+ * dsp-chain worklet) when one is published, else the
  * analyser's mono time-domain buffer.
  */
 function readWindow(analyser: AnalyserNode, scratch: Float32Array<ArrayBuffer>): PcmWindow {

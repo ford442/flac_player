@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Scalar-vs-SIMD speaker DSP golden + analysis ring / FFT golden, built with the
+# Scalar-vs-SIMD speaker DSP golden + FFT golden, built with the
 # pinned emsdk and run under node (tests/native/*_golden.cpp).
 set -euo pipefail
 

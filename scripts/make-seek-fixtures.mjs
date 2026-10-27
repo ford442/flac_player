@@ -40,4 +40,23 @@ encode('gapless-a.flac', 0, 3);
 encode('gapless-b.flac', 3 * RATE, 3);
 // Rate change: must not splice (the backend reloads via ensureForTrack).
 encode('gapless-48k.flac', 0, 1, 48000);
-console.log('Wrote seek-index-40s.flac, gapless-a.flac, gapless-b.flac, gapless-48k.flac');
+
+// 5.1 at 48 kHz, 4 s: channel c holds the constant (c + 1) / 8 (int16 (c + 1) × 4096),
+// so a channel that moved shows up as the wrong level (tests/browser/sdlEngine.test.ts).
+function encodeChannelLevels(name, channels, seconds, rate) {
+  const dir = mkdtempSync(join(tmpdir(), 'seekfx-'));
+  const raw = join(dir, 'in.raw');
+  const frames = Math.round(seconds * rate);
+  const buf = Buffer.alloc(frames * channels * 2);
+  for (let i = 0; i < frames; i++) {
+    for (let c = 0; c < channels; c++) buf.writeInt16LE((c + 1) * 4096, (i * channels + c) * 2);
+  }
+  writeFileSync(raw, buf);
+  execFileSync('ffmpeg', [
+    '-v', 'error', '-y', '-f', 's16le', '-ar', String(rate), '-ac', String(channels), '-i', raw,
+    '-map_metadata', '-1', '-c:a', 'flac', '-compression_level', '5', join(OUT, name),
+  ]);
+  rmSync(dir, { recursive: true, force: true });
+}
+encodeChannelLevels('channel-levels-6ch.flac', 6, 4, 48000);
+console.log('Wrote seek-index-40s.flac, gapless-a.flac, gapless-b.flac, gapless-48k.flac, channel-levels-6ch.flac');
