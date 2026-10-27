@@ -1,6 +1,9 @@
 import type { PlaybackPathInfo } from '../utils/playbackPath';
 import type { GaplessSettings, PreloadNextOptions, TrackTransitionEvent } from './gapless';
 
+/** Selectable playback engine (`createAudioBackend`). */
+export type AudioOutputMode = 'streaming' | 'web-audio' | 'worklet' | 'sdl';
+
 export interface AudioPlaybackState {
   isPlaying: boolean;
   currentTime: number;

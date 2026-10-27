@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { AudioContextManager } from '../../src/audio/AudioContextManager';
 import { createAudioBackend } from '../../src/audio/createAudioBackend';
 import type { ConfigurableAudioBackend } from '../../src/types/audio';
-import type { AudioOutputMode } from '../../src/hooks/usePlayerState';
+import type { AudioOutputMode } from '../../src/types/audio';
 
 const FIXTURE_DURATION_SECONDS = 1;
 const ACTIVITY_TIMEOUT_MS = 1_500;

@@ -21,7 +21,7 @@ Last updated: September 2026
 | Feature | Entry point |
 |---------|-------------|
 | Player orchestration | `src/components/Player.tsx` |
-| Playback controller | `src/hooks/usePlaybackController.ts` |
+| Playback engine + store | `src/player/PlaybackEngine.ts`, `src/player/playerStore.ts`, `src/player/selectors.ts` |
 | Backend factory | `src/audio/createAudioBackend.ts` |
 | Streaming (default) | `src/audio/backends/StreamingAudioPlayer.ts` |
 | Buffered Web Audio | `src/audio/backends/WebAudioPlayer.ts` |
@@ -29,7 +29,7 @@ Last updated: September 2026
 | SDL3 WASM | `src/audio/backends/Sdl3AudioPlayer.ts` |
 | SDL → analyser bridge | `src/audio/SdlPcmBridge.ts`, `src/sdl/pcm_ring.h` |
 | SDL3 play ring | `src/sdl/play_ring.h`, `src/audio/playRingBackpressure.ts` |
-| Library / API client | `src/api/songApi.ts`, `src/api/audioLoader.ts` |
+| Library / API client | `src/api/http.ts`, `src/api/songApi.ts`, `src/api/library.ts` (TanStack Query) |
 | Offline cache | `src/storage/trackCache.ts`, `src/components/OfflineCache.tsx` |
 | Queue persistence | `src/storage/queueStorage.ts` |
 | Playlist share (static) | `src/api/songApi.ts` (`createShare`, `fetchSharedPlaylist`) |
@@ -76,8 +76,8 @@ Last updated: September 2026
 
 **Load and play (streaming — default)**
 
-1. User selects track → `Player.tsx` → `audioLoader` resolves URL from API.
-2. `createAudioBackend('streaming')` → `StreamingAudioPlayer.loadFromURL(url)`.
+1. User selects track → `useActions().playTrack` → `PlaybackEngine.load(track)` (URL already resolved by `resolveTrackUrl`).
+2. Backend built once per mode by `createAudioBackend('streaming')` → `StreamingAudioPlayer.loadFromURL(url)`.
 3. `<audio src>` + `MediaElementAudioSourceNode` → `AudioContextManager` → EQ → analyser → visualizer.
 4. Optional: `preloadNextTrack` + crossfade 3 s before track end.
 
@@ -93,7 +93,7 @@ Last updated: September 2026
 
 ## 6. Debug logging
 
-Set `REACT_APP_DEBUG=true` in `.env`. Central helper: `src/utils/debug.ts` (used by `api/audioLoader.ts`, `api/songApi.ts`). **Off by default** in production builds.
+Set `REACT_APP_DEBUG=true` in `.env`. Central helper: `src/utils/debug.ts` (used by `api/http.ts`, `api/songApi.ts`). **Off by default** in production builds.
 
 ## 7. Related docs
 

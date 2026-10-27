@@ -27,7 +27,6 @@ import {
   overlapSeconds,
   type GaplessSettings,
   type PreloadNextOptions,
-  type TrackTransitionEvent,
 } from '../../types/gapless';
 import { BaseAudioBackend } from './BaseAudioBackend';
 
@@ -38,6 +37,14 @@ type ActivePath = 'native' | 'hifi' | 'buffered';
 
 function normalizePreloadOptions(options: PreloadNextOptions | string): PreloadNextOptions {
   return typeof options === 'string' ? { url: options } : options;
+}
+
+/** Stop an element and drop its media, so it can neither keep playing nor fire 'ended'. */
+function releaseElement(el: HTMLAudioElement): void {
+  el.pause();
+  if (!el.hasAttribute('src')) return;
+  el.removeAttribute('src');
+  el.load();
 }
 
 export class StreamingAudioPlayer extends BaseAudioBackend {
@@ -65,6 +72,8 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
   private prebufferingNext = false;
   private headerProbeAbort: AbortController | null = null;
   private nativeOnly = false;
+  /** Rejects the in-flight native load when a newer load or a path switch supersedes it. */
+  private abortNativeLoad: (() => void) | null = null;
   private readonly unsubscribeGraph: () => void;
 
   private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
@@ -73,6 +82,11 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     super();
     this.audioElement = this._makeAudioElement();
     this.unsubscribeGraph = contextManager.subscribeGraphRecreated(() => {
+      // The old elements feed the closed context: unload them, or they keep
+      // running silently and their 'ended' advances the queue (#258).
+      this._cancelTransition();
+      this.abortNativeLoad?.();
+      releaseElement(this.audioElement);
       this.sourceNode = null;
       this.nextSourceNode = null;
       this.nextGainNode = null;
@@ -97,8 +111,13 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     if (!this.workletPlayer) {
       this.workletPlayer = new WorkletAudioPlayer(this.contextManager);
       this.workletPlayer.setPlaybackRate(this.playbackRate);
-      this.workletPlayer.setStateChangeCallback((state) => this.notifyStateChange(state));
-      this.workletPlayer.setOnEndedCallback((event) => this.onEndedCallback?.(event));
+      // Only the active path reports: a stopped worklet must not overwrite native state.
+      this.workletPlayer.setStateChangeCallback((state) => {
+        if (this.activePath !== 'native') this.notifyStateChange(state);
+      });
+      this.workletPlayer.setOnEndedCallback((event) => {
+        if (this.activePath !== 'native') this.onEndedCallback?.(event);
+      });
       if (this.onPCMBlock) {
         this.workletPlayer.setPCMCallback(this.onPCMBlock);
       }
@@ -139,17 +158,14 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     el.addEventListener('durationchange', () => this.notifyStateChange());
     el.addEventListener('loadedmetadata', () => this.notifyStateChange());
     el.addEventListener('ended', () => {
+      // A released or replaced element must not advance the queue (#258).
+      if (el !== this.audioElement || this.activePath !== 'native') return;
       this.notifyStateChange();
       if (!this.transitionActive) {
         try { this.onEndedCallback?.(); } catch { /* noop */ }
       }
     });
     return el;
-  }
-
-  override setOnEndedCallback(callback?: (event?: TrackTransitionEvent) => void): void {
-    super.setOnEndedCallback(callback);
-    this.workletPlayer?.setOnEndedCallback(callback);
   }
 
   private setPrebuffering(active: boolean): void {
@@ -190,7 +206,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     }
 
     if (this.nativeOnly) {
-      this.activePath = 'native';
+      this.switchPath('native');
       return this._loadNative(url);
     }
 
@@ -204,17 +220,32 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     const strategy = selectDecodeStrategy(probe.contentLength, { outputMode: 'streaming', url });
 
     if (strategy === 'native-stream') {
-      this.activePath = 'native';
+      this.switchPath('native');
       return this._loadNative(url);
     }
 
     if (strategy === 'buffered') {
-      this.activePath = 'buffered';
+      this.switchPath('buffered');
       return this._loadBuffered(url, options.expectedDuration);
     }
 
-    this.activePath = 'hifi';
+    this.switchPath('hifi');
     return this._loadHifi(url, options.expectedDuration);
+  }
+
+  /**
+   * Make `next` the only path that can sound. FLAC goes through the worklet and
+   * everything else through `<audio>`, so a FLAC ↔ MP3 queue used to leave the
+   * previous track playing under the new one (#258).
+   */
+  private switchPath(next: ActivePath): void {
+    this.activePath = next;
+    if (next === 'native') {
+      this.workletPlayer?.stop();
+    } else {
+      this.abortNativeLoad?.();
+      releaseElement(this.audioElement);
+    }
   }
 
   private async _refineDurationFromHeader(url: string): Promise<void> {
@@ -263,18 +294,23 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
       this.sourceNode.connect(gain);
     }
 
-    this.audioElement.src = url;
-    this.audioElement.load();
+    this.abortNativeLoad?.();
+    const el = this.audioElement;
+    el.src = url;
+    el.load();
 
     return new Promise<void>((resolve, reject) => {
       const onCanPlay = () => { cleanup(); resolve(); };
       const onError = () => { cleanup(); reject(new Error(`Failed to load audio: ${url}`)); };
+      const abort = () => { cleanup(); reject(new DOMException(`Load superseded: ${url}`, 'AbortError')); };
       const cleanup = () => {
-        this.audioElement.removeEventListener('canplay', onCanPlay);
-        this.audioElement.removeEventListener('error', onError);
+        el.removeEventListener('canplay', onCanPlay);
+        el.removeEventListener('error', onError);
+        if (this.abortNativeLoad === abort) this.abortNativeLoad = null;
       };
-      this.audioElement.addEventListener('canplay', onCanPlay);
-      this.audioElement.addEventListener('error', onError);
+      el.addEventListener('canplay', onCanPlay);
+      el.addEventListener('error', onError);
+      this.abortNativeLoad = abort;
     });
   }
 
@@ -500,6 +536,11 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
 
   stop(): void {
     this._cancelTransition();
+    // A stop while a native load is pending cancels it: nothing keeps loading after stop.
+    if (this.abortNativeLoad) {
+      this.abortNativeLoad();
+      releaseElement(this.audioElement);
+    }
     if (this.activePath === 'native') {
       this.audioElement.pause();
       this.audioElement.currentTime = 0;
@@ -620,8 +661,8 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     this.unsubscribeGraph();
     this.headerProbeAbort?.abort();
     this._cancelTransition();
-    this.audioElement.pause();
-    this.audioElement.src = '';
+    this.abortNativeLoad?.();
+    releaseElement(this.audioElement);
     if (this.sourceNode) {
       this.sourceNode.disconnect();
       this.sourceNode = null;
