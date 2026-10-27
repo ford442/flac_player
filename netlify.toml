@@ -7,6 +7,9 @@
   to = "/index.html"
   status = 200
 
+# Cross-origin isolation (COOP + COEP) is required for SharedArrayBuffer: the
+# worklet play ring, the analysis tap and the SDL3 (-pthread) backend. See
+# docs/DEPLOYMENT.md → Cross-origin isolation.
 [[headers]]
   for = "/*"
   [headers.values]
@@ -14,6 +17,7 @@
     Cross-Origin-Embedder-Policy = "require-corp"
     Cross-Origin-Resource-Policy = "same-origin"
 
+# Root-hosted build. With PUBLIC_PATH=/<base>/, change this to "/<base>/service-worker.js".
 [[headers]]
   for = "/service-worker.js"
   [headers.values]

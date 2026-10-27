@@ -7,6 +7,11 @@
  *   stage_main    A ⇄ B          log2(N) Stockham stages (mirror: stockhamFftReference)
  *   magnitude_main A|B → mags    |X[k]| · 2/Σw averaged over segments
  * Only the N/2 magnitudes are read back; HUD binning is `binFftMagnitudes` on CPU.
+ *
+ * Buffers are cached per (device, N) like the pipelines (#259 W7): the twiddle and
+ * Hann tables are computed and uploaded once, the work buffers grow to the largest
+ * window seen, and runs on the same plan are serialized so they never share a
+ * buffer mid-flight. The 30 Hz meter therefore allocates nothing on the GPU.
  */
 
 import { GPU_FFT_WORKGROUP_SIZE } from './constants';
@@ -70,8 +75,127 @@ async function getPipelines(device: GPUDevice): Promise<CachedFft> {
   return created;
 }
 
-function destroyBuf(buffer: GPUBuffer | null): void {
-  try { buffer?.destroy(); } catch { /* already destroyed */ }
+/** Per-(device, N) buffers. `pcm` / `a` / `b` grow with the window; the rest are fixed by N. */
+interface FftPlanBuffers {
+  twiddles: GPUBuffer;
+  hann: GPUBuffer;
+  params: GPUBuffer;
+  mags: GPUBuffer;
+  read: GPUBuffer;
+  pcm: GPUBuffer | null;
+  a: GPUBuffer | null;
+  b: GPUBuffer | null;
+  bindGroup: GPUBindGroup | null;
+  /** Runs on this plan, chained so one finishes (and unmaps) before the next writes. */
+  tail: Promise<unknown>;
+}
+
+const planBuffers = new WeakMap<GPUDevice, Map<number, FftPlanBuffers>>();
+
+/** Buffers created per (device, N) since load — the unit test checks they are reused. */
+export const fftBufferStats = { created: 0 };
+
+function createBuffer(device: GPUDevice, descriptor: GPUBufferDescriptor): GPUBuffer {
+  fftBufferStats.created += 1;
+  return device.createBuffer(descriptor);
+}
+
+function getPlanBuffers(device: GPUDevice, n: number): FftPlanBuffers {
+  let byN = planBuffers.get(device);
+  if (!byN) {
+    byN = new Map();
+    planBuffers.set(device, byN);
+  }
+  const hit = byN.get(n);
+  if (hit) return hit;
+
+  const log2n = Math.round(Math.log2(n));
+  const lines = n >> 1;
+  const twiddleTable = fftTwiddles(n);
+  const hannTable = new Float32Array(n);
+  for (let i = 0; i < n; i++) hannTable[i] = hannWindow(i, n);
+  const twiddles = createBuffer(device, {
+    label: 'gpu-chores-fft-twiddles',
+    size: twiddleTable.byteLength,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
+  const hann = createBuffer(device, {
+    label: 'gpu-chores-fft-hann',
+    size: hannTable.byteLength,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  });
+  device.queue.writeBuffer(twiddles, 0, twiddleTable);
+  device.queue.writeBuffer(hann, 0, hannTable);
+
+  const created: FftPlanBuffers = {
+    twiddles,
+    hann,
+    // Slot 0 = window, 1..log2n = stages, log2n+1 = magnitude.
+    params: createBuffer(device, {
+      label: 'gpu-chores-fft-params',
+      size: (log2n + 2) * PARAMS_STRIDE,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    }),
+    mags: createBuffer(device, {
+      label: 'gpu-chores-fft-mags',
+      size: lines * 4,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+    }),
+    read: createBuffer(device, {
+      label: 'gpu-chores-fft-read',
+      size: lines * 4,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    }),
+    pcm: null,
+    a: null,
+    b: null,
+    bindGroup: null,
+    tail: Promise.resolve(),
+  };
+  byN.set(n, created);
+  return created;
+}
+
+/** Grow the window-sized buffers to fit; rebuilds the bind group when any changed. */
+function ensureWorkBuffers(
+  device: GPUDevice,
+  bufs: FftPlanBuffers,
+  layout: GPUBindGroupLayout,
+  pcmBytes: number,
+  complexBytes: number,
+): GPUBindGroup {
+  let changed = bufs.bindGroup === null;
+  if (!bufs.pcm || bufs.pcm.size < pcmBytes) {
+    bufs.pcm?.destroy();
+    bufs.pcm = createBuffer(device, {
+      label: 'gpu-chores-fft-pcm',
+      size: pcmBytes,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    changed = true;
+  }
+  if (!bufs.a || !bufs.b || bufs.a.size < complexBytes) {
+    bufs.a?.destroy();
+    bufs.b?.destroy();
+    bufs.a = createBuffer(device, { label: 'gpu-chores-fft-a', size: complexBytes, usage: GPUBufferUsage.STORAGE });
+    bufs.b = createBuffer(device, { label: 'gpu-chores-fft-b', size: complexBytes, usage: GPUBufferUsage.STORAGE });
+    changed = true;
+  }
+  if (changed || !bufs.bindGroup) {
+    bufs.bindGroup = device.createBindGroup({
+      layout,
+      entries: [
+        { binding: 0, resource: { buffer: bufs.pcm } },
+        { binding: 1, resource: { buffer: bufs.a } },
+        { binding: 2, resource: { buffer: bufs.b } },
+        { binding: 3, resource: { buffer: bufs.mags } },
+        { binding: 4, resource: { buffer: bufs.params, size: PARAMS_BYTES } },
+        { binding: 5, resource: { buffer: bufs.twiddles } },
+        { binding: 6, resource: { buffer: bufs.hann } },
+      ],
+    });
+  }
+  return bufs.bindGroup;
 }
 
 export interface WebGpuFftOutput {
@@ -93,15 +217,29 @@ export async function runWebGpuFft(
 
   const plan = planFft(pcm.length, channels, fftSize);
   const n = plan.fftSize;
+  const pipes = await getPipelines(device);
+  const bufs = getPlanBuffers(device, n);
+  const run = bufs.tail.then(() => dispatchFft(device, pipes, bufs, plan, pcm, binCount, signal));
+  bufs.tail = run.catch(() => undefined);
+  return run;
+}
+
+async function dispatchFft(
+  device: GPUDevice,
+  pipes: CachedFft,
+  bufs: FftPlanBuffers,
+  plan: ReturnType<typeof planFft>,
+  pcm: Float32Array,
+  binCount: number,
+  signal: AbortSignal | undefined,
+): Promise<WebGpuFftOutput> {
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+  const n = plan.fftSize;
   const lines = n >> 1;
   const points = plan.segments * n;
   const log2n = Math.round(Math.log2(n));
-  const complexBytes = points * 8;
   const magBytes = lines * 4;
 
-  const pipes = await getPipelines(device);
-
-  // Slot 0 = window, 1..log2n = stages, log2n+1 = magnitude.
   const slotCount = log2n + 2;
   const params = new ArrayBuffer(slotCount * PARAMS_STRIDE);
   const writeSlot = (slot: number, ns: number, flip: number) => {
@@ -120,95 +258,34 @@ export async function runWebGpuFft(
   // After log2n stages the result lives in A when log2n is even, else B.
   writeSlot(log2n + 1, 0, log2n & 1);
 
-  const pcmBuffer = device.createBuffer({
-    label: 'gpu-chores-fft-pcm',
-    size: Math.max(4, pcm.byteLength),
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-  });
-  const bufA = device.createBuffer({ label: 'gpu-chores-fft-a', size: complexBytes, usage: GPUBufferUsage.STORAGE });
-  const bufB = device.createBuffer({ label: 'gpu-chores-fft-b', size: complexBytes, usage: GPUBufferUsage.STORAGE });
-  const magBuffer = device.createBuffer({
-    label: 'gpu-chores-fft-mags',
-    size: magBytes,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
-  });
-  const paramBuffer = device.createBuffer({
-    label: 'gpu-chores-fft-params',
-    size: params.byteLength,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  const twiddles = fftTwiddles(n);
-  const hann = new Float32Array(n);
-  for (let i = 0; i < n; i++) hann[i] = hannWindow(i, n);
-  const twiddleBuffer = device.createBuffer({
-    label: 'gpu-chores-fft-twiddles',
-    size: twiddles.byteLength,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-  });
-  const hannBuffer = device.createBuffer({
-    label: 'gpu-chores-fft-hann',
-    size: hann.byteLength,
-    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-  });
-  const readBuffer = device.createBuffer({
-    label: 'gpu-chores-fft-read',
-    size: magBytes,
-    usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
-  });
-
-  try {
-    if (pcm.byteLength > 0) {
-      device.queue.writeBuffer(pcmBuffer, 0, pcm.buffer, pcm.byteOffset, pcm.byteLength);
-    }
-    device.queue.writeBuffer(paramBuffer, 0, params);
-    device.queue.writeBuffer(twiddleBuffer, 0, twiddles);
-    device.queue.writeBuffer(hannBuffer, 0, hann);
-
-    const bindGroup = device.createBindGroup({
-      layout: pipes.layout,
-      entries: [
-        { binding: 0, resource: { buffer: pcmBuffer } },
-        { binding: 1, resource: { buffer: bufA } },
-        { binding: 2, resource: { buffer: bufB } },
-        { binding: 3, resource: { buffer: magBuffer } },
-        { binding: 4, resource: { buffer: paramBuffer, size: PARAMS_BYTES } },
-        { binding: 5, resource: { buffer: twiddleBuffer } },
-        { binding: 6, resource: { buffer: hannBuffer } },
-      ],
-    });
-
-    const groups = (count: number) => Math.ceil(count / GPU_FFT_WORKGROUP_SIZE);
-    const encoder = device.createCommandEncoder({ label: 'gpu-chores-fft' });
-    const pass = encoder.beginComputePass({ label: 'gpu-chores-fft' });
-    pass.setPipeline(pipes.window);
-    pass.setBindGroup(0, bindGroup, [0]);
-    pass.dispatchWorkgroups(groups(points));
-    pass.setPipeline(pipes.stage);
-    for (let s = 0; s < log2n; s++) {
-      pass.setBindGroup(0, bindGroup, [(s + 1) * PARAMS_STRIDE]);
-      pass.dispatchWorkgroups(groups(points >> 1));
-    }
-    pass.setPipeline(pipes.magnitude);
-    pass.setBindGroup(0, bindGroup, [(log2n + 1) * PARAMS_STRIDE]);
-    pass.dispatchWorkgroups(groups(lines));
-    pass.end();
-    encoder.copyBufferToBuffer(magBuffer, 0, readBuffer, 0, magBytes);
-    device.queue.submit([encoder.finish()]);
-
-    await readBuffer.mapAsync(GPUMapMode.READ);
-    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-    const magnitudes = new Float32Array(readBuffer.getMappedRange().slice(0));
-    readBuffer.unmap();
-
-    return { spectrum: binFftMagnitudes(magnitudes, binCount), magnitudes, fftSize: n };
-  } finally {
-    destroyBuf(pcmBuffer);
-    destroyBuf(bufA);
-    destroyBuf(bufB);
-    destroyBuf(magBuffer);
-    destroyBuf(paramBuffer);
-    destroyBuf(twiddleBuffer);
-    destroyBuf(hannBuffer);
-    destroyBuf(readBuffer);
+  const bindGroup = ensureWorkBuffers(device, bufs, pipes.layout, Math.max(4, pcm.byteLength), points * 8);
+  if (pcm.byteLength > 0) {
+    device.queue.writeBuffer(bufs.pcm!, 0, pcm.buffer, pcm.byteOffset, pcm.byteLength);
   }
+  device.queue.writeBuffer(bufs.params, 0, params);
+
+  const groups = (count: number) => Math.ceil(count / GPU_FFT_WORKGROUP_SIZE);
+  const encoder = device.createCommandEncoder({ label: 'gpu-chores-fft' });
+  const pass = encoder.beginComputePass({ label: 'gpu-chores-fft' });
+  pass.setPipeline(pipes.window);
+  pass.setBindGroup(0, bindGroup, [0]);
+  pass.dispatchWorkgroups(groups(points));
+  pass.setPipeline(pipes.stage);
+  for (let s = 0; s < log2n; s++) {
+    pass.setBindGroup(0, bindGroup, [(s + 1) * PARAMS_STRIDE]);
+    pass.dispatchWorkgroups(groups(points >> 1));
+  }
+  pass.setPipeline(pipes.magnitude);
+  pass.setBindGroup(0, bindGroup, [(log2n + 1) * PARAMS_STRIDE]);
+  pass.dispatchWorkgroups(groups(lines));
+  pass.end();
+  encoder.copyBufferToBuffer(bufs.mags, 0, bufs.read, 0, magBytes);
+  device.queue.submit([encoder.finish()]);
+
+  await bufs.read.mapAsync(GPUMapMode.READ);
+  const magnitudes = new Float32Array(bufs.read.getMappedRange().slice(0));
+  bufs.read.unmap();
+  if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+
+  return { spectrum: binFftMagnitudes(magnitudes, binCount), magnitudes, fftSize: n };
 }

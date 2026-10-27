@@ -4,6 +4,7 @@ import { DEFAULT_EQ_BANDS } from '../EQChain';
 import { DSP_EQ_TYPE_CODES } from '../worklets/dspChainMessages';
 import { SdlPcmModule, sharedSdlPcmBridge } from '../SdlPcmBridge';
 import { WASM_ASSETS, loadWasmScript } from '../wasmLoader';
+import { outputModeUnavailableReason } from '../outputModeSupport';
 import type { AudioBackendCapabilities, AudioPlaybackState, DecodedPcmView } from '../../types/audio';
 import { isGaplessActive, DEFAULT_CROSSFADE_MS, DEFAULT_GAPLESS_MODE, type GaplessSettings, type PreloadNextOptions } from '../../types/gapless';
 import { BaseAudioBackend } from './BaseAudioBackend';
@@ -50,7 +51,6 @@ interface SdlModule extends SdlPcmModule {
 declare global {
   function createSdlAudioModule(): Promise<SdlModule>;
   interface Window {
-    __sdl_script_processor_shim_loaded?: boolean;
   }
 }
 
@@ -66,6 +66,8 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
   private duration: number = 0;
   private pollInterval: number | null = null;
   private initialization: Promise<void>;
+  /** Set when this page cannot run the pthread build (no cross-origin isolation). */
+  private readonly unavailable: string | null;
   private decodedPcm: Float32Array | null = null;
   private decodedChannels = 1;
   private decodedSampleRate = 0;
@@ -94,10 +96,12 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
     super();
-    this.initialization = this.initializeModule();
+    this.unavailable = outputModeUnavailableReason('sdl');
+    this.initialization = this.unavailable ? Promise.resolve() : this.initializeModule();
   }
 
   async initialize(): Promise<void> {
+    if (this.unavailable) throw new Error(`SDL3 ${this.unavailable}; this page is not isolated`);
     await this.initialization;
     if (!this.isReady) throw new Error('SDL Module failed to initialize');
   }
@@ -108,16 +112,6 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
 
   private async initializeModule() {
     debug.log('SdlAudioPlayer', 'Initializing module');
-    if (!window.__sdl_script_processor_shim_loaded) {
-      try {
-        await loadWasmScript(WASM_ASSETS.scriptProcessorShim);
-        window.__sdl_script_processor_shim_loaded = true;
-        debug.log('SdlAudioPlayer', 'script-processor-shim.js loaded');
-      } catch {
-        console.warn('[SdlAudioPlayer] Script processor shim failed to load; continuing without shim.');
-      }
-    }
-
     if (!window.createSdlAudioModule) {
       await loadWasmScript(WASM_ASSETS.sdl3);
       debug.log('SdlAudioPlayer', 'sdl-audio.js loaded');

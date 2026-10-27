@@ -415,8 +415,11 @@ All modes share one PCM pipeline — **no duplicate audio decode**. The player f
 
 Routing (`src/utils/projectMBridge.ts`):
 
-- **In-app host:** When `ProjectMHost` is mounted, PCM is fed directly to projectM WASM via `registerInAppProjectMHost()`.
-- **External embed:** Same PCM is also sent via `postMessage` and `BroadcastChannel('projectm-audio')`.
+- **In-app host:** When `ProjectMHost` is mounted, PCM is fed directly to projectM WASM via `registerInAppProjectMHost()`, and nothing is posted outside the page.
+- **External embed:** Otherwise each block goes to `window.opener` if there is one, else to `window.parent` when framed (`postMessage(msg, '*')`), and also to `BroadcastChannel('projectm-audio')`.
+
+Message shape: `{ type: 'pcm', buffer: Float32Array, channels: number, sampleRate?: number }`.
+The worklet tap sends interleaved multichannel blocks with `sampleRate`. The analyser fallback sends mono blocks without it.
 
 ### Embed mode (`?projectm=1`)
 
@@ -428,28 +431,38 @@ https://<player-url>/?projectm=1
 
 Compact transport UI (`EmbedPlayerView`) is shown. PCM bridge is wired automatically.
 
-**Popup:**
-
-```js
-const player = window.open('https://<player-url>/?projectm=1', 'flac-player');
-window.addEventListener('message', (e) => {
-  if (e.data?.type === 'pcm') {
-    projectM.addPCMfloat(e.data.buffer, e.data.channels);
-  }
-});
-```
-
-**iframe:**
+**Supported: iframe + `postMessage`.** The player posts to `window.parent`, which works across origins:
 
 ```html
-<iframe src="https://<player-url>/?projectm=1" id="flac-player"></iframe>
+<iframe src="https://<player-url>/?projectm=1" name="flac-player" allow="autoplay"></iframe>
 <script>
-  const bc = new BroadcastChannel('projectm-audio');
-  bc.onmessage = (e) => {
-    if (e.data?.type === 'pcm') projectM.addPCMfloat(e.data.buffer, e.data.channels);
-  };
+  const PLAYER_ORIGIN = 'https://<player-url>';
+  window.addEventListener('message', (e) => {
+    if (e.origin !== PLAYER_ORIGIN || e.data?.type !== 'pcm') return;
+    projectM.addPCMfloat(e.data.buffer, e.data.channels);
+  });
 </script>
 ```
+
+- The framed player is cross-origin isolated only if the parent page is isolated
+  too and grants `allow="cross-origin-isolated"`. Otherwise it runs without
+  `SharedArrayBuffer`: the worklet ring and tap fall back to message transport
+  and SDL3 is unavailable (see `docs/DEPLOYMENT.md` → Cross-origin isolation).
+  PCM still flows.
+- If the parent page sends COEP `require-corp`, the player's HTML must be served
+  with `Cross-Origin-Resource-Policy: cross-origin`. The shipped configs send
+  `same-origin`, which blocks the frame.
+
+**Popup (`window.open`): not supported on isolated deploys.** The player sends
+`Cross-Origin-Opener-Policy: same-origin`, so a popup opened from another origin
+gets its own browsing context group: its `window.opener` is `null` and nothing is
+posted back. The opener's handle reports `closed`. Popups only work from a page
+on the player's own origin that also sends COOP `same-origin`, or against a
+deploy without COOP (e.g. GitHub Pages).
+
+**`BroadcastChannel('projectm-audio')`** is same-origin only, and partitioned by
+top-level site. It reaches other pages of the same player deploy (e.g. a
+projectM page served from the same origin), never a cross-origin parent or opener.
 
 ### Share links with projectM
 
@@ -461,7 +474,7 @@ https://<player-url>/?share=<id>&aesthetic=projectm
 
 ### Requirements
 
-- **Cross-origin isolation** (COOP/COEP) for AudioWorklet + projectM pthread builds — configured in `webpack.config.js` dev server, `netlify.toml`, and `vercel.json`.
+- **Cross-origin isolation** (COOP/COEP) for `SharedArrayBuffer`: the worklet play ring, the projectM PCM tap ring and the SDL3 `-pthread` backend. Configured in the `webpack.config.js` dev server, `netlify.toml` and `vercel.json`; other hosts in `docs/DEPLOYMENT.md`. The projectM host itself is built **without** `-pthread` (`scripts/build-projectm-wasm.sh`) and runs without isolation.
 - **Cleanup:** Call the teardown returned by `createProjectMPCMFeed(player)` when destroying the player backend. Track changes invoke `notifyInAppProjectMTrackChange()` (no audio glitch — PCM stream continues).
 
 ### Presets (Phase 2)

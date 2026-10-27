@@ -5,7 +5,7 @@ import {
   latencyHintsEqual,
   latencyModeToHint,
   destinationChannelCount,
-  probeSampleRateSupported,
+  isSampleRateAccepted,
   relaxContextOptions,
   renderSizeModeToHint,
   isRenderSizeMode,
@@ -80,7 +80,7 @@ describe('sampleRatePolicy', () => {
   });
 });
 
-describe('probeSampleRateSupported', () => {
+describe('isSampleRateAccepted', () => {
   let restore: (() => void) | undefined;
 
   afterEach(() => {
@@ -94,16 +94,16 @@ describe('probeSampleRateSupported', () => {
       isSampleRateSupported?: (rate: number) => boolean;
     };
     Ctor.isSampleRateSupported = (rate) => rate === 48000;
-    expect(probeSampleRateSupported(48000)).toBe(true);
-    expect(probeSampleRateSupported(192000)).toBe(false);
-    expect(RecordingAudioContext.instances).toHaveLength(0);
+    expect(isSampleRateAccepted(48000)).toBe(true);
+    expect(isSampleRateAccepted(192000)).toBe(false);
     delete Ctor.isSampleRateSupported;
   });
 
-  it('falls back to a construct/close probe', () => {
+  it('never opens a throwaway context (constructor relaxation catches rejected rates)', () => {
     restore = installRecordingAudioContext();
-    expect(probeSampleRateSupported(96000)).toBe(true);
-    expect(RecordingAudioContext.instances[0]?.state).toBe('closed');
+    expect(isSampleRateAccepted(96000)).toBe(true);
+    expect(isSampleRateAccepted(0)).toBe(false);
+    expect(RecordingAudioContext.instances).toHaveLength(0);
   });
 });
 

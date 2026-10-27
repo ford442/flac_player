@@ -41,6 +41,34 @@ describe('PlaybackEngine', () => {
     expect(FakeBackend.created[0]!.destroy).toHaveBeenCalledTimes(1);
   });
 
+  it('unlocks audio synchronously on user play commands and reports audible transport (#259 A3/A4)', async () => {
+    const { engine, deps, flush } = setup();
+    await flush();
+    const unlock = deps.unlockAudio as ReturnType<typeof vi.fn>;
+    const active = deps.setPlaybackActive as ReturnType<typeof vi.fn>;
+
+    const loading = engine.load(track('a'));
+    // Before the first await: still inside the click handler's task.
+    expect(unlock).toHaveBeenCalledTimes(1);
+    expect(active).toHaveBeenLastCalledWith(true); // loading
+    await loading;
+    await flush();
+    expect(active).toHaveBeenLastCalledWith(true); // playing
+
+    engine.pause();
+    expect(active).toHaveBeenLastCalledWith(false);
+    const playing = engine.play();
+    expect(unlock).toHaveBeenCalledTimes(2);
+    await playing;
+    expect(active).toHaveBeenLastCalledWith(true);
+
+    // A guest's paused load (autoplay off) is not a gesture.
+    await engine.load(track('b'), { autoplay: false });
+    expect(unlock).toHaveBeenCalledTimes(2);
+    engine.stop();
+    expect(active).toHaveBeenLastCalledWith(false);
+  });
+
   it('drops a stale load result: a slow track A cannot replace track B', async () => {
     const { engine, store, backend, flush } = setup();
     await flush();

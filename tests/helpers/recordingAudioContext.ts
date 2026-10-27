@@ -4,7 +4,9 @@ type RecordingNodeKind =
   | 'compressor'
   | 'biquad'
   | 'analyser'
-  | 'buffer-source';
+  | 'buffer-source'
+  | 'splitter'
+  | 'merger';
 
 export class RecordingAudioParam {
   value: number;
@@ -28,8 +30,16 @@ export class RecordingAudioParam {
   }
 }
 
+export interface RecordingConnection {
+  destination: AudioNode;
+  output: number;
+  input: number;
+}
+
 export class RecordingAudioNode {
   readonly connections: AudioNode[] = [];
+  /** Same edges as `connections`, with output / input indices. */
+  readonly ports: RecordingConnection[] = [];
   disconnectCalls = 0;
 
   constructor(
@@ -37,14 +47,22 @@ export class RecordingAudioNode {
     readonly kind: RecordingNodeKind
   ) {}
 
-  connect(destination: AudioNode): AudioNode {
+  connect(destination: AudioNode, output = 0, input = 0): AudioNode {
     this.connections.push(destination);
+    this.ports.push({ destination, output, input });
     return destination;
   }
 
   disconnect(): void {
     this.disconnectCalls += 1;
     this.connections.length = 0;
+    this.ports.length = 0;
+  }
+}
+
+export class RecordingChannelNode extends RecordingAudioNode {
+  constructor(context: RecordingAudioContext, kind: 'splitter' | 'merger', readonly channels: number) {
+    super(context, kind);
   }
 }
 
@@ -169,6 +187,8 @@ export class RecordingAudioContext {
   readonly gainNodes: RecordingGainNode[] = [];
   readonly compressorNodes: RecordingDynamicsCompressorNode[] = [];
   readonly bufferSources: RecordingAudioBufferSourceNode[] = [];
+  readonly channelNodes: RecordingChannelNode[] = [];
+  private readonly listeners = new Map<string, Set<(event: Event) => void>>();
 
   constructor(options: AudioContextOptions & { sinkId?: string } = {}) {
     if (RecordingAudioContext.rejectOptions?.(options)) {
@@ -198,6 +218,18 @@ export class RecordingAudioContext {
     const node = new RecordingDynamicsCompressorNode(this);
     this.compressorNodes.push(node);
     return node as unknown as DynamicsCompressorNode;
+  }
+
+  createChannelSplitter(outputs = 6): ChannelSplitterNode {
+    const node = new RecordingChannelNode(this, 'splitter', outputs);
+    this.channelNodes.push(node);
+    return node as unknown as ChannelSplitterNode;
+  }
+
+  createChannelMerger(inputs = 6): ChannelMergerNode {
+    const node = new RecordingChannelNode(this, 'merger', inputs);
+    this.channelNodes.push(node);
+    return node as unknown as ChannelMergerNode;
   }
 
   createBiquadFilter(): BiquadFilterNode {
@@ -234,17 +266,47 @@ export class RecordingAudioContext {
     },
   };
 
+  resumeCalls = 0;
+  /** Make resume() reject (WebKit outside a user gesture). */
+  refuseResume = false;
+
   async resume(): Promise<void> {
-    this.state = 'running';
+    this.resumeCalls += 1;
+    if (this.refuseResume) throw new DOMException('not allowed', 'NotAllowedError');
+    this.setState('running');
   }
 
   async suspend(): Promise<void> {
     this.suspendCalls += 1;
-    this.state = 'suspended';
+    this.setState('suspended');
   }
 
   async close(): Promise<void> {
-    this.state = 'closed';
+    this.setState('closed');
+  }
+
+  addEventListener(type: string, listener: (event: Event) => void): void {
+    let set = this.listeners.get(type);
+    if (!set) {
+      set = new Set();
+      this.listeners.set(type, set);
+    }
+    set.add(listener);
+  }
+
+  removeEventListener(type: string, listener: (event: Event) => void): void {
+    this.listeners.get(type)?.delete(listener);
+  }
+
+  dispatch(type: string): void {
+    this.listeners.get(type)?.forEach((listener) => listener(new Event(type)));
+  }
+
+  /** Change state the way the browser does (e.g. 'interrupted' on iOS) and fire statechange. */
+  setState(state: AudioContextState | 'interrupted'): void {
+    if (this.state === state) return;
+    this.state = state as AudioContextState;
+    this.dispatch('statechange');
   }
 }
 

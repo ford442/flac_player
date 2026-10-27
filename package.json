@@ -20,6 +20,7 @@
     "test:unit": "vitest run",
     "test:decoder": "vitest run --config vitest.decoder.config.ts",
     "test:e2e": "npx playwright test",
+    "test:e2e:prod": "npx playwright test --config playwright.prod.config.ts",
     "test:streaming": "vitest run --config vitest.browser.config.ts",
     "test:visualizer": "vitest run tests/rendererSelection.test.ts tests/waveformContract.test.ts tests/debugModes.test.ts tests/canvasConfig.test.ts tests/deviceLostRecovery.test.ts tests/spectrumSource.test.ts",
     "test:gpu-chores": "vitest run tests/gpuChores.reduce.test.ts tests/gpuChores.dispatcher.test.ts tests/gpuChores.fft.test.ts",

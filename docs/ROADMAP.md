@@ -41,8 +41,8 @@ Matches GitHub as of 2026-09-30. The shared AudioContext / worklet graph (#218) 
 Ideas validated by the September 2026 audit for a later cycle:
 
 - **Installable offline hi-fi PWA** — full library mirror + gapless offline once #216 badges and #215 gapless land
-- **projectM visual radio** — preset packs, beat-sync, shareable embeds (WASM host already optional)
-- **SDL3-only playback WASM** — **shipped** (#212). projectM keeps a separate `USE_SDL=2` video host.
+- **projectM visual radio** — runtime preset pack, picker (next / prev / random / lock) and `?preset=` links **shipped** (#259 G5); still open: bigger / user-chosen packs, preset textures, shareable embeds
+- **SDL3-only playback WASM** — **shipped** (#212). The projectM host dropped SDL2 too (#259 G4).
 - **Shared `gpu-chores` package** — in-repo stub shipped (#201); extract when a second app needs it
 
 ## Documentation index

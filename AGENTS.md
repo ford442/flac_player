@@ -44,9 +44,7 @@ flac_player/
 ├── public/                      # Static assets
 │   ├── index.html              # HTML template
 │   ├── sdl-audio.js            # SDL3 WASM module (generated via Emscripten)
-│   ├── sdl-audio.wasm          # SDL3 WASM binary (generated)
-│   ├── script-processor-shim.js     # createScriptProcessor polyfill for SDL3 (Emscripten audio)
-│   └── script-processor-processor.js # its AudioWorklet processor
+│   └── sdl-audio.wasm          # SDL3 WASM binary (generated)
 ├── src/
 │   ├── components/
 │   │   ├── Player.tsx          # Main player UI component (~446 lines)

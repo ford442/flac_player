@@ -62,6 +62,8 @@ class StrictGL {
   deleteProgram(program: FakeProgram) { program.deleted = true; }
   useProgram(program: FakeProgram) { this.current = program; }
   getContextAttributes() { return {}; }
+  isContextLost() { return false; }
+  getExtension() { return null; }
   disable() {}
   viewport() {}
   readPixels() {}
@@ -95,6 +97,8 @@ function setup() {
     width: 640,
     height: 160,
     getContext: (type: string) => (type === 'webgl2' ? gl : null),
+    addEventListener() {},
+    removeEventListener() {},
   } as unknown as HTMLCanvasElement;
   const analyser = {
     frequencyBinCount: 8,

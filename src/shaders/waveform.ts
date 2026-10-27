@@ -1,9 +1,12 @@
 import waveformSource from './waveform.wgsl?raw';
 import { injectShaderTokens, waveformLayoutTokens } from '../visuals/waveformContract';
+import { outputColorWGSL } from '../visuals/webgpu/outputColor';
 
 export interface WaveformShaderOptions {
   /** Device has `shader-f16`: glow math runs in f16. f32 otherwise. */
   f16?: boolean;
+  /** Canvas color space: 'display-p3' converts the sRGB palette on output (?p3=1). */
+  colorSpace?: PredefinedColorSpace;
 }
 
 /**
@@ -16,6 +19,7 @@ export function buildWaveformWGSL(options: WaveformShaderOptions = {}): string {
     ...waveformLayoutTokens('wgsl'),
     F16_ENABLE: options.f16 ? 'enable f16;' : '',
     GLOW_T: options.f16 ? 'f16' : 'f32',
+    OUTPUT_COLOR_FN: outputColorWGSL(options.colorSpace),
   });
 }
 

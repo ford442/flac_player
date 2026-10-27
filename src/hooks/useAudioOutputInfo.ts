@@ -3,7 +3,7 @@
  * latency, sink) plus enumerable output devices for the Settings panel.
  */
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   isAudioContextSinkSupported,
   sharedAudioContextManager,
@@ -54,13 +54,34 @@ export function useAudioOutputInfo(
   return info;
 }
 
+export interface OutputDeviceList {
+  devices: OutputDeviceOption[];
+  /**
+   * The browser reports outputs but blanks their ids (Chromium, version-dependent,
+   * until the page holds a media permission), so none can be offered yet.
+   */
+  hidden: boolean;
+  /** Ask for that permission, release it at once, and list again. */
+  reveal: () => Promise<void>;
+}
+
+/** `audiooutput` entries usable with setSinkId, plus whether some were hidden. */
+export function listOutputDevices(all: readonly MediaDeviceInfo[]): Pick<OutputDeviceList, 'devices' | 'hidden'> {
+  const outputs = all.filter((d) => d.kind === 'audiooutput');
+  const devices = outputs
+    .filter((d) => d.deviceId && d.deviceId !== 'default')
+    .map((d, i) => ({ deviceId: d.deviceId, label: d.label || `Output ${i + 1}` }));
+  return { devices, hidden: outputs.some((d) => !d.deviceId) };
+}
+
 /**
  * `audiooutput` devices for the sink dropdown (Chromium, where `setSinkId` exists
- * but `selectAudioOutput` usually does not). Labels may be blank until the page
- * holds a media permission.
+ * but `selectAudioOutput` usually does not). Labels and ids may be blank until
+ * the page holds a media permission; `reveal()` asks for one.
  */
-export function useOutputDevices(): OutputDeviceOption[] {
-  const [devices, setDevices] = useState<OutputDeviceOption[]>([]);
+export function useOutputDevices(): OutputDeviceList {
+  const [list, setList] = useState<Pick<OutputDeviceList, 'devices' | 'hidden'>>({ devices: [], hidden: false });
+  const refreshRef = useRef<() => Promise<void>>(async () => {});
 
   useEffect(() => {
     const media = typeof navigator !== 'undefined' ? navigator.mediaDevices : undefined;
@@ -69,15 +90,12 @@ export function useOutputDevices(): OutputDeviceOption[] {
     const refresh = async () => {
       try {
         const all = await media.enumerateDevices();
-        if (cancelled) return;
-        const outputs = all
-          .filter((d) => d.kind === 'audiooutput' && d.deviceId && d.deviceId !== 'default')
-          .map((d, i) => ({ deviceId: d.deviceId, label: d.label || `Output ${i + 1}` }));
-        setDevices(outputs);
+        if (!cancelled) setList(listOutputDevices(all));
       } catch {
-        if (!cancelled) setDevices([]);
+        if (!cancelled) setList({ devices: [], hidden: false });
       }
     };
+    refreshRef.current = refresh;
     void refresh();
     media.addEventListener?.('devicechange', refresh);
     return () => {
@@ -86,5 +104,18 @@ export function useOutputDevices(): OutputDeviceOption[] {
     };
   }, []);
 
-  return devices;
+  const reveal = useCallback(async () => {
+    const media = navigator.mediaDevices;
+    if (!media?.getUserMedia) return;
+    try {
+      // Only the permission matters: the stream is stopped before anything is captured.
+      const stream = await media.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+    } catch (err) {
+      console.warn('[useOutputDevices] media permission refused; output devices stay hidden', err);
+    }
+    await refreshRef.current();
+  }, []);
+
+  return useMemo(() => ({ ...list, reveal }), [list, reveal]);
 }

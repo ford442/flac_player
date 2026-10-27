@@ -25,7 +25,7 @@ function loadEnv(mode) {
   dotenv.config({ path: path.resolve(__dirname, '.env') });
   const publicPath = normalizePublicPath(process.env.PUBLIC_PATH);
   const envVars = { 'process.env.PUBLIC_PATH': JSON.stringify(publicPath) };
-  ['REACT_APP_API_URL', 'REACT_APP_PLAYLIST_API_URL', 'REACT_APP_ROOMS_API_URL', 'REACT_APP_WS_URL', 'REACT_APP_GA_ID', 'REACT_APP_MIXPANEL_TOKEN', 'REACT_APP_DEBUG'].forEach(key => {
+  ['REACT_APP_API_URL', 'REACT_APP_PLAYLIST_API_URL', 'REACT_APP_ROOMS_API_URL', 'REACT_APP_WS_URL', 'REACT_APP_GA_ID', 'REACT_APP_MIXPANEL_TOKEN', 'REACT_APP_DEBUG', 'REACT_APP_PROJECTM_PRESET_BASE'].forEach(key => {
     envVars[`process.env.${key}`] = JSON.stringify(process.env[key] || '');
   });
   return { PUBLIC_PATH: publicPath, envVars };
@@ -54,7 +54,6 @@ module.exports = (env = {}, argv = {}) => {
   }
 
   const copyPatterns = [
-    { from: 'public/script-processor-*.js', to: '[name][ext]' },
     { from: 'public/manifest.json', to: 'manifest.json' },
     { from: 'public/icons', to: 'icons' },
     // Small UMD wrapper + worker for client-side convert (core WASM loaded from CDN).
