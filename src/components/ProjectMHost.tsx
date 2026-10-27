@@ -48,6 +48,11 @@ export const ProjectMHost: React.FC<ProjectMHostProps> = ({
   const [favorites, setFavorites] = useState<string[]>(() => loadFavorites());
   const lastBeatPhaseRef = useRef(beatPhase);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Callers pass inline callbacks; the engine lifecycle below must not restart when they change.
+  const onFailedRef = useRef(onFailed);
+  const onReadyRef = useRef(onReady);
+  onFailedRef.current = onFailed;
+  onReadyRef.current = onReady;
 
   useEffect(() => {
     return engine.onStatusChange((next) => setStatus(next));
@@ -61,9 +66,9 @@ export const ProjectMHost: React.FC<ProjectMHostProps> = ({
     void engine.load(canvas).then((ok) => {
       if (cancelled) return;
       if (ok) {
-        onReady?.();
+        onReadyRef.current?.();
       } else {
-        onFailed?.();
+        onFailedRef.current?.();
       }
     });
 
@@ -78,8 +83,10 @@ export const ProjectMHost: React.FC<ProjectMHostProps> = ({
     return () => {
       cancelled = true;
       unregisterInAppProjectMHost(host);
+      // Unmount (aesthetic toggle, route change): stop the host and drop its GL context.
+      engine.destroy(canvas);
     };
-  }, [engine, onFailed, onReady]);
+  }, [engine]);
 
   useEffect(() => {
     if (!containerRef.current || status !== 'ready') return;

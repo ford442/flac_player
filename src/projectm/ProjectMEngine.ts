@@ -1,5 +1,6 @@
 /** Emscripten module surface for the in-app projectM host. */
 import { WASM_ASSETS, loadWasmScript } from '../audio/wasmLoader';
+import { loseCanvasGlContext } from '../visuals/webgl2/glContext';
 export interface ProjectMWasmModule {
   _pm_init(width: number, height: number): number;
   _pm_resize(width: number, height: number): void;
@@ -24,6 +25,9 @@ export type ProjectMEngineStatus = 'idle' | 'loading' | 'ready' | 'error';
 
 export class ProjectMEngine {
   private module: ProjectMWasmModule | null = null;
+  private canvas: HTMLCanvasElement | null = null;
+  /** Bumped by load() and destroy(): an older load that resumes afterwards drops what it made. */
+  private loadSeq = 0;
   private status: ProjectMEngineStatus = 'idle';
   private statusListeners = new Set<(status: ProjectMEngineStatus, error?: string) => void>();
   private lastError = '';
@@ -45,7 +49,11 @@ export class ProjectMEngine {
   }
 
   async load(canvas: HTMLCanvasElement): Promise<boolean> {
-    if (this.status === 'ready' && this.module) return true;
+    if (this.status === 'ready' && this.module && this.canvas === canvas) return true;
+    // A module is bound to the canvas it was created on; another canvas needs a fresh one.
+    if (this.module || this.canvas) this.destroy();
+    const seq = ++this.loadSeq;
+    this.canvas = canvas;
     this.setStatus('loading');
 
     try {
@@ -55,19 +63,25 @@ export class ProjectMEngine {
       if (!window.createProjectMModule) {
         throw new Error('projectm-host.js did not register createProjectMModule');
       }
+      if (seq !== this.loadSeq) return false;
 
-      this.module = await window.createProjectMModule({ canvas });
-      const ok = this.module._pm_init(canvas.clientWidth || 640, canvas.clientHeight || 360);
+      const module = await window.createProjectMModule({ canvas });
+      // Superseded before _pm_init: nothing was created on the canvas, so just drop it.
+      if (seq !== this.loadSeq) return false;
+
+      this.module = module;
+      const ok = module._pm_init(canvas.clientWidth || 640, canvas.clientHeight || 360);
       if (!ok) {
         throw new Error('_pm_init returned 0');
       }
       this.setStatus('ready');
       return true;
     } catch (err) {
+      if (seq !== this.loadSeq) return false;
       const message = err instanceof Error ? err.message : 'projectM WASM failed to load';
       console.warn('[ProjectMEngine]', message);
+      this.disposeModule();
       this.setStatus('error', message);
-      this.module = null;
       return false;
     }
   }
@@ -127,16 +141,32 @@ export class ProjectMEngine {
     this.module?._pm_set_beat_sensitivity(Math.max(0, Math.min(3, value)));
   }
 
-  destroy(): void {
-    if (this.module) {
-      try {
-        this.module._pm_destroy();
-      } catch {
-        // ignore teardown errors
-      }
-      this.module = null;
-    }
+  /**
+   * Stop the host: `_pm_destroy` (cancels the main loop, tears down SDL), then lose the GL
+   * context on the canvas so a hidden canvas cannot keep presenting. Safe mid-load. Pass the
+   * canvas you loaded to leave a newer owner's module alone.
+   *
+   * The context is only lost once the canvas has left the document: StrictMode and fast refresh
+   * re-run the effect on the same canvas, and a context lost there cannot be re-created.
+   */
+  destroy(owner?: HTMLCanvasElement): void {
+    if (owner && this.canvas !== owner) return;
+    this.loadSeq += 1;
+    this.disposeModule();
     this.setStatus('idle');
+  }
+
+  private disposeModule(): void {
+    const { module, canvas } = this;
+    this.module = null;
+    this.canvas = null;
+    if (!module) return;
+    try {
+      module._pm_destroy();
+    } catch {
+      // ignore teardown errors
+    }
+    if (canvas && !canvas.isConnected) loseCanvasGlContext(canvas);
   }
 }
 

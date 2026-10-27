@@ -307,9 +307,7 @@ export class WebAudioPlayer extends BaseAudioBackend {
 
     const { context, gain } = this.requireGraph();
 
-    if (context.state === 'suspended') {
-      void this.contextManager.resume();
-    }
+    void this.contextManager.whenRunning();
 
     this.sourceNode = context.createBufferSource();
     this.sourceNode.buffer = this.audioBuffer;

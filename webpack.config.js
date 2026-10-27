@@ -106,10 +106,12 @@ module.exports = (env = {}, argv = {}) => {
             // entries below, producing duplicate URLs and an
             // add-to-cache-list-conflicting-entries throw on SW install.
             exclude: [/^icons\//, /^manifest\.json$/],
+            // Relative: workbox resolves entries against the worker's own URL, so the
+            // precache still installs when the app is served from a sub-path.
             additionalManifestEntries: [
-              { url: '/manifest.json', revision: null },
-              { url: '/icons/icon-192.png', revision: null },
-              { url: '/icons/icon-512.png', revision: null },
+              { url: 'manifest.json', revision: null },
+              { url: 'icons/icon-192.png', revision: null },
+              { url: 'icons/icon-512.png', revision: null },
             ],
           }),
         ]

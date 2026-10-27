@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { WebGPUVisualizer } from '../../webgpuVisualizer';
 import { WebGL2Visualizer } from '../../visuals/webgl2/WebGL2Visualizer';
+import { retireGlHost } from '../../visuals/webgl2/glContext';
 import { CanvasFallbackVisualizer } from '../../visuals/webglFallback';
 import { buildFrameUniforms } from '../../visuals/visualSync';
 import {
@@ -11,13 +12,9 @@ import {
 import { setCurrentVisualizer } from '../../visuals/webgl2/global';
 import { cycleDebugMode } from '../../visuals/webgl2/debugModes';
 import type { VisualizerBackend } from '../../visuals/types';
-import {
-  createVisualizerBootFailure,
-  probeWebGPU,
-  recordWebGPUFailure,
-  type WebGPUProbeBreadcrumb,
-} from '../../visuals/webgpuProbe';
-import { adoptVisualizerDevice, releaseVisualizerDevice } from '../../gpu-chores';
+import { createVisualizerBootFailure, type WebGPUProbeBreadcrumb } from '../../visuals/webgpuProbe';
+import { startWebGPUSession } from '../../visuals/webgpuSession';
+import { releaseVisualizerDevice } from '../../gpu-chores';
 import type { GpuChoreBackend } from '../../gpu-chores';
 import { LiveWaveformOverview } from '../WaveformOverview';
 import { PlaylistTrack } from '../../audioLoader';
@@ -95,6 +92,8 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const webgpuRef = useRef<WebGPUVisualizer | null>(null);
   const webgl2Ref = useRef<WebGL2Visualizer | null>(null);
+  // Whoever holds the live WebGL2 context, even after destroy(): its canvas keeps the context.
+  const glHostRef = useRef<WebGL2Visualizer | null>(null);
   const canvas2dRef = useRef<CanvasFallbackVisualizer | null>(null);
   const animFrameRef = useRef<number>(0);
   const [probeFailure, setProbeFailure] = useState<WebGPUProbeBreadcrumb | null>(null);
@@ -170,6 +169,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
 
     if (requiredBackend === 'webgl2') {
       const visualizer = new WebGL2Visualizer(node);
+      glHostRef.current = visualizer;
       if (!visualizer.initialize(audioAnalyser)) {
         visualizer.destroy();
         if (cancelled()) return;
@@ -225,66 +225,35 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       return;
     }
 
-    const boot = await probeWebGPU(node, { requestedVisualizer });
-    if (cancelled()) {
-      if (boot.ok) boot.device.destroy();
-      return;
-    }
-    if (!boot.ok) {
-      console.warn('[ShaderGUI] WebGPU boot probe failed:', boot.breadcrumb.reason);
-      setProbeFailure(boot.breadcrumb);
-      setCurrentVisualizer(null);
-      return;
-    }
-
-    const visualizer = new WebGPUVisualizer(node);
-    webgpuRef.current = visualizer;
-
-    visualizer.setOnDeviceLost((reason) => {
-      if (cancelled()) return;
-      const fatal = recordWebGPUFailure(
-        boot.breadcrumb,
-        'webgpu-device-lost',
-        reason,
-      );
-      releaseVisualizerDevice(visualizer.getDevice());
-      visualizer.destroy();
-      webgpuRef.current = null;
-      setCurrentVisualizer(null);
-      setProbeFailure(fatal);
-    });
-
-    try {
-      await visualizer.initialize(audioAnalyser, boot);
-      if (cancelled()) {
-        visualizer.destroy();
+    await startWebGPUSession({
+      canvas: node,
+      analyser: audioAnalyser,
+      requestedVisualizer,
+      isCancelled: cancelled,
+      createVisualizer: (canvas) => new WebGPUVisualizer(canvas),
+      onReady: (visualizer) => {
+        webgpuRef.current = visualizer;
+        setProbeFailure(null);
+        setCurrentVisualizer({
+          backend: requiredBackend,
+          readPixels: () => null,
+          getCanvas: () => node,
+          setDebugMode: (mode) => visualizer.setDebugMode(mode),
+          getDebugMode: () => visualizer.getDebugMode(),
+          resize: () => visualizer.resize(),
+          getGpuDevice: () => visualizer.getDevice(),
+        });
+      },
+      onLost: () => {
         webgpuRef.current = null;
-        return;
-      }
-      setProbeFailure(null);
-      adoptVisualizerDevice(visualizer.getDevice());
-      setCurrentVisualizer({
-        backend: requiredBackend,
-        readPixels: () => null,
-        getCanvas: () => node,
-        setDebugMode: (mode) => visualizer.setDebugMode(mode),
-        getDebugMode: () => visualizer.getDebugMode(),
-        resize: () => visualizer.resize(),
-        getGpuDevice: () => visualizer.getDevice(),
-      });
-    } catch (err: unknown) {
-      visualizer.destroy();
-      webgpuRef.current = null;
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error('[ShaderGUI] WebGPU initialization failed:', msg);
-      if (cancelled()) return;
-      setCurrentVisualizer(null);
-      setProbeFailure(recordWebGPUFailure(
-        boot.breadcrumb,
-        'webgpu-visualizer-initialize-failed',
-        msg,
-      ));
-    }
+        setCurrentVisualizer(null);
+      },
+      onFatal: (breadcrumb) => {
+        webgpuRef.current = null;
+        setCurrentVisualizer(null);
+        setProbeFailure(breadcrumb);
+      },
+    });
   }, []);
 
   useEffect(() => subscribeVisualizerPreference(() => {
@@ -298,6 +267,9 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     const isCancelled = () => cancelled;
 
     const init = async () => {
+      // A replaced canvas keeps its GL context until told otherwise; drop it before anything
+      // (the WebGPU probe included) runs on the new one.
+      glHostRef.current = retireGlHost(glHostRef.current, canvasRef.current);
       if (!canvasRef.current || !analyser || controlsOnly) return;
 
       destroyAllVisualizers();
@@ -311,6 +283,11 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       destroyAllVisualizers();
     };
   }, [analyser, controlsOnly, destroyAllVisualizers, initVisualizer, preferenceEpoch]);
+
+  // Unmount: the canvas is detached by now (StrictMode's simulated unmount keeps it attached).
+  useEffect(() => () => {
+    glHostRef.current = retireGlHost(glHostRef.current, null);
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

@@ -497,7 +497,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     this.streamFinished = false;
     this.splicedDurations = [];
 
-    await this.contextManager.resume();
+    await this.contextManager.whenRunning();
 
     if (this.useScriptProcessor) {
       console.warn('[AudioWorkletPlayer] Streaming mode requires AudioWorklet. ScriptProcessor fallback not supported for streaming.');
@@ -562,9 +562,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       return;
     }
 
-    if (this.audioContext.state === 'suspended') {
-      void this.contextManager.resume();
-    }
+    void this.contextManager.whenRunning();
 
     if (this.isStreaming) {
       if (this.streamFinished) {

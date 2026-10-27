@@ -8,6 +8,7 @@ import {
 } from './DspChainNode';
 import { applyAnalyserPolicy } from './analyserPolicy';
 import { setAnalysisTap } from './analysisRing';
+import { createSerialQueue } from '../utils/serialQueue';
 import { ReplayGainNode } from './ReplayGainNode';
 import {
   DEFAULT_AUDIO_CONTEXT_POLICY,
@@ -55,6 +56,17 @@ export type DspEngine = 'wasm' | 'web-audio';
 /** Longest ensureForTrack waits for the DSP worklet before playing through the fallback. */
 const DSP_ATTACH_WAIT_MS = 1500;
 
+/** Longest {@link AudioContextManager.whenRunning} waits for a context to start by default. */
+const RUNNING_WAIT_MS = 500;
+
+/** Gestures that count as the user activation Web Audio needs to start a context. */
+const UNLOCK_EVENTS = ['pointerdown', 'touchend', 'keydown'] as const;
+
+/** `AudioContext.state` also reports `'interrupted'` on iOS Safari, which lib.dom omits. */
+function contextState(ctx: BaseAudioContext): string {
+  return ctx.state;
+}
+
 type SinkAudioContext = AudioContext & {
   sinkId?: string | { type: string };
   setSinkId?: (sinkId: string) => Promise<void>;
@@ -82,6 +94,10 @@ export function isAudioContextSinkSupported(): boolean {
  * Setters (volume, EQ, ReplayGain, sink) only store state until a graph exists.
  * {@link getContext} is the one lazy creator: calling it before `ensureForTrack`
  * opens the device-default rate and the first track may recreate the graph.
+ *
+ * Only the manager decides the context's run state: backends share it with each
+ * other and the visualizer tap, so `suspend()` is refused and {@link whenRunning}
+ * is the one way to get a running context.
  */
 export class AudioContextManager {
   private context: AudioContext | null = null;
@@ -108,6 +124,9 @@ export class AudioContextManager {
   private sinkId = '';
   /** Rates whose constructor threw; skipped so each track does not retry them. */
   private readonly rejectedSampleRates = new Set<number>();
+  /** Graph changes (first build, rate / latency recreate) run one at a time. */
+  private readonly graphChanges = createSerialQueue();
+  private disarmGestureResume: (() => void) | null = null;
 
   subscribeGraphRecreated(listener: () => void): () => void {
     this.graphListeners.add(listener);
@@ -131,9 +150,11 @@ export class AudioContextManager {
   async setLatencyMode(mode: LatencyMode): Promise<void> {
     const hint = latencyModeToHint(mode);
     this.policy.latencyHint = hint;
-    if (!this.context) return;
-    if (latencyHintsEqual(this.appliedLatencyHint, hint)) return;
-    await this.recreateGraph(this.context.sampleRate);
+    await this.graphChanges(async () => {
+      if (!this.context) return;
+      if (latencyHintsEqual(this.appliedLatencyHint, hint)) return;
+      await this.recreateGraph(this.context.sampleRate);
+    });
   }
 
   /**
@@ -150,25 +171,34 @@ export class AudioContextManager {
       this.lastTrackChannels = options.channels;
       this.applyDestinationChannels();
     }
+    return this.graphChanges(() => this.prepareGraph(options.sampleRate));
+  }
+
+  private async prepareGraph(fileRate: number | undefined): Promise<AudioContext> {
+    const live = this.context;
+    // Probing exists to avoid a pointless recreate. A first build has nothing to
+    // protect: constructContext relaxes a rejected rate itself, so one attempt.
     const targetRate = chooseContextSampleRate(
-      options.sampleRate,
-      (rate) => !this.rejectedSampleRates.has(rate) && probeSampleRateSupported(rate)
+      fileRate,
+      (rate) => !live
+        ? !this.rejectedSampleRates.has(rate)
+        : rate === live.sampleRate || (!this.rejectedSampleRates.has(rate) && probeSampleRateSupported(rate))
     );
-    const nextHint = this.policy.latencyHint;
 
     let context: AudioContext;
-    if (!this.context) {
+    if (!live) {
       context = this.buildGraph(targetRate);
     } else if (shouldRecreateContext({
-      liveRate: this.context.sampleRate,
+      liveRate: live.sampleRate,
       targetRate,
       liveHint: this.appliedLatencyHint,
-      nextHint,
+      nextHint: this.policy.latencyHint,
       recreateOnMismatch: this.policy.recreateOnSampleRateMismatch,
     })) {
-      context = await this.recreateGraph(targetRate ?? this.context.sampleRate);
+      // Waits for the DSP worklet itself before publishing the new graph.
+      return this.recreateGraph(targetRate ?? live.sampleRate);
     } else {
-      context = this.context;
+      context = live;
     }
     await this.waitForDspAttach();
     return context;
@@ -270,10 +300,39 @@ export class AudioContextManager {
     return this.externalPlaybackActive;
   }
 
-  /** Resume a suspended graph. No-op before a graph exists (does not create one). */
-  async resume(): Promise<void> {
-    const context = this.context;
-    if (context?.state === 'suspended') await context.resume();
+  /**
+   * Resolve true once the context is running, false if it is not by `timeoutMs`
+   * (or there is no graph; this does not create one).
+   *
+   * A `suspended` context, and iOS Safari's `interrupted` (a call, Siri), are both
+   * brought back with `resume()`; the graph is never rebuilt for either. The
+   * `resume()` call is issued before the first await, so calling this inside the
+   * click that unlocks audio keeps the activation. When that is not enough, the
+   * next user gesture anywhere on the page resumes it.
+   */
+  async whenRunning(timeoutMs = RUNNING_WAIT_MS): Promise<boolean> {
+    const ctx = this.context;
+    if (!ctx) return false;
+    const state = contextState(ctx);
+    if (state === 'running') return true;
+    if (state === 'closed') return false;
+
+    this.armGestureResume(ctx);
+    await new Promise<void>((resolve) => {
+      const done = () => {
+        clearTimeout(timer);
+        ctx.removeEventListener('statechange', check);
+        resolve();
+      };
+      const check = () => {
+        if (contextState(ctx) === 'running' || contextState(ctx) === 'closed') done();
+      };
+      const timer = setTimeout(done, timeoutMs);
+      ctx.addEventListener('statechange', check);
+      // A rejection (closed, or still interrupted) leaves statechange / the timeout to decide.
+      ctx.resume().then(check, () => undefined);
+    });
+    return contextState(ctx) === 'running';
   }
 
   setVolume(volume: number): void {
@@ -328,6 +387,7 @@ export class AudioContextManager {
     const { context, options: applied } = this.constructContext(options);
     this.context = context;
     this.appliedLatencyHint = applied.latencyHint ?? this.policy.latencyHint;
+    this.refuseSuspend(this.context);
     this.replayGain = new ReplayGainNode(this.context);
     this.masterGain = this.context.createGain();
     this.eqChain = new EQChain(this.context);
@@ -339,7 +399,7 @@ export class AudioContextManager {
     this.inputGain = this.context.createGain();
 
     this.inputGain.connect(this.replayGain.input);
-    this.replayGain.output.connect(this.masterGain);
+    this.replayGain.connect(this.masterGain);
     this.masterGain.connect(this.eqChain.input);
     this.eqChain.output.connect(this.analyser);
     this.visualizerFeedGain.connect(this.analyser);
@@ -468,6 +528,8 @@ export class AudioContextManager {
         console.warn('[AudioContextManager] destination.channelCount rejected', { count, err });
       }
     }
+    // The fallback limiter is built per channel above stereo.
+    this.replayGain?.setChannelCount(this.dspChannelCount(ctx));
     // An attached DSP worklet has a fixed width; rebuild it when the track's differs.
     if (this.dspChain && this.dspChain.channels !== this.dspChannelCount(ctx)) {
       this.dspAttach = this.attachDspChain(ctx);
@@ -486,30 +548,26 @@ export class AudioContextManager {
     }
   }
 
+  /**
+   * Replace the context. The old graph is cut from its destination up front so two
+   * contexts never sound at once, but the old context is closed only once the new
+   * one is running. `graphGeneration` and the listeners move together, last: by
+   * then the new `inputGain` is routed and the context reports real latencies, so
+   * a listener (or Settings) reading {@link getOutputInfo} sees the new graph whole.
+   */
   private async recreateGraph(sampleRate: number | undefined): Promise<AudioContext> {
-    const previous = this.context;
-    this.eqChain?.disconnect();
-    this.dspChain?.disconnect();
-    this.dspChain = null;
-    setAnalysisTap('dsp-chain', null);
-    this.inputGain = null;
-    this.context = null;
-    this.replayGain = null;
-    this.masterGain = null;
-    this.eqChain = null;
-    this.analyser = null;
-    this.speakerGain = null;
-    this.visualizerFeedGain = null;
-
+    const previous = this.retireGraph();
     const next = this.buildGraph(sampleRate);
-    this.graphGeneration += 1;
-    if (previous && previous.state !== 'closed') {
+    await this.whenRunning();
+    await this.waitForDspAttach();
+    if (previous.context && previous.context.state !== 'closed') {
       try {
-        await previous.close();
+        await previous.context.close();
       } catch {
         /* already closed */
       }
     }
+    this.graphGeneration += 1;
     for (const listener of this.graphListeners) {
       try {
         listener();
@@ -518,6 +576,65 @@ export class AudioContextManager {
       }
     }
     return next;
+  }
+
+  /** Silence and drop the live graph; the caller owns closing the returned context. */
+  private retireGraph(): { context: AudioContext | null } {
+    const context = this.context;
+    // speakerGain feeds the destination: cutting it is what makes the old context silent.
+    this.speakerGain?.disconnect();
+    this.inputGain?.disconnect();
+    this.visualizerFeedGain?.disconnect();
+    this.analyser?.disconnect();
+    this.replayGain?.disconnect();
+    this.masterGain?.disconnect();
+    this.eqChain?.disconnect();
+    this.dspChain?.disconnect();
+    this.dspChain = null;
+    setAnalysisTap('dsp-chain', null);
+    this.disarmGestureResume?.();
+    this.inputGain = null;
+    this.context = null;
+    this.replayGain = null;
+    this.masterGain = null;
+    this.eqChain = null;
+    this.analyser = null;
+    this.speakerGain = null;
+    this.visualizerFeedGain = null;
+    return { context };
+  }
+
+  /**
+   * Shared with every backend and the visualizer tap, so one backend's `suspend()`
+   * would mute the others. Run state is only ever restored here ({@link whenRunning}).
+   */
+  private refuseSuspend(ctx: AudioContext): void {
+    Object.defineProperty(ctx, 'suspend', {
+      configurable: true,
+      value: (): Promise<void> => {
+        console.warn('[AudioContextManager] context.suspend() ignored: the context is shared');
+        return Promise.resolve();
+      },
+    });
+  }
+
+  /** Resume `ctx` on the next user gesture, until it runs (or the graph is retired). */
+  private armGestureResume(ctx: AudioContext): void {
+    if (this.disarmGestureResume || typeof document === 'undefined') return;
+    const resume = () => {
+      ctx.resume().catch(() => undefined);
+    };
+    const disarm = () => {
+      for (const type of UNLOCK_EVENTS) document.removeEventListener(type, resume, true);
+      ctx.removeEventListener('statechange', onChange);
+      this.disarmGestureResume = null;
+    };
+    const onChange = () => {
+      if (contextState(ctx) === 'running' || contextState(ctx) === 'closed') disarm();
+    };
+    for (const type of UNLOCK_EVENTS) document.addEventListener(type, resume, true);
+    ctx.addEventListener('statechange', onChange);
+    this.disarmGestureResume = disarm;
   }
 }
 

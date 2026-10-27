@@ -6,6 +6,7 @@
  * from CDN into a blob URL (COEP-safe).
  */
 
+import { publicUrl } from '../../utils/publicUrl';
 import {
   buildFfmpegArgs,
   memfsInputName,
@@ -34,7 +35,7 @@ export interface ConvertResult {
 const CORE_VERSION = '0.12.6';
 const CORE_BASE = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${CORE_VERSION}/dist/umd`;
 /** Same-origin UMD build (copied to public/ffmpeg/). */
-const FFMPEG_UMD = '/ffmpeg/ffmpeg.js';
+const FFMPEG_UMD = publicUrl('ffmpeg/ffmpeg.js');
 
 /** Minimal surface we use from @ffmpeg/ffmpeg. */
 interface FFmpegInstance {
