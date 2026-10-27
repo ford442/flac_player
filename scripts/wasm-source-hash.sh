@@ -14,6 +14,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
     src/sdl/audio_engine.cpp \
     src/sdl/dsp_chain.h \
     src/sdl/pcm_ring.h \
+    src/sdl/pcm_scrub.h \
+    src/sdl/play_fill.h \
     src/sdl/play_ring.h \
     | sort | sha256sum | awk '{print $1}'
 )

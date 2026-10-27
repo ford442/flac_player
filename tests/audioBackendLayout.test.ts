@@ -86,9 +86,12 @@ describe('audio backend package layout', () => {
     expect(player).toMatch(/this\.module\._seek\(time\)/);
   });
 
-  it('hashes every SDL header into wasm-source.sha256', () => {
+  it('hashes every SDL source the engine includes into wasm-source.sha256', () => {
     const hash = readFileSync(resolve(__dirname, '../scripts/wasm-source-hash.sh'), 'utf8');
-    for (const f of ['audio_engine.cpp', 'dsp_chain.h', 'pcm_ring.h', 'play_ring.h']) {
+    const engine = readFileSync(resolve(__dirname, '../src/sdl/audio_engine.cpp'), 'utf8');
+    const included = [...engine.matchAll(/#include "([^"]+)"/g)].map((m) => m[1]);
+    expect(included.length).toBeGreaterThan(0);
+    for (const f of ['audio_engine.cpp', ...included]) {
       expect(hash).toContain(`src/sdl/${f}`);
     }
   });

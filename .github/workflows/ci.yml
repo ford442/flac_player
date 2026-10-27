@@ -39,6 +39,14 @@ jobs:
       - run: npm run test:unit
       - run: npm run test:decoder
 
+  # Engine headers (play ring, fill loop, PCM scrub, scalar DSP) built with the
+  # host clang at -Wall -Wextra -Werror; no emsdk. Seconds, so it runs always.
+  native-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: CXX=clang++ npm run test:native
+
   python-tests:
     runs-on: ubuntu-latest
     steps:

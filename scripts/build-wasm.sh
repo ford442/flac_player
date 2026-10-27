@@ -48,7 +48,7 @@ mkdir -p "$SDL_DIR/build" "$OUT_DIR"
 
 PROJECT_ROOT="$PROJECT_ROOT" source "$SCRIPT_DIR/emsdk-env.sh"
 
-# 64 MiB floor: pthread worker stacks + play ring (~1.5 MiB) + viz ring +
+# 64 MiB floor: pthread worker stacks + play ring (2 MiB) + viz ring +
 # analysis ring (512 KiB) + SDL.
 # 32 MiB is tight with -pthread. ALLOW_MEMORY_GROWTH is on for buffered PCM
 # outliers. Without an explicit MAXIMUM_MEMORY, Emscripten still sets
@@ -83,7 +83,7 @@ fi
 #   Viz tap:       _get_pcm_ring_state _get_pcm_ring_data
 #   Analysis tap:  _get_analysis_ring_state _get_analysis_ring_data (analysis_ring.h)
 #   Heap:          _malloc _free
-# Play ring capacity (C++ PLAY_RING_CAPACITY): 384000 floats (~2 s stereo f32 @ 96 kHz).
+# Play ring capacity (C++ PLAY_RING_CAPACITY): 2^19 floats (~2.7 s stereo f32 @ 96 kHz).
 SDL3_EXPORTS='["_init_audio","_create_audio_buffer","_set_audio_data","_set_stream_format","_push_pcm","_get_play_ring_fill","_get_play_ring_capacity","_set_stream_ended","_play","_pause_audio","_resume_audio","_stop","_seek","_seek_stream","_set_playback_rate","_get_device_format","_get_current_time","_set_volume","_set_eq_band","_set_replaygain","_get_pcm_ring_state","_get_pcm_ring_data","_get_analysis_ring_state","_get_analysis_ring_data","_cleanup","_malloc","_free"]'
 RUNTIME_EXPORTS='["ccall","cwrap","HEAPF32","HEAPU8","wasmMemory","getValue","setValue"]'
 

@@ -9,6 +9,8 @@
 #include "pcm_ring.h"
 #include "analysis_ring.h"
 #include "play_ring.h"
+#include "play_fill.h"
+#include "pcm_scrub.h"
 #include "dsp_chain.h"
 
 #ifdef __cplusplus
@@ -32,8 +34,10 @@ struct PlayerState {
     SDL_AudioDeviceID deviceId = 0;
 } g_state;
 
-// Bounded callback drain (no heap alloc). SDL additional_amount is typically a few KB.
+// Bounded callback drain (no heap alloc). play_fill() loops over it in whole
+// frames, so any channel count and any request size are served.
 static float g_callbackScratch[8192];
+static constexpr int kCallbackScratchFloats = (int)(sizeof(g_callbackScratch) / sizeof(g_callbackScratch[0]));
 
 void SDLCALL fill_audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount);
 
@@ -88,7 +92,8 @@ static int configure_stream(int channels, int sampleRate) {
 
 // ---------------------------------------------------------
 // SDL3 Stream Callback
-// Automatically called by SDL's audio pump when it needs data
+// Called by SDL's audio pump when it needs data. On Emscripten that pump is a
+// ScriptProcessorNode on the main thread, not a pthread.
 // ---------------------------------------------------------
 void SDLCALL fill_audio_callback(void *userdata, SDL_AudioStream *stream, int additional_amount, int total_amount) {
     (void)userdata;
@@ -97,24 +102,24 @@ void SDLCALL fill_audio_callback(void *userdata, SDL_AudioStream *stream, int ad
     if (!g_state.isPlaying) {
         return;
     }
+    const int channels = g_state.channels;
 
-    int floatsWanted = additional_amount / (int)sizeof(float);
-    if (floatsWanted <= 0) return;
-    floatsWanted = std::min(floatsWanted, (int)(sizeof(g_callbackScratch) / sizeof(g_callbackScratch[0])));
+    // Speaker DSP (ReplayGain -> limiter -> volume -> EQ) runs in place on each
+    // whole-frame scratch block; the viz ring and the analysis ring receive the
+    // processed signal the user hears (memcpy only — analysis runs on the readers' threads).
+    auto deliver = [stream, channels](float* block, int floats) {
+        dsp_process(block, floats, channels, g_state.sampleRate, g_state.volume);
+        pcm_ring_write(block, floats);
+        analysis_ring_write(block, floats);
+        return SDL_PutAudioStreamData(stream, block, floats * (int)sizeof(float));
+    };
+    const int floatsWanted = additional_amount / (int)sizeof(float);
 
-    // Speaker DSP (ReplayGain -> limiter -> volume -> EQ) runs in place on the
-    // scratch copy; the viz ring and the analysis ring receive the processed
-    // signal the user hears (memcpy only — analysis runs on the readers' threads).
     if (g_state.streamMode) {
-        int got = play_ring_read(g_callbackScratch, floatsWanted);
-        if (got > 0) {
-            dsp_process(g_callbackScratch, got, g_state.channels, g_state.sampleRate, g_state.volume);
-            pcm_ring_write(g_callbackScratch, got);
-            analysis_ring_write(g_callbackScratch, got);
-            SDL_PutAudioStreamData(stream, g_callbackScratch, got * (int)sizeof(float));
-            g_state.playHead += (size_t)got;
-        }
-        if (play_ring_fill() == 0 && play_ring_ended()) {
+        PlayFillSource ring;
+        g_state.playHead += (size_t)play_fill(g_callbackScratch, kCallbackScratchFloats, channels,
+                                              floatsWanted, ring, deliver);
+        if (play_ring_fill() < (uint32_t)channels && play_ring_ended()) {
             g_state.isPlaying = false;
         }
         return;
@@ -123,24 +128,13 @@ void SDLCALL fill_audio_callback(void *userdata, SDL_AudioStream *stream, int ad
     if (!g_state.audioBuffer) {
         return;
     }
-
-    size_t samplesRemaining = g_state.audioLength - g_state.playHead;
-    if (samplesRemaining == 0) {
-        g_state.isPlaying = false;
-        return;
-    }
-
-    int floatsToPush = (int)std::min(samplesRemaining, (size_t)floatsWanted);
-    std::copy_n(g_state.audioBuffer + g_state.playHead, floatsToPush, g_callbackScratch);
-    dsp_process(g_callbackScratch, floatsToPush, g_state.channels, g_state.sampleRate, g_state.volume);
-
-    pcm_ring_write(g_callbackScratch, floatsToPush);
-    analysis_ring_write(g_callbackScratch, floatsToPush);
-    SDL_PutAudioStreamData(stream, g_callbackScratch, floatsToPush * (int)sizeof(float));
-
-    g_state.playHead += (size_t)floatsToPush;
-
-    if (g_state.playHead >= g_state.audioLength) {
+    PlayFillSource buffered;
+    buffered.buffer = g_state.audioBuffer;
+    buffered.length = g_state.audioLength;
+    buffered.head = g_state.playHead;
+    play_fill(g_callbackScratch, kCallbackScratchFloats, channels, floatsWanted, buffered, deliver);
+    g_state.playHead = buffered.head;
+    if (play_fill_buffer_done(buffered, channels)) {
         g_state.isPlaying = false;
     }
 }
@@ -206,6 +200,7 @@ int set_audio_data(int length, int channels, int sampleRate) {
         std::cerr << "[C++] Buffer size mismatch." << std::endl;
         return 0;
     }
+    pcm_scrub_nonfinite(g_state.audioBuffer, g_state.audioLength);
     g_state.streamMode = false;
     play_ring_reset();
     return configure_stream(channels, sampleRate);
@@ -222,8 +217,10 @@ int set_stream_format(int channels, int sampleRate) {
     return configure_stream(channels, sampleRate);
 }
 
+// `samples` is the caller's malloc'd staging block; it is scrubbed in place.
 EMSCRIPTEN_KEEPALIVE
-int push_pcm(const float* samples, int count) {
+int push_pcm(float* samples, int count) {
+    if (count > 0) pcm_scrub_nonfinite(samples, (size_t)count);
     return play_ring_push(samples, count);
 }
 

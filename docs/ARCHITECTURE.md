@@ -204,7 +204,7 @@ In-app ProjectMHost OR postMessage / BroadcastChannel('projectm-audio')
 
 ### SDL PCM bridge (`src/audio/SdlPcmBridge.ts`)
 
-Visualizer tap only: lock-free ring in C++ (`src/sdl/pcm_ring.h`, 65536 floats) → AudioWorklet → `AnalyserNode` for SDL3. SDL3 **playback** uses a separate play ring (`src/sdl/play_ring.h`, 384000 floats) fed by `_push_pcm`.
+Visualizer tap only: lock-free ring in C++ (`src/sdl/pcm_ring.h`, 65536 floats) → AudioWorklet → `AnalyserNode` for SDL3. SDL3 **playback** uses a separate play ring (`src/sdl/play_ring.h`, 2^19 floats) fed by `_push_pcm`.
 
 ### Analysis ring (`src/audio/analysisRing.ts`)
 
