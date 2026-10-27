@@ -103,6 +103,54 @@ describe('probeSampleRateSupported', () => {
     expect(probeSampleRateSupported(96000)).toBe(true);
     expect(RecordingAudioContext.instances[0]?.state).toBe('closed');
   });
+
+  it('opens the throwaway context once per rate, not once per call', () => {
+    restore = installRecordingAudioContext();
+    expect(probeSampleRateSupported(96000)).toBe(true);
+    expect(probeSampleRateSupported(96000)).toBe(true);
+    expect(RecordingAudioContext.instances).toHaveLength(1);
+    expect(probeSampleRateSupported(192000)).toBe(true);
+    expect(RecordingAudioContext.instances).toHaveLength(2);
+  });
+
+  it('remembers a rejection as well as a success', () => {
+    restore = installRecordingAudioContext();
+    let attempts = 0;
+    RecordingAudioContext.rejectOptions = (o) => {
+      attempts += 1;
+      return o.sampleRate === 384000;
+    };
+    expect(probeSampleRateSupported(384000)).toBe(false);
+    expect(probeSampleRateSupported(384000)).toBe(false);
+    expect(attempts).toBe(1);
+  });
+
+  it('asks isSampleRateSupported once per rate', () => {
+    restore = installRecordingAudioContext();
+    const Ctor = globalThis.AudioContext as typeof AudioContext & {
+      isSampleRateSupported?: (rate: number) => boolean;
+    };
+    const asked: number[] = [];
+    Ctor.isSampleRateSupported = (rate) => {
+      asked.push(rate);
+      return rate <= 48000;
+    };
+    expect(probeSampleRateSupported(48000)).toBe(true);
+    expect(probeSampleRateSupported(48000)).toBe(true);
+    expect(probeSampleRateSupported(96000)).toBe(false);
+    expect(probeSampleRateSupported(96000)).toBe(false);
+    expect(asked).toEqual([48000, 96000]);
+  });
+
+  it('keeps separate answers per AudioContext implementation', () => {
+    const first = installRecordingAudioContext();
+    expect(probeSampleRateSupported(96000)).toBe(true);
+    first();
+
+    restore = installRecordingAudioContext();
+    RecordingAudioContext.rejectOptions = () => true;
+    expect(probeSampleRateSupported(96000)).toBe(false);
+  });
 });
 
 describe('resampleInterleavedLinear', () => {

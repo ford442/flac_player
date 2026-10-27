@@ -88,7 +88,7 @@ describe('real browser audio pipeline', () => {
       await backend.loadFromArrayBuffer(await response.arrayBuffer(), 'test.flac');
 
       expect(backend.getState().duration).toBeCloseTo(FIXTURE_DURATION_SECONDS, 2);
-      await manager.resume();
+      await manager.whenRunning();
       await backend.play();
 
       const activity = await waitForAnalyserActivity(backend.getAnalyser()!);
@@ -152,7 +152,7 @@ describe('real browser audio pipeline', () => {
 
       expect(backend.getPlaybackPath?.()?.strategy).toBe('buffered');
       expect(backend.getState().duration).toBeCloseTo(FIXTURE_DURATION_SECONDS, 2);
-      await manager.resume();
+      await manager.whenRunning();
       await backend.play();
 
       const activity = await waitForAnalyserActivity(backend.getAnalyser()!);

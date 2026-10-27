@@ -68,11 +68,30 @@ type AudioContextCtor = typeof AudioContext & {
   isSampleRateSupported?: (sampleRate: number) => boolean;
 };
 
+/**
+ * Probe answers for the page lifetime, per constructor (a swapped-in fake gets its
+ * own). Without `isSampleRateSupported` a probe opens and closes a whole context.
+ */
+const probeResults = new WeakMap<object, Map<number, boolean>>();
+
 /** Probe whether the constructor will accept `rate`. Closes any throwaway context. */
 export function probeSampleRateSupported(rate: number): boolean {
   if (!Number.isFinite(rate) || rate <= 0) return false;
   const Ctor = globalThis.AudioContext as AudioContextCtor | undefined;
   if (!Ctor) return false;
+  let results = probeResults.get(Ctor);
+  if (!results) {
+    results = new Map();
+    probeResults.set(Ctor, results);
+  }
+  const known = results.get(rate);
+  if (known !== undefined) return known;
+  const supported = probeConstructor(Ctor, rate);
+  results.set(rate, supported);
+  return supported;
+}
+
+function probeConstructor(Ctor: AudioContextCtor, rate: number): boolean {
   if (typeof Ctor.isSampleRateSupported === 'function') {
     try {
       return Ctor.isSampleRateSupported(rate);

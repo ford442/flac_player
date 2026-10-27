@@ -114,6 +114,9 @@ Helper: `src/utils/debug.ts` — used by `audioLoader.ts` and `api/songApi.ts`.
 - `loadFromURL()` only handles `http`, `https`, `gs://` schemes — don't pass relative paths
 - The backend must always return absolute `https://` URLs in the `url` field
 - Default output mode is `streaming` (`usePlayerState.ts`)
+- The shared `AudioContext`'s run state belongs to `AudioContextManager`: use `whenRunning()`, never `context.suspend()`
+  (refused; the context is shared with every backend and the visualizer tap). Never leave a `DynamicsCompressorNode`
+  in the speaker chain while the limiter is off (spec clamps it to 2 channels)
 
 ## WASM builds
 

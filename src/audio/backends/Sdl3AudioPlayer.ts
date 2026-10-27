@@ -309,7 +309,7 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
           sampleRate: result.sampleRate,
           channels: channels,
         });
-        await this.contextManager.resume();
+        await this.contextManager.whenRunning();
         await sharedSdlPcmBridge.connect(this.contextManager, this.module, channels);
       } catch (err) {
         console.error('[SdlAudioPlayer] Failed to write audio data into WASM heap:', err, {
@@ -367,7 +367,7 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
         this.pushedAbs = 0;
         this.duration = (await session.audibleDuration) ?? options.expectedDuration ?? 0;
         await this.contextManager.ensureForTrack({ sampleRate, channels });
-        await this.contextManager.resume();
+        await this.contextManager.whenRunning();
         await sharedSdlPcmBridge.connect(this.contextManager, this.module, channels);
         this.module._play();
         this.isPlaying = true;

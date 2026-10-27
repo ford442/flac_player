@@ -20,8 +20,6 @@ import type { RoomQueueState, RoomRole } from './types';
 const BULK_RESOLVE_THRESHOLD = 8;
 const MAX_SINGLE_LOOKUPS = 25;
 const LIBRARY_RESOLVE_LIMIT = 1000;
-/** How long to wait for AudioContext.resume() before asking for a click. */
-const RESUME_TIMEOUT_MS = 500;
 
 /** Local files (`local-…`) have no catalog id and cannot be shared. */
 export function isShareableTrackId(id: string | undefined | null): id is string {
@@ -56,10 +54,6 @@ export interface ListeningRoomBridgeOptions {
   setOutputMode: (mode: AudioOutputMode) => void;
   addToast: (message: string, type: 'success' | 'error' | 'info') => void;
   onLeft?: (role: RoomRole) => void;
-}
-
-function wait(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function useListeningRoomBridge(options: ListeningRoomBridgeOptions): UseListeningRoomResult {
@@ -126,18 +120,10 @@ export function useListeningRoomBridge(options: ListeningRoomBridgeOptions): Use
     },
 
     play: async () => {
-      // resume() must start inside the click that unlocks audio, before any await.
-      if (sharedAudioContextManager.hasContext()) {
-        const ctx = sharedAudioContextManager.getContext();
-        if (ctx.state !== 'running') {
-          const resumed = await Promise.race([
-            ctx.resume().then(() => true, () => false),
-            wait(RESUME_TIMEOUT_MS).then(() => false),
-          ]);
-          if (!resumed || (ctx.state as AudioContextState) !== 'running') {
-            throw new DOMException('Click to start listening', 'NotAllowedError');
-          }
-        }
+      // whenRunning() issues resume() before its first await: it must start inside the
+      // click that unlocks audio. Not running by its deadline means the guest has to click.
+      if (sharedAudioContextManager.hasContext() && !(await sharedAudioContextManager.whenRunning())) {
+        throw new DOMException('Click to start listening', 'NotAllowedError');
       }
       await latest.current.playback.engine.play();
     },
