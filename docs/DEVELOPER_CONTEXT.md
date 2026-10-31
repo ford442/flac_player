@@ -4,13 +4,13 @@ Last updated: September 2026
 
 ## 1. High-Level Architecture & Intent
 
-*   **Core Purpose:** High-performance in-browser audio player for FLAC/WAV and library-backed streaming. Features a **four-backend audio engine** (streaming, Web Audio, AudioWorklet, C++ WASM engine), a fail-closed WebGPU ShaderGUI, and an optional projectM Milkdrop host.
+*   **Core Purpose:** High-performance in-browser audio player for FLAC/WAV and library-backed streaming. Features a **four-backend audio engine** (streaming, Web Audio, AudioWorklet, SDL-free C++ WASM engine), a fail-closed WebGPU ShaderGUI, and an optional projectM Milkdrop host.
 *   **Tech Stack:**
     *   **Frontend:** React 18, TypeScript, CSS3.
     *   **Build:** Webpack 5, Babel, lazy dynamic imports for WASM backends.
     *   **Audio Engines:** See [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md). Default is `StreamingAudioPlayer` (HTMLAudio + range requests).
-    *   **Visualization:** WebGPU is required for ShaderGUI. `src/visuals/webgpuProbe.ts` validates the adapter, device, and canvas context; failure produces a fatal visualizer panel without blocking audio. WebGL2/Canvas2D fallback is disabled pending a later issue; projectM WASM remains optional.
-    *   **Backend API:** FastAPI (`app.py`); production at `storage.noahcohn.com`.
+    *   **Visualization:** WebGPU is required for ShaderGUI. `src/visuals/webgpuProbe.ts` validates the adapter, device, and canvas context; failure produces a fatal visualizer panel without blocking audio. WebGL2 is an **opt-in** fallback (`?visualizer=webgl2` / Compatibility toggle) and is never selected automatically; projectM WASM remains optional.
+    *   **Backend API:** FastAPI (`server/app.py`); production at `storage.noahcohn.com`.
 *   **Design Patterns:**
     *   **Strategy Pattern:** `createAudioBackend(mode)` returns a `ConfigurableAudioBackend` implementation.
     *   **Observer Pattern:** Players call `setStateChangeCallback` for UI updates.
@@ -21,15 +21,14 @@ Last updated: September 2026
 | Feature | Entry point |
 |---------|-------------|
 | Player orchestration | `src/components/Player.tsx` |
-| Transport (load / play / clock) | `src/audio/PlaybackEngine.ts`, React store `src/hooks/usePlaybackEngine.ts` |
-| Playback controller (queue → engine) | `src/hooks/usePlaybackController.ts` |
+| Playback engine + store | `src/player/PlaybackEngine.ts`, `src/player/playerStore.ts`, `src/player/selectors.ts` |
 | Backend factory | `src/audio/createAudioBackend.ts` |
 | Streaming (default) | `src/audio/backends/StreamingAudioPlayer.ts` |
 | Buffered Web Audio | `src/audio/backends/WebAudioPlayer.ts` |
-| AudioWorklet + PCM tap | `src/audio/backends/worklet/WorkletAudioPlayer.ts`, processor `src/audio/worklets/flacProcessor.js` |
-| SDL engine (`sdl` mode) | `src/audio/backends/Sdl3AudioPlayer.ts`, `src/sdl/audio_engine.cpp`, processor `src/audio/worklets/sdlEngineProcessor.js` |
-| SDL engine transport / play ring | `src/sdl/engine_state.h`, `src/sdl/play_ring.h`, `src/audio/playRingBackpressure.ts` |
-| Library / API client | `src/api/songApi.ts`, `src/audioLoader.ts` |
+| AudioWorklet + PCM tap | `src/audio/backends/worklet/WorkletAudioPlayer.ts`, processor `src/audio/worklets/flacProcessor.ts`, SAB ring `src/audio/worklets/playRingSAB.ts` |
+| WASM engine (legacy mode `sdl`) | `src/audio/backends/Sdl3AudioPlayer.ts`, `src/audio/worklets/sdlEngineProcessor.js` |
+| WASM engine state and play ring | `src/sdl/engine_state.h`, `src/sdl/play_ring.h`, `src/audio/playRingBackpressure.ts` |
+| Library / API client | `src/api/http.ts`, `src/api/songApi.ts`, `src/api/library.ts` (TanStack Query) |
 | Offline cache | `src/storage/trackCache.ts`, `src/components/OfflineCache.tsx` |
 | Queue persistence | `src/storage/queueStorage.ts` |
 | Playlist share (static) | `src/api/songApi.ts` (`createShare`, `fetchSharedPlaylist`) |
@@ -44,22 +43,20 @@ Last updated: September 2026
 ## 3. Complexity Hotspots
 
 *   **WASM memory interop (`Sdl3AudioPlayer.ts` under `src/audio/backends/`):**
-    *   Manual `malloc`, HEAP views, channel interleaving. `heapF32()` rebuilds its view when `wasmMemory.buffer` changes (a shared Memory hands out a new, longer buffer after it grows); the `sdl-engine` processor holds the `WebAssembly.Memory` itself and remaps when a buffered track lies past its view.
-    *   **`INITIAL_MEMORY` is 64 MiB** (`67108864`) with `ALLOW_MEMORY_GROWTH=1` and **`MAXIMUM_MEMORY` 512 MiB** (`536870912`). Without the explicit cap, pthreads+growth still set `Memory.maximum` to 32768 pages (**2 GiB**). The 512 MiB flag **lowers** that SAB max. Stream mode uses `play_ring.h` (2 MiB); buffered `_create_audio_buffer` rejects >384 MiB of f32 PCM. Debug: `scripts/build-wasm.sh --debug` (`-O0 -g ASSERTIONS SAFE_HEAP`, 32 MiB floor, same 512 MiB max).
-    *   **Keep `-pthread`:** it is what makes `wasmMemory` a SharedArrayBuffer, so JS `_push_pcm` (main thread) and the `sdl-engine` processor (audio thread) share the play ring and the transport block with `Atomics`. No thread is ever started. Dropping it would mean posting PCM to the audio thread.
-*   **SDL engine → AudioWorklet (`sdlEngineProcessor.js`):**
-    *   Epoch protocol in `engine_state.h`: exports write a change, then bump `epoch`; the processor applies it at the start of a quantum and publishes `ackEpoch`. Word indices are mirrored in `sdlEngineMessages.ts` and the processor (checked by `tests/sdlEngineProcessor.test.ts`).
-    *   One node per load (`_set_output_owner` first); `_rebase()` + a new node on graph recreate.
+    *   Manual `malloc`, shared-memory views, and channel interleaving. `heapF32()` refreshes its view after WASM memory growth.
+    *   The WASM heap is capped at 512 MiB. Streaming uses `play_ring.h`; buffered `_create_audio_buffer` rejects more than 384 MiB of f32 PCM.
+    *   **Toolchain pin:** every WASM artifact is built with the emsdk in `scripts/emsdk-version` (`scripts/emsdk-env.sh` refuses another emcc). The C++ engine uses `-fno-exceptions -fno-rtti`; allocation failure is returned to JavaScript instead of aborting.
+    *   **Other WASM heaps:** SpeexDSP resampler: 4 MiB initial, **16 MiB `MAXIMUM_MEMORY`**, `-msimd128`, no pthread; `resampler.ts` feeds `rs_process` in ~1 MiB slices so whole-file conversion never stages the file in the heap, and `rs_create` rejects > 8 channels (→ linear fallback). projectM host: default 16 MiB initial, **256 MiB `MAXIMUM_MEMORY`** (measured: stays at 16 MiB rendering at 4K with preset switching), no SDL (WebGL2 context via `emscripten_webgl_create_context`), exception catching on (libprojectM throws on bad presets), WebGL2-only (`FULL_ES3`, which implies `FULL_ES2`), `-O2`, no pthread; hashed in `public/projectm/projectm-source.sha256`.
+    *   **Keep `-pthread`:** it enables the shared WASM memory used by the main-thread producer and AudioWorklet consumer. The audio callback is not part of this engine.
+*   **WASM engine → AudioWorklet (`sdlEngineProcessor.js`):**
+    *   The processor reads the play ring and feeds the shared Web Audio graph; speaker DSP and the analysis tap run in the `dsp-chain` worklet.
     *   Decoder high-water: pause JS decode when play-ring fill &gt; 75% (`src/audio/playRingBackpressure.ts`).
 *   **Cross-origin isolation (`webpack.config.js`, hosting headers):**
-    *   COOP/COEP required for SharedArrayBuffer: the analysis ring and the `sdl` engine (which reports `playable: false` without it).
-*   **WebGPU lifecycle (`webgpuVisualizer.ts`):**
-    *   `webgpuProbe.ts` acquires the exact adapter/device/context consumed by `WebGPUVisualizer`; the visualizer must not request a second device.
-    *   gpu-chores **adopts** that same device (`adoptVisualizerDevice`) for peak/RMS compute and never calls `requestDevice()`. Kill switch: `?no_gpu_compute`.
+    *   COOP/COEP is required for SharedArrayBuffer and the `sdl` WASM engine; other AudioWorklet paths can fall back to message transport. Per-host header blocks: `docs/DEPLOYMENT.md`.
+*   **WebGPU lifecycle (`src/visuals/webgpuVisualizer.ts`):**
+    *   `GpuDeviceService` (`src/visuals/webgpu/deviceService.ts`) requests the adapter (compatibility-mode retry; fallback adapters refused unless `?webgpu=fallback-ok`) and device **once** per session and lends it to `WebGPUVisualizer` and gpu-chores. Borrowers never destroy it; only `device.lost` drops it (`deviceLostRecovery.ts`). A new analyser reaches the live visualizer through `setAnalyser()`, so sample-rate or graph changes keep the device. `window.webgpuProbe.deviceRequests` counts requests.
+    *   gpu-chores **adopts** that same device for peak/RMS compute and never calls `requestDevice()`. Kill switch: `?no_gpu_compute`.
     *   Manual resource cleanup in `destroy()`; 60 fps rAF loop. Probe/init/device-loss failures remain local to the GPU surface.
-    *   `visuals/webgpuSession.ts` owns boot + device loss: an unexpected `device.lost` is re-requested through `probeWebGPU` on the same canvas (max 3 per minute), the new visualizer is rebound and `adoptVisualizerDevice` re-run. A `destroyed` loss we did not cause, an exhausted budget, or a failed re-request ends on the fatal `webgpu-device-lost` panel; audio is never touched.
-    *   A canvas keeps its context type for life and a lost GL context cannot be re-created on it: `WebGL2Visualizer.destroy()` keeps the context for same-canvas re-init, `releaseContext()` (`WEBGL_lose_context`) runs when ShaderGUI replaces or unmounts the canvas (`retireGlHost`), before the WebGPU probe touches the new one.
-    *   `ProjectMHost` unmount calls `ProjectMEngine.destroy(canvas)` (`_pm_destroy`, then loses the module's GL context once the canvas is detached).
 *   **ShaderGUI layout contract (`src/visuals/waveformContract.ts`):**
     *   Knob/LED glow UVs, palette colors, and intensity scales live in `WAVEFORM_LAYOUT`.
     *   Both WGSL (`src/shaders/waveform.wgsl`, injected by `waveform.ts`) and GLSL (`src/visuals/webgl2/shaders/waveform.ts`) inject these constants — change positions in **one** place.
@@ -70,7 +67,7 @@ Last updated: September 2026
 
 *   **Streaming vs buffered:** Streaming cannot load raw ArrayBuffers; buffered backends cannot crossfade. Mode switch resets playback.
 *   **Test coverage:** Playwright smoke tests plus a real decode→playback→analyser integration harness (`tests/browser/audioPipeline.test.ts`, shipped via [#196](https://github.com/ford442/flac_player/issues/196)).
-*   **Deploy credentials:** `deploy.py` contains environment-specific SFTP config.
+*   **Deploy credentials:** `scripts/deploy.py` contains environment-specific SFTP config.
 *   **HTTPS + isolation:** App requires secure context with COOP/COEP for worklet/SDL/projectM paths.
 *   **WebGPU fail-closed default:** ShaderGUI probes WebGPU unless the user opts into WebGL2 (`?visualizer=webgl2` or Settings → Compatibility visualizer). Failed probes do not auto-start GL. Canvas2D is `DEBUG_VISUALIZER=canvas2d` only. Inspect `window.webgpuProbe` for reason, `powerPreference`, `requestedFeatures`, browser brand, and adapter data; audio playback is independent.
 
@@ -78,24 +75,24 @@ Last updated: September 2026
 
 **Load and play (streaming — default)**
 
-1. User selects track → `Player.tsx` → `audioLoader` resolves URL from API.
-2. `createAudioBackend('streaming')` → `StreamingAudioPlayer.loadFromURL(url)`.
+1. User selects track → `useActions().playTrack` → `PlaybackEngine.load(track)` (URL already resolved by `resolveTrackUrl`).
+2. Backend built once per mode by `createAudioBackend('streaming')` → `StreamingAudioPlayer.loadFromURL(url)`.
 3. `<audio src>` + `MediaElementAudioSourceNode` → `AudioContextManager` → EQ → analyser → visualizer.
 4. Optional: `preloadNextTrack` + crossfade 3 s before track end.
 
 **Load and play (worklet — projectM PCM)**
 
-1. `fetch` → decode → `AudioWorkletPlayer` ring buffer.
+1. `fetch` → decode → `AudioWorkletPlayer` ring buffer (SharedArrayBuffer under COOP/COEP, `chunk` messages otherwise).
 2. `createProjectMPCMFeed(player)` wires `setPCMCallback` → `projectMBridge` → in-app `ProjectMHost` or external embed.
 
 **Library fetch**
 
 1. `songApi.fetchSongs()` → `GET /api/songs` on `REACT_APP_API_URL` (default `storage.noahcohn.com`).
-2. Response cached in `libraryCache.ts` (TTL). Each item includes absolute `https://` `url`.
+2. Every page is synced into the IndexedDB catalog (`src/catalog/`); the library view reads from it. Each item includes absolute `https://` `url`.
 
 ## 6. Debug logging
 
-Set `REACT_APP_DEBUG=true` in `.env`. Central helper: `src/utils/debug.ts` (used by `audioLoader.ts`, `api/songApi.ts`). **Off by default** in production builds.
+Set `REACT_APP_DEBUG=true` in `.env`. Central helper: `src/utils/debug.ts` (used by `api/http.ts`, `api/songApi.ts`). **Off by default** in production builds.
 
 ## 7. Related docs
 

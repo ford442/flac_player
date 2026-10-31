@@ -4,22 +4,29 @@
 
 The API backend is **storage.noahcohn.com** (not a local server).
 `REACT_APP_API_URL=https://storage.noahcohn.com` in `.env` and `.env.production`.
+webpack loads `.env.<mode>` then `.env` (shell variables win). The dev server's
+`/api → localhost:7860` proxy only matters with `REACT_APP_API_URL=` empty, i.e. when
+running the optional local backend in `server/` (see `server/README.md`).
 
 Songs come from `GET /api/songs` on that host. Audio files are served as static files
 from `https://storage.noahcohn.com/files/audio/music/{filename}`.
 
-## How songs load (audioLoader.ts)
+## How songs load (catalog/ → api/songApi.ts → api/http.ts)
 
 ```
-fetchLibrary()
-  → GET https://storage.noahcohn.com/api/songs
+useLibraryCatalog(filters)            // api/library.ts
+  → useLibrarySync: TanStack query ['library','sync'] → syncRemoteLibrary(fetchSongPage)
+      → GET /api/songs?limit=1000&offset=N&sort_by=date&sort_desc=false, every page
+        (apiFetch + valibot; no host supports updated_since, so the walk diffs locally)
+      → IndexedDB `flac_player` (Dexie, catalog/db.ts): tracks keyed [source+sourceId]
+  → useLiveQuery over the catalog → filter / sort / tags / stats locally (catalog/libraryQuery.ts)
   → each item.url is already an absolute https:// URL (set by the backend)
-  → if somehow not absolute, prepend API_BASE_URL
+  → resolveTrackUrl(url, id): the only resolver; relative → API_BASE_URL + path
 
-playTrack(track)
-  → createAudioBackend(outputMode)  // default: streaming
+engine.load(track)                    // player/PlaybackEngine.ts
+  → backend from createAudioBackend(outputMode), built once per output mode
   → streaming: loadFromURL(track.url) → HTMLAudioElement.src (range requests)
-  → buffered backends: fetch(url) → arrayBuffer() → decode  ← 404s surface here
+  → buffered backends: fetchTrackBytes(url) → arrayBuffer() → decode  ← 404s surface here
 ```
 
 `track.url` is always set by the backend. If you see a 404:
@@ -29,9 +36,9 @@ playTrack(track)
 
 ## API_BASE_URL usage
 
+Defined once in `src/api/http.ts`. Catalog requests go through `apiFetch(path, schema, {signal})`.
 `API_BASE_URL` is used for:
-- `GET /api/songs` (library fetch)
-- `GET /api/songs/tags`
+- `GET /api/songs` (catalog sync; tags and stats are computed from the catalog)
 - `POST /api/songs/{id}/play`
 - Fallback audio proxy: `/api/music/{id}` (only when song has no filename)
 
@@ -48,56 +55,32 @@ track.url → HTMLAudioElement → MediaElementSource → AudioContextManager �
 (crossfade uses a second <audio> element; no full-file download)
 ```
 
-Every backend's speaker DSP (ReplayGain → limiter → volume → EQ) is the `dsp-chain`
-AudioWorklet running `src/sdl/dsp_chain.h` as WASM (`public/dsp-chain.wasm`), one instance per
-context. `EQChain` / `ReplayGainNode` are the fallback when it fails to load (`?dsp=webaudio`
-forces the fallback). Keep `DEFAULT_EQ_BANDS` the single band layout; never reimplement the RBJ
-EQ in TS.
+Streaming / web-audio / worklet speaker DSP (ReplayGain → limiter → volume → EQ) is the
+`dsp-chain` AudioWorklet running `src/sdl/dsp_chain.h` as WASM — the same code SDL runs in
+its callback. `EQChain` / `ReplayGainNode` are the fallback when it fails to load
+(`?dsp=webaudio` forces the fallback). Keep `DEFAULT_EQ_BANDS` the single band layout.
 
-**Analysis ring (shared post-DSP PCM tap):** the dsp-chain worklet (`dspChainProcessor.js`) writes
-an 8 × u32 header + data into a SharedArrayBuffer; `src/audio/analysisRing.ts` reads it
-(`getAnalysisTap()`). Keep the two in sync; the layout must not change. Writers only memcpy —
-FFT / analysis runs on reader threads (`src/sdl/dsp_fft.h` via `src/audio/wasmFft.ts`, or
-gpu-chores WebGPU), never in an audio callback.
+**Analysis ring (shared post-DSP PCM tap):** SDL's callback (`src/sdl/analysis_ring.h`) and the
+dsp-chain worklet (`dspChainProcessor.js`) write the same 8 × u32 header + data layout into a
+SharedArrayBuffer; `src/audio/analysisRing.ts` reads it (`getAnalysisTap()`). Keep the three in
+sync. Writers only memcpy — FFT / analysis runs on reader threads (`src/sdl/dsp_fft.h` via
+`src/audio/wasmFft.ts`, or gpu-chores WebGPU), never in an audio callback.
+
+**Context lifecycle (#259):** one shared `AudioContext` at the device rate for the session
+(decision record in `docs/AUDIO_BACKENDS.md`; `?ctxrate=native` restores per-file-rate rebuilds).
+The engine calls `unlock()` synchronously from user play commands and reports
+`setPlaybackActive(playing|loading)`; the manager resumes on gesture / visibility / `statechange`
+(incl. iOS `interrupted`) and suspends after 10 s idle. Never open throwaway contexts.
 
 **Buffered (web-audio, worklet, SDL):**
 ```
-fetch(url) → ArrayBuffer → flacDecoder / audioDecoder → AudioBuffer or worklet ring
+fetch(url) → ArrayBuffer → audio/flacDecoder / audio/audioDecoder → AudioBuffer or worklet ring
            → backend-specific nodes → AudioContextManager → speakers
 ```
 
 No `<audio>` element for buffered modes. Streaming uses `<audio>` exclusively.
 
-**SDL mode (`sdl`, labelled "WASM engine"; links no SDL since #268):**
-```
-audio_engine.cpp (main-thread exports: PCM + transport words, engine_state.h / play_ring.h)
-  → module's shared memory → `sdl-engine` AudioWorkletProcessor (sdlEngineProcessor.js)
-  → AudioContextManager.connectInput → dsp-chain → analyser → speakers
-```
-- The processor reads whole frames on the audio thread; JS only advances `writePos`, the
-  processor only `readPos` and its progress words. Changes go through the epoch protocol in
-  `engine_state.h`; word indices are mirrored in `sdlEngineMessages.ts` and the processor
-  (`tests/sdlEngineProcessor.test.ts` checks them against the static_asserts).
-- One node per load, owner id set first (`_set_output_owner`); a graph recreate calls `_rebase()`
-  and attaches a new node.
-- Worklet `.js` processors stay classic `@ts-check` scripts with a sibling `*Messages.ts`; do not
-  bundle them into the React chunk.
-- No main-thread audio: no ScriptProcessor anywhere. A backend that cannot start a worklet reports
-  `getCapabilities().playable === false` and `PlaybackEngine` rejects loads before fetching.
-
 Worklet backend exposes `setPCMCallback()` for projectM PCM (`createProjectMPCMFeed` in `projectMBridge.ts`).
-
-## Transport (PlaybackEngine)
-
-`src/audio/PlaybackEngine.ts` is the one transport: backend lifecycle, `load()` (generation counter —
-stale loads return `'superseded'`), play/pause/seek/stop, the clock, gapless `preloadNext` forwarding,
-throttled `flac_position` saves (`src/audio/playbackPosition.ts`). `usePlaybackController` maps the queue onto it.
-
-- Read transport state with `usePlaybackStatus` (no position). Only leaves that show time use
-  `usePlaybackTime` / `usePlaybackTimeRef` (`src/hooks/usePlaybackEngine.ts`) — do not put `currentTime` back
-  into Player state or props (`tests/playerRenders.test.ts` guards this).
-- `StreamingAudioPlayer.loadFromURL` halts every path before starting one; a graph recreate retires the
-  `<audio>` element (an element binds to one `MediaElementAudioSourceNode` forever) and reattaches the URL on a new one.
 
 ## Visualizer pipeline
 
@@ -107,53 +90,104 @@ AnalyserNode → VisualizerShell
   → projectM: optional WASM host (?aesthetic=projectm|split)
 ```
 
+- One `GPUDevice` per session from `GpuDeviceService` (`visuals/webgpu/deviceService.ts`), lent to the
+  visualizer and gpu-chores; analyser changes go through `setAnalyser()`, never a re-init.
+- WebGL2 survives `webglcontextlost`/`restored`. projectM: `ProjectMEngine` owns one canvas + main loop
+  (SDL-free `emscripten_webgl_create_context` host); presets come from `public/projectm/presets.json`
+  at runtime (`?preset=`).
+
+## Playback engine (#258)
+
+```
+React views ─ selectors (useTransport / useQueue / useClock …) ─┐
+            └ useActions() → usePlayerActions (room-aware) ──┐   │
+                                                            ▼   │
+PlaybackEngine (player/PlaybackEngine.ts) ── writes ──► player store (zustand, playerStore.ts)
+  owns: backend (one per output mode), queue cursor, load token + AbortController,
+        transport state machine (transport.ts), honest clock (clock.now())
+```
+
+- One active audio path; every load gets a token and stale results are dropped; backend loads are serialized
+- Graph rebuild → engine reloads the current track at `clock.now()` and keeps playing
+- `'ended'` counts only from the current backend for the current load
+- Only the scrubber / time readouts / MediaSessionBridge subscribe to `useClock()` (≤4 Hz); `Player` never does.
+  rAF code (ShaderGUI) reads `engine.clock.now()` directly
+- Persistence (`player/persistence.ts`): position every 5 s + `pagehide` from the clock, queue/volume on change
+- Errors → store toasts (`PlayerToasts`) + top-level `ErrorBoundary` (`src/index.tsx`)
+- Engine unit tests use `tests/helpers/fakeEngine.ts` (fake backend + clock)
+
 ## Listening rooms (#209)
 
 ```
-Player.tsx → useListeningRoomBridge (next to usePlaybackController) → useListeningRoom
-  host:  HostPublisher.observe(SyncClock) → WS → rooms.py → guests
-  guest: GuestSync.reconcile → playTrack({autoplay:false}) / play / seek / nudge rate
+Player.tsx → useListeningRoomBridge({ engine, store }) → useListeningRoom
+  host:  HostPublisher.observe(SyncClock) → WS → server/rooms.py → guests
+  guest: GuestSync.reconcile → engine.load({autoplay:false}) / play / seek / nudgeRate
 ```
 
 - Join links are `?room={id}` (relative asset paths break deep `/room/{id}` reloads); host token in sessionStorage only
 - Rooms lock the backend to `streaming` and force its native `<audio>` path (`setNativeOnly`, `getSyncClock`)
-- Server: `rooms.py` router mounted in `app.py` (in-memory → one uvicorn worker); production bridge port pending
+- Server: `server/rooms.py` router mounted in `server/app.py` (in-memory → one uvicorn worker); production bridge port pending
 - Details: `docs/LISTENING_ROOMS.md`
+
+## Styling and accessibility
+
+Tailwind CSS v4: `src/index.css` (imported by `src/index.tsx`) → `postcss.config.mjs` → `postcss-loader`. Palette tokens
+live in its `@theme static` block (`bg-surface`, `--color-gui-*`); don't add arbitrary `bg-[#…]` colors. ShaderGUI keeps
+hand-written CSS: `ShaderGUI.layout.css` (mirrored by `WAVEFORM_LAYOUT`) and `ShaderGUI.overlays.css`.
+
+Shortcuts come from one map (`hooks/keyboardShortcutMap.ts`); the help dialog renders it, so add keys there. Custom
+controls are ARIA sliders (`utils/sliderKeys.ts`). `eslint-plugin-jsx-a11y` runs in lint and `tests/a11y.spec.ts` runs axe.
+
+## Library catalog (IndexedDB, phase 1)
+
+- One Dexie database `flac_player` (`src/catalog/db.ts`): `tracks`, `albums`, `artists`, `artwork`,
+  `sources`, `scanState`, `playlists`, `state` (the saved queue lives at `state.queue`).
+  Schema changes are a new `db.version(n)` with an upgrade — never edit an existing version.
+- The catalog is the offline source of truth for the library view; `trackCache` stays the audio store.
+  Remote rows are `source: 'library'`; host-trashed rows stay with `trashed: true` and are hidden.
+- Edits mirror into the catalog after the host accepts them (`catalog/libraryRows.ts`).
+- `migrateLegacyStorage` moves the pre-catalog `flac_player_playlists` DB and localStorage queue in once.
+- Tests get a fresh `fake-indexeddb` factory per test (`tests/setup.ts`); pass a `CatalogDb` on its own
+  `IDBFactory` where a test needs isolation.
 
 ## Debug logging
 
 Off by default. Enable with `REACT_APP_DEBUG=true` in `.env` (webpack DefinePlugin).
-Helper: `src/utils/debug.ts` — used by `audioLoader.ts` and `api/songApi.ts`.
+Helper: `src/utils/debug.ts` — used by `api/http.ts` and `api/songApi.ts`.
 
 ## Key invariants to maintain
 
-- `audioLoader.ts` line ~203: fallback URL is `${API_BASE_URL}/api/music/${item.id}`
+- `resolveTrackUrl()` (`api/http.ts`): fallback URL is `${API_BASE_URL}/api/music/${encodeURIComponent(id)}`
   — this only fires when the backend sends a song with no URL (shouldn't happen normally)
 - `loadFromURL()` only handles `http`, `https`, `gs://` schemes — don't pass relative paths
 - The backend must always return absolute `https://` URLs in the `url` field
-- Default output mode is `streaming` (`usePlayerState.ts`)
-- The shared `AudioContext`'s run state belongs to `AudioContextManager`: use `whenRunning()`, never `context.suspend()`
-  (refused; the context is shared with every backend and the visualizer tap). Never leave a `DynamicsCompressorNode`
-  in the speaker chain while the limiter is off (spec clamps it to 2 channels)
-- Files copied into the build root (`*.wasm`, glue scripts, icons, `service-worker.js`) are located with `publicUrl()`
-  (`src/utils/publicUrl.ts`), not `'/name'` literals, so a sub-path deploy finds them
+- Default output mode is `streaming` (`player/playerStore.ts`)
+- Only `source: 'library'` tracks reach library endpoints, share links, playlists and rooms
+  (`isLibraryTrack()`, `types/track.ts`); ids in paths are `encodeURIComponent`-ed
+
+## Deployment base path
+
+Root-hosted by default. For a subpath (e.g. `https://host/flac-player/`) build with
+`PUBLIC_PATH=/flac-player/ npm run build`. It feeds webpack `publicPath`, the HTML
+template, the SW precache/scope, and runtime asset URLs (`src/utils/publicPath.ts`).
+Server rewrites must serve `<base>/service-worker.js` as JS, not the SPA fallback.
 
 ## WASM builds
 
 ```bash
-npm run build:wasm:sdl3    # engine → public/sdl-audio.* (or bash src/sdl/build.sh)
+npm run build:wasm:sdl3    # or bash src/sdl/build.sh
 npm run build:wasm:resampler  # SpeexDSP HQ resampler (worklet rate mismatch)
 npm run build:wasm:dsp     # dsp_chain.h + dsp_fft.h → public/dsp-chain.wasm (EQ/ReplayGain worklet, fft_spectrum)
 npm run build:projectm     # optional Milkdrop host
 npm run verify:wasm        # CI artifact check
 ```
 
-Emscripten is pinned in `scripts/emsdk-version` (6.0.11); the build scripts refuse any other `emcc`
-and every source hash covers the pin. Per-graph flags and heap caps: `docs/WASM_TOOLCHAIN.md`.
+All four are built with the emsdk in `scripts/emsdk-version` (the build refuses any other
+emcc; if `$EMSDK` points at another release, `export EMSDK=$PWD/emsdk`). SDL3 and
+`dsp-chain` both compile `src/sdl/dsp_chain.h` — rebuild both when it changes. Never merge
+`public/*.wasm` or `*.sha256` textually; rebuild them.
 
 Production webpack (`npm run build`) copies prebuilt artifacts from `public/` — no emsdk required.
-Host-clang tests for the engine headers: `npm run test:native` (CMake, `-Wall -Wextra -Werror`;
-writes `.build/native/compile_commands.json` for clangd).
 
 ## Related docs
 
@@ -161,5 +195,4 @@ writes `.build/native/compile_commands.json` for clangd).
 - `docs/AUDIO_BACKENDS.md` — backend selection
 - `docs/API.md` — REST + projectM embed
 - `docs/LISTENING_ROOMS.md` — synced listening rooms
-- `docs/WASM_TOOLCHAIN.md` — emsdk pin, compile commands, heap caps
 - `AGENTS.md` — full agent reference

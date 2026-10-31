@@ -2,11 +2,15 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { AudioContextManager } from '../src/audio/AudioContextManager';
 import {
   RecordingAudioContext,
-  channelsAt,
   installRecordingAudioContext,
-  reachableNodes,
-  type RecordingAudioNode,
 } from './helpers/recordingAudioContext';
+
+/** The pre-#259 policy: open and rebuild the context at each file's rate (now opt-in). */
+function nativeRateManager(): AudioContextManager {
+  const manager = new AudioContextManager();
+  manager.setPolicy({ recreateOnSampleRateMismatch: true });
+  return manager;
+}
 
 function allowAllSampleRates(): void {
   (globalThis.AudioContext as typeof AudioContext & {
@@ -14,7 +18,7 @@ function allowAllSampleRates(): void {
   }).isSampleRateSupported = () => true;
 }
 
-describe('AudioContextManager native-rate recreate', () => {
+describe('AudioContextManager native-rate policy (opt-in)', () => {
   let restore: (() => void) | undefined;
 
   afterEach(() => {
@@ -24,7 +28,7 @@ describe('AudioContextManager native-rate recreate', () => {
 
   it('does not pass sampleRate: 44100 when initializing without a track rate', () => {
     restore = installRecordingAudioContext();
-    const manager = new AudioContextManager();
+    const manager = nativeRateManager();
     manager.initialize();
     const ctx = RecordingAudioContext.instances[0];
     expect(ctx).toBeDefined();
@@ -35,22 +39,23 @@ describe('AudioContextManager native-rate recreate', () => {
   it('creates the context at the track native rate', async () => {
     restore = installRecordingAudioContext();
     allowAllSampleRates();
-    const manager = new AudioContextManager();
+    const manager = nativeRateManager();
     await manager.ensureForTrack({ sampleRate: 48000, channels: 2 });
     expect(RecordingAudioContext.instances[0].sampleRate).toBe(48000);
     expect(manager.getContext().sampleRate).toBe(48000);
   });
 
-  it('recreates on rate mismatch and restores volume, EQ, and ReplayGain', async () => {
+  it('recreates on rate mismatch and restores volume, EQ, ReplayGain, and mute', async () => {
     restore = installRecordingAudioContext();
     allowAllSampleRates();
-    const manager = new AudioContextManager();
+    const manager = nativeRateManager();
     await manager.ensureForTrack({ sampleRate: 44100 });
 
     manager.setVolume(0.42);
     manager.setEQGains([1, 2, 3, 4, 5]);
     manager.setReplayGainLinear(0.5);
     manager.setReplayGainLimiter(true);
+    manager.setExternalPlaybackActive(true);
 
     let notified = 0;
     manager.subscribeGraphRecreated(() => {
@@ -66,18 +71,19 @@ describe('AudioContextManager native-rate recreate', () => {
     expect(manager.getGraphGeneration()).toBe(1);
 
     const ctx = RecordingAudioContext.instances[1];
+    // ReplayGain in / out, master, speaker.
     expect(ctx.gainNodes[0].gain.value).toBeCloseTo(0.5, 6);
-    expect(ctx.gainNodes[1].gain.value).toBeCloseTo(0.42, 6);
-    // Speaker gain: no backend mutes it any more (#268: SDL plays through this graph).
-    expect(ctx.gainNodes[2].gain.value).toBe(1);
+    expect(ctx.gainNodes[2].gain.value).toBeCloseTo(0.42, 6);
+    expect(ctx.gainNodes[3].gain.value).toBe(0);
     expect(ctx.compressorNodes[0].threshold.value).toBe(-1);
     expect(manager.getEQGains()).toEqual([1, 2, 3, 4, 5]);
+    expect(manager.isExternalPlaybackActive()).toBe(true);
   });
 
   it('keeps the same context for a same-rate follow-up track', async () => {
     restore = installRecordingAudioContext();
     allowAllSampleRates();
-    const manager = new AudioContextManager();
+    const manager = nativeRateManager();
     await manager.ensureForTrack({ sampleRate: 48000 });
     await manager.ensureForTrack({ sampleRate: 48000 });
     expect(RecordingAudioContext.instances).toHaveLength(1);
@@ -86,13 +92,13 @@ describe('AudioContextManager native-rate recreate', () => {
   it('does not open a graph from setters or getAnalyser before the first track', async () => {
     restore = installRecordingAudioContext();
     allowAllSampleRates();
-    const manager = new AudioContextManager();
+    const manager = nativeRateManager();
     manager.setEQGains([1, 0, 0, 0, 0]);
     manager.setReplayGainLinear(0.8);
     manager.setReplayGainLimiter(true);
     manager.setVolume(0.5);
     await manager.setSinkId('speaker-2');
-    expect(await manager.whenRunning()).toBe(false);
+    await manager.resume();
     expect(manager.getAnalyser()).toBeNull();
     expect(manager.getOutputInfo()).toBeNull();
     expect(RecordingAudioContext.instances).toHaveLength(0);
@@ -102,7 +108,7 @@ describe('AudioContextManager native-rate recreate', () => {
     const ctx = RecordingAudioContext.instances[0];
     expect(ctx.sampleRate).toBe(96000);
     expect(ctx.constructorOptions).toMatchObject({ sinkId: 'speaker-2' });
-    expect(ctx.gainNodes[1].gain.value).toBeCloseTo(0.5, 6);
+    expect(ctx.gainNodes[2].gain.value).toBeCloseTo(0.5, 6);
     expect(manager.getAnalyser()).not.toBeNull();
   });
 
@@ -110,7 +116,7 @@ describe('AudioContextManager native-rate recreate', () => {
     restore = installRecordingAudioContext();
     allowAllSampleRates();
     RecordingAudioContext.rejectOptions = (o) => o.sampleRate === 384000;
-    const manager = new AudioContextManager();
+    const manager = nativeRateManager();
     await manager.ensureForTrack({ sampleRate: 384000 });
     expect(RecordingAudioContext.instances).toHaveLength(1);
     expect(manager.getContext().sampleRate).toBe(44100);
@@ -120,11 +126,62 @@ describe('AudioContextManager native-rate recreate', () => {
     expect(RecordingAudioContext.instances).toHaveLength(1);
   });
 
+  describe('renderSizeHint', () => {
+    const proto = RecordingAudioContext.prototype as unknown as { renderQuantumSize?: number };
+    afterEach(() => {
+      delete proto.renderQuantumSize;
+    });
+
+    it('is omitted where the browser has no renderQuantumSize', async () => {
+      restore = installRecordingAudioContext();
+      allowAllSampleRates();
+      const manager = nativeRateManager();
+      await manager.setRenderSizeMode('512');
+      await manager.ensureForTrack({ sampleRate: 48000 });
+      expect(RecordingAudioContext.instances[0].constructorOptions).not.toHaveProperty('renderSizeHint');
+      expect(manager.getOutputInfo()?.renderSizeHint).toBeUndefined();
+    });
+
+    it('is passed when supported and recreates the graph on change', async () => {
+      restore = installRecordingAudioContext();
+      allowAllSampleRates();
+      proto.renderQuantumSize = 128;
+      const manager = nativeRateManager();
+      await manager.setRenderSizeMode('hardware');
+      await manager.ensureForTrack({ sampleRate: 48000 });
+      expect(RecordingAudioContext.instances[0].constructorOptions).toMatchObject({
+        renderSizeHint: 'hardware',
+        sampleRate: 48000,
+      });
+      await manager.setRenderSizeMode('256');
+      expect(RecordingAudioContext.instances).toHaveLength(2);
+      expect(manager.getOutputInfo()).toMatchObject({ renderSizeHint: 256, sampleRate: 48000 });
+    });
+
+    it('a rejected hint does not prevent graph create and keeps the native rate', async () => {
+      restore = installRecordingAudioContext();
+      allowAllSampleRates();
+      proto.renderQuantumSize = 128;
+      RecordingAudioContext.rejectOptions = (o) =>
+        (o as { renderSizeHint?: unknown }).renderSizeHint !== undefined;
+      const manager = nativeRateManager();
+      await manager.setRenderSizeMode('512');
+      await manager.ensureForTrack({ sampleRate: 96000 });
+      expect(RecordingAudioContext.instances).toHaveLength(1);
+      expect(manager.getContext().sampleRate).toBe(96000);
+      expect(manager.getOutputInfo()?.renderSizeHint).toBeUndefined();
+
+      // Not retried on the next same-rate track.
+      await manager.ensureForTrack({ sampleRate: 96000 });
+      expect(RecordingAudioContext.instances).toHaveLength(1);
+    });
+  });
+
   it('falls back from a numeric latencyHint without recreating on every track', async () => {
     restore = installRecordingAudioContext();
     allowAllSampleRates();
     RecordingAudioContext.rejectOptions = (o) => typeof o.latencyHint === 'number';
-    const manager = new AudioContextManager();
+    const manager = nativeRateManager();
     await manager.setLatencyMode('balanced');
     await manager.ensureForTrack({ sampleRate: 48000 });
     expect(RecordingAudioContext.instances[0].latencyHint).toBe('interactive');
@@ -136,7 +193,7 @@ describe('AudioContextManager native-rate recreate', () => {
     restore = installRecordingAudioContext();
     allowAllSampleRates();
     RecordingAudioContext.maxChannelCount = 6;
-    const manager = new AudioContextManager();
+    const manager = nativeRateManager();
     await manager.ensureForTrack({ sampleRate: 48000, channels: 6 });
     expect(manager.getOutputInfo()?.channelCount).toBe(6);
     await manager.ensureForTrack({ sampleRate: 48000, channels: 1 });
@@ -148,7 +205,7 @@ describe('AudioContextManager native-rate recreate', () => {
   it('switches sink live and reports latency after the graph exists', async () => {
     restore = installRecordingAudioContext();
     allowAllSampleRates();
-    const manager = new AudioContextManager();
+    const manager = nativeRateManager();
     await manager.ensureForTrack({ sampleRate: 48000 });
     expect(await manager.setSinkId('usb-dac')).toBe(true);
     const info = manager.getOutputInfo();
@@ -166,22 +223,7 @@ describe('AudioContextManager native-rate recreate', () => {
   });
 });
 
-/** A stand-in backend source wired through the public input, as backends do. */
-function connectSource(manager: AudioContextManager): RecordingAudioNode {
-  const source = manager.getContext().createBufferSource() as unknown as RecordingAudioNode;
-  manager.connectInput(source as unknown as AudioNode);
-  return source;
-}
-
-function destinationOf(manager: AudioContextManager): RecordingAudioNode {
-  return manager.getContext().destination as unknown as RecordingAudioNode;
-}
-
-function kindsAfter(source: RecordingAudioNode): string[] {
-  return reachableNodes(source).map((node) => node.kind);
-}
-
-describe('AudioContextManager fallback chain channels', () => {
+describe('AudioContextManager device-rate default (#259 A2 / A8)', () => {
   let restore: (() => void) | undefined;
 
   afterEach(() => {
@@ -189,334 +231,212 @@ describe('AudioContextManager fallback chain channels', () => {
     restore = undefined;
   });
 
-  async function openSurround(channels: number) {
-    restore ??= installRecordingAudioContext();
-    allowAllSampleRates();
+  it('keeps one context at the device rate across a mixed-rate session', async () => {
+    restore = installRecordingAudioContext();
+    const manager = new AudioContextManager();
+    const rates = [44100, 48000, 96000, 192000, 88200, 44100, 176400, 48000, 32000, 96000];
+    for (const sampleRate of rates) {
+      await manager.ensureForTrack({ sampleRate, channels: 2 });
+    }
+    expect(RecordingAudioContext.instances).toHaveLength(1);
+    expect(RecordingAudioContext.instances[0].constructorOptions.sampleRate).toBeUndefined();
+    expect(manager.getGraphGeneration()).toBe(0);
+  });
+});
+
+describe('ReplayGain limiter channel width (#259 A1)', () => {
+  let restore: (() => void) | undefined;
+
+  afterEach(() => {
+    restore?.();
+    restore = undefined;
+  });
+
+  it('keeps the (stereo-clamped) compressor out of the chain while the limiter is off', async () => {
+    restore = installRecordingAudioContext();
     RecordingAudioContext.maxChannelCount = 8;
     const manager = new AudioContextManager();
-    await manager.ensureForTrack({ sampleRate: 48000, channels });
-    return manager;
-  }
-
-  it('keeps no DynamicsCompressorNode in the connected chain while the limiter is off', async () => {
-    const manager = await openSurround(6);
-    const source = connectSource(manager);
-
-    expect(kindsAfter(source)).not.toContain('compressor');
-    expect(manager.getOutputInfo()?.channelCount).toBe(6);
-    expect(channelsAt(source, 6, destinationOf(manager))).toBe(6);
-  });
-
-  it('carries 5.1 and 7.1 to the destination with the limiter on, one compressor per channel', async () => {
-    const manager = await openSurround(6);
-    manager.setReplayGainLimiter(true);
-    const source = connectSource(manager);
-
-    const compressors = reachableNodes(source).filter((node) => node.kind === 'compressor');
-    expect(compressors).toHaveLength(6);
-    expect(channelsAt(source, 6, destinationOf(manager))).toBe(6);
-    // No compressor is ever asked to carry more than the one channel it is fed.
-    for (const compressor of compressors) {
-      expect(channelsAt(source, 6, compressor)).toBe(1);
-    }
-
-    await manager.ensureForTrack({ sampleRate: 48000, channels: 8 });
-    const wide = reachableNodes(source).filter((node) => node.kind === 'compressor');
-    expect(wide).toHaveLength(8);
-    expect(channelsAt(source, 8, destinationOf(manager))).toBe(8);
-  });
-
-  it('uses a single linked compressor up to stereo and none once the limiter goes off', async () => {
-    const manager = await openSurround(2);
-    manager.setReplayGainLimiter(true);
-    const source = connectSource(manager);
-    expect(kindsAfter(source).filter((kind) => kind === 'compressor')).toHaveLength(1);
-    expect(kindsAfter(source)).not.toContain('channel-splitter');
-    expect(channelsAt(source, 2, destinationOf(manager))).toBe(2);
-
-    manager.setReplayGainLimiter(false);
-    expect(kindsAfter(source)).not.toContain('compressor');
-    expect(channelsAt(source, 2, destinationOf(manager))).toBe(2);
-  });
-
-  it('rebuilds the limiter when the next track changes the channel count', async () => {
-    const manager = await openSurround(6);
-    manager.setReplayGainLimiter(true);
-    const source = connectSource(manager);
-    expect(kindsAfter(source).filter((kind) => kind === 'compressor')).toHaveLength(6);
-
-    await manager.ensureForTrack({ sampleRate: 48000, channels: 2 });
-    expect(kindsAfter(source).filter((kind) => kind === 'compressor')).toHaveLength(1);
-    expect(channelsAt(source, 2, destinationOf(manager))).toBe(2);
-
-    await manager.ensureForTrack({ sampleRate: 48000, channels: 6 });
-    expect(kindsAfter(source).filter((kind) => kind === 'compressor')).toHaveLength(6);
-  });
-
-  it('leaves no disposed limiter node wired into the graph after toggling', async () => {
-    const manager = await openSurround(6);
-    const source = connectSource(manager);
-    manager.setReplayGainLimiter(true);
+    await manager.ensureForTrack({ channels: 6 });
     const ctx = RecordingAudioContext.instances[0];
-    const built = [...ctx.compressorNodes];
+    expect(ctx.compressorNodes).toHaveLength(0);
+    // ReplayGain input feeds its output directly.
+    expect(ctx.gainNodes[0].connections).toEqual([ctx.gainNodes[1]]);
+  });
+
+  it('limits a 5.1 track per channel pair and merges back to six channels', async () => {
+    restore = installRecordingAudioContext();
+    RecordingAudioContext.maxChannelCount = 8;
+    const manager = new AudioContextManager();
+    manager.setReplayGainLimiter(true);
+    await manager.ensureForTrack({ channels: 6 });
+    const ctx = RecordingAudioContext.instances[0];
+    // The graph opens stereo, then widens to the track: only the rewired limiters stay connected.
+    const live = ctx.compressorNodes.filter((c) => c.connections.length > 0);
+    expect(live).toHaveLength(3);
+    const [splitter, merger] = ctx.channelNodes.filter((n) => n.channels === 6);
+    expect(splitter).toMatchObject({ kind: 'splitter', channels: 6 });
+    expect(merger).toMatchObject({ kind: 'merger', channels: 6 });
+    expect(ctx.gainNodes[0].connections).toEqual([splitter]);
+    expect(merger.connections).toEqual([ctx.gainNodes[1]]);
+    // Every splitter output reaches a pair and every merger input is fed.
+    expect(splitter.ports.map((p) => p.output).sort()).toEqual([0, 1, 2, 3, 4, 5]);
+    const mergerInputs = ctx.channelNodes
+      .filter((node) => node.connections.length > 0)
+      .flatMap((node) => node.ports)
+      .filter((p) => p.destination === (merger as unknown as AudioNode))
+      .map((p) => p.input)
+      .sort();
+    expect(mergerInputs).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(live.every((c) => c.threshold.value === -1 && c.ratio.value === 20)).toBe(true);
+  });
+
+  it('uses a single compressor for stereo and drops it when the limiter is turned off', async () => {
+    restore = installRecordingAudioContext();
+    const manager = new AudioContextManager();
+    manager.setReplayGainLimiter(true);
+    await manager.ensureForTrack({ channels: 2 });
+    const ctx = RecordingAudioContext.instances[0];
+    expect(ctx.compressorNodes).toHaveLength(1);
+    expect(ctx.gainNodes[0].connections).toEqual([ctx.compressorNodes[0]]);
     manager.setReplayGainLimiter(false);
-    for (const compressor of built) {
-      expect((compressor as unknown as RecordingAudioNode).edges).toHaveLength(0);
-    }
-    expect(kindsAfter(source)).not.toContain('compressor');
+    expect(ctx.gainNodes[0].connections).toEqual([ctx.gainNodes[1]]);
   });
 });
 
-describe('AudioContextManager sample-rate probing', () => {
+describe('AudioContextManager lifecycle (#259 A3 / A4 / A5 / A7)', () => {
   let restore: (() => void) | undefined;
 
   afterEach(() => {
     restore?.();
     restore = undefined;
+    vi.useRealTimers();
   });
 
-  /** Throwaway probe contexts carry no latencyHint; the manager's always do. */
-  const probeContexts = () =>
-    RecordingAudioContext.instances.filter((ctx) => ctx.constructorOptions.latencyHint === undefined);
-  const graphContexts = () =>
-    RecordingAudioContext.instances.filter((ctx) => ctx.constructorOptions.latencyHint !== undefined);
-
-  it('constructs one AudioContext for the same rate twice, with no throwaway probe', async () => {
+  it('publishes running / suspended / interrupted / closed from statechange', async () => {
     restore = installRecordingAudioContext();
     const manager = new AudioContextManager();
-    await manager.ensureForTrack({ sampleRate: 48000 });
-    await manager.ensureForTrack({ sampleRate: 48000 });
-    expect(RecordingAudioContext.instances).toHaveLength(1);
-  });
-
-  it('does not probe a first build: the constructor attempt is the probe', async () => {
-    restore = installRecordingAudioContext();
-    const manager = new AudioContextManager();
-    await manager.ensureForTrack({ sampleRate: 96000 });
-    expect(probeContexts()).toHaveLength(0);
-    expect(graphContexts()).toHaveLength(1);
-    expect(manager.getContext().sampleRate).toBe(96000);
-  });
-
-  it('probes each new rate once for the page, then answers from memory', async () => {
-    restore = installRecordingAudioContext();
-    const manager = new AudioContextManager();
-    for (const rate of [48000, 96000, 48000, 96000, 48000]) {
-      await manager.ensureForTrack({ sampleRate: rate });
-    }
-    // 96000 and 48000 were each probed once (the first build probes nothing).
-    expect(probeContexts()).toHaveLength(2);
-    expect(graphContexts()).toHaveLength(5);
-  });
-
-  it('remembers an unsupported rate instead of probing and recreating again', async () => {
-    restore = installRecordingAudioContext();
-    RecordingAudioContext.rejectOptions = (o) => o.sampleRate === 384000;
-    const manager = new AudioContextManager();
-    await manager.ensureForTrack({ sampleRate: 48000 });
-    await manager.ensureForTrack({ sampleRate: 384000 });
-    await manager.ensureForTrack({ sampleRate: 384000 });
-    expect(probeContexts()).toHaveLength(0); // the throwing probe never produces an instance
-    expect(graphContexts()).toHaveLength(1);
-    expect(manager.getGraphGeneration()).toBe(0);
-  });
-});
-
-describe('AudioContextManager.whenRunning', () => {
-  let restore: (() => void) | undefined;
-
-  afterEach(() => {
-    restore?.();
-    restore = undefined;
-    vi.restoreAllMocks();
-  });
-
-  it('resumes a suspended context without rebuilding the graph', async () => {
-    restore = installRecordingAudioContext();
-    allowAllSampleRates();
-    RecordingAudioContext.initialState = 'suspended';
-    const manager = new AudioContextManager();
-    await manager.ensureForTrack({ sampleRate: 48000 });
-    expect(RecordingAudioContext.instances[0].state).toBe('suspended');
-
-    expect(await manager.whenRunning()).toBe(true);
-    expect(RecordingAudioContext.instances).toHaveLength(1);
-    expect(manager.getGraphGeneration()).toBe(0);
-    expect(manager.getOutputInfo()?.state).toBe('running');
-  });
-
-  it('treats iOS interrupted like suspended: resume, never rebuild', async () => {
-    restore = installRecordingAudioContext();
-    allowAllSampleRates();
-    const manager = new AudioContextManager();
-    await manager.ensureForTrack({ sampleRate: 48000 });
+    const seen: string[] = [];
+    manager.subscribeState((state) => seen.push(state));
+    expect(manager.getState()).toBe('none');
+    await manager.ensureForTrack({});
     const ctx = RecordingAudioContext.instances[0];
     ctx.setState('interrupted');
-
-    await manager.ensureForTrack({ sampleRate: 48000 });
-    expect(RecordingAudioContext.instances).toHaveLength(1);
-
-    expect(await manager.whenRunning()).toBe(true);
-    expect(ctx.resumeCalls).toBe(1);
-    expect(RecordingAudioContext.instances).toHaveLength(1);
+    ctx.setState('suspended');
+    expect(seen).toEqual(['running', 'interrupted', 'suspended']);
   });
 
-  it('is already true for a running context and false with no graph (creating none)', async () => {
+  it('suspends after the idle timeout while paused and resumes on play', async () => {
+    vi.useFakeTimers();
     restore = installRecordingAudioContext();
-    allowAllSampleRates();
-    const manager = new AudioContextManager();
-    expect(await manager.whenRunning()).toBe(false);
-    expect(RecordingAudioContext.instances).toHaveLength(0);
-
-    await manager.ensureForTrack({ sampleRate: 48000 });
-    expect(await manager.whenRunning()).toBe(true);
-    expect(RecordingAudioContext.instances[0].resumeCalls).toBe(0);
-  });
-
-  it('issues resume() before its first await so it stays inside the unlocking click', async () => {
-    restore = installRecordingAudioContext();
-    allowAllSampleRates();
-    RecordingAudioContext.initialState = 'suspended';
-    const manager = new AudioContextManager();
-    await manager.ensureForTrack({ sampleRate: 48000 });
-    const pending = manager.whenRunning();
-    expect(RecordingAudioContext.instances[0].resumeCalls).toBe(1);
-    await pending;
-  });
-
-  it('gives up after the deadline, then resumes on the next user gesture', async () => {
-    restore = installRecordingAudioContext();
-    allowAllSampleRates();
-    RecordingAudioContext.initialState = 'suspended';
-    const manager = new AudioContextManager();
-    await manager.ensureForTrack({ sampleRate: 48000 });
+    const manager = new AudioContextManager(1000);
+    await manager.ensureForTrack({});
     const ctx = RecordingAudioContext.instances[0];
-    // Autoplay-gated: the promise stays pending until the platform allows the start.
-    let allowed = false;
-    vi.spyOn(ctx, 'resume').mockImplementation(async () => {
-      if (!allowed) return new Promise<void>(() => undefined);
-      ctx.setState('running');
-    });
-
-    expect(await manager.whenRunning(10)).toBe(false);
+    manager.setPlaybackActive(true);
+    manager.setPlaybackActive(false);
+    vi.advanceTimersByTime(999);
+    expect(ctx.suspendCalls).toBe(0);
+    vi.advanceTimersByTime(1);
+    expect(ctx.suspendCalls).toBe(1);
     expect(ctx.state).toBe('suspended');
 
-    allowed = true;
-    document.dispatchEvent(new Event('pointerdown'));
-    await vi.waitFor(() => expect(ctx.state).toBe('running'));
-
-    // Disarmed once running: a later gesture does not touch the context again.
-    const calls = vi.mocked(ctx.resume).mock.calls.length;
-    document.dispatchEvent(new Event('pointerdown'));
-    expect(vi.mocked(ctx.resume).mock.calls.length).toBe(calls);
-  });
-
-  it('refuses context.suspend() from a backend', async () => {
-    restore = installRecordingAudioContext();
-    allowAllSampleRates();
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
-    const manager = new AudioContextManager();
-    const ctx = await manager.ensureForTrack({ sampleRate: 48000 });
-
-    await ctx.suspend();
-
-    expect(RecordingAudioContext.instances[0].suspendCalls).toBe(0);
+    manager.setPlaybackActive(true);
+    await vi.runAllTimersAsync();
     expect(ctx.state).toBe('running');
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('suspend() ignored'));
-  });
-});
-
-describe('AudioContextManager graph recreate', () => {
-  let restore: (() => void) | undefined;
-
-  afterEach(() => {
-    restore?.();
-    restore = undefined;
-    vi.restoreAllMocks();
   });
 
-  it('cuts the old destination first and closes the old context only once the new one runs', async () => {
+  it('does not suspend when playback restarts within the idle window', async () => {
+    vi.useFakeTimers();
     restore = installRecordingAudioContext();
-    allowAllSampleRates();
-    const manager = new AudioContextManager();
-    await manager.ensureForTrack({ sampleRate: 44100 });
-    const [oldCtx] = RecordingAudioContext.instances;
-    const oldSpeaker = oldCtx.gainNodes[2] as unknown as RecordingAudioNode;
-    expect(oldSpeaker.edges).toHaveLength(1); // speaker -> destination
-
-    RecordingAudioContext.initialState = 'suspended';
-    const seenAtResume: Array<{ speakerEdges: number; oldState: string; generation: number }> = [];
-    const resume = RecordingAudioContext.prototype.resume;
-    vi.spyOn(RecordingAudioContext.prototype, 'resume').mockImplementation(async function (this: RecordingAudioContext) {
-      seenAtResume.push({
-        speakerEdges: oldSpeaker.edges.length,
-        oldState: oldCtx.state,
-        generation: manager.getGraphGeneration(),
-      });
-      return resume.call(this);
-    });
-
-    await manager.ensureForTrack({ sampleRate: 96000 });
-
-    expect(seenAtResume).toEqual([{ speakerEdges: 0, oldState: 'running', generation: 0 }]);
-    expect(RecordingAudioContext.events).toEqual(['resume:1', 'close:0']);
-    expect(manager.getGraphGeneration()).toBe(1);
+    const manager = new AudioContextManager(1000);
+    await manager.ensureForTrack({});
+    manager.setPlaybackActive(false);
+    vi.advanceTimersByTime(500);
+    manager.setPlaybackActive(true);
+    vi.advanceTimersByTime(5000);
+    expect(RecordingAudioContext.instances[0].suspendCalls).toBe(0);
   });
 
-  it('publishes the generation and the new output info together, after the context runs', async () => {
+  it('resumes an interrupted context (iOS), not only a suspended one', async () => {
     restore = installRecordingAudioContext();
-    allowAllSampleRates();
     const manager = new AudioContextManager();
-    await manager.ensureForTrack({ sampleRate: 44100 });
-    const [oldCtx] = RecordingAudioContext.instances;
-
-    RecordingAudioContext.initialState = 'suspended';
-    const resume = RecordingAudioContext.prototype.resume;
-    vi.spyOn(RecordingAudioContext.prototype, 'resume').mockImplementation(async function (this: RecordingAudioContext) {
-      this.outputLatency = 0.05; // the device only reports a real figure once the context runs
-      return resume.call(this);
-    });
-
-    const seen: Array<ReturnType<AudioContextManager['getOutputInfo']>> = [];
-    let oldStateAtNotify = '';
-    manager.subscribeGraphRecreated(() => {
-      seen.push(manager.getOutputInfo());
-      oldStateAtNotify = oldCtx.state;
-    });
-    await manager.ensureForTrack({ sampleRate: 96000 });
-
-    expect(seen).toHaveLength(1);
-    expect(seen[0]).toMatchObject({
-      sampleRate: 96000,
-      baseLatency: 0.01,
-      outputLatency: 0.05,
-      state: 'running',
-      graphGeneration: 1,
-    });
-    expect(oldStateAtNotify).toBe('closed');
+    await manager.ensureForTrack({});
+    const ctx = RecordingAudioContext.instances[0];
+    ctx.setState('interrupted');
+    await manager.resume();
+    expect(ctx.state).toBe('running');
   });
 
-  it('serializes overlapping recreates: one live context, a generation per rebuild', async () => {
+  it('retries a refused resume on the next user gesture while playback is wanted', async () => {
     restore = installRecordingAudioContext();
-    allowAllSampleRates();
     const manager = new AudioContextManager();
-    await manager.ensureForTrack({ sampleRate: 44100 });
-    // Each rebuild is published whole, before the next one starts swapping contexts.
-    const publishedRates: Array<number | undefined> = [];
-    manager.subscribeGraphRecreated(() => {
-      publishedRates.push(manager.getOutputInfo()?.sampleRate);
-    });
+    manager.installLifecycle();
+    await manager.ensureForTrack({});
+    const ctx = RecordingAudioContext.instances[0];
+    ctx.refuseResume = true;
+    ctx.setState('suspended');
+    manager.setPlaybackActive(true);
+    await Promise.resolve();
+    expect(ctx.state).toBe('suspended');
 
-    const [a, b] = await Promise.all([
-      manager.ensureForTrack({ sampleRate: 96000 }),
-      manager.ensureForTrack({ sampleRate: 192000 }),
-    ]);
+    ctx.refuseResume = false;
+    window.dispatchEvent(new Event('pointerdown'));
+    await Promise.resolve();
+    expect(ctx.state).toBe('running');
+  });
 
-    expect(a.sampleRate).toBe(96000);
-    expect(b.sampleRate).toBe(192000);
-    expect(manager.getContext()).toBe(b);
-    expect(publishedRates).toEqual([96000, 192000]);
-    expect(manager.getGraphGeneration()).toBe(2);
-    expect(RecordingAudioContext.instances.map((ctx) => ctx.state)).toEqual(['closed', 'closed', 'running']);
+  it('a gesture does not wake a context that idled out while paused', async () => {
+    restore = installRecordingAudioContext();
+    const manager = new AudioContextManager();
+    manager.installLifecycle();
+    await manager.ensureForTrack({});
+    const ctx = RecordingAudioContext.instances[0];
+    await ctx.suspend();
+    const before = ctx.resumeCalls;
+    window.dispatchEvent(new Event('keydown'));
+    await Promise.resolve();
+    expect(ctx.resumeCalls).toBe(before);
+    expect(ctx.state).toBe('suspended');
+  });
+
+  it('unlock() creates the graph synchronously (inside the gesture)', () => {
+    restore = installRecordingAudioContext();
+    const manager = new AudioContextManager();
+    manager.unlock();
+    expect(RecordingAudioContext.instances).toHaveLength(1);
+    expect(manager.getState()).toBe('running');
+  });
+
+  it('moves to a silent sink while SDL owns the speakers and restores the device after', async () => {
+    restore = installRecordingAudioContext();
+    const manager = new AudioContextManager();
+    await manager.ensureForTrack({});
+    const ctx = RecordingAudioContext.instances[0];
+    await manager.setSinkId('usb-dac');
+    manager.setExternalPlaybackActive(true);
+    expect(ctx.setSinkIdCalls.at(-1)).toEqual({ type: 'none' });
+    manager.setExternalPlaybackActive(false);
+    expect(ctx.setSinkIdCalls.at(-1)).toBe('usb-dac');
+  });
+
+  it('falls back to the default output when the sink errors (device unplugged)', async () => {
+    restore = installRecordingAudioContext();
+    const manager = new AudioContextManager();
+    await manager.ensureForTrack({});
+    const ctx = RecordingAudioContext.instances[0];
+    await manager.setSinkId('usb-dac');
+    ctx.dispatch('error');
+    await Promise.resolve();
+    expect(manager.getSinkId()).toBe('');
+    expect(ctx.setSinkIdCalls.at(-1)).toBe('');
+  });
+
+  it('notifies graph listeners on sinkchange so readouts refresh', async () => {
+    restore = installRecordingAudioContext();
+    const manager = new AudioContextManager();
+    await manager.ensureForTrack({});
+    let notified = 0;
+    manager.subscribeGraphRecreated(() => { notified += 1; });
+    RecordingAudioContext.instances[0].dispatch('sinkchange');
+    expect(notified).toBe(1);
   });
 });

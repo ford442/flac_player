@@ -34,6 +34,9 @@ declare global {
 /** SPEEX_RESAMPLER_QUALITY_MAX. */
 export const SPEEX_QUALITY = 10;
 
+/** Max floats (in + out) staged in the WASM heap per rs_process slice (~1 MiB). */
+const HEAP_SLICE_FLOATS = 1 << 18;
+
 export type ResamplerKind = 'speex' | 'linear';
 
 export interface StreamResampler {
@@ -71,12 +74,6 @@ export function resetSpeexResamplerForTests(): void {
   speexModule = null;
 }
 
-/**
- * Output frames staged in the WASM heap per slice (input is scaled so neither
- * side exceeds it): 16384 frames x 8 ch x 4 B = 512 KiB each way.
- */
-const SLICE_FRAMES = 16384;
-
 class SpeexStreamResampler implements StreamResampler {
   readonly kind = 'speex' as const;
   private inPtr = 0;
@@ -109,46 +106,56 @@ class SpeexStreamResampler implements StreamResampler {
     if (!this.inPtr || !this.outPtr) throw new Error('SpeexDSP resampler out of memory');
   }
 
-  /** Output frames `inFrames` input frames can produce, plus slack for the filter phase. */
-  private outFramesFor(inFrames: number): number {
-    return Math.ceil((inFrames * this.toRate) / this.fromRate) + 16;
-  }
-
+  /**
+   * Whole-file input (resampleInterleaved) is fed through in slices so the
+   * WASM heap only ever stages ~HEAP_SLICE_FLOATS: speex-resampler.wasm is
+   * capped at 16 MiB (scripts/build-resampler-wasm.sh). The filter is
+   * stateful, so slicing is seamless.
+   */
   private run(input: Float32Array): Float32Array {
     const ch = this.channels;
     const frames = Math.floor(input.length / ch);
     if (frames === 0) return new Float32Array(0);
-    const outGuess = this.outFramesFor(frames);
-    const out = new Float32Array(outGuess * ch);
-    // Stage one bounded slice at a time: a whole buffered track would not fit
-    // the module's capped heap (scripts/build-resampler-wasm.sh).
-    const sliceFrames = Math.max(1, Math.floor((SLICE_FRAMES * Math.min(this.fromRate, this.toRate)) / this.toRate));
-    this.reserve(Math.min(frames, sliceFrames), this.outFramesFor(Math.min(frames, sliceFrames)));
+    const ratio = this.toRate / this.fromRate;
+    const slice = Math.max(256, Math.floor(HEAP_SLICE_FLOATS / (ch * (1 + ratio))));
+    const slices = Math.ceil(frames / slice);
+    // Σ (ceil(n·ratio) + 16) over slices ≤ ceil(frames·ratio) + 17·slices.
+    const out = new Float32Array((Math.ceil(frames * ratio) + 17 * slices) * ch);
     let produced = 0;
-    for (let start = 0; start < frames; start += sliceFrames) {
-      const sliceEnd = Math.min(frames, start + sliceFrames);
-      // HEAPF32 is re-read after every call: memory growth replaces the view.
-      this.m.HEAPF32.set(input.subarray(start * ch, sliceEnd * ch), this.inPtr >> 2);
-      let consumed = 0;
-      while (start + consumed < sliceEnd) {
-        const room = Math.min(this.outCap, outGuess - produced);
-        if (room <= 0) break;
-        const n = this.m._rs_process(
-          this.state,
-          this.inPtr + consumed * ch * 4,
-          sliceEnd - start - consumed,
-          this.outPtr,
-          room
-        );
-        if (n < 0) throw new Error('SpeexDSP resampler failed');
-        const used = this.m._rs_last_consumed();
-        out.set(this.m.HEAPF32.subarray(this.outPtr >> 2, (this.outPtr >> 2) + n * ch), produced * ch);
-        produced += n;
-        consumed += used;
-        if (n === 0 && used === 0) break;
-      }
+    for (let at = 0; at < frames; at += slice) {
+      const end = Math.min(frames, at + slice);
+      produced += this.runSlice(input.subarray(at * ch, end * ch), end - at, out, produced);
     }
     return out.subarray(0, produced * ch);
+  }
+
+  /** One rs_process pass over `frames` input frames; writes into `out` at `outAt` (frames). */
+  private runSlice(input: Float32Array, frames: number, out: Float32Array, outAt: number): number {
+    const ch = this.channels;
+    const outGuess = Math.ceil((frames * this.toRate) / this.fromRate) + 16;
+    this.reserve(frames, outGuess);
+    // HEAPF32 is re-read after every call: memory growth replaces the view.
+    this.m.HEAPF32.set(input, this.inPtr >> 2);
+    let consumed = 0;
+    let produced = 0;
+    while (consumed < frames) {
+      const room = outGuess - produced;
+      if (room <= 0) break;
+      const n = this.m._rs_process(
+        this.state,
+        this.inPtr + consumed * ch * 4,
+        frames - consumed,
+        this.outPtr,
+        room
+      );
+      if (n < 0) throw new Error('SpeexDSP resampler failed');
+      const used = this.m._rs_last_consumed();
+      out.set(this.m.HEAPF32.subarray(this.outPtr >> 2, (this.outPtr >> 2) + n * ch), (outAt + produced) * ch);
+      produced += n;
+      consumed += used;
+      if (n === 0 && used === 0) break;
+    }
+    return produced;
   }
 
   process(input: Float32Array): Float32Array {

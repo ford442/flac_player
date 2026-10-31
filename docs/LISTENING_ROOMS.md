@@ -1,6 +1,6 @@
 # Synced Listening Rooms
 
-**Status:** Implemented (MVP) — prototype server in `app.py` / `rooms.py`; production bridge port pending  
+**Status:** Implemented (MVP) — prototype server in `server/app.py` / `server/rooms.py`; production bridge port pending
 **Tracking:** [#209](https://github.com/ford442/flac_player/issues/209) (design closed as #197)  
 **Last updated:** October 2026
 
@@ -21,13 +21,13 @@ MVP: **host-authoritative** over **WebSocket**, **streaming backend only** (nati
 
 ## Acceptance (MVP)
 
-Measured with two headless Chromium tabs against `app.py` on one machine (11-minute FLAC, 10-minute soak, 119 samples every 5 s):
+Measured with two headless Chromium tabs against `server/app.py` on one machine (11-minute FLAC, 10-minute soak, 119 samples every 5 s):
 
 - [x] Two browser tabs stay within **500 ms** for **10 minutes** — max |drift| 101 ms, typically 30–100 ms; after seek ≈ 115–180 ms, after a track change < 50 ms
 - [x] Host **pause** propagates to guests within **1 s** — 19–36 ms (resume 35–50 ms) on localhost
 - [x] Room **closes gracefully** when the host leaves — `End room` → guests see "The host ended the session"; tab close → after the grace period
 - [ ] Works with **production CORS** on `storage.noahcohn.com` — needs the bridge port below (WebSocket origin check mirrors `CORS_ALLOWED_ORIGINS`)
-- [x] Unit tests for drift correction and the room protocol (`tests/listeningSync.test.ts`, `tests/listeningRoom.test.ts`, `tests/test_rooms.py`)
+- [x] Unit tests for drift correction and the room protocol (`tests/listeningSync.test.ts`, `tests/listeningRoom.test.ts`, `server/tests/test_rooms.py`)
 
 Out of scope (MVP): visualizer/analyser sync, SDL / worklet / web-audio clocks, guest DJ permissions, WebRTC, TinyURL room links.
 
@@ -81,9 +81,9 @@ sequenceDiagram
 
 ---
 
-## Server (`rooms.py`)
+## Server (`server/rooms.py`)
 
-`create_rooms_router(manager, app_base_url=…, allowed_origins=…, public_ws_base_url=…)` returns a FastAPI `APIRouter`; `app.py` mounts it and runs `RoomManager.run_sweeper()` in its lifespan. Rooms live in process memory: **run one uvicorn worker** (or move `RoomManager` to Redis).
+`create_rooms_router(manager, app_base_url=…, allowed_origins=…, public_ws_base_url=…)` returns a FastAPI `APIRouter`; `server/app.py` mounts it and runs `RoomManager.run_sweeper()` in its lifespan. Rooms live in process memory: **run one uvicorn worker** (or move `RoomManager` to Redis).
 
 ### REST
 
@@ -92,7 +92,7 @@ sequenceDiagram
 | `POST` | `/api/rooms` | Body `{ title?, track_ids?, expires_in_minutes? (5–1440, default 240) }` → `{ room_id, host_token, join_url, ws_url, expires_at }`. 429 after 10 creates / 10 min per client, 503 past `ROOM_MAX_ACTIVE` rooms. |
 | `GET` | `/api/rooms/{room_id}` | `{ room_id, title, track_count, guest_count, host_connected, expires_at }`; 404 when missing/ended. |
 | `DELETE` | `/api/rooms/{room_id}` | Header `X-Host-Token`; closes the room (`ROOM_CLOSED {reason: "deleted"}`). |
-| `GET` | `/room/{room_id}` | Redirects to `/?room={room_id}` (when `app.py` serves the SPA). |
+| `GET` | `/room/{room_id}` | Redirects to `/?room={room_id}` (when `server/app.py` serves the SPA). |
 
 `host_token` (32 random bytes, URL-safe) is returned once; the client keeps it in **sessionStorage** only. Room ids use `URLShortener.generate_short_id(10)`, like share ids. The client builds its own join link from `window.location`; `join_url` / `ws_url` in the response are informational.
 
@@ -165,26 +165,27 @@ src/listening/
   roomApi.ts               # REST client, WS URL derivation
   roomSession.ts           # ?room= / /room/{id} links, sessionStorage host token, client id
   useListeningRoom.ts      # React hook owning one session
-  useListeningRoomBridge.ts# glue to usePlaybackController (adapter, track resolution, streaming lock)
+  useListeningRoomBridge.ts# glue to the PlaybackEngine (adapter, track resolution, streaming lock)
 src/components/ListeningRoomPanel.tsx  # badge + actions (both views)
 ```
 
-`useListeningRoomBridge` is called in `Player.tsx` right after `usePlaybackController`. `PlayerFallbackView` gets **one** prop, `room?: { role, driftMs, onListenTogether }`, for the header badge and the queue's Listen together button; all room actions live in `ListeningRoomPanel`.
+`useListeningRoomBridge({ engine, store })` is called in `Player.tsx`; guests' transport buttons go through the room-aware `usePlayerActions`. `PlayerFallbackView` gets **one** prop, `room?: { role, driftMs, onListenTogether }`, for the header badge and the queue's Listen together button; all room actions live in `ListeningRoomPanel`.
 
 ### Links and routing
 
-Join links use **`?room={id}`** (like `?share=`): the bundle loads with relative asset paths, so a query string works on any static host or subpath. `/room/{id}` is also recognized when the host rewrites it to the SPA (and `app.py` redirects it). `App.tsx` opens room links full-screen. A tab whose sessionStorage holds the room's host token is the host; any other tab is a guest and mounts read-only (no library load, no saved-queue writes).
+Join links use **`?room={id}`** (like `?share=`): the bundle loads with relative asset paths, so a query string works on any static host or subpath. `/room/{id}` is also recognized when the host rewrites it to the SPA (and `server/app.py` redirects it). `App.tsx` opens room links full-screen. A tab whose sessionStorage holds the room's host token is the host; any other tab is a guest and mounts read-only (no library load, no saved-queue writes).
 
-### Playback controller hooks
+### Playback engine hooks
 
-`usePlaybackController` exposes:
+`PlaybackEngine` (`src/player/PlaybackEngine.ts`) exposes:
 
-| Hook | Purpose |
-|------|---------|
-| `setListeningSyncMode('off' \| 'host' \| 'guest')` | Any role → `StreamingAudioPlayer.setNativeOnly(true)`. Guest → no queue auto-advance, no gapless preload. |
+| Method | Purpose |
+|--------|---------|
+| `setSyncMode('off' \| 'host' \| 'guest')` | Any role → `StreamingAudioPlayer.setNativeOnly(true)`. Guest → no queue auto-advance, no gapless preload. |
 | `getSyncClock()` | `SyncClock` of the native `<audio>` path, else `null`. |
-| `engine` | The `PlaybackEngine`. The bridge sends play/pause/seek through it (overlapping `play()` from a click, Media Session and the room collapse into one) and publishes host samples on its clock ticks (`subscribePlayback`), not on React re-renders. |
-| `playTrack(track, index, { autoplay, restorePosition, startAt })` | Guests load without playing; hosts reload in place. Resolves `true` on success. |
+| `load(track, { index, autoplay, restorePosition, startAt, silent })` | Guests load without playing; hosts reload in place (`silent`). Resolves `true` unless superseded or failed. |
+| `play()` | Resolves `'playing'`, `'blocked'` (autoplay policy), `'pending'` or `'idle'`. |
+| `nudgeRate(rate)` | Guest drift correction without touching the user's rate setting. |
 
 ```typescript
 interface SyncClock {
@@ -251,7 +252,7 @@ Guest track ids are resolved from the library cache, then one `GET /api/songs?li
 
 ## Production port (`storage.noahcohn.com`)
 
-`rooms.py` depends only on FastAPI and `url_shortener.py`, so the bridge can mount it unchanged:
+`server/rooms.py` depends only on FastAPI and `server/url_shortener.py`, so the bridge can mount it unchanged:
 
 ```python
 from rooms import RoomManager, create_rooms_router
@@ -272,9 +273,9 @@ Checklist:
 - [ ] nginx: `proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";` and `proxy_read_timeout ≥ 60s` for `/ws/` (heartbeats and TIME_SYNC keep sockets busy every ≤ 15 s)
 - [ ] `wss://` on the existing certificate
 - [ ] Player origin in `CORS_ALLOWED_ORIGINS` (REST **and** WebSocket)
-- [ ] `GET /api/health` reports `rooms_active` (done in `app.py`)
+- [ ] `GET /api/health` reports `rooms_active` (done in `server/app.py`)
 
-Until then the player shows "Listening rooms are not available on this server yet" when `POST /api/rooms` returns 404, or `REACT_APP_ROOMS_API_URL` can point at an `app.py` deployment while songs stay on `storage.noahcohn.com`.
+Until then the player shows "Listening rooms are not available on this server yet" when `POST /api/rooms` returns 404, or `REACT_APP_ROOMS_API_URL` can point at an `server/app.py` deployment while songs stay on `storage.noahcohn.com`.
 
 ---
 
@@ -284,9 +285,9 @@ Until then the player shows "Listening rooms are not available on this server ye
 |------|--------|
 | `tests/listeningSync.test.ts` | `syncEngine` thresholds / hysteresis / seek lead, `clockSync`, protocol decoding, links |
 | `tests/listeningRoom.test.ts` | `GuestSync` apply snapshot + drift correct against a simulated `<audio>` clock, `HostPublisher` event selection, `RoomConnection` JOIN / clock / reconnect / LEAVE |
-| `tests/test_rooms.py` | state transitions, validation, rate limit, origin check, host/guest WebSocket flow, delete, grace expiry, sweep |
+| `server/tests/test_rooms.py` | state transitions, validation, rate limit, origin check, host/guest WebSocket flow, delete, grace expiry, sweep |
 
-Manual two-tab check: run `app.py` with a few long tracks, start the dev server with `REACT_APP_API_URL=http://localhost:7860`, host in one tab, open the join link in another.
+Manual two-tab check: run `server/app.py` with a few long tracks, start the dev server with `REACT_APP_API_URL=http://localhost:7860`, host in one tab, open the join link in another.
 
 ---
 
@@ -294,7 +295,7 @@ Manual two-tab check: run `app.py` with a few long tracks, start the dev server 
 
 - WebRTC data channel for sub-100 ms sync and lower server load
 - Guest roles: listen-only vs co-DJ (`guest:seek_request` + host approval)
-- TinyURL for join links (`url_shortener.py`)
+- TinyURL for join links (`server/url_shortener.py`)
 - Buffered-backend clocks (worklet ring position / `AudioContext.currentTime` mapping) — `SyncClock` is the extension point
 - Studio DSP (separate PR train): Rubber Band tempo on worklet/SDL, LUFS meter, hashed WASM artifacts
 

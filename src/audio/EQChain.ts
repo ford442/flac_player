@@ -57,21 +57,21 @@ export class EQChain {
 
     // Chain: filter[0] → filter[1] → … → filter[n-1]
     for (let i = 0; i < this.filters.length - 1; i++) {
-      this.filters[i].connect(this.filters[i + 1]);
+      this.filters[i]!.connect(this.filters[i + 1]!);
     }
 
-    this.input  = this.filters[0];
-    this.output = this.filters[this.filters.length - 1];
+    this.input  = this.filters[0]!;
+    this.output = this.filters[this.filters.length - 1]!;
   }
 
   setBandGain(bandIndex: number, gainDb: number): void {
     if (bandIndex < 0 || bandIndex >= this.filters.length) return;
-    this.filters[bandIndex].gain.value = Math.max(-12, Math.min(12, gainDb));
+    this.filters[bandIndex]!.gain.value = Math.max(-12, Math.min(12, gainDb));
   }
 
   getBandGain(bandIndex: number): number {
     if (bandIndex < 0 || bandIndex >= this.filters.length) return 0;
-    return this.filters[bandIndex].gain.value;
+    return this.filters[bandIndex]!.gain.value;
   }
 
   getAllGains(): number[] {

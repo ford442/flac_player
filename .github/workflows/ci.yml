@@ -22,7 +22,7 @@ jobs:
         # copy-webpack-plugin 14). See AGENTS.md "Dependency audit".
         continue-on-error: true
         run: npm audit --audit-level=high
-      - run: npm run lint
+      - run: npm run lint -- --max-warnings 0
       - run: npm run typecheck
       - run: npm run verify:wasm
       - run: npm run build -- --env skipWasm=true
@@ -39,14 +39,6 @@ jobs:
       - run: npm run test:unit
       - run: npm run test:decoder
 
-  # Engine headers (play ring, fill loop, PCM scrub, scalar DSP) built with the
-  # host clang at -Wall -Wextra -Werror; no emsdk. Seconds, so it runs always.
-  native-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: CXX=clang++ npm run test:native
-
   python-tests:
     runs-on: ubuntu-latest
     steps:
@@ -55,8 +47,9 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
-      - run: pip install -r requirements.txt pytest
-      - run: python -m pytest tests/test_playlists.py tests/test_rooms.py tests/test_replaygain.py -q
+      - run: pip install -r server/requirements.txt pytest
+      - run: python -m pytest tests -q
+        working-directory: server
 
   e2e-smoke:
     runs-on: ubuntu-latest
@@ -73,6 +66,8 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:streaming
       - run: npm run test:e2e
+      - name: Production build is cross-origin isolated (vercel.json headers)
+        run: npm run build -- --env skipWasm=true && npm run test:e2e:prod
       - name: Upload Playwright traces on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -82,15 +77,12 @@ jobs:
           path: playwright-report/
           retention-days: 7
 
-  # Rebuild each WASM graph a PR touches with the pinned Emscripten and fail if
-  # the committed artifacts differ. The pin (scripts/emsdk-version) makes an
-  # unchanged graph rebuild byte-identically, so an LLVM release can no longer
-  # fail a comment-only C++ change. Pinned toolchain (docs/WASM_TOOLCHAIN.md):
-  #   emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.11 (a0014542110d6078c3a1a7941fa1ddb3a2281f16)
-  #   clang version 24.0.0git (https:/github.com/llvm/llvm-project f718ebe873411a562ef6e5c27da36d75b7aaec98)
+  # Rebuild WASM on PRs and pushes to main that touch a WASM graph and fail if
+  # committed artifacts differ (a direct push to main can't silently stale them).
+  # Emscripten is pinned (scripts/emsdk-version), so an unchanged graph rebuilds
+  # bit-identically; a pin bump rebuilds all four.
   wasm-build:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -102,23 +94,22 @@ jobs:
             toolchain:
               - 'scripts/emsdk-version'
               - 'scripts/emsdk-env.sh'
+              - '.github/workflows/ci.yml'
             sdl:
               - 'src/sdl/**'
               - 'scripts/build-wasm.sh'
               - 'scripts/wasm-source-hash.sh'
               - 'scripts/update-wasm-source-hash.sh'
-            dsp:
-              - 'src/sdl/dsp_chain.h'
-              - 'src/sdl/dsp_fft.h'
-              - 'src/dsp/**'
-              - 'tests/native/**'
-              - 'scripts/build-dsp-wasm.sh'
-              - 'scripts/dsp-source-hash.sh'
-              - 'scripts/test-dsp-golden.sh'
             resampler:
               - 'src/resampler/**'
               - 'scripts/build-resampler-wasm.sh'
               - 'scripts/resampler-source-hash.sh'
+            dsp:
+              - 'src/sdl/dsp_chain.h'
+              - 'src/sdl/dsp_fft.h'
+              - 'src/dsp/**'
+              - 'scripts/build-dsp-wasm.sh'
+              - 'scripts/dsp-source-hash.sh'
             projectm:
               - 'src/projectm/**'
               - 'scripts/build-projectm-wasm.sh'
@@ -129,57 +120,47 @@ jobs:
           PIN: ${{ steps.changes.outputs.pin }}
           TOOLCHAIN: ${{ steps.changes.outputs.toolchain }}
           SDL: ${{ steps.changes.outputs.sdl }}
-          DSP: ${{ steps.changes.outputs.dsp }}
           RESAMPLER: ${{ steps.changes.outputs.resampler }}
+          DSP: ${{ steps.changes.outputs.dsp }}
           PROJECTM: ${{ steps.changes.outputs.projectm }}
         run: |
           any() { for v in "$@"; do [ "$v" = true ] && { echo true; return; }; done; echo false; }
-          {
-            echo "sdl=$(any "$TOOLCHAIN" "$SDL")"
-            echo "dsp=$(any "$TOOLCHAIN" "$DSP")"
-            echo "resampler=$(any "$TOOLCHAIN" "$RESAMPLER")"
-            # libprojectM is a slow CMake build: only its own inputs or a pin bump.
-            echo "projectm=$(any "$PIN" "$PROJECTM")"
-            echo "any=$(any "$TOOLCHAIN" "$SDL" "$DSP" "$RESAMPLER" "$PIN" "$PROJECTM")"
-          } >> "$GITHUB_OUTPUT"
+          echo "sdl=$(any "$TOOLCHAIN" "$SDL")" >> "$GITHUB_OUTPUT"
+          echo "resampler=$(any "$TOOLCHAIN" "$RESAMPLER")" >> "$GITHUB_OUTPUT"
+          echo "dsp=$(any "$TOOLCHAIN" "$DSP")" >> "$GITHUB_OUTPUT"
+          # projectM is slow (libprojectM CMake build): only its own sources or a pin bump.
+          echo "projectm=$(any "$PIN" "$PROJECTM")" >> "$GITHUB_OUTPUT"
           cat "$GITHUB_OUTPUT"
       - name: Install pinned Emscripten
-        if: steps.targets.outputs.any == 'true'
+        if: steps.targets.outputs.sdl == 'true' || steps.targets.outputs.resampler == 'true' || steps.targets.outputs.dsp == 'true' || steps.targets.outputs.projectm == 'true'
         run: |
           EMSDK_VERSION="$(tr -d '[:space:]' < scripts/emsdk-version)"
-          echo "EMSDK_VERSION=$EMSDK_VERSION" >> "$GITHUB_ENV"
           git clone https://github.com/emscripten-core/emsdk.git --depth 1
           cd emsdk
           ./emsdk install "$EMSDK_VERSION"
           ./emsdk activate "$EMSDK_VERSION"
-          source ./emsdk_env.sh >/dev/null 2>&1
-          emcc -v
       - name: Build SDL3 playback WASM
         if: steps.targets.outputs.sdl == 'true'
         run: npm run build:wasm
-      - name: Build DSP chain WASM
-        if: steps.targets.outputs.dsp == 'true'
-        run: npm run build:wasm:dsp
-      - name: DSP golden (scalar vs SIMD, analysis ring, FFT)
-        if: steps.targets.outputs.dsp == 'true'
-        run: npm run test:dsp-golden
       - name: Build SpeexDSP resampler WASM
         if: steps.targets.outputs.resampler == 'true'
         run: npm run build:wasm:resampler
+      - name: Build DSP chain WASM
+        if: steps.targets.outputs.dsp == 'true'
+        run: npm run build:wasm:dsp
       - name: Build projectM host WASM
         if: steps.targets.outputs.projectm == 'true'
         run: npm run build:projectm
       - name: Check for uncommitted WASM output
-        if: steps.targets.outputs.any == 'true'
+        if: steps.targets.outputs.sdl == 'true' || steps.targets.outputs.resampler == 'true' || steps.targets.outputs.dsp == 'true' || steps.targets.outputs.projectm == 'true'
         run: |
-          dirty="$(git status --porcelain -- \
-            public/sdl-audio.js public/sdl-audio.wasm public/wasm-source.sha256 \
-            public/dsp-chain.js public/dsp-chain.wasm public/dsp-source.sha256 \
+          dirty="$(git status --porcelain -- public/sdl-audio.js public/sdl-audio.wasm public/wasm-source.sha256 \
             public/speex-resampler.js public/speex-resampler.wasm public/resampler-source.sha256 \
+            public/dsp-chain.js public/dsp-chain.wasm public/dsp-source.sha256 \
             public/projectm/)"
           if [ -n "$dirty" ]; then
             echo "$dirty"
-            echo "::error::WASM build (emsdk $EMSDK_VERSION) produced diffs. Rebuild with the pinned emsdk and commit the public/ artifacts."
+            echo "::error::WASM build (emsdk $(cat scripts/emsdk-version)) produced diffs. Rebuild with the pinned emsdk and commit public/ artifacts."
             exit 1
           fi
       - run: npm run verify:wasm

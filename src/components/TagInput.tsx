@@ -80,7 +80,7 @@ export const TagInput: React.FC<TagInputProps> = ({
         addTag(inputValue);
       }
     } else if (e.key === 'Backspace' && !inputValue && tags.length > 0) {
-      removeTag(tags[tags.length - 1]);
+      removeTag(tags[tags.length - 1]!);
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
       setSelectedIndex(prev => (prev + 1) % Math.max(suggestions.length, 1));
@@ -136,7 +136,7 @@ export const TagInput: React.FC<TagInputProps> = ({
       </div>
       
       {showSuggestions && suggestions.length > 0 && (
-        <div id={listboxId} role="listbox" aria-label={`${label} suggestions`} className="absolute z-50 mt-1 w-full bg-[#1a1a2e] border border-white/20 rounded-lg shadow-xl max-h-48 overflow-auto">
+        <div id={listboxId} role="listbox" aria-label={`${label} suggestions`} className="absolute z-50 mt-1 w-full bg-surface-raised border border-white/20 rounded-lg shadow-xl max-h-48 overflow-auto">
           {suggestions.map((suggestion, index) => (
             <button
               type="button"
@@ -160,7 +160,7 @@ export const TagInput: React.FC<TagInputProps> = ({
       )}
       {(suggestionsLoading || suggestedTags.some(t => !tags.includes(t))) && (
         <div className="mt-1 flex flex-wrap items-center gap-1 text-xs" aria-label="Suggested tags" role="group">
-          <span className="text-gray-500">{suggestionsLoading ? 'Finding suggestions…' : 'Suggested:'}</span>
+          <span className="text-gray-400">{suggestionsLoading ? 'Finding suggestions…' : 'Suggested:'}</span>
           {suggestedTags.filter(t => !tags.includes(t)).slice(0, 8).map(tag => (
             <button
               type="button"

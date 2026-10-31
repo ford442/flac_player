@@ -202,10 +202,17 @@ The user ticks which fields to apply; only then is `PATCH /api/songs/{id}` sent 
 `title`, `genre`, `description`, and/or merged `tags`. `artist` is shown for reference only —
 the PATCH body has no `author` field yet.
 
-### Library pagination & tag suggestions (frontend)
+### Library catalog & tag suggestions (frontend)
 
-- `usePlayerData` fetches `GET /api/songs?limit=200&offset=N` (`LIBRARY_PAGE_SIZE`). "Load more"
-  requests the next offset with the same filters and appends; it is shown while the last page was full.
+- `syncRemoteLibrary` (`src/catalog/remoteSync.ts`) walks `GET /api/songs?limit=1000&offset=N&sort_by=date&sort_desc=false`
+  into the IndexedDB catalog: unchanged rows are skipped, rows the host stopped listing are deleted once
+  the walk completes, and a host that ignores `offset` (page repeats) ends the walk. Neither host supports
+  `updated_since` yet; adding it to `list_songs` would let the sync fetch only changed rows.
+- `useLibraryCatalog` (`src/api/library.ts`) filters, sorts, and computes tags and stats from the catalog
+  with the hosts' semantics, so the library works offline. `GET /api/songs/tags` and `/stats` are no longer
+  called. "Load more" widens a local window of `LIBRARY_PAGE_SIZE` (200) rows.
+- Responses are validated with valibot (`src/api/schemas.ts`); a mistyped optional field reads as
+  undefined and an invalid row is dropped rather than failing the page.
 - Library edit mode calls `GET /api/songs/{id}/suggest-tags` and shows the results as one-click chips
   under `TagInput`.
 
@@ -214,8 +221,9 @@ the PATCH body has no `author` field yet.
 A **playlist** is a named, editable, persistent list of track ids. It is a different object from a
 **share link** (`POST /api/share`), which stays an immutable, expiring snapshot and is unchanged.
 
-**Local-first (frontend).** The Playlists tab saves playlists in IndexedDB (`flac_player_playlists`,
-`src/storage/playlistStore.ts`, model `{ id, title, description, trackIds, updatedAt, origin: 'local' | 'cloud' }`).
+**Local-first (frontend).** The Playlists tab saves playlists in the catalog database (`flac_player`,
+`playlists` table; `src/storage/playlistStore.ts`; the pre-catalog `flac_player_playlists` database is
+imported once, model `{ id, title, description, trackIds, updatedAt, origin: 'local' | 'cloud' }`).
 They work with no backend support: create from the queue, rename, delete, reorder (drag or ▲/▼), replace with
 the queue, and play. Deleting a local playlist never touches the network. Only track ids are stored — audio
 bytes stay in `trackCache` / the Cache API. Tracks no longer in the library are skipped on play.
@@ -236,7 +244,7 @@ Titles are trimmed and must be non-empty (≤ 200 chars); `track_ids` ≤ 5000. 
 `data/playlists/index.json` (next to `data/songs/index.json`). Tested by `tests/test_playlists.py`
 (`pytest tests/test_playlists.py`).
 
-**Client.** `songApi.ts` / `AudioLoader` expose `createCloudPlaylist`, `replaceCloudPlaylist`,
+**Client.** `songApi.ts` exposes `createCloudPlaylist`, `replaceCloudPlaylist`,
 `deleteCloudPlaylist` and `probePlaylistWriteSupport`. The tab's cloud section only *reads*
 `GET {REACT_APP_PLAYLIST_API_URL}/api/playlists` (loaded when the tab opens); a 404/empty answer just means
 "no cloud playlists" and never affects local ones. **Save copy** imports a cloud playlist as a local one
@@ -412,8 +420,11 @@ All modes share one PCM pipeline — **no duplicate audio decode**. The player f
 
 Routing (`src/utils/projectMBridge.ts`):
 
-- **In-app host:** When `ProjectMHost` is mounted, PCM is fed directly to projectM WASM via `registerInAppProjectMHost()`.
-- **External embed:** Same PCM is also sent via `postMessage` and `BroadcastChannel('projectm-audio')`.
+- **In-app host:** When `ProjectMHost` is mounted, PCM is fed directly to projectM WASM via `registerInAppProjectMHost()`, and nothing is posted outside the page.
+- **External embed:** Otherwise each block goes to `window.opener` if there is one, else to `window.parent` when framed (`postMessage(msg, '*')`), and also to `BroadcastChannel('projectm-audio')`.
+
+Message shape: `{ type: 'pcm', buffer: Float32Array, channels: number, sampleRate?: number }`.
+The worklet tap sends interleaved multichannel blocks with `sampleRate`. The analyser fallback sends mono blocks without it.
 
 ### Embed mode (`?projectm=1`)
 
@@ -425,28 +436,38 @@ https://<player-url>/?projectm=1
 
 Compact transport UI (`EmbedPlayerView`) is shown. PCM bridge is wired automatically.
 
-**Popup:**
-
-```js
-const player = window.open('https://<player-url>/?projectm=1', 'flac-player');
-window.addEventListener('message', (e) => {
-  if (e.data?.type === 'pcm') {
-    projectM.addPCMfloat(e.data.buffer, e.data.channels);
-  }
-});
-```
-
-**iframe:**
+**Supported: iframe + `postMessage`.** The player posts to `window.parent`, which works across origins:
 
 ```html
-<iframe src="https://<player-url>/?projectm=1" id="flac-player"></iframe>
+<iframe src="https://<player-url>/?projectm=1" name="flac-player" allow="autoplay"></iframe>
 <script>
-  const bc = new BroadcastChannel('projectm-audio');
-  bc.onmessage = (e) => {
-    if (e.data?.type === 'pcm') projectM.addPCMfloat(e.data.buffer, e.data.channels);
-  };
+  const PLAYER_ORIGIN = 'https://<player-url>';
+  window.addEventListener('message', (e) => {
+    if (e.origin !== PLAYER_ORIGIN || e.data?.type !== 'pcm') return;
+    projectM.addPCMfloat(e.data.buffer, e.data.channels);
+  });
 </script>
 ```
+
+- The framed player is cross-origin isolated only if the parent page is isolated
+  too and grants `allow="cross-origin-isolated"`. Otherwise it runs without
+  `SharedArrayBuffer`: the worklet ring and tap fall back to message transport
+  and the WASM engine is unavailable (see `docs/DEPLOYMENT.md` → Cross-origin isolation).
+  PCM still flows.
+- If the parent page sends COEP `require-corp`, the player's HTML must be served
+  with `Cross-Origin-Resource-Policy: cross-origin`. The shipped configs send
+  `same-origin`, which blocks the frame.
+
+**Popup (`window.open`): not supported on isolated deploys.** The player sends
+`Cross-Origin-Opener-Policy: same-origin`, so a popup opened from another origin
+gets its own browsing context group: its `window.opener` is `null` and nothing is
+posted back. The opener's handle reports `closed`. Popups only work from a page
+on the player's own origin that also sends COOP `same-origin`, or against a
+deploy without COOP (e.g. GitHub Pages).
+
+**`BroadcastChannel('projectm-audio')`** is same-origin only, and partitioned by
+top-level site. It reaches other pages of the same player deploy (e.g. a
+projectM page served from the same origin), never a cross-origin parent or opener.
 
 ### Share links with projectM
 
@@ -458,7 +479,7 @@ https://<player-url>/?share=<id>&aesthetic=projectm
 
 ### Requirements
 
-- **Cross-origin isolation** (COOP/COEP) for AudioWorklet + projectM pthread builds — configured in `webpack.config.js` dev server, `netlify.toml`, and `vercel.json`.
+- **Cross-origin isolation** (COOP/COEP) for `SharedArrayBuffer`: the worklet play ring and projectM PCM tap, plus the WASM engine's shared memory. Configured in the `webpack.config.js` dev server, `netlify.toml` and `vercel.json`; other hosts in `docs/DEPLOYMENT.md`. The projectM host itself is built **without** `-pthread` (`scripts/build-projectm-wasm.sh`) and runs without isolation.
 - **Cleanup:** Call the teardown returned by `createProjectMPCMFeed(player)` when destroying the player backend. Track changes invoke `notifyInAppProjectMTrackChange()` (no audio glitch — PCM stream continues).
 
 ### Presets (Phase 2)

@@ -1,16 +1,30 @@
 /**
  * Shared AudioContext sample-rate and latency policy.
  *
- * Native file rate is preferred when the device can open it. Otherwise the
- * constructor omits `sampleRate` and the OS device default is used.
+ * Default: one context at the output device's rate for the page's lifetime.
+ * Browsers resample a context to the device anyway, so a context opened at the
+ * file's rate is only bit-exact when the device already runs at that rate, and
+ * then the device-rate context is too (decision record: docs/AUDIO_BACKENDS.md,
+ * "One context at the device rate"). `recreateOnSampleRateMismatch` (or
+ * `?ctxrate=native`) restores the old open-at-file-rate behavior.
  */
 
 export type LatencyMode = 'playback' | 'interactive' | 'balanced';
 
 export type AudioContextLatencyHint = AudioContextLatencyCategory | number;
 
+/**
+ * Render quantum hint (Chromium `AudioContextOptions.renderSizeHint`).
+ * 'default' omits the option (128-frame quantum).
+ */
+export type RenderSizeMode = 'default' | 'hardware' | '256' | '512';
+
+export type RenderSizeHint = 'default' | 'hardware' | number;
+
 export interface AudioContextOptionsPolicy {
   latencyHint: AudioContextLatencyHint;
+  /** Undefined = omit from the constructor. */
+  renderSizeHint?: RenderSizeHint;
   /** Preferred constructor rate. Undefined = omit (device default / first-track native). */
   sampleRate?: number;
   recreateOnSampleRateMismatch: boolean;
@@ -21,8 +35,18 @@ export const BALANCED_LATENCY_SECONDS = 0.03;
 
 export const DEFAULT_AUDIO_CONTEXT_POLICY: AudioContextOptionsPolicy = {
   latencyHint: 'playback',
-  recreateOnSampleRateMismatch: true,
+  recreateOnSampleRateMismatch: false,
 };
+
+/** `?ctxrate=native`: open (and rebuild) the context at each file's rate, for A/B. */
+export function isNativeRateRequestedByUrl(): boolean {
+  if (typeof window === 'undefined' || !window.location) return false;
+  try {
+    return new URLSearchParams(window.location.search).get('ctxrate') === 'native';
+  } catch {
+    return false;
+  }
+}
 
 export function isLatencyMode(value: string | null | undefined): value is LatencyMode {
   return value === 'playback' || value === 'interactive' || value === 'balanced';
@@ -32,6 +56,25 @@ export function latencyModeToHint(mode: LatencyMode): AudioContextLatencyHint {
   if (mode === 'interactive') return 'interactive';
   if (mode === 'balanced') return BALANCED_LATENCY_SECONDS;
   return 'playback';
+}
+
+export const DEFAULT_RENDER_SIZE_MODE: RenderSizeMode = 'default';
+
+export function isRenderSizeMode(value: string | null | undefined): value is RenderSizeMode {
+  return value === 'default' || value === 'hardware' || value === '256' || value === '512';
+}
+
+export function renderSizeModeToHint(mode: RenderSizeMode): RenderSizeHint | undefined {
+  if (mode === 'hardware') return 'hardware';
+  if (mode === '256') return 256;
+  if (mode === '512') return 512;
+  return undefined;
+}
+
+/** True when the browser exposes `AudioContext.renderQuantumSize` (and so reads renderSizeHint). */
+export function isRenderSizeHintSupported(): boolean {
+  const Ctor = globalThis.AudioContext as { prototype?: object } | undefined;
+  return !!Ctor?.prototype && 'renderQuantumSize' in Ctor.prototype;
 }
 
 export function latencyHintsEqual(
@@ -57,8 +100,11 @@ export function shouldRecreateContext(options: {
   liveHint: AudioContextLatencyHint;
   nextHint: AudioContextLatencyHint;
   recreateOnMismatch: boolean;
+  liveRenderSize?: RenderSizeHint;
+  nextRenderSize?: RenderSizeHint;
 }): boolean {
   if (!latencyHintsEqual(options.liveHint, options.nextHint)) return true;
+  if (options.liveRenderSize !== options.nextRenderSize) return true;
   if (options.targetRate === undefined) return false;
   if (options.liveRate === options.targetRate) return false;
   return options.recreateOnMismatch;
@@ -69,54 +115,34 @@ type AudioContextCtor = typeof AudioContext & {
 };
 
 /**
- * Probe answers for the page lifetime, per constructor (a swapped-in fake gets its
- * own). Without `isSampleRateSupported` a probe opens and closes a whole context.
+ * Whether to ask the constructor for `rate`. Uses `AudioContext.isSampleRateSupported`
+ * where it exists and otherwise assumes yes: a rejected rate is caught by the
+ * constructor relaxation ({@link relaxContextOptions}) and remembered there, so no
+ * throwaway context is ever opened just to test a rate.
  */
-const probeResults = new WeakMap<object, Map<number, boolean>>();
-
-/** Probe whether the constructor will accept `rate`. Closes any throwaway context. */
-export function probeSampleRateSupported(rate: number): boolean {
+export function isSampleRateAccepted(rate: number): boolean {
   if (!Number.isFinite(rate) || rate <= 0) return false;
   const Ctor = globalThis.AudioContext as AudioContextCtor | undefined;
   if (!Ctor) return false;
-  let results = probeResults.get(Ctor);
-  if (!results) {
-    results = new Map();
-    probeResults.set(Ctor, results);
-  }
-  const known = results.get(rate);
-  if (known !== undefined) return known;
-  const supported = probeConstructor(Ctor, rate);
-  results.set(rate, supported);
-  return supported;
-}
-
-function probeConstructor(Ctor: AudioContextCtor, rate: number): boolean {
-  if (typeof Ctor.isSampleRateSupported === 'function') {
-    try {
-      return Ctor.isSampleRateSupported(rate);
-    } catch {
-      return false;
-    }
-  }
+  if (typeof Ctor.isSampleRateSupported !== 'function') return true;
   try {
-    const ctx = new Ctor({ sampleRate: rate });
-    const ok = Math.abs(ctx.sampleRate - rate) < 1;
-    void ctx.close();
-    return ok;
+    return Ctor.isSampleRateSupported(rate);
   } catch {
     return false;
   }
 }
 
-/** `AudioContextOptions` plus `sinkId` (Chromium 110+; not yet in lib.dom). */
+/** `AudioContextOptions` plus `sinkId` / `renderSizeHint` (Chromium; not yet in lib.dom). */
 export interface AudioContextOptionsWithSink extends AudioContextOptions {
-  sinkId?: string;
+  /** A device id, or `{ type: 'none' }` to render without an output device. */
+  sinkId?: string | { type: 'none' };
+  renderSizeHint?: RenderSizeHint;
 }
 
 /**
  * Next, less demanding constructor options after `new AudioContext(options)` threw.
- * Order: numeric latencyHint → 'interactive', then drop sinkId, then drop sampleRate.
+ * Order: numeric latencyHint → 'interactive', then drop sinkId, then drop
+ * renderSizeHint, then drop sampleRate (native rate is the last thing given up).
  * Returns null when nothing is left to relax (caller rethrows).
  */
 export function relaxContextOptions(
@@ -128,6 +154,11 @@ export function relaxContextOptions(
   if (options.sinkId !== undefined) {
     const rest = { ...options };
     delete rest.sinkId;
+    return rest;
+  }
+  if (options.renderSizeHint !== undefined) {
+    const rest = { ...options };
+    delete rest.renderSizeHint;
     return rest;
   }
   if (options.sampleRate !== undefined) {

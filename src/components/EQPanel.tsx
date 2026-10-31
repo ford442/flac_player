@@ -3,7 +3,7 @@ import { DEFAULT_EQ_BANDS } from '../audio/EQChain';
 import type { GaplessMode } from '../types/gapless';
 import { MAX_CROSSFADE_MS, MIN_CROSSFADE_MS } from '../types/gapless';
 import type { ReplayGainMode } from '../utils/replayGain';
-import type { LatencyMode } from '../audio/sampleRatePolicy';
+import type { LatencyMode, RenderSizeMode } from '../audio/sampleRatePolicy';
 import type { AudioOutputInfo } from '../audio/AudioContextManager';
 import type { OutputDeviceOption } from '../hooks/useAudioOutputInfo';
 import { useAudioCapabilities } from './AudioCapabilitiesContext';
@@ -18,15 +18,28 @@ export interface AudioOutputControls {
   /** `navigator.mediaDevices.selectAudioOutput` exists. */
   pickerSupported: boolean;
   devices: OutputDeviceOption[];
+  /** Outputs exist but their ids are hidden until a media permission (Chromium). */
+  devicesHidden?: boolean;
+  onRevealDevices?: () => void;
   onSelectOutputDevice: (deviceId?: string, label?: string) => Promise<void>;
   info: AudioOutputInfo | null;
+  /** The WASM engine output mode is selected. */
+  externalPlayback: boolean;
+  /** AudioContext renderSizeHint (callback quantum). Omitted → row hidden. */
+  renderSize?: {
+    mode: RenderSizeMode;
+    /** Browser exposes `renderQuantumSize`; otherwise the hint is never sent. */
+    supported: boolean;
+    onChange: (mode: RenderSizeMode) => void;
+  };
 }
 
 function formatMs(seconds: number | null): string {
   return seconds === null ? '—' : `${(seconds * 1000).toFixed(1)} ms`;
 }
 
-function formatDspEngine({ info }: AudioOutputControls): string {
+function formatDspEngine({ info, externalPlayback }: AudioOutputControls): string {
+  if (externalPlayback) return 'WASM engine';
   if (!info) return '—';
   return info.dspEngine === 'wasm' ? 'Worklet WASM' : 'Web Audio nodes';
 }
@@ -71,6 +84,13 @@ const LATENCY_OPTIONS: { mode: LatencyMode; label: string; hint: string }[] = [
   { mode: 'playback', label: 'Playback', hint: 'Higher buffering — library listening and streaming' },
   { mode: 'interactive', label: 'Interactive', hint: 'Lower latency — scrubbing, worklet, projectM' },
   { mode: 'balanced', label: 'Balanced', hint: 'Numeric hint (~30 ms) when the browser supports it' },
+];
+
+const RENDER_SIZE_OPTIONS: { mode: RenderSizeMode; label: string; hint: string }[] = [
+  { mode: 'default', label: '128', hint: 'Web Audio default render quantum (option omitted)' },
+  { mode: 'hardware', label: 'Hardware', hint: 'Match the device callback size — fewer worklet wakeups' },
+  { mode: '256', label: '256', hint: '256-frame quantum' },
+  { mode: '512', label: '512', hint: '512-frame quantum — most headroom for the worklet ring' },
 ];
 
 export const EQPanel: React.FC<EQPanelProps> = ({
@@ -143,7 +163,7 @@ export const EQPanel: React.FC<EQPanelProps> = ({
                 >
                   {band.label}
                 </span>
-                <span className={`text-xs font-mono ${gain > 0 ? 'text-purple-300' : gain < 0 ? 'text-red-400' : 'text-gray-500'}`}>
+                <span className={`text-xs font-mono ${gain > 0 ? 'text-purple-300' : gain < 0 ? 'text-red-400' : 'text-gray-400'}`}>
                   {gain >= 0 ? '+' : ''}{gain.toFixed(1)}
                 </span>
               </div>
@@ -172,6 +192,7 @@ export const EQPanel: React.FC<EQPanelProps> = ({
           className="w-full disabled:opacity-40"
           style={{ accentColor: '#a78bfa' }}
           aria-label="Playback speed"
+          title={rateDisabled ? 'Speed control is unavailable in this output mode' : undefined}
         />
 
         <div className="flex gap-1 mt-1 flex-wrap">
@@ -190,11 +211,6 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             </button>
           ))}
         </div>
-        {rateDisabled && (
-          <p className="text-xs text-gray-500 mt-2">
-            The current output mode cannot change speed. Switch to Streaming or Web Audio.
-          </p>
-        )}
       </div>
 
       {/* ReplayGain / Loudness */}
@@ -229,9 +245,9 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             Prevent clipping (peak-aware limiter)
           </label>
         )}
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-gray-400 mt-2">
           Applies before the master volume fader. Gain is clamped to ±12 dB.
-          Crossfade overlap may briefly mismatch levels between tracks.
+          The WASM engine uses the shared speaker DSP; crossfade overlap may briefly mismatch levels.
         </p>
       </div>
 
@@ -256,26 +272,60 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             </button>
           ))}
         </div>
-        <p className="text-xs text-gray-500 mt-2">
-          Recreates the shared AudioContext. Same-rate albums stay gapless; a rate or latency
-          change may produce a brief audible gap.
+        {audioOutput?.renderSize && (
+          <div className="mt-3">
+            <span className="text-xs text-gray-400">Render quantum</span>
+            <div className="flex gap-1 mt-1 flex-wrap">
+              {RENDER_SIZE_OPTIONS.map(({ mode, label, hint }) => (
+                <button
+                  key={mode}
+                  onClick={() => audioOutput.renderSize!.onChange(mode)}
+                  disabled={!audioOutput.renderSize!.supported}
+                  className={`px-2 py-1 rounded text-xs transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                    audioOutput.renderSize!.mode === mode
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-white/10 text-gray-400 hover:bg-white/20 hover:text-white'
+                  }`}
+                  title={hint}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {!audioOutput.renderSize.supported && (
+              <p className="text-xs text-gray-400 mt-1">
+                This browser has no <code>renderSizeHint</code>; the graph always runs 128-frame quanta.
+              </p>
+            )}
+          </div>
+        )}
+        <p className="text-xs text-gray-400 mt-2">
+          Recreates the shared AudioContext. Same-rate albums stay gapless; a rate, latency or
+          render-quantum change may produce a brief audible gap. The WASM engine uses this shared
+          AudioContext and output device too.
         </p>
         {audioOutput && (
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1 mt-3 text-xs">
-            <dt className="text-gray-500">Context rate</dt>
+            <dt className="text-gray-400">Context rate</dt>
             <dd className="font-mono text-purple-300">
               {audioOutput.info ? `${audioOutput.info.sampleRate} Hz` : 'not open'}
             </dd>
-            <dt className="text-gray-500">Base latency</dt>
+            <dt className="text-gray-400">Base latency</dt>
             <dd className="font-mono text-purple-300">{formatMs(audioOutput.info?.baseLatency ?? null)}</dd>
-            <dt className="text-gray-500">Output latency</dt>
+            <dt className="text-gray-400">Output latency</dt>
             <dd className="font-mono text-purple-300">{formatMs(audioOutput.info?.outputLatency ?? null)}</dd>
-            <dt className="text-gray-500">Channels</dt>
+            <dt className="text-gray-400">Render quantum</dt>
+            <dd className="font-mono text-purple-300">
+              {audioOutput.info?.renderQuantumSize != null
+                ? `${audioOutput.info.renderQuantumSize} frames`
+                : '128 frames'}
+            </dd>
+            <dt className="text-gray-400">Channels</dt>
             <dd className="font-mono text-purple-300">{audioOutput.info?.channelCount ?? '—'}</dd>
-            <dt className="text-gray-500">EQ / limiter</dt>
+            <dt className="text-gray-400">EQ / limiter</dt>
             <dd
               className="font-mono text-purple-300"
-              title="Who runs EQ, ReplayGain and the limiter. WASM = dsp_chain.h in the dsp-chain worklet, for every output mode."
+              title="Who runs EQ, ReplayGain and the limiter. WASM = dsp_chain.h, the same code on SDL and Web Audio."
             >
               {formatDspEngine(audioOutput)}
             </dd>
@@ -316,6 +366,15 @@ export const EQPanel: React.FC<EQPanelProps> = ({
                   Choose…
                 </button>
               )}
+              {audioOutput.devicesHidden && audioOutput.devices.length === 0 && audioOutput.onRevealDevices && (
+                <button
+                  onClick={audioOutput.onRevealDevices}
+                  className="px-2 py-1 rounded text-xs bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white"
+                  title="This browser lists output devices only after a microphone permission. The microphone is released at once; nothing is recorded."
+                >
+                  Show devices…
+                </button>
+              )}
               {audioOutput.devices.length === 0 && (
                 <>
                   <span className="text-xs text-gray-300 truncate">
@@ -333,8 +392,13 @@ export const EQPanel: React.FC<EQPanelProps> = ({
               )}
             </div>
           ) : (
-            <p className="text-xs text-gray-500 mt-2">
+            <p className="text-xs text-gray-400 mt-2">
               This browser cannot route Web Audio to another device; the system default is used.
+            </p>
+          )}
+          {audioOutput.externalPlayback && (
+            <p className="text-xs text-gray-400 mt-2">
+              This output device also applies to the WASM engine.
             </p>
           )}
         </div>
@@ -384,7 +448,7 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             />
           </div>
         )}
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-gray-400 mt-2">
           {gaplessMode === 'gapless'
             ? 'Pre-buffers the next track for seamless playback on streaming and buffered backends.'
             : gaplessMode === 'crossfade'

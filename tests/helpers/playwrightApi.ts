@@ -20,27 +20,8 @@ export const MOCK_TRACKS = [
   },
 ];
 
-/** Mock library/health API routes used on app startup. */
+/** Mock the library catalog the app syncs on startup (tags and stats are computed locally). */
 export async function mockLibraryApi(page: Page, tracks = MOCK_TRACKS): Promise<void> {
-  await page.route('**/api/songs/tags**', route =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: '[]' })
-  );
-  await page.route('**/api/songs/stats**', route =>
-    route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        total_tracks: tracks.length,
-        rated_4plus: 0,
-        total_duration_hours: 0,
-        total_play_count: 0,
-        untagged_count: 0,
-        trash_count: 0,
-        unique_tags: 0,
-        top_tags: [],
-      }),
-    })
-  );
   await page.route('**/api/songs?**', route =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(tracks) })
   );

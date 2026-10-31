@@ -7,6 +7,8 @@ import {
   clearVisualizerPreference,
   setCompatibilityVisualizer,
   isCompatibilityVisualizerEnabled,
+  subscribeVisualizerPreference,
+  getRendererLabel,
 } from '../src/visuals/rendererSelection';
 
 describe('readVisualizerPreference', () => {
@@ -31,6 +33,25 @@ describe('readVisualizerPreference', () => {
   it('accepts ?renderer= as an alias', () => {
     window.history.replaceState({}, '', '/?renderer=canvas2d');
     expect(readVisualizerPreference()).toBe('canvas2d');
+  });
+
+  it('reads the short ?webgl2=1 opt-in (and =true)', () => {
+    window.history.replaceState({}, '', '/?webgl2=1');
+    expect(readVisualizerPreference()).toBe('webgl2');
+    window.history.replaceState({}, '', '/?webgl2=TRUE');
+    expect(readVisualizerPreference()).toBe('webgl2');
+  });
+
+  it('does not treat other ?webgl2 values as an opt-in', () => {
+    for (const q of ['?webgl2=0', '?webgl2=false', '?webgl2=', '?webgl2=yes']) {
+      window.history.replaceState({}, '', `/${q}`);
+      expect(readVisualizerPreference()).toBeNull();
+    }
+  });
+
+  it('lets an explicit ?visualizer= win over ?webgl2=1', () => {
+    window.history.replaceState({}, '', '/?visualizer=webgpu&webgl2=1');
+    expect(readVisualizerPreference()).toBe('webgpu');
   });
 
   it('falls back to localStorage when URL is absent', () => {
@@ -83,5 +104,54 @@ describe('resolveVisualizerBackend', () => {
     setCompatibilityVisualizer(false);
     expect(isCompatibilityVisualizerEnabled()).toBe(false);
     expect(resolveVisualizerBackend()).toBe('webgpu');
+  });
+});
+
+describe('getRendererLabel', () => {
+  it('claims WebGPU only once a WebGPU visualizer is running', () => {
+    expect(getRendererLabel('webgpu', 'ready').title).toBe('FLAC Player with WebGPU');
+    expect(getRendererLabel('webgpu', 'pending').title).toBe('FLAC Player');
+    expect(getRendererLabel('webgpu', 'failed').title).toBe('FLAC Player — WebGPU unavailable');
+  });
+
+  it('never badges the default WebGPU path', () => {
+    for (const status of ['pending', 'ready', 'failed'] as const) {
+      expect(getRendererLabel('webgpu', status).badge).toBeNull();
+    }
+  });
+
+  it('titles and badges an opted-in WebGL2 renderer as not WebGPU', () => {
+    const ready = getRendererLabel('webgl2', 'ready');
+    expect(ready.title).toBe('FLAC Player with WebGL2 (compatibility renderer)');
+    expect(ready.title).not.toMatch(/WebGPU/);
+    expect(ready.badge).toBe('WebGL2 compatibility renderer — not WebGPU');
+  });
+
+  it('badges WebGL2 as soon as it is selected, before any renderer runs', () => {
+    const pending = getRendererLabel('webgl2', 'pending');
+    expect(pending.title).toBe('FLAC Player');
+    expect(pending.badge).toBe('WebGL2 compatibility renderer — not WebGPU');
+  });
+
+  it('labels the Canvas2D debug renderer, and drops the badge when init failed', () => {
+    expect(getRendererLabel('canvas2d', 'ready').badge).toBe('Canvas2D debug renderer — not WebGPU');
+    const failed = getRendererLabel('webgl2', 'failed');
+    expect(failed.title).toBe('FLAC Player — WebGL2 unavailable');
+    expect(failed.badge).toBeNull();
+  });
+});
+
+describe('subscribeVisualizerPreference', () => {
+  it('has no automatic fallback trigger: a visualizer-fallback event does not change the backend', () => {
+    clearVisualizerPreference();
+    delete window.DEBUG_VISUALIZER;
+    window.history.replaceState({}, '', '/');
+    const seen: string[] = [];
+    const unsubscribe = subscribeVisualizerPreference((b) => seen.push(b));
+    window.dispatchEvent(new CustomEvent('visualizer-fallback', { detail: 'webgpu-no-adapter' }));
+    expect(seen).toEqual([]);
+    window.dispatchEvent(new Event('flac-player-visualizer-change'));
+    expect(seen).toEqual(['webgpu']);
+    unsubscribe();
   });
 });

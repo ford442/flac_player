@@ -13,7 +13,8 @@ import {
   downloadTrackViaSW,
   cancelBackgroundDownload,
 } from '../sw/serviceWorkerClient';
-import { PlaylistTrack } from '../audioLoader';
+import { readStorageStatus, requestPersistentStorage, type StorageStatus } from '../catalog/storagePersistence';
+import type { PlaylistTrack } from '../types/library';
 
 interface OfflineBadgeProps {
   track: PlaylistTrack;
@@ -115,7 +116,7 @@ export const OfflineBadge: React.FC<OfflineBadgeProps> = ({ track, onDownload, o
           <button
             type="button"
             onClick={handleCancel}
-            className="text-gray-500 hover:text-red-400 ml-1"
+            className="text-gray-400 hover:text-red-400 ml-1"
             title="Cancel download"
             aria-label="Cancel download"
           >
@@ -148,7 +149,7 @@ export const OfflineBadge: React.FC<OfflineBadgeProps> = ({ track, onDownload, o
       onClick={handleDownload}
       onDoubleClick={e => e.stopPropagation()}
       data-testid="offline-badge-download"
-      className="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-blue-300 transition-colors"
+      className="inline-flex items-center gap-1 text-xs text-gray-400 hover:text-blue-300 transition-colors"
       title="Download for offline"
       aria-label="Download for offline"
     >
@@ -229,7 +230,51 @@ export const CacheStatsPanel: React.FC<CacheStatsPanelProps> = ({ onClearAll, on
         </p>
       )}
       {canUseBackgroundDownloads() && (
-        <p className="text-xs text-gray-500">Background downloads enabled via service worker</p>
+        <p className="text-xs text-gray-400">Background downloads enabled via service worker</p>
+      )}
+    </div>
+  );
+};
+
+// ─── Browser storage (catalog + audio) ──────────────────────────────────────
+
+/** Origin-wide usage and quota, and whether the browser may evict it under pressure. */
+export const StorageStatusPanel: React.FC = () => {
+  const [status, setStatus] = useState<StorageStatus | null>(null);
+  const [asking, setAsking] = useState(false);
+
+  const refresh = useCallback(() => {
+    readStorageStatus().then(setStatus).catch(() => setStatus({}));
+  }, []);
+  useEffect(refresh, [refresh]);
+
+  const keep = useCallback(async () => {
+    setAsking(true);
+    await requestPersistentStorage();
+    setAsking(false);
+    refresh();
+  }, [refresh]);
+
+  if (!status) return null;
+  const { usage, quota, persisted } = status;
+  return (
+    <div className="space-y-1 text-xs text-gray-400" data-testid="storage-status">
+      {usage !== undefined && quota !== undefined && (
+        <p>Browser storage: {formatBytes(usage)} used of {formatBytes(quota)} available</p>
+      )}
+      {persisted === true && <p className="text-green-400">Library and downloads are kept when storage runs low</p>}
+      {persisted === false && (
+        <div className="flex items-center justify-between gap-2">
+          <span>The browser may clear the library and downloads when storage runs low</span>
+          <button
+            type="button"
+            onClick={() => void keep()}
+            disabled={asking}
+            className="shrink-0 rounded-md bg-white/10 px-2 py-1 text-gray-200 hover:bg-white/20 disabled:opacity-50"
+          >
+            Keep offline data
+          </button>
+        </div>
       )}
     </div>
   );

@@ -318,9 +318,9 @@ describe('single GPUDevice', () => {
     });
   }
 
-  it('requests adapters and devices only in webgpuProbe.ts', () => {
+  it('requests adapters and devices only in the shared WebGPU device service', () => {
     const offenders = sourceFiles(srcRoot).filter((file) => {
-      if (file.endsWith(path.join('visuals', 'webgpuProbe.ts'))) return false;
+      if (file.endsWith(path.join('visuals', 'webgpu', 'deviceService.ts'))) return false;
       return fs.readFileSync(file, 'utf8').split('\n').some((line) => {
         const code = line.trim();
         if (code.startsWith('*') || code.startsWith('//') || code.startsWith('/*')) return false;

@@ -62,14 +62,20 @@ describe('audio backend package layout', () => {
       resolve(__dirname, '../src/components/player-fallback/PlayerFallbackTransportBar.tsx'),
       'utf8'
     );
-    // The mode keeps its stored value; SDL itself left the audio path in #268.
-    expect(src).toMatch(/<option value="sdl">WASM engine<\/option>/);
-    expect(src).not.toMatch(/value="sdl2"/);
+    const options = readFileSync(
+      resolve(__dirname, '../src/components/player-fallback/OutputModeOptions.tsx'),
+      'utf8'
+    );
+    const types = readFileSync(resolve(__dirname, '../src/components/player-fallback/types.ts'), 'utf8');
+    expect(src).toMatch(/<OutputModeOptions \/>/);
+    expect(options).toMatch(/Object\.entries\(OUTPUT_MODE_LABELS\)/);
+    expect(types).toMatch(/\bsdl:\s*'WASM engine'/);
+    expect(options).not.toMatch(/sdl2/);
     const settings = readFileSync(
       resolve(__dirname, '../src/components/player-fallback/PlayerFallbackSettingsTab.tsx'),
       'utf8'
     );
-    expect(settings).not.toMatch(/value="sdl2"/);
+    expect(settings).toMatch(/<OutputModeOptions \/>/);
   });
 
   it('exports the engine transport ABI without linking SDL', () => {

@@ -1,40 +1,37 @@
 import React from 'react';
-import { PlaylistTrack } from '../../audioLoader';
-import { AudioOutputMode } from '../../hooks/usePlayerState';
+import type { AudioOutputMode } from '../../types/audio';
 import { MetadataPanel } from '../MetadataPanel';
-import { LiveWaveformOverview } from '../WaveformOverview';
+import { PlaybackScrubber } from '../PlaybackScrubber';
+import { useActions } from '../PlayerActionsContext';
+import { selectIsLoading, selectIsPlaying, useQueue, useSettings, useTransport } from '../../player/selectors';
 import { getNextQueueIndex, getPreviousQueueIndex } from '../../utils/queueUtils';
-import { OverviewData, PlaybackModeState, TransportControls, TransportState } from './types';
+import { OutputModeOptions } from './OutputModeOptions';
 
-export interface PlayerFallbackTransportBarProps {
-  currentTrack: PlaylistTrack | null;
-  currentFile: File | undefined;
-  analyser: AnalyserNode | null;
-  transportState: TransportState;
-  transportControls: TransportControls;
-  overview: OverviewData;
-  playbackMode: PlaybackModeState;
-  queueLength: number;
-  queueCurrentIndex: number;
-  outputMode: AudioOutputMode;
-  setOutputMode: (m: AudioOutputMode) => void;
-}
-
-export const PlayerFallbackTransportBar: React.FC<PlayerFallbackTransportBarProps> = ({
-  currentTrack, currentFile, analyser, transportState, transportControls, overview,
-  playbackMode, queueLength, queueCurrentIndex, outputMode, setOutputMode,
-}) => {
-  const { isPlaying, isLoading, duration, volume, muted } = transportState;
-  const { onPlay, onNext, onPrevious, onSeek, onMute } = transportControls;
-  const { shuffle, setShuffle, repeatMode, setRepeatMode } = playbackMode;
+/** Bottom transport bar; reads the player store, so it takes no props. */
+export const PlayerFallbackTransportBar: React.FC = () => {
+  const currentTrack = useTransport((t) => t.currentTrack);
+  const isPlaying = useTransport(selectIsPlaying);
+  const isLoading = useTransport(selectIsLoading);
+  const duration = useTransport((t) => t.duration);
+  const queueLength = useQueue((q) => q.tracks.length);
+  const queueCurrentIndex = useQueue((q) => q.currentIndex);
+  const shuffle = useQueue((q) => q.shuffle);
+  const repeatMode = useQueue((q) => q.repeatMode);
+  const volume = useSettings((st) => st.volume);
+  const muted = useSettings((st) => st.muted);
+  const outputMode = useSettings((st) => st.outputMode);
+  const {
+    togglePlay: onPlay, next: onNext, previous: onPrevious, toggleMute: onMute,
+    toggleShuffle, cycleRepeat, setOutputMode,
+  } = useActions();
 
   return (
-    <footer className="border-t border-white/10 bg-[#0a0a18] px-6 py-4">
+    <footer className="border-t border-white/10 bg-surface-sunken px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="w-1/3 flex items-center gap-3">
           {currentTrack && (
             <MetadataPanel
-              file={currentFile}
+              file={currentTrack.file}
               audioUrl={currentTrack.url}
               trackInfo={{
                 title: currentTrack.title || currentTrack.name,
@@ -67,22 +64,13 @@ export const PlayerFallbackTransportBar: React.FC<PlayerFallbackTransportBarProp
               aria-label="Next track">⏭</button>
           </div>
           <div className="w-full max-w-md">
-            <LiveWaveformOverview
-              minmax={overview.minmax ?? null}
-              duration={duration}
-              onSeek={onSeek}
-              analyser={analyser}
-              rms={overview.rms}
-              peak={overview.peak}
-              backend={overview.backend}
-              reason={overview.reason}
-            />
+            <PlaybackScrubber />
           </div>
         </div>
 
         <div className="w-1/3 flex items-center justify-end gap-4">
-          <button onClick={() => setShuffle(s => !s)} className={`text-sm ${shuffle ? 'text-purple-400' : 'text-gray-400'}`} title="Shuffle" aria-label="Toggle shuffle" aria-pressed={shuffle}>🔀</button>
-          <button onClick={() => setRepeatMode(m => m === 'off' ? 'all' : m === 'all' ? 'one' : 'off')}
+          <button onClick={toggleShuffle} className={`text-sm ${shuffle ? 'text-purple-400' : 'text-gray-400'}`} title="Shuffle" aria-label="Toggle shuffle" aria-pressed={shuffle}>🔀</button>
+          <button onClick={cycleRepeat}
             className={`text-sm ${repeatMode !== 'off' ? 'text-purple-400' : 'text-gray-400'}`} title={`Repeat: ${repeatMode}`}
             aria-label={`Repeat mode: ${repeatMode}`} aria-pressed={repeatMode !== 'off'}>
             {repeatMode === 'one' ? '🔂' : '🔁'}
@@ -94,10 +82,7 @@ export const PlayerFallbackTransportBar: React.FC<PlayerFallbackTransportBarProp
           </button>
           <select value={outputMode} onChange={(e) => setOutputMode(e.target.value as AudioOutputMode)}
             className="px-3 py-1 bg-white/10 rounded text-sm" aria-label="Audio output mode">
-            <option value="streaming">Streaming (default)</option>
-            <option value="web-audio">Web Audio (buffered)</option>
-            <option value="worklet">AudioWorklet</option>
-            <option value="sdl">WASM engine</option>
+            <OutputModeOptions />
           </select>
           <span className="text-xs text-gray-400 w-12 text-right">{muted ? '🔇 0%' : `${Math.round(volume * 100)}%`}</span>
         </div>

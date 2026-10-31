@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { PlaylistTrack, RepeatMode } from '../audioLoader';
+import type { PlaylistTrack } from '../types/library';
+import type { RepeatMode } from '../storage/queueStorage';
 
 interface QueuePanelProps {
   queue: PlaylistTrack[];
@@ -97,7 +98,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div role="complementary" aria-label="Play queue" className="queue-panel fixed right-0 top-0 bottom-0 w-80 bg-[#0f0f1e]/95 border-l border-white/10 shadow-2xl flex flex-col z-40">
+    <div role="complementary" aria-label="Play queue" className="queue-panel fixed right-0 top-0 bottom-0 w-80 bg-surface/95 border-l border-white/10 shadow-2xl flex flex-col z-40">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-white/10">
         <div>
@@ -129,7 +130,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
           aria-pressed={shuffle}
           className={`flex-1 px-3 py-1.5 text-sm rounded transition-colors ${
             shuffle
-              ? 'bg-purple-500 text-white'
+              ? 'bg-purple-600 text-white'
               : 'bg-white/10 text-gray-300 hover:bg-white/20'
           }`}
         >
@@ -139,7 +140,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
           onClick={onToggleRepeat}
           className={`px-3 py-1.5 text-sm rounded transition-colors ${
             repeatMode !== 'off'
-              ? 'bg-purple-500 text-white'
+              ? 'bg-purple-600 text-white'
               : 'bg-white/10 text-gray-300 hover:bg-white/20'
           }`}
           title={`Repeat: ${repeatMode}`}
@@ -194,7 +195,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
       {/* Track List */}
       <div className="flex-1 overflow-y-auto">
         {queue.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
+          <div className="p-8 text-center text-gray-400">
             <p className="text-4xl mb-2">🎵</p>
             <p>Queue is empty</p>
             <p className="text-sm mt-2">Add tracks from the library</p>
@@ -211,7 +212,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
                 <li key={`${track.id}-${index}`}>
                   {/* Drop indicator above item */}
                   {isDragOver && draggedIndex !== null && draggedIndex > index && (
-                    <div className="h-0.5 bg-purple-500 mx-2 rounded-full" />
+                    <div className="h-0.5 bg-purple-600 mx-2 rounded-full" />
                   )}
 
                   <div
@@ -242,7 +243,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
                         : 'hover:bg-white/5 border-l-2 border-transparent'
                     } ${onReorderQueue ? 'cursor-move' : ''} ${isLoadingTrack ? 'opacity-60' : ''}`}
                   >
-                    <div className="w-8 text-center text-sm text-gray-500">
+                    <div className="w-8 text-center text-sm text-gray-400">
                       {isLoadingTrack ? (
                         <div className="spinner mx-auto" style={{ width: '14px', height: '14px', borderWidth: '2px' }} />
                       ) : isCurrent ? (
@@ -271,7 +272,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
                       type="button"
                       tabIndex={-1}
                       aria-label={`Remove ${track.title || track.name} from queue`}
-                      className="opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 p-1 text-gray-500 hover:text-red-400 transition-all"
+                      className="opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 p-1 text-gray-400 hover:text-red-400 transition-all"
                     >
                       ✕
                     </button>
@@ -279,7 +280,7 @@ export const QueuePanel: React.FC<QueuePanelProps> = ({
 
                   {/* Drop indicator below item */}
                   {isDragOver && draggedIndex !== null && draggedIndex < index && (
-                    <div className="h-0.5 bg-purple-500 mx-2 rounded-full" />
+                    <div className="h-0.5 bg-purple-600 mx-2 rounded-full" />
                   )}
                 </li>
               );

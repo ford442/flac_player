@@ -1,103 +1,99 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { AudioLoader, PlaylistTrack, loadQueueFromStorage } from '../audioLoader';
+import { routePath } from '../utils/publicPath';
+import { fetchSong } from '../api/songApi';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
-import { useMediaSession } from '../hooks/useMediaSession';
-import { usePlayerState } from '../hooks/usePlayerState';
-import { useToastNotifications } from '../hooks/useToastNotifications';
+import { listShortcuts, type ShortcutHandlers } from '../hooks/keyboardShortcutMap';
 import { isOutputPickerSupported, useAudioSettings } from '../hooks/useAudioSettings';
 import { useAudioOutputInfo, useOutputDevices } from '../hooks/useAudioOutputInfo';
-import { usePlayerData } from '../hooks/usePlayerData';
-import { usePlaybackController } from '../hooks/usePlaybackController';
-import { PlaybackEngineContext } from '../hooks/usePlaybackEngine';
+import { useLibraryState } from '../hooks/useLibraryState';
+import { usePlayerActions } from '../hooks/usePlayerActions';
+import { useQueueActions } from '../hooks/useQueueActions';
+import { useAppBootstrap } from '../hooks/useAppBootstrap';
+import { useGlobalFileDrop } from '../hooks/useGlobalFileDrop';
 import { usePlaylists } from '../hooks/usePlaylists';
 import { isAudioContextSinkSupported, sharedAudioContextManager } from '../audio/AudioContextManager';
+import { isRenderSizeHintSupported } from '../audio/sampleRatePolicy';
+import { usePlayer } from '../player/PlayerContext';
+import { useNotify, useQueue, useSettings, useTransport } from '../player/selectors';
+import { persistPlayerState } from '../player/persistence';
 import type { AudioOutputControls } from './EQPanel';
 import { AudioCapabilitiesContext } from './AudioCapabilitiesContext';
-import { useGpuChoresOverview } from '../hooks/useGpuChoresOverview';
+import { PlayerActionsProvider, type AppActions } from './PlayerActionsContext';
+import { TrackOverviewProvider } from './PlaybackScrubber';
+import { MediaSessionBridge } from './MediaSessionBridge';
 import { VisualizerShell } from './VisualizerShell';
-import { ToastContainer } from './Toast';
+import { PlayerToasts } from './Toast';
 import { KeyboardHelpModal } from './KeyboardHelpModal';
 import { PlayerFallbackView } from './PlayerFallbackView';
 import { EmbedPlayerView } from './EmbedPlayerView';
-import { shuffleArray, isFastMirrorEligible } from '../utils/audioUtils';
 import { IS_PROJECTM_EMBED } from '../utils/embedMode';
 import { getInitialVisualizerAesthetic, VisualizerAesthetic } from '../utils/visualizerMode';
-import { clearTrackCache, downloadForOffline, isTrackCached } from '../storage/trackCache';
-import { isOfflineCacheAvailable } from './OfflineCache';
+import { clearTrackCache } from '../storage/trackCache';
 import { ListeningRoomPanel } from './ListeningRoomPanel';
 import { appBasePath, getCurrentRoomId, loadHostToken } from '../listening/roomSession';
 import { isShareableTrackId, useListeningRoomBridge } from '../listening/useListeningRoomBridge';
-import type { RoomBadge } from './player-fallback/types';
+import type { LibraryViewMode, RoomBadge, ViewTab } from './player-fallback/types';
 import './Player.css';
 
 const getSharedPlaylistId = (): string | null => {
   const params = new URLSearchParams(window.location.search);
   const queryShareId = params.get('share');
   if (queryShareId) return queryShareId;
-  const pathMatch = window.location.pathname.match(/^\/playlist\/([^/]+)$/);
-  return pathMatch ? decodeURIComponent(pathMatch[1]) : null;
+  const pathMatch = routePath(window.location.pathname).match(/^\/playlist\/([^/]+)$/);
+  const pathId = pathMatch?.[1];
+  return pathId ? decodeURIComponent(pathId) : null;
 };
 
+/**
+ * App shell. Playback lives in the PlaybackEngine and the player store (#258):
+ * Player wires settings, rooms and persistence to the engine and lays out the
+ * views, which read playback state themselves. It never subscribes to the clock.
+ */
 export const Player: React.FC = () => {
+  const { engine, store } = usePlayer();
+  const notify = useNotify();
   const sharedPlaylistId = useMemo(() => getSharedPlaylistId(), []);
   const routeRoomId = useMemo(() => getCurrentRoomId(), []);
   // A guest link opens a read-only player (like a shared playlist): no library, no saved queue.
   const isRoomGuestRoute = useMemo(() => routeRoomId !== null && loadHostToken(routeRoomId) === null, [routeRoomId]);
   const isSharedPlaylist = sharedPlaylistId !== null || isRoomGuestRoute;
 
-  const { outputMode, setOutputMode, setError, currentTrack, setCurrentTrack, loadingTrackId, setLoadingTrackId, backendStatus, setBackendStatus } = usePlayerState();
-  const { toasts, addToast, removeToast } = useToastNotifications();
-  const {
-    eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate,
-    gaplessSettings, setGaplessMode, crossfadeMs, setCrossfadeMs,
-    replayGainMode, setReplayGainMode, replayGainLimiter, setReplayGainLimiter,
-    replayGainSettings,
-    latencyMode, setLatencyMode,
-    outputDevice, onSelectOutputDevice,
-  } = useAudioSettings();
+  // The engine owns one backend for the page's lifetime (attach is StrictMode-safe).
+  useEffect(() => engine.attach(), [engine]);
 
-  const loader = useMemo(() => new AudioLoader(), []);
-  const data = usePlayerData({ loader, addToast, setError, setCurrentTrack, isSharedPlaylist });
+  const audio = useAudioSettings();
   const {
-    library, allTags, stats, isLoadingLibrary, isResyncingLibrary, hasMoreLibrary, loadMoreLibrary,
-    sharedPlaylistTitle, setSharedPlaylistTitle,
-    searchQuery, setSearchQuery, minRating, setMinRating,
-    selectedTags, setSelectedTags, untaggedOnly, setUntaggedOnly,
-    sortBy, setSortBy, storageSourceFilter, setStorageSourceFilter,
-    queue, setQueue, queueCurrentIndex, setQueueCurrentIndex,
-    showQueue, setShowQueue, shuffle, setShuffle, repeatMode, setRepeatMode,
-    volume, setVolume, muted, setMuted, prevVolumeRef,
-    checkBackend, loadLibrary, loadStats, triggerLibraryResync,
-    addToQueue, addAllToQueue, removeFromQueue, reorderQueue, clearQueue, enqueueNext,
-    updateTrack, trashTrack,
-  } = data;
-
-  const playback = usePlaybackController({
-    loader, outputMode, setOutputMode, setError,
-    currentTrack, setCurrentTrack, setLoadingTrackId,
-    queue, queueCurrentIndex, setQueueCurrentIndex,
-    shuffle, repeatMode, volume, muted, setVolume, setMuted, prevVolumeRef,
     eqGains, playbackRate, gaplessSettings, replayGainSettings,
-    addToast, loadStats, isSharedPlaylist,
-  });
+    latencyMode, renderSizeMode, setRenderSizeMode, outputDevice, onSelectOutputDevice,
+  } = audio;
+  useEffect(() => {
+    engine.setAudioSettings({ eqGains, playbackRate, gapless: gaplessSettings, replayGain: replayGainSettings });
+  }, [engine, eqGains, playbackRate, gaplessSettings, replayGainSettings]);
 
-  // Transport status only (no position): Player does not re-render on timeupdate.
-  const {
-    engine, status: playerState,
-    currentFile, playbackPath, capabilities, prebufferingNext,
-    playTrack, playNextInQueue, playPreviousInQueue, togglePlayback,
-    handleLocalFiles, handleVolumeChange, toggleMute,
-    getAnalyser, getDecodedPcm, stop, seek, pause,
-  } = playback;
+  // Shared playlists and room guests leave nothing behind in localStorage.
+  useEffect(
+    () => persistPlayerState(engine.clock, store, { position: !isSharedPlaylist, queue: !isSharedPlaylist }),
+    [engine, store, isSharedPlaylist],
+  );
+
+  const library = useLibraryState({ enabled: !isSharedPlaylist, notify, engine });
+
+  const [sharedPlaylistTitle, setSharedPlaylistTitle] = useState('');
+  const [activeTab, setActiveTab] = useState<ViewTab>('library');
+  const [libraryViewMode, setLibraryViewMode] = useState<LibraryViewMode>('grid');
+  const [showHtmlFallback, setShowHtmlFallback] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [showQueue, setShowQueue] = useState(false);
+  const [visualizerAesthetic, setVisualizerAesthetic] = useState<VisualizerAesthetic>(
+    () => getInitialVisualizerAesthetic()
+  );
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const room = useListeningRoomBridge({
     initialRoomId: routeRoomId,
-    loader, playback, backendGeneration: playerState.backendGeneration,
-    currentTrack, loadingTrackId,
-    isPlaying: playerState.isPlaying, isLoading: playerState.isLoading,
-    queue, queueCurrentIndex, shuffle, repeatMode, library,
-    setQueue, setQueueCurrentIndex, setShuffle, setRepeatMode,
-    outputMode, setOutputMode, addToast,
+    engine, store,
+    library: library.library,
+    addToast: notify,
     onLeft: (role) => {
       // Guests were mounted read-only; reload into the normal player.
       if (role === 'guest' || isRoomGuestRoute) window.location.assign(appBasePath());
@@ -106,280 +102,128 @@ export const Player: React.FC = () => {
   });
   const inRoom = room.role !== null && room.endedReason === null;
   const isRoomGuest = inRoom && room.role === 'guest';
+  const roomRef = useRef(room);
+  roomRef.current = room;
 
-  // Guests follow the host: transport actions become "start listening" or a hint.
-  const notifyHostControls = useCallback(
-    () => addToast('The host controls playback in this listening room', 'info'),
-    [addToast]
-  );
-  const roomPlayTrack = useCallback((track: PlaylistTrack, index?: number) => {
-    if (isRoomGuest) { notifyHostControls(); return; }
-    void playTrack(track, index);
-  }, [isRoomGuest, notifyHostControls, playTrack]);
-  const transportToggle = useCallback(() => {
-    if (!isRoomGuest) { togglePlayback(); return; }
-    if (room.sync.needsUserGesture || !playerState.isPlaying) room.unlockAudio();
-    else notifyHostControls();
-  }, [isRoomGuest, togglePlayback, room, playerState.isPlaying, notifyHostControls]);
-  const transportNext = isRoomGuest ? notifyHostControls : playNextInQueue;
-  const transportPrevious = isRoomGuest ? notifyHostControls : playPreviousInQueue;
-  const transportStop = isRoomGuest ? notifyHostControls : stop;
-  const handleFiles = useCallback((files: File[]) => {
-    if (inRoom) { addToast('Local files cannot be shared in a listening room', 'info'); return; }
-    handleLocalFiles(files);
-  }, [inRoom, addToast, handleLocalFiles]);
+  useEffect(() => {
+    if (!isRoomGuestRoute || !room.title) return;
+    setSharedPlaylistTitle(room.title);
+    document.title = room.title;
+  }, [isRoomGuestRoute, room.title]);
+
+  const capabilities = useTransport((t) => t.capabilities);
+  const playerActions = usePlayerActions(engine, store, {
+    isGuest: isRoomGuest,
+    inRoom,
+    needsUserGesture: room.sync.needsUserGesture,
+    unlockAudio: room.unlockAudio,
+  }, capabilities.seek);
 
   const startListeningRoom = useCallback(() => {
-    const trackIds = queue.map(t => t.id).filter(isShareableTrackId);
-    if (trackIds.length === 0) { addToast('Add library tracks to the queue first.', 'info'); return; }
-    void room.createRoom({ title: 'Listen together', trackIds });
-  }, [queue, room, addToast]);
+    const trackIds = store.getState().queue.tracks.map(t => t.id).filter(isShareableTrackId);
+    if (trackIds.length === 0) { notify('Add library tracks to the queue first.', 'info'); return; }
+    void roomRef.current.createRoom({ title: 'Listen together', trackIds });
+  }, [store, notify]);
+  const queueTools = useQueueActions(engine, store, isSharedPlaylist || inRoom ? undefined : startListeningRoom);
+  const actions = useMemo<AppActions>(() => ({ ...playerActions, ...queueTools }), [playerActions, queueTools]);
+
   const roomBadge = useMemo<RoomBadge>(() => ({
     role: inRoom ? room.role : null,
     driftMs: room.sync.driftMs,
     onListenTogether: isSharedPlaylist ? undefined : startListeningRoom,
   }), [inRoom, room.role, room.sync.driftMs, isSharedPlaylist, startListeningRoom]);
 
-  useEffect(() => {
-    if (!isRoomGuestRoute || !room.title) return;
-    setSharedPlaylistTitle(room.title);
-    document.title = room.title;
-  }, [isRoomGuestRoute, room.title, setSharedPlaylistTitle]);
+  useAppBootstrap({
+    engine,
+    sharedPlaylistId,
+    isRoomGuestRoute,
+    notify,
+    onPlaylistOpened: (title) => {
+      setActiveTab('now-playing');
+      if (title) {
+        setSharedPlaylistTitle(title);
+        document.title = title;
+      }
+    },
+  });
 
-  const canSeek = capabilities.seek && !isRoomGuest;
-  const onSeek = canSeek ? seek : undefined;
+  const queueTracks = useQueue((q) => q.tracks);
+  const playlists = usePlaylists({
+    library: library.library, queue: queueTracks, addToast: notify, onPlayTracks: actions.playAll,
+  });
 
   useEffect(() => {
     void sharedAudioContextManager.setLatencyMode(latencyMode);
   }, [latencyMode]);
 
   useEffect(() => {
+    void sharedAudioContextManager.setRenderSizeMode(renderSizeMode);
+  }, [renderSizeMode]);
+
+  useEffect(() => {
     let cancelled = false;
     void sharedAudioContextManager.setSinkId(outputDevice.id).then((ok) => {
       if (ok || cancelled) return;
-      addToast(`Output device unavailable — using system default`, 'error');
+      notify(`Output device unavailable — using system default`, 'error');
       void onSelectOutputDevice('');
     });
     return () => { cancelled = true; };
-  }, [outputDevice.id, addToast, onSelectOutputDevice]);
+  }, [outputDevice.id, notify, onSelectOutputDevice]);
 
   const audioOutputInfo = useAudioOutputInfo();
   const outputDevices = useOutputDevices();
+  const externalPlayback = useSettings((s) => s.outputMode === 'sdl');
   const audioOutput = useMemo<AudioOutputControls>(() => ({
     deviceId: outputDevice.id,
     deviceLabel: outputDevice.label,
     sinkSupported: isAudioContextSinkSupported(),
     pickerSupported: isOutputPickerSupported(),
-    devices: outputDevices,
+    devices: outputDevices.devices,
+    devicesHidden: outputDevices.hidden,
+    onRevealDevices: () => { void outputDevices.reveal(); },
     onSelectOutputDevice,
     info: audioOutputInfo,
-  }), [outputDevice, outputDevices, onSelectOutputDevice, audioOutputInfo]);
+    externalPlayback,
+    renderSize: {
+      mode: renderSizeMode,
+      supported: isRenderSizeHintSupported(),
+      onChange: setRenderSizeMode,
+    },
+  }), [
+    outputDevice, outputDevices, onSelectOutputDevice, audioOutputInfo, externalPlayback,
+    renderSizeMode, setRenderSizeMode,
+  ]);
 
-  const gpuOverview = useGpuChoresOverview({
-    trackKey: currentTrack?.id ?? currentTrack?.url ?? null,
-    isLoading: playerState.isLoading,
-    getDecodedPcm,
-  });
-
-  const [activeTab, setActiveTab] = useState<'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'convert' | 'settings'>('library');
-  const [libraryViewMode, setLibraryViewMode] = useState<'grid' | 'list'>('grid');
-  const [showHtmlFallback, setShowHtmlFallback] = useState(false);
-  const [showHelp, setShowHelp] = useState(false);
-  const [isDraggingFile, setIsDraggingFile] = useState(false);
-  const [visualizerAesthetic, setVisualizerAesthetic] = useState<VisualizerAesthetic>(
-    () => getInitialVisualizerAesthetic()
-  );
-
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
-  // Initialization: shared playlist / URL params / saved queue
-  useEffect(() => {
-    const initializeApp = async () => {
-      // Room guests get their queue from the host's STATE_SNAPSHOT.
-      if (isRoomGuestRoute) return;
-      const params = new URLSearchParams(window.location.search);
-      const tracksParam = params.get('tracks');
-
-      if (sharedPlaylistId) {
-        try {
-          const shared = await loader.fetchSharedPlaylist(sharedPlaylistId);
-          if (shared.tracks.length > 0) {
-            setQueue(shared.tracks);
-            setQueueCurrentIndex(0);
-            setActiveTab('now-playing');
-            setSharedPlaylistTitle(shared.title);
-            document.title = shared.title;
-            addToast(`Loaded shared playlist: ${shared.title}`, 'success');
-            return;
-          }
-        } catch {
-          addToast('Failed to load shared playlist', 'error');
-        }
-      }
-
-      if (tracksParam) {
-        try {
-          const trackIds = tracksParam.split(',');
-          const { tracks: allTracks } = await loader.fetchLibrary({ limit: 500 });
-          const playlistTracks = trackIds
-            .map(id => allTracks.find(t => t.id === id))
-            .filter(Boolean) as PlaylistTrack[];
-          if (playlistTracks.length > 0) {
-            setQueue(playlistTracks);
-            setQueueCurrentIndex(0);
-            setActiveTab('now-playing');
-            addToast('Loaded custom playlist!', 'success');
-            window.history.replaceState({}, '', window.location.pathname);
-            return;
-          }
-        } catch { /* no-op */ }
-      }
-
-      const saved = loadQueueFromStorage();
-      if (saved && saved.tracks.length > 0) {
-        setQueue(saved.tracks);
-        setQueueCurrentIndex(saved.currentIndex);
-        setShuffle(saved.shuffle);
-        setRepeatMode(saved.repeat);
-      }
-    };
-    initializeApp();
-  }, [loader, addToast, sharedPlaylistId, isRoomGuestRoute, setQueue, setQueueCurrentIndex, setShuffle, setRepeatMode, setSharedPlaylistTitle]);
-
-  const playAll = (tracks: PlaylistTrack[], shuffled = false) => {
-    if (tracks.length === 0) return;
-    const ordered = shuffled ? shuffleArray(tracks) : tracks;
-    setQueue(ordered);
-    setQueueCurrentIndex(0);
-    roomPlayTrack(ordered[0], 0);
-    addToast(shuffled ? `Shuffling ${ordered.length} tracks` : `Playing ${ordered.length} tracks`, 'success');
-  };
-
-  const playlists = usePlaylists({ loader, library, queue, addToast, onPlayTracks: playAll });
-
-  const playNow = (track: PlaylistTrack) => {
-    setQueue([track]); setQueueCurrentIndex(0); roomPlayTrack(track, 0);
-    addToast('Playing now: ' + (track.title || track.name), 'info');
-  };
-
-  const handleSmartMix = async () => {
-    if (!currentTrack?.tags) { addToast('No tags to base mix on', 'error'); return; }
-    try {
-      const similar = await loader.findSimilarTracks(currentTrack.id, currentTrack.tags, 4, 20);
-      if (similar.length > 0) {
-        setQueue(prev => [...prev, ...similar.filter(t => !prev.some(p => p.id === t.id))]);
-        addToast(`Added ${similar.length} tracks to queue`, 'success');
-      } else {
-        addToast('No similar tracks found', 'info');
-      }
-    } catch {
-      addToast('Failed to create smart mix', 'error');
-    }
-  };
-
-  const downloadQueueForOffline = async () => {
-    if (queue.length === 0) { addToast('Add tracks to the queue first.', 'info'); return; }
-    if (!isOfflineCacheAvailable()) { addToast('Offline cache is unavailable in this browser', 'error'); return; }
-    addToast(`Downloading ${queue.length} tracks for offline…`, 'info');
-    let saved = 0;
-    const failed: string[] = [];
-    for (const track of queue) {
-      try {
-        if (!(await isTrackCached(track.url))) await downloadForOffline(track.url);
-        saved++;
-      } catch {
-        failed.push(track.title || track.name);
-      }
-    }
-    if (failed.length === 0) addToast(`${saved} tracks available offline`, 'success');
-    else addToast(`Offline: ${saved} saved, ${failed.length} failed (${failed.slice(0, 3).join(', ')}${failed.length > 3 ? '…' : ''})`, 'error');
-  };
-
-  const generateShareLink = async () => {
-    if (queue.length === 0) { addToast('Add tracks to the queue first.', 'info'); return; }
-    const trackIds = queue.map(t => t.id).filter(Boolean);
-    if (trackIds.length === 0) { addToast('No valid tracks to share.', 'info'); return; }
-    try {
-      const shareResponse = await loader.createShare(trackIds, 'Shared Playlist', 30);
-      await navigator.clipboard.writeText(shareResponse.short_url || shareResponse.full_url);
-      addToast('Shareable playlist link copied to clipboard!', 'success');
-      return;
-    } catch {
-      addToast('Could not create shared playlist. Falling back to URL playlist.', 'error');
-    }
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}?tracks=${trackIds.join(',')}`);
-      addToast('Legacy playlist link copied to clipboard.', 'success');
-    } catch {
-      addToast('Error copying link.', 'error');
-    }
-  };
-
-  useKeyboardShortcuts({
-    onPlayPause: transportToggle,
-    onSeekForward: canSeek
-      ? () => seek(Math.min(engine.getTime() + 10, playerState.duration))
-      : undefined,
-    onSeekBackward: canSeek
-      ? () => seek(Math.max(engine.getTime() - 10, 0))
-      : undefined,
-    onNext: transportNext,
-    onPrevious: transportPrevious,
+  const shortcutHandlers: ShortcutHandlers = {
+    onPlayPause: actions.togglePlay,
+    onSeekForward: actions.seekBy ? () => actions.seekBy?.(10) : undefined,
+    onSeekBackward: actions.seekBy ? () => actions.seekBy?.(-10) : undefined,
+    onNext: actions.next,
+    onPrevious: actions.previous,
     onSearchFocus: () => searchInputRef.current?.focus(),
-    onVolumeUp:   () => handleVolumeChange(Math.min(1, volume + 0.1)),
-    onVolumeDown: () => handleVolumeChange(Math.max(0, volume - 0.1)),
+    onVolumeUp:   () => actions.setVolume(Math.min(1, store.getState().settings.volume + 0.1)),
+    onVolumeDown: () => actions.setVolume(Math.max(0, store.getState().settings.volume - 0.1)),
     onToggleQueue: () => setShowQueue(prev => !prev),
-    onMute: toggleMute,
+    onMute: actions.toggleMute,
     onShowHelp: () => setShowHelp(prev => !prev),
-    isEnabled: true,
-  });
-
-  useMediaSession({
-    currentTrack,
-    isPlaying: playerState.isPlaying,
-    clock: engine,
-    duration: playerState.duration,
-    playbackRate,
-    onPlay: () => { if (!playerState.isPlaying) transportToggle(); },
-    onPause: () => { if (isRoomGuest) notifyHostControls(); else pause(); },
-    onNext: transportNext,
-    onPrevious: transportPrevious,
-    onSeek,
-  });
-
-  useEffect(() => {
-    const onDragOver = (e: DragEvent) => { if (e.dataTransfer?.types.includes('Files')) { e.preventDefault(); setIsDraggingFile(true); } };
-    const onDragLeave = (e: DragEvent) => { if (e.relatedTarget === null) setIsDraggingFile(false); };
-    const onDrop = (e: DragEvent) => {
-      setIsDraggingFile(false);
-      if (!e.dataTransfer) return;
-      const files = Array.from(e.dataTransfer.files).filter(
-        f => f.name.endsWith('.flac') || f.name.endsWith('.wav') || f.name.endsWith('.mp3') || f.type.includes('audio')
-      );
-      if (files.length > 0) { e.preventDefault(); handleFiles(files); }
-    };
-    window.addEventListener('dragover', onDragOver);
-    window.addEventListener('dragleave', onDragLeave);
-    window.addEventListener('drop', onDrop);
-    return () => {
-      window.removeEventListener('dragover', onDragOver);
-      window.removeEventListener('dragleave', onDragLeave);
-      window.removeEventListener('drop', onDrop);
-    };
-  }, [handleFiles]);
-
-  const fastMirrorCount = useMemo(() => library.filter(track => isFastMirrorEligible(track.url)).length, [library]);
-  const displayedLibrary = useMemo(
-    () => storageSourceFilter === 'fast' ? library.filter(track => isFastMirrorEligible(track.url)) : library,
-    [library, storageSourceFilter]
+  };
+  useKeyboardShortcuts(shortcutHandlers);
+  const helpModal = showHelp && (
+    <KeyboardHelpModal shortcuts={listShortcuts(shortcutHandlers)} onClose={() => setShowHelp(false)} />
   );
+
+  const isDraggingFile = useGlobalFileDrop(actions.addFiles);
 
   const handleGenerationCompleted = async (songId: string) => {
-    const generatedTrack = await loader.fetchSong(songId);
-    await loadLibrary();
-    playNow(generatedTrack);
-    setActiveTab('now-playing');
-    addToast(`Generated track ready: ${generatedTrack.title || generatedTrack.name}`, 'success');
+    try {
+      const generatedTrack = await fetchSong(songId);
+      await library.refresh();
+      actions.playNow(generatedTrack);
+      setActiveTab('now-playing');
+      notify(`Generated track ready: ${generatedTrack.title || generatedTrack.name}`, 'success');
+    } catch (error) {
+      notify(error instanceof Error ? error.message : 'Generated track is not available yet', 'error');
+    }
   };
 
   const roomPanel = (
@@ -393,30 +237,12 @@ export const Player: React.FC = () => {
     />
   );
 
+  let view: React.ReactNode;
   if (IS_PROJECTM_EMBED) {
-    return (
-      <PlaybackEngineContext.Provider value={engine}>
-        <ToastContainer toasts={toasts} onRemove={removeToast} />
-        <EmbedPlayerView
-          currentTrack={currentTrack}
-          isPlaying={playerState.isPlaying}
-          isLoading={playerState.isLoading}
-          duration={playerState.duration}
-          onPlay={togglePlayback}
-          onStop={stop}
-          onSeek={onSeek}
-          onNext={playNextInQueue}
-          onPrevious={playPreviousInQueue}
-          onFileSelect={handleLocalFiles}
-        />
-      </PlaybackEngineContext.Provider>
-    );
-  }
-
-  if (!showHtmlFallback) {
-    return (
-      <PlaybackEngineContext.Provider value={engine}>
-        <ToastContainer toasts={toasts} onRemove={removeToast} />
+    view = <EmbedPlayerView />;
+  } else if (!showHtmlFallback) {
+    view = (
+      <>
         {roomPanel}
         {!isSharedPlaylist && (
           <div className="fixed top-4 right-4 z-40 flex gap-2">
@@ -431,17 +257,17 @@ export const Player: React.FC = () => {
               className="px-4 py-2 rounded-lg bg-fuchsia-600/90 text-white text-sm font-semibold hover:bg-fuchsia-500 transition-colors shadow-lg">
               ✨ Generate
             </button>
-            <button onClick={triggerLibraryResync} disabled={isResyncingLibrary}
+            <button onClick={() => { void library.triggerLibraryResync(); }} disabled={library.isResyncingLibrary}
               className="px-4 py-2 rounded-lg bg-blue-600/90 text-white text-sm font-semibold hover:bg-blue-500 transition-colors shadow-lg disabled:opacity-60">
-              {isResyncingLibrary ? '⏳ Rescanning...' : '🔄 Rescan Library'}
+              {library.isResyncingLibrary ? '⏳ Rescanning...' : '🔄 Rescan Library'}
             </button>
             <a href="https://storage.noahcohn.com/admin" target="_blank" rel="noopener noreferrer"
-              className="px-4 py-2 rounded-lg bg-purple-600/90 text-white text-sm font-semibold hover:bg-purple-500 transition-colors shadow-lg">
+              className="px-4 py-2 rounded-lg bg-purple-600/90 text-white text-sm font-semibold hover:bg-purple-600 transition-colors shadow-lg">
               ⬆️ Add Music
             </a>
           </div>
         )}
-        {showHelp && <KeyboardHelpModal onClose={() => setShowHelp(false)} />}
+        {helpModal}
         {isSharedPlaylist && sharedPlaylistTitle && (
           <div className="fixed top-0 left-0 right-0 z-40 flex items-center justify-center pt-4 pointer-events-none">
             <h1 className="text-xl md:text-2xl font-bold text-white/90 bg-black/50 backdrop-blur px-6 py-2 rounded-full border border-white/10 pointer-events-auto">
@@ -459,99 +285,42 @@ export const Player: React.FC = () => {
         <VisualizerShell
           aesthetic={visualizerAesthetic}
           onAestheticChange={setVisualizerAesthetic}
-          analyser={getAnalyser()}
-          currentTrack={currentTrack} queue={queue} queueCurrentIndex={queueCurrentIndex}
-          isPlaying={playerState.isPlaying} isLoading={playerState.isLoading}
-          duration={playerState.duration}
-          volume={volume} muted={muted}
-          onPlay={transportToggle} onStop={transportStop}
-          onSeek={onSeek}
-          onTrackClick={(index) => roomPlayTrack(queue[index], index)}
-          onVolumeChange={handleVolumeChange} onMute={toggleMute}
-          onNext={transportNext} onPrevious={transportPrevious}
           onToggleFallback={() => setShowHtmlFallback(true)}
           showFallbackToggle={!isSharedPlaylist}
-          onFileSelect={handleFiles}
-          overviewMinmax={gpuOverview.minmax}
-          overviewRms={gpuOverview.rms}
-          overviewPeak={gpuOverview.peak}
-          overviewBackend={gpuOverview.backend}
-          overviewReason={gpuOverview.reason}
+          canLoadUrl
         />
-      </PlaybackEngineContext.Provider>
+      </>
+    );
+  } else {
+    view = (
+      <AudioCapabilitiesContext.Provider value={capabilities}>
+        {roomPanel}
+        <PlayerFallbackView
+          helpModal={helpModal} setShowHelp={setShowHelp}
+          showQueue={showQueue} setShowQueue={setShowQueue}
+          library={library}
+          playlists={playlists}
+          activeTab={activeTab} setActiveTab={setActiveTab}
+          libraryViewMode={libraryViewMode} setLibraryViewMode={setLibraryViewMode}
+          searchInputRef={searchInputRef}
+          audio={audio}
+          audioOutput={audioOutput}
+          isSharedPlaylist={isSharedPlaylist} sharedPlaylistTitle={sharedPlaylistTitle}
+          onSetShowHtmlFallback={setShowHtmlFallback}
+          onClearCache={() => { void clearTrackCache().then(() => notify('Offline cache cleared', 'success')); }}
+          onGenerationCompleted={handleGenerationCompleted}
+          room={roomBadge}
+        />
+      </AudioCapabilitiesContext.Provider>
     );
   }
 
   return (
-    <PlaybackEngineContext.Provider value={engine}>
-    <AudioCapabilitiesContext.Provider value={capabilities}>
-    {roomPanel}
-    <PlayerFallbackView
-      toasts={toasts} removeToast={removeToast}
-      showHelp={showHelp} setShowHelp={setShowHelp}
-      backendStatus={backendStatus}
-      onRetry={() => checkBackend().then(h => { setBackendStatus(h ? 'up' : 'down'); if (h) loadLibrary(); })}
-      queue={queue} queueCurrentIndex={queueCurrentIndex}
-      showQueue={showQueue} setShowQueue={setShowQueue}
-      shuffle={shuffle} setShuffle={setShuffle}
-      repeatMode={repeatMode} setRepeatMode={setRepeatMode}
-      isResyncingLibrary={isResyncingLibrary} onTriggerResync={triggerLibraryResync}
-      currentTrack={currentTrack} currentFile={currentFile} loadingTrackId={loadingTrackId}
-      isPlaying={playerState.isPlaying} isLoading={playerState.isLoading}
-      duration={playerState.duration}
-      library={library} displayedLibrary={displayedLibrary}
-      allTags={allTags} stats={stats} isLoadingLibrary={isLoadingLibrary}
-      fastMirrorCount={fastMirrorCount}
-      playlists={playlists}
-      activeTab={activeTab} setActiveTab={setActiveTab}
-      libraryViewMode={libraryViewMode} setLibraryViewMode={setLibraryViewMode}
-      searchQuery={searchQuery} setSearchQuery={setSearchQuery} searchInputRef={searchInputRef}
-      minRating={minRating} setMinRating={setMinRating}
-      selectedTags={selectedTags} setSelectedTags={setSelectedTags}
-      untaggedOnly={untaggedOnly} setUntaggedOnly={setUntaggedOnly}
-      sortBy={sortBy} setSortBy={setSortBy}
-      storageSourceFilter={storageSourceFilter} setStorageSourceFilter={setStorageSourceFilter}
-      volume={volume} muted={muted} outputMode={outputMode} setOutputMode={setOutputMode}
-      eqGains={eqGains} setEQBandGain={setEQBandGain} resetEQ={resetEQ}
-      playbackRate={playbackRate} setPlaybackRate={setPlaybackRate}
-      gaplessMode={gaplessSettings.mode} setGaplessMode={setGaplessMode}
-      crossfadeMs={crossfadeMs} setCrossfadeMs={setCrossfadeMs}
-      replayGainMode={replayGainMode} setReplayGainMode={setReplayGainMode}
-      replayGainLimiter={replayGainLimiter} setReplayGainLimiter={setReplayGainLimiter}
-      latencyMode={latencyMode} setLatencyMode={setLatencyMode}
-      audioOutput={audioOutput}
-      prebufferingNext={prebufferingNext}
-      playbackPath={playbackPath}
-      isSharedPlaylist={isSharedPlaylist} sharedPlaylistTitle={sharedPlaylistTitle}
-      analyser={getAnalyser()}
-      overviewMinmax={gpuOverview.minmax}
-      overviewRms={gpuOverview.rms}
-      overviewPeak={gpuOverview.peak}
-      overviewBackend={gpuOverview.backend}
-      overviewReason={gpuOverview.reason}
-      onTrackClick={(track) => { addToQueue(track); roomPlayTrack(track, queue.length); }}
-      onTrackDoubleClick={playNow}
-      onQueueTrackClick={(index) => roomPlayTrack(queue[index], index)}
-      onPlay={transportToggle} onStop={transportStop}
-      onSeek={onSeek}
-      onVolumeChange={handleVolumeChange} onMute={toggleMute}
-      onNext={transportNext} onPrevious={transportPrevious}
-      onFileSelect={handleFiles}
-      onPlayAll={playAll} onAddAllToQueue={addAllToQueue}
-      onPlayNow={playNow} onPlayNext={enqueueNext} onAddToQueue={addToQueue}
-      onRemoveFromQueue={removeFromQueue} onClearQueue={clearQueue}
-      onReorderQueue={reorderQueue} onSmartMix={handleSmartMix}
-      onShareQueue={generateShareLink}
-      onDownloadQueue={downloadQueueForOffline}
-      hasMoreLibrary={hasMoreLibrary} onLoadMoreLibrary={loadMoreLibrary}
-      onNotify={addToast}
-      onUpdateTrack={updateTrack} onTrashTrack={trashTrack}
-      onSetShowHtmlFallback={setShowHtmlFallback}
-      onClearCache={() => clearTrackCache().then(() => addToast('Offline cache cleared', 'success'))}
-      onGenerationCompleted={handleGenerationCompleted}
-      room={roomBadge}
-    />
-    </AudioCapabilitiesContext.Provider>
-    </PlaybackEngineContext.Provider>
+    <PlayerActionsProvider value={actions}>
+      <PlayerToasts />
+      <MediaSessionBridge playbackRate={playbackRate} />
+      {/* Scrubber peaks survive switching views; the embed view never reduces them on the GPU. */}
+      {IS_PROJECTM_EMBED ? view : <TrackOverviewProvider>{view}</TrackOverviewProvider>}
+    </PlayerActionsProvider>
   );
 };

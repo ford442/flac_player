@@ -1,17 +1,27 @@
 #!/usr/bin/env bash
-# Fail when WASM sources (or the emsdk pin in scripts/emsdk-version) changed but
-# the committed artifacts / source hashes are stale. One check per graph:
-#   SDL3 playback  public/sdl-audio.*               wasm-source.sha256
-#   SpeexDSP       public/speex-resampler.*         resampler-source.sha256
-#   DSP chain      public/dsp-chain.*               dsp-source.sha256
+# Fail when WASM sources (or the pinned emsdk in scripts/emsdk-version) changed
+# but committed artifacts / source hashes are stale. Four graphs:
+#   SDL3 playback  public/sdl-audio.*            wasm-source.sha256
+#   SpeexDSP       public/speex-resampler.*      resampler-source.sha256
+#   DSP chain      public/dsp-chain.*            dsp-source.sha256
 #   projectM host  public/projectm/projectm-host.*  projectm/projectm-source.sha256
-# Hashes cover sources + build script + pin, not the binaries; CI's wasm-build
-# job rebuilds a changed graph and diffs the bytes.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PUBLIC="$PROJECT_ROOT/public"
+
+# Byte sizes below catch an empty/truncated/LFS-pointer .wasm that a hash match can't
+# (the hash covers sources, not the committed binary). SDL is intentionally small
+# now that its engine no longer links SDL or the main-thread audio shim.
+min_bytes() {
+  local artifact="$1" min="$2" size
+  size="$(wc -c < "$artifact" | tr -d '[:space:]')"
+  if [ "$size" -lt "$min" ]; then
+    echo "${artifact#"$PROJECT_ROOT/"} is $size bytes (< $min): truncated or placeholder artifact?" >&2
+    exit 1
+  fi
+}
 
 # check <label> <hash script> <hash file> <rebuild cmd> <artifact>...
 check() {
@@ -20,13 +30,13 @@ check() {
   local artifact
   for artifact in "$@"; do
     if [ ! -f "$artifact" ]; then
-      echo "Missing $label WASM artifact: ${artifact#"$PROJECT_ROOT/"}" >&2
+      echo "Missing $label WASM artifact: $artifact" >&2
       echo "Run: $rebuild" >&2
       exit 1
     fi
   done
   if [ ! -f "$hash_file" ]; then
-    echo "Missing ${hash_file#"$PROJECT_ROOT/"} — run: $rebuild" >&2
+    echo "Missing $hash_file — run: $rebuild" >&2
     exit 1
   fi
   local current expected
@@ -47,12 +57,26 @@ check "SDL" wasm-source-hash.sh "$PUBLIC/wasm-source.sha256" "npm run build:wasm
 check "Resampler" resampler-source-hash.sh "$PUBLIC/resampler-source.sha256" "npm run build:wasm:resampler" \
   "$PUBLIC/speex-resampler.js" "$PUBLIC/speex-resampler.wasm"
 
+# dsp-chain.wasm and sdl-audio.wasm both compile src/sdl/dsp_chain.h; both hashes cover it.
 check "DSP chain" dsp-source-hash.sh "$PUBLIC/dsp-source.sha256" "npm run build:wasm:dsp" \
   "$PUBLIC/dsp-chain.js" "$PUBLIC/dsp-chain.wasm"
 
-# Optional at runtime (ShaderGUI is the fallback), but committed artifacts must
-# match projectm_host.cpp + the build script + the pin.
-check "projectM" projectm-source-hash.sh "$PUBLIC/projectm/projectm-source.sha256" "npm run build:projectm" \
-  "$PUBLIC/projectm/projectm-host.js" "$PUBLIC/projectm/projectm-host.wasm" "$PUBLIC/projectm/projectm-host.data"
+# projectM is optional at runtime (ShaderGUI fallback), but once its artifacts
+# are committed they must match projectm_host.cpp + the build script + the pin.
+if [ -f "$PUBLIC/projectm/projectm-host.wasm" ]; then
+  check "projectM" projectm-source-hash.sh "$PUBLIC/projectm/projectm-source.sha256" "npm run build:projectm" \
+    "$PUBLIC/projectm/projectm-host.js" "$PUBLIC/projectm/projectm-host.wasm"
+fi
 
-echo "WASM artifacts present and source hashes match."
+min_bytes "$PUBLIC/sdl-audio.wasm" 20000
+min_bytes "$PUBLIC/sdl-audio.js" 20000
+min_bytes "$PUBLIC/speex-resampler.wasm" 10000
+min_bytes "$PUBLIC/speex-resampler.js" 2000
+min_bytes "$PUBLIC/dsp-chain.wasm" 10000
+min_bytes "$PUBLIC/dsp-chain.js" 3000
+if [ -f "$PUBLIC/projectm/projectm-host.wasm" ]; then
+  min_bytes "$PUBLIC/projectm/projectm-host.wasm" 700000
+  min_bytes "$PUBLIC/projectm/projectm-host.js" 50000
+fi
+
+echo "WASM artifacts present and source hashes match (emsdk $(tr -d '[:space:]' < "$SCRIPT_DIR/emsdk-version"))."

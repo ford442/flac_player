@@ -134,7 +134,11 @@ export async function startWebGPUSession<V extends SessionVisualizer>(
       return;
     }
     const now = deps.now();
-    while (recoveries.length > 0 && now - recoveries[0] > DEVICE_RECOVERY_WINDOW_MS) recoveries.shift();
+    while (recoveries.length > 0) {
+      const oldest = recoveries[0];
+      if (oldest === undefined || now - oldest <= DEVICE_RECOVERY_WINDOW_MS) break;
+      recoveries.shift();
+    }
     if (recoveries.length >= MAX_DEVICE_RECOVERIES) {
       lostFatal(loss, `${reason}; gave up after ${MAX_DEVICE_RECOVERIES} recoveries in ${DEVICE_RECOVERY_WINDOW_MS / 1000}s`);
       return;

@@ -2,9 +2,9 @@
 
 import { clientsClaim } from 'workbox-core';
 import { ExpirationPlugin } from 'workbox-expiration';
-import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
-import { registerRoute } from 'workbox-routing';
-import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies';
+import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from 'workbox-precaching';
+import { NavigationRoute, registerRoute } from 'workbox-routing';
+import { CacheFirst, NetworkFirst } from 'workbox-strategies';
 import { CacheableResponsePlugin } from 'workbox-cacheable-response';
 import {
   API_CACHE_NAME,
@@ -13,6 +13,7 @@ import {
   type SWClientMessage,
   type SWServerMessage,
 } from './swMessages';
+import { CACHED_AUDIO_RE, createRangedResponse } from './rangeResponse';
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -43,12 +44,30 @@ precacheAndRoute(self.__WB_MANIFEST, {
   ignoreURLParametersMatching: [/^utm_/, /^fbclid$/],
 });
 
+// SPA deep links (e.g. <base>/playlist/{id}) load the precached shell when offline.
+// The shell URL derives from the SW scope so the app works from any base path. A
+// throw here would fail script evaluation (and the whole registration), so a
+// missing precache entry just skips the offline-navigation route.
+try {
+  const scopePath = new URL(self.registration.scope).pathname;
+  const escapedScope = scopePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  registerRoute(new NavigationRoute(createHandlerBoundToURL(`${scopePath}index.html`), {
+    denylist: [new RegExp(`^${escapedScope}(api|files)/`), /\.[a-z0-9]+$/i],
+  }));
+} catch (err) {
+  console.warn('[SW] Offline navigation route disabled:', err);
+}
+
 // ─── Runtime caching ─────────────────────────────────────────────────────────
 
 /** API host used in production builds (injected at compile time). */
-const API_HOST: string = process.env.REACT_APP_API_URL
-  ? new URL(process.env.REACT_APP_API_URL).host
-  : '';
+const API_HOST: string = (() => {
+  try {
+    return process.env.REACT_APP_API_URL ? new URL(process.env.REACT_APP_API_URL).host : '';
+  } catch {
+    return ''; // malformed build-time value must not fail SW evaluation
+  }
+})();
 
 function isSongsApiRequest(url: URL): boolean {
   if (!url.pathname.startsWith('/api/songs')) return false;
@@ -56,9 +75,12 @@ function isSongsApiRequest(url: URL): boolean {
     || (API_HOST !== '' && url.host === API_HOST);
 }
 
+// Network first: the catalog sync must see the host's current rows (a stale copy would
+// undo edits until the next sync). The IndexedDB catalog is the offline library; this
+// cache only covers other /api/songs reads (a single song, shared playlists) offline.
 registerRoute(
   ({ url, request }) => request.method === 'GET' && isSongsApiRequest(url),
-  new StaleWhileRevalidate({
+  new NetworkFirst({
     cacheName: API_CACHE_NAME,
     plugins: [
       new CacheableResponsePlugin({ statuses: [0, 200] }),
@@ -85,6 +107,36 @@ registerRoute(
       corpPlugin,
     ],
   }),
+);
+
+/**
+ * projectM presets (.milk from the CDN in public/projectm/presets.json) – the
+ * URLs pin a commit, so cache-first. CORS responses: no CORP rewrite needed.
+ */
+registerRoute(
+  ({ url, request }) => request.method === 'GET' && /\.milk$/i.test(url.pathname),
+  new CacheFirst({
+    cacheName: 'flac-player-projectm-presets-v1',
+    plugins: [
+      new CacheableResponsePlugin({ statuses: [200] }),
+      new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 90 }),
+    ],
+  }),
+);
+
+/**
+ * Offline tracks – serve flac-player-tracks-v1 entries (written by trackCache /
+ * background downloads) to the native <audio> path, honouring Range. Misses go
+ * straight to the network; this route never writes to the cache.
+ */
+registerRoute(
+  ({ url, request }) => request.method === 'GET' && CACHED_AUDIO_RE.test(url.pathname),
+  async ({ request }) => {
+    const cache = await caches.open(TRACK_CACHE_NAME);
+    const cached = await cache.match(request.url, { ignoreVary: true });
+    if (!cached) return fetch(request);
+    return createRangedResponse(cached, request.headers.get('range'));
+  },
 );
 
 // ─── Background track downloads (shared Cache API store) ───────────────────

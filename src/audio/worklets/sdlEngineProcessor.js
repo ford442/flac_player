@@ -92,7 +92,7 @@ class SdlEngineProcessor extends AudioWorkletProcessor {
     this.state = new Uint32Array(buffer, this.statePtr, STATE_WORDS);
     this.ring = new Uint32Array(buffer, this.ringStatePtr, 4);
     this.heap = new Float32Array(buffer);
-    const capacity = this.ring[R_CAPACITY];
+    const capacity = this.ring[R_CAPACITY] ?? 0;
     // play_ring.h only accepts a power-of-two capacity; 0 means not initialised.
     const valid = capacity > 0 && (capacity & (capacity - 1)) === 0;
     this.ringMask = valid ? capacity - 1 : 0;
@@ -162,7 +162,7 @@ class SdlEngineProcessor extends AudioWorkletProcessor {
 
   /** @param {Float32Array[]} output @param {number} from */
   silence(output, from) {
-    for (let ch = 0; ch < output.length; ch++) output[ch].fill(0, from);
+    for (let ch = 0; ch < output.length; ch++) output[ch]?.fill(0, from);
   }
 
   /**
@@ -191,7 +191,7 @@ class SdlEngineProcessor extends AudioWorkletProcessor {
     }
 
     const channels = this.channels;
-    const frames = output[0].length;
+    const frames = output[0]?.length ?? 0;
     const outChannels = Math.min(channels, output.length);
     const heap = this.heap;
     const isStream = mode === MODE_STREAM;
@@ -214,7 +214,7 @@ class SdlEngineProcessor extends AudioWorkletProcessor {
     }
 
     this.rateU32[0] = Atomics.load(s, S_RATE_BITS);
-    let rate = this.rateF32[0];
+    let rate = this.rateF32[0] ?? 1;
     if (!(rate > 0)) rate = 1;
     rate *= this.rateScale;
 
@@ -227,7 +227,10 @@ class SdlEngineProcessor extends AudioWorkletProcessor {
       const n = Math.min(frames, available);
       for (; i < n; i++) {
         const p = pos + i * channels;
-        for (let ch = 0; ch < outChannels; ch++) output[ch][i] = heap[base + ((p + ch) & mask)];
+        for (let ch = 0; ch < outChannels; ch++) {
+          const channel = output[ch];
+          if (channel) channel[i] = heap[base + ((p + ch) & mask)] ?? 0;
+        }
       }
       consumed = n;
     } else {
@@ -241,8 +244,11 @@ class SdlEngineProcessor extends AudioWorkletProcessor {
         if (frac > 0 && !lerp && !final) break;
         const p = pos + consumed * channels;
         for (let ch = 0; ch < outChannels; ch++) {
-          const a = heap[base + ((p + ch) & mask)];
-          output[ch][i] = lerp ? a + (heap[base + ((p + channels + ch) & mask)] - a) * frac : a;
+          const channel = output[ch];
+          if (!channel) continue;
+          const a = heap[base + ((p + ch) & mask)] ?? 0;
+          const b = heap[base + ((p + channels + ch) & mask)] ?? 0;
+          channel[i] = lerp ? a + (b - a) * frac : a;
         }
         frac += rate;
         const step = Math.floor(frac);
@@ -256,7 +262,7 @@ class SdlEngineProcessor extends AudioWorkletProcessor {
       this.frac = frac;
     }
     if (i < frames || outChannels < output.length) {
-      for (let ch = 0; ch < output.length; ch++) output[ch].fill(0, ch < outChannels ? i : 0);
+      for (let ch = 0; ch < output.length; ch++) output[ch]?.fill(0, ch < outChannels ? i : 0);
     }
 
     if (consumed > 0) {

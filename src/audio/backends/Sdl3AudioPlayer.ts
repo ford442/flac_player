@@ -7,7 +7,7 @@
 // and transport words. No second AudioContext, no ScriptProcessor: without
 // AudioWorklet and cross-origin isolation the mode reports `playable: false`
 // and loads reject.
-import { decodeAudio } from '../../audioDecoder';
+import { decodeAudio } from '../audioDecoder';
 import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextManager } from '../AudioContextManager';
 import { createStreamResampler, resampleInterleaved, type StreamResampler } from '../resampler';
 import { WASM_ASSETS, loadWasmScript } from '../wasmLoader';
@@ -67,7 +67,7 @@ export function isSdlEngineSupported(): boolean {
 }
 
 const UNSUPPORTED_MESSAGE =
-  'The SDL output needs AudioWorklet and a cross-origin isolated page (SharedArrayBuffer); use Streaming instead.';
+  'The WASM engine needs AudioWorklet and a cross-origin isolated page (SharedArrayBuffer); use Streaming instead.';
 
 /** Processor ids; 0 means "no owner" in EngineState. */
 let lastOwner = 0;
@@ -119,6 +119,8 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
   /** Contexts the processor module was added to. */
   private readonly workletContexts = new WeakSet<BaseAudioContext>();
   private heapView: Float32Array | null = null;
+  private stagingPtr = 0;
+  private stagingCapacity = 0;
   private readonly unsubscribeGraph: () => void;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
@@ -192,7 +194,9 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
   private checkBoundaries(current: number): void {
     const frameSamples = this.engineRate * this.channels;
     if (frameSamples <= 0) return;
-    while (this.boundaries.length > 0 && current * frameSamples >= this.boundaries[0].abs) {
+    while (this.boundaries.length > 0) {
+      const next = this.boundaries[0];
+      if (!next || current * frameSamples < next.abs) break;
       const b = this.boundaries.shift()!;
       this.segmentOffset = b.abs / frameSamples;
       this.duration = b.duration ?? 0;
@@ -293,23 +297,23 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
         continue;
       }
       const n = Math.min(interleaved.length - offset, cap - fill);
-      const ptr = module._malloc(n * 4);
-      if (!ptr) {
-        await sleep(8);
-        continue;
-      }
-      try {
-        this.heapF32().set(interleaved.subarray(offset, offset + n), ptr / 4);
-        const written = module._push_pcm(ptr, n);
-        if (written <= 0) {
+      if (this.stagingCapacity < cap) {
+        if (this.stagingPtr) module._free(this.stagingPtr);
+        this.stagingPtr = module._malloc(cap * 4);
+        this.stagingCapacity = this.stagingPtr ? cap : 0;
+        if (!this.stagingPtr) {
           await sleep(8);
           continue;
         }
-        offset += written;
-        this.pushedAbs += written;
-      } finally {
-        module._free(ptr);
       }
+      this.heapF32().set(interleaved.subarray(offset, offset + n), this.stagingPtr / 4);
+      const written = module._push_pcm(this.stagingPtr, n);
+      if (written <= 0) {
+        await sleep(8);
+        continue;
+      }
+      offset += written;
+      this.pushedAbs += written;
     }
   }
 
@@ -352,7 +356,7 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
     this.channels = channels;
     this.engineRate = rate;
 
-    await this.contextManager.whenRunning();
+    await this.contextManager.resume();
     if (token !== this.loadToken || this.destroyed) return;
     await this.attachNode(ctx, channels);
     this.notifyStateChange();
@@ -397,7 +401,7 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
         this.engineRate = rate;
         this.pushedAbs = 0;
         this.duration = (await session.audibleDuration) ?? options.expectedDuration ?? 0;
-        await this.contextManager.whenRunning();
+        await this.contextManager.resume();
         if (this.session !== session) return;
         await this.attachNode(ctx, channels);
         module._play();
@@ -482,7 +486,7 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
       // Played to the end: restart from the top.
       this.seek(0);
     }
-    void this.contextManager.whenRunning();
+    void this.contextManager.resume();
     module._play();
     this.isPlaying = true;
     this.notifyStateChange();
@@ -613,6 +617,9 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
     this.stop();
     if (this.pollInterval) clearInterval(this.pollInterval);
     this.pollInterval = null;
+    if (this.module && this.stagingPtr) this.module._free(this.stagingPtr);
+    this.stagingPtr = 0;
+    this.stagingCapacity = 0;
     this.module?._cleanup();
     this.module = null;
   }

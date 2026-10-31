@@ -1,6 +1,12 @@
+import type { TrackSource } from './track';
+
 export interface PlaylistTrack {
   id: string;
   name: string;
+  /** Unset on tracks saved before #258; read it through `trackSource()`. */
+  source?: TrackSource;
+  /** The file behind a `local` track; never persisted. */
+  file?: File;
   title?: string;
   url: string;
   rating?: number;

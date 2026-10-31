@@ -1,6 +1,6 @@
 # FLAC Player Architecture
 
-Last updated: August 2026
+Last updated: October 2026
 
 ## System overview
 
@@ -10,7 +10,7 @@ The app is a React/TypeScript single-page player with a **four-backend audio eng
 flowchart TB
   subgraph UI["React UI"]
     Player["Player.tsx"]
-    Controller["usePlaybackController"]
+    Engine["PlaybackEngine + player store<br/>(player/, #258)"]
     Library["LibraryView"]
     Queue["QueuePanel"]
     Shell["VisualizerShell"]
@@ -22,14 +22,14 @@ flowchart TB
     Streaming["StreamingAudioPlayer<br/>default — HTMLAudio + range requests"]
     WebAudio["WebAudioPlayer<br/>buffered Web Audio API"]
     Worklet["WorkletAudioPlayer<br/>worklet + libflac decode"]
-    SDL3["Sdl3AudioPlayer<br/>C++ WASM engine + sdl-engine worklet"]
+    WasmEngine["WASM engine<br/>C++ WASM + AudioWorklet"]
   end
 
   subgraph Load["Loading & library"]
-    Loader["audioLoader.ts"]
+    Http["api/http.ts (apiFetch, resolveTrackUrl)<br/>api/library.ts (sync query + live catalog)"]
     SongApi["api/songApi.ts"]
     TrackCache["storage/trackCache.ts"]
-    LibCache["storage/libraryCache.ts"]
+    LibCache["catalog/ (IndexedDB, Dexie)"]
   end
 
   subgraph FX["Shared audio graph"]
@@ -45,26 +45,27 @@ flowchart TB
     Fatal["Fatal visualizer panel"]
   end
 
-  Player --> Controller
-  Controller --> Audio
+  Player --> Engine
+  Engine --> Audio
   Player --> Shell
   Shell --> ShaderGUI
   Shell --> ProjectM
-  Player --> Loader
-  Loader --> SongApi
-  Loader --> TrackCache
+  Player --> SongApi
+  SongApi --> Http
+  Engine --> TrackCache
   SongApi --> LibCache
 
   Streaming --> ACM
   WebAudio --> ACM
   Worklet --> ACM
-  SDL3 --> ACM
+  WasmEngine --> ACM
   ACM --> EQ --> Analyser
   Analyser --> Probe
   Probe -->|adapter + device + canvas context ready| WebGPU
   Probe -->|failure without GL opt-in; audio unaffected| Fatal
   Analyser -->|visualizer=webgl2 or Settings| WebGL2
   Worklet -->|PCM tap| ProjectM
+  WasmEngine -->|shared AudioWorklet graph| ACM
 ```
 
 ## Audio data flow
@@ -74,9 +75,9 @@ flowchart TB
 ```
 User selects track in LibraryView / QueuePanel
     ↓
-Player.tsx → usePlaybackController → PlaybackEngine.load() → createAudioBackend()
+Player.tsx / views → useActions() → PlaybackEngine.load(track) (token, abort, one active path)
     ↓
-GET https://storage.noahcohn.com/api/songs  (or REACT_APP_API_URL)
+GET https://storage.noahcohn.com/api/songs  (or REACT_APP_API_URL), synced into the IndexedDB catalog
     ↓
 Each song.url is an absolute https:// URL to the audio file
     ↓
@@ -94,7 +95,7 @@ Destination → speakers
 ```
 fetch(url) → ArrayBuffer
     ↓
-flacDecoder.ts / audioDecoder.ts / flacDecoderWorker.ts
+audio/flacDecoder.ts / audio/audioDecoder.ts / workers/flacDecoderWorker.ts
     ↓
 AudioBuffer (or streaming chunks into worklet ring buffer)
     ↓
@@ -122,11 +123,11 @@ No full-file download before playback starts. Requires CORS + `Accept-Ranges` on
 | `streaming` (default) | `audio/backends/StreamingAudioPlayer.ts` | URL → `<audio>` | Large library, instant start, crossfade |
 | `web-audio` | `audio/backends/WebAudioPlayer.ts` | Full fetch + decode | Simple buffered playback, debugging |
 | `worklet` | `audio/backends/worklet/WorkletAudioPlayer.ts` | Fetch/decode → worklet ring | Low latency, projectM PCM tap, EQ |
-| `sdl` | `audio/backends/Sdl3AudioPlayer.ts` | Range + play ring (large) or full fetch (small) | Experimental C++ engine (play ring + transport) read by an AudioWorklet; 512 MiB heap cap |
+| `sdl` | `audio/backends/Sdl3AudioPlayer.ts` | Range + play ring (large) or full fetch (small) | Experimental WASM output; 512 MiB heap cap |
 
 Backend factory: `src/audio/createAudioBackend.ts` (dynamic `import()` — WASM chunks load lazily).
 
-Shared lifecycle guards (destroyed checks, volume/ReplayGain, state callbacks) live in `src/audio/backends/BaseAudioBackend.ts`. The transport is `src/audio/PlaybackEngine.ts`: backend lifecycle, the one `load()` path (generation counter; stops the path it leaves), play/pause/seek, the clock, settings re-applied to each new backend, gapless `preloadNext` forwarding and throttled resume-position saves. React reads it as an external store (`src/hooks/usePlaybackEngine.ts`): `usePlaybackStatus` changes only on discrete transport changes, and only time-showing leaves (`LiveWaveformOverview`, `EmbedPlayerView`) subscribe to the clock, so the library, EQ panel and visualizer do not re-render on `timeupdate`. `src/hooks/usePlaybackController.ts` maps queue / settings / room role onto engine commands; `Player.tsx` composes hooks + views only.
+Shared lifecycle guards (destroyed checks, volume/ReplayGain, state callbacks) live in `src/audio/backends/BaseAudioBackend.ts`. Playback lifecycle, load tokens, queue advance and the clock are owned by `src/player/PlaybackEngine.ts` (plain TS), which writes a zustand store (`src/player/playerStore.ts`). Views read it through selectors (`src/player/selectors.ts`); only the scrubber, time readouts and the Media Session bridge subscribe to the 4 Hz clock. `Player.tsx` wires settings, rooms and persistence and lays out the views.
 
 See [AUDIO_BACKENDS.md](./AUDIO_BACKENDS.md) for selection guidance.
 
@@ -149,7 +150,11 @@ preference webgl2 (opt-in)  → WebGL2Visualizer (WAVEFORM_LAYOUT GLSL)
 DEBUG_VISUALIZER=canvas2d   → CanvasFallbackVisualizer (debug only)
 ```
 
-The boot probe is the **only** `requestAdapter` / `requestDevice` call. It uses `powerPreference: 'high-performance'` (`?gpu=low` → `'low-power'`), intersects optional features (`timestamp-query`, `shader-f16`; never required), and configures the canvas via `buildCanvasConfiguration` in `src/visuals/webgpu/canvasConfig.ts`. `WebGPUVisualizer` adopts that device and reuses the same configure factory on init/resize. Inspect `window.webgpuProbe` for status, reason, browser, adapter (including `isFallbackAdapter`), `powerPreference`, `requestedFeatures`, `display`, and live `gpuTimeMs`.
+The boot probe is the **only** `requestAdapter` / `requestDevice` call. It uses `powerPreference: 'high-performance'` (`?gpu=low` → `'low-power'`), intersects optional features (`timestamp-query`, `shader-f16`; never required), and configures the canvas via `buildCanvasConfiguration` in `src/visuals/webgpu/canvasConfig.ts`. `WebGPUVisualizer` adopts that device and reuses the same configure factory on init/resize. Inspect `window.webgpuProbe` for status, reason, browser, adapter (including `isFallbackAdapter`), `powerPreference`, `requestedFeatures`, `display`, and live `gpuTimeMs`. The device is labelled `flac-player-visualizer`. `requiredLimits` is left out on purpose: the FFT fits the default limits, and requiring more would exclude Intel iGPUs. `uncapturederror` events are counted on `window.webgpuProbe.uncapturedErrors` (the first one is also logged and kept in `firstUncapturedError`).
+
+**Device lost** (`src/visuals/webgpu/deviceLostRecovery.ts`): for any reason other than `'destroyed'`, ShaderGUI releases the chores device and re-runs `probeWebGPU` on the same canvas **once**. On success it re-initializes `WebGPUVisualizer` and gpu-chores adopts the new device (the `webgpuFft.ts` WeakMap caches are keyed by device). If the re-probe fails, or a second loss happens, the fatal panel shows `reason: 'webgpu-device-lost'`. It never auto-starts WebGL2, and audio is never touched. Manual check: open `chrome://gpucrash` in another tab (or end the GPU process in the Chrome task manager) while playing. The visualizer should come back, and `window.webgpuProbe.deviceLostRecoveries` should be `1`.
+
+**WebGL2 opt-in context:** `buildWebGL2ContextAttributes()` in `canvasConfig.ts` sets `powerPreference` from `?gpu=low`, `antialias: false`, `preserveDrawingBuffer: false`, `desynchronized: true` (retried without it if rejected), `failIfMajorPerformanceCaveat` only with `?gl=strict`, and `xrCompatible: false`. The attributes the browser granted go into `window.webgpuProbe.glAttributes`.
 
 `GPUCanvasConfiguration` fields (`resolveCanvasDisplay` → `buildCanvasConfiguration`):
 
@@ -195,34 +200,54 @@ In-app ProjectMHost OR postMessage / BroadcastChannel('projectm-audio')
 ### AudioContextManager (`src/audio/AudioContextManager.ts`)
 
 - Single shared `AudioContext`
-- Speaker DSP (ReplayGain → limiter → volume → 5-band EQ) in the `dsp-chain` AudioWorklet: `src/sdl/dsp_chain.h` compiled to `public/dsp-chain.wasm`, for every backend; `EQChain.ts` / `ReplayGainNode.ts` when it cannot load (see `docs/AUDIO_BACKENDS.md` → Speaker-path DSP)
+- Speaker DSP (ReplayGain → limiter → volume → 5-band EQ) in the `dsp-chain` AudioWorklet: `src/sdl/dsp_chain.h` compiled to `public/dsp-chain.wasm`; `EQChain.ts` / `ReplayGainNode.ts` are the fallback (see `docs/AUDIO_BACKENDS.md` → Speaker-path DSP)
 - Analyser policy (`fftSize`, smoothing, dB range) set explicitly from `analyserPolicy.ts`
 - Application-lifetime device: backends connect/disconnect sources and never `suspend()` it
-- `connectInput()` routing for every backend's source node
+- `connectInput()` / `connectVisualizerFeed()` routing
+- The WASM engine's `sdl-engine` AudioWorklet feeds PCM into this shared graph; it does not open a separate audio device
 
-### SDL engine (`src/audio/backends/Sdl3AudioPlayer.ts`)
+### WASM playback engine (`src/audio/backends/Sdl3AudioPlayer.ts`)
 
-The C++ engine (`src/sdl/audio_engine.cpp`) holds the buffered track or the play ring (`src/sdl/play_ring.h`, 2^19 floats, fed by `_push_pcm`) and a transport block (`src/sdl/engine_state.h`) in `-pthread` shared memory. The `sdl-engine` AudioWorkletProcessor (`src/audio/worklets/sdlEngineProcessor.js`) reads whole frames out of it on the audio thread and feeds `connectInput()`, so speaker DSP and the analysis ring are the shared graph's. SDL itself (a ScriptProcessor on the main thread in a second `AudioContext`) left the path in #268.
+The C++ engine owns buffered PCM and the streaming play ring (`src/sdl/play_ring.h`). The `sdl-engine` AudioWorklet reads that shared memory and connects to `AudioContextManager`; there is no SDL audio device, second context, or ScriptProcessor.
 
 ### Analysis ring (`src/audio/analysisRing.ts`)
 
-Broadcast SharedArrayBuffer tap of post-DSP PCM for analysis consumers: written by the `dsp-chain` worklet (every backend passes through it), read at UI rate by `AnalysisRingReader` (`getAnalysisTap()`). Feeds the `?gpu_fft=1` live spectrum and its `dsp_fft.h` WASM golden (`src/audio/wasmFft.ts`). See `docs/AUDIO_BACKENDS.md` → Analysis ring.
+Broadcast SharedArrayBuffer tap of post-DSP PCM for analysis consumers: written by the `dsp-chain` worklet and read at UI rate by `AnalysisRingReader` (`getAnalysisTap()`). Feeds the `?gpu_fft=1` live spectrum and its `dsp_fft.h` WASM golden (`src/audio/wasmFft.ts`). See `docs/AUDIO_BACKENDS.md` → Analysis ring.
 
 ## Library & storage (client)
 
 | Module | Role |
 |--------|------|
 | `api/songApi.ts` | REST client for songs, tags, share, upload, MusicBrainz |
-| `storage/libraryCache.ts` | TTL cache for `/api/songs` responses |
+| `catalog/` | IndexedDB catalog (Dexie): remote sync, local filters/tags/stats, albums/artists, legacy import |
 | `storage/trackCache.ts` | Cache API offline track storage (LRU, 500 MB default) |
-| `storage/queueStorage.ts` | Persisted queue + repeat/shuffle |
+| `storage/metadataCache.ts` | Parsed tags/specs (localStorage) + cover art (Cache API `flac-player-artwork-v1`); 24 h TTL, 300-entry LRU, cleared on library resync |
+| `utils/trackMetadata.ts` | Tag/spec loading via Range reads (FLAC blocks walked, padding/seektable skipped); never downloads the whole file |
+| `hooks/useTrackMetadata.ts` | Memory → persisted → network, in-flight dedupe; feeds `MetadataPanel` and the ShaderGUI top screen |
+| `storage/queueStorage.ts` | Persisted queue + repeat/shuffle (catalog `state.queue`) |
+| `storage/playlistStore.ts` | Local-first playlists (catalog `playlists` table) |
 | `components/OfflineCache.tsx` | Per-track download / evict UI |
 
 Production API: **`https://storage.noahcohn.com`** (`REACT_APP_API_URL`).
 
+### Track metadata (album, cover art, specs)
+
+```
+useTrackMetadata(track)
+  → memory cache → storage/metadataCache (localStorage + Cache API) → network
+  → local File:  parseBlob (lazy slices)
+  → remote URL:  GET Range 0–128 KiB, then only the tag blocks still needed
+                 (FLAC: STREAMINFO / VORBIS_COMMENT / PICTURE; the rest is skipped unread)
+```
+
+Do not `fetch(url).blob()` to read tags. The `File` the playback controller keeps (`currentFile`) is not cleared
+when a remote track starts, so `ownsFile()` only trusts it for `blob:` URLs. For non-FLAC/WAV remote files
+duration and bitrate are omitted (they would be extrapolated from the truncated window); callers fall back to
+the backend's `duration`. Servers that ignore `Range` are handled: the 200 body is read only up to the needed offset.
+
 ## Backend API (FastAPI)
 
-Local/dev: `app.py` on port 7860. Production library and static audio files are served from `storage.noahcohn.com`.
+Local/dev: `server/app.py` on port 7860. Production library and static audio files are served from `storage.noahcohn.com`.
 
 Key endpoints: `GET /api/songs`, `POST /api/songs/{id}/play`, `POST /api/share`, `GET /api/share/{id}`. Full contract: [API.md](./API.md).
 
@@ -230,33 +255,21 @@ Key endpoints: `GET /api/songs`, `POST /api/songs/{id}/play`, `POST /api/share`,
 
 | Artifact | Build command | Committed in `public/` |
 |----------|---------------|------------------------|
-| SDL engine | `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh` (`--debug` via `scripts/build-wasm.sh --debug --sdl3`) | `sdl-audio.js`, `sdl-audio.wasm` |
-| projectM | `npm run build:projectm` | `projectm/projectm-host.*` (optional; separate `USE_SDL=2` video host) |
+| WASM engine (legacy mode `sdl`) | `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh` (`--debug` via `scripts/build-wasm.sh --debug --sdl3`) | `sdl-audio.js`, `sdl-audio.wasm` |
+| projectM | `npm run build:projectm` | `projectm/projectm-host.*` (optional; WebGL2 host, no SDL; presets fetched at runtime via `projectm/presets.json`) |
 
 CI runs `npm run verify:wasm` against `public/wasm-source.sha256`. Production webpack uses `--env skipWasm=true` and copies prebuilt binaries.
 
-## Cross-origin isolation and hosting
+## Cross-origin isolation
 
-Send these on every response from the app's origin: the dev server (`webpack.config.js`), `netlify.toml`, `vercel.json`, and any other host, including a deploy under a sub-path such as `/flac-player/`:
+Required for SharedArrayBuffer and the `sdl` WASM engine (disabled in the picker without it). The regular worklet ring falls back to `postMessage`, and analysis-ring consumers fall back to the `AnalyserNode`. Streaming and projectM work without cross-origin isolation. Every deploy target's headers are in `docs/DEPLOYMENT.md`:
 
 ```
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 ```
 
-The page's own headers isolate it. The service worker does not provide them (it only adds `Cross-Origin-Resource-Policy` to cached responses so they stay loadable under `require-corp`), so a worker that fails to register costs offline caching and background downloads, not isolation.
-
-| Context | Needs isolation? | Without it |
-|---------|------------------|------------|
-| Shared `AudioContext` + `dsp-chain` worklet | Only for the analysis ring (`SharedArrayBuffer`); the module itself is built without pthreads | Audio and speaker DSP work; `getAnalysisTap()` is null and analysis consumers read the `AnalyserNode` |
-| `sdl` engine worklet | Yes: `-pthread` build, PCM and transport in shared memory read by the worklet | The backend reports `playable: false` and loads reject; use `streaming` |
-| `GPUDevice` + canvas (WebGPU) | No | — |
-| WebGL2 visualizer | No | — |
-| projectM host | No `SharedArrayBuffer` use (built without pthreads) | — |
-
-## Serving from a sub-path
-
-Webpack's `publicPath` is `auto`, so the bundle finds its chunks next to `index.html`, and everything else that is loaded by URL is located the same way through `publicUrl()` (`src/utils/publicUrl.ts`): the service worker (`serviceWorkerLocation()` registers `service-worker.js` with the bundle's directory as scope), `WASM_ASSETS`, `DSP_CHAIN_WASM_URL`, the ffmpeg glue and the media-session icons. `index.html`, `manifest.json` and the precache entries in `webpack.config.js` use relative URLs. At the site root all of these resolve to the same root-relative paths as before. Do not add `'/something.wasm'` literals; deep links use the query string (`?room=`), not a path.
+Configured in `webpack.config.js` (dev), `netlify.toml`, and `vercel.json`.
 
 ## Testing
 
@@ -272,14 +285,14 @@ Static playlist share (`POST /api/share`, `/playlist/{id}`) loads a track list o
 
 ```
 Host Player                    rooms.py (WS)                  Guest Player(s)
- usePlaybackController             │                     usePlaybackController
+ PlaybackEngine                    │                     PlaybackEngine
    └ SyncClock (<audio>)           │                       └ SyncClock (<audio>)
  HostPublisher.observe ─ TRACK_CHANGE / PLAY / PAUSE / SEEK ─► GuestSync.reconcile
                        ─ QUEUE_UPDATE / HEARTBEAT (5 s) ─────►   load · play/pause ·
                        ◄─ TIME_SYNC (server clock) ──────────►   nudge rate · seek
 ```
 
-`useListeningRoomBridge` mounts next to `usePlaybackController` in `Player.tsx`. Rooms force the streaming backend's native `<audio>` path; measured drift between two tabs is tens of ms. Protocol, server, and production port: [LISTENING_ROOMS.md](./LISTENING_ROOMS.md).
+`useListeningRoomBridge({ engine, store })` is called from `Player.tsx`. Rooms force the streaming backend's native `<audio>` path; measured drift between two tabs is tens of ms. Protocol, server, and production port: [LISTENING_ROOMS.md](./LISTENING_ROOMS.md).
 
 ## Related docs
 

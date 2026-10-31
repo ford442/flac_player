@@ -2,7 +2,7 @@
 
 export const TRACK_CACHE_NAME = 'flac-player-tracks-v1';
 export const API_CACHE_NAME = 'flac-player-api-v1';
-export const LIBRARY_CACHE_TTL_SECONDS = 60 * 60 * 24; // 24h – mirrors libraryCache.ts
+export const LIBRARY_CACHE_TTL_SECONDS = 60 * 60 * 24; // 24h offline fallback for /api/songs reads
 
 export type SWClientMessage =
   | { type: 'SKIP_WAITING' }

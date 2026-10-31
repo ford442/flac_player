@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# SHA-256 over the projectM host WASM inputs (public/projectm/projectm-host.*):
-# the host source, the build script (which pins PROJECTM_TAG), and the emsdk pin.
-# The cloned libprojectM tree is not hashed; the pinned tag stands in for it.
+# SHA-256 over the projectM host WASM inputs: what we compile (host cpp), how
+# (build script, which pins PROJECTM_TAG), and with which Emscripten. The
+# cloned libprojectM tree is not hashed; the pinned tag stands in for it.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"

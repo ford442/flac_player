@@ -36,7 +36,16 @@ Call from UI/overview code only — **never inside an audio callback**. File ove
 
 The `auto` break-even below applies unchanged; small live windows go CPU unless the caller passes `prefer: 'webgpu'`.
 
-**Live ShaderGUI (opt-in `?gpu_fft=1`):** `useLiveGpuSpectrum` reads the newest 2048 frames of the **analysis ring** (`getAnalysisTap()` — interleaved post-DSP PCM from the dsp-chain worklet; see `docs/AUDIO_BACKENDS.md` → Analysis ring) at ≤ `METER_HZ` (30 Hz, main thread, never the audio callback), falling back to the analyser's mono time-domain window when no ring is published. It runs `fft_spectrum` with `prefer: 'webgpu'` and compares against the `dsp_fft.h` WASM golden at ~1 Hz (the JS golden until the module loads). The 🎛 HUD shows backend, PCM source, golden kind and Δ. `AnalyserNode` still feeds the shader until the goldens are trusted.
+**Live ShaderGUI (`?gpu_fft=1`):** `useLiveGpuSpectrum` reads the newest 2048 frames of the **analysis ring** (`getAnalysisTap()` — interleaved post-DSP PCM from SDL's callback or the dsp-chain worklet; see `docs/AUDIO_BACKENDS.md` → Analysis ring) at ≤ `METER_HZ` (30 Hz, main thread, never the audio callback), falling back to the analyser's mono time-domain window when no ring is published. It runs `fft_spectrum` with `prefer: 'webgpu'` and compares against the `dsp_fft.h` WASM golden at ~1 Hz (the JS golden until the module loads). The 🎛 HUD shows backend, PCM source, golden kind and Δ.
+
+Promotion (`src/visuals/spectrumSource.ts`): once `GPU_SPECTRUM_TRUST_CHECKS` (3) consecutive golden checks are within `FFT_GPU_EPSILON`, the GPU bins drive ShaderGUI's spectrum uniforms, its 64 audio bars, **and** beat detection. The bins are mapped to `getByteFrequencyData`'s scale first (`amplitudesToAnalyserBytes`: analyser Blackman gain, analyser smoothing and min/max dB), so the shader looks the same. One failed check or chore error sends it back to the analyser immediately. In GPU mode the analyser frequency data is not read at all. The budget is one time-domain read plus one GPU FFT at 30 Hz, and beat detection updates at 30 Hz (its 10-sample bass history covers ~333 ms instead of ~166 ms). The 🎛 HUD shows which source is live.
+
+| URL | Spectrum source |
+|-----|-----------------|
+| (default) | `GPU_SPECTRUM_DEFAULT` — `analyser` until goldens are trusted in the field |
+| `?gpu_fft=1` | GPU once trusted, analyser while warming up |
+| `?analyser_fft=1` | analyser (rollback once GPU becomes the default) |
+| `?no_gpu_compute` | analyser; the kill switch wins over both flags |
 
 ## Backend order (`prefer: 'auto'`)
 
@@ -44,7 +53,7 @@ The `auto` break-even below applies unchanged; small live windows go CPU unless 
 2. **Worker TS** reduce (chunked copies so playback PCM is never transferred)
 3. **Main-thread CPU** last (the golden used by unit tests)
 
-WebGL2 compute-via-FBO is **not** used. GLSL is an **opt-in** ShaderGUI render path (`?visualizer=webgl2`); it never shares a canvas or `GPUDevice` with WebGPU (switching away from it loses the GL context via `WEBGL_lose_context` before the next probe; on `device.lost` the probe re-requests the one device and chores re-adopt it). Dual-hot GL + WebGPU on the same PCM working set is avoided by never allocating a second device and by skipping the WebGPU probe on the GL canvas.
+WebGL2 compute-via-FBO is **not** used. GLSL is an **opt-in** ShaderGUI render path (`?visualizer=webgl2`); it never shares a canvas or `GPUDevice` with WebGPU. Dual-hot GL + WebGPU on the same PCM working set is avoided by never allocating a second device and by skipping the WebGPU probe on the GL canvas.
 
 Chrome vs Edge WebGPU flakes must not take down playback: compute failures fall through to Worker/CPU. Visualizer probe failure already leaves audio running.
 

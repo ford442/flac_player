@@ -1,23 +1,33 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { WebGPUVisualizer } from '../../webgpuVisualizer';
+import { WebGPUVisualizer } from '../../visuals/webgpuVisualizer';
 import { WebGL2Visualizer } from '../../visuals/webgl2/WebGL2Visualizer';
-import { retireGlHost } from '../../visuals/webgl2/glContext';
 import { CanvasFallbackVisualizer } from '../../visuals/webglFallback';
 import { buildFrameUniforms } from '../../visuals/visualSync';
 import {
+  getRendererLabel,
   readVisualizerPreference,
   resolveVisualizerBackend,
   subscribeVisualizerPreference,
+  type RendererStatus,
 } from '../../visuals/rendererSelection';
 import { setCurrentVisualizer } from '../../visuals/webgl2/global';
 import { cycleDebugMode } from '../../visuals/webgl2/debugModes';
+import { debug } from '../../utils/debug';
 import type { VisualizerBackend } from '../../visuals/types';
-import { createVisualizerBootFailure, type WebGPUProbeBreadcrumb } from '../../visuals/webgpuProbe';
-import { startWebGPUSession } from '../../visuals/webgpuSession';
-import { releaseVisualizerDevice } from '../../gpu-chores';
-import type { GpuChoreBackend } from '../../gpu-chores';
-import { LiveWaveformOverview } from '../WaveformOverview';
-import { PlaylistTrack } from '../../audioLoader';
+import {
+  createVisualizerBootFailure,
+  createVisualizerBootReady,
+  probeWebGPU,
+  type WebGPUProbeBreadcrumb,
+} from '../../visuals/webgpuProbe';
+import { bootWebGPUWithRecovery } from '../../visuals/webgpu/deviceLostRecovery';
+import { buildWebGL2ContextAttributes } from '../../visuals/webgpu/canvasConfig';
+import { PlaybackScrubber } from '../PlaybackScrubber';
+import { useActions } from '../PlayerActionsContext';
+import { UrlLoader } from '../UrlLoader';
+import {
+  selectIsLoading, selectIsPlaying, useAnalyser, usePlaybackEngine, useQueue, useSettings, useTransport,
+} from '../../player/selectors';
 import { Chassis } from './Chassis';
 import { TopScreen } from './TopScreen';
 import { BottomScreen } from './BottomScreen';
@@ -25,75 +35,61 @@ import { Knob } from './Knob';
 import { Button } from './Button';
 import { VolumeSlider } from './VolumeSlider';
 import { useBeatDetection } from '../../hooks/useBeatDetection';
-import { isLiveGpuFftEnabled, useLiveGpuSpectrum } from '../../hooks/useLiveGpuSpectrum';
-import { usePlaybackTimeRef } from '../../hooks/usePlaybackEngine';
-import './ShaderGUI.css';
+import { useLiveGpuSpectrum } from '../../hooks/useLiveGpuSpectrum';
+import { ownsFile, useTrackMetadata } from '../../hooks/useTrackMetadata';
+import { formatSpecBadges } from '../../utils/trackMetadata';
+import { amplitudesToAnalyserBytes, resolveSpectrumSource } from '../../visuals/spectrumSource';
+import './ShaderGUI.layout.css';
+import './ShaderGUI.overlays.css';
 
+/**
+ * The hardware-styled player. Transport, queue and volume come from the player
+ * store; playback time is read from the engine clock inside the render loop, so
+ * a clock tick never re-renders this component (#258).
+ */
 export interface ShaderGUIProps {
-  analyser: AnalyserNode | null;
-  currentTrack: PlaylistTrack | null;
-  queue: PlaylistTrack[];
-  queueCurrentIndex: number;
-  isPlaying: boolean;
-  isLoading?: boolean;
-  duration: number;
-  volume: number;
-  muted?: boolean;
-  onPlay: () => void;
-  onStop: () => void;
-  onSeek?: (time: number) => void;
-  onTrackClick: (index: number) => void;
-  onVolumeChange: (volume: number) => void;
-  onMute?: () => void;
-  onNext?: () => void;
-  onPrevious?: () => void;
   onToggleFallback?: () => void;
   showFallbackToggle?: boolean;
-  onFileSelect?: (files: File[]) => void;
+  /** Offer the load-from-URL / demo playlist panel. */
+  canLoadUrl?: boolean;
   /** Hide GPU visualizer; keep transport/queue controls (projectM-only mode). */
   controlsOnly?: boolean;
-  /** Scrubber peaks from gpu-chores (null while streaming / not yet reduced). */
-  overviewMinmax?: Float32Array | null;
-  overviewRms?: number | null;
-  overviewPeak?: number | null;
-  overviewBackend?: GpuChoreBackend | null;
-  overviewReason?: string | null;
 }
 
 export const ShaderGUI: React.FC<ShaderGUIProps> = ({
-  analyser,
-  currentTrack,
-  queue,
-  queueCurrentIndex,
-  isPlaying,
-  isLoading = false,
-  duration,
-  volume,
-  muted = false,
-  onPlay,
-  onStop,
-  onSeek,
-  onTrackClick,
-  onVolumeChange,
-  onMute,
-  onNext,
-  onPrevious,
   onToggleFallback,
   showFallbackToggle = false,
-  onFileSelect,
+  canLoadUrl = false,
   controlsOnly = false,
-  overviewMinmax = null,
-  overviewRms = null,
-  overviewPeak = null,
-  overviewBackend = null,
-  overviewReason = null,
 }) => {
+  const engine = usePlaybackEngine();
+  const actions = useActions();
+  const analyser = useAnalyser();
+  const currentTrack = useTransport((t) => t.currentTrack);
+  const currentFile = currentTrack?.file;
+  const isPlaying = useTransport(selectIsPlaying);
+  const isLoading = useTransport(selectIsLoading);
+  const duration = useTransport((t) => t.duration);
+  const queue = useQueue((q) => q.tracks);
+  const queueCurrentIndex = useQueue((q) => q.currentIndex);
+  const volume = useSettings((st) => st.volume);
+  const muted = useSettings((st) => st.muted);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const trackMeta = useTrackMetadata(
+    !controlsOnly && currentTrack
+      ? {
+          cacheKey: currentTrack.id || currentTrack.url,
+          url: currentTrack.url,
+          file: ownsFile(currentTrack.url, currentFile) ? currentFile : undefined,
+        }
+      : null
+  );
+  const trackAlbum = trackMeta.metadata?.tags.album;
+  const trackYear = trackMeta.metadata?.tags.year;
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showUrlLoader, setShowUrlLoader] = useState(false);
   const webgpuRef = useRef<WebGPUVisualizer | null>(null);
   const webgl2Ref = useRef<WebGL2Visualizer | null>(null);
-  // Whoever holds the live WebGL2 context, even after destroy(): its canvas keeps the context.
-  const glHostRef = useRef<WebGL2Visualizer | null>(null);
   const canvas2dRef = useRef<CanvasFallbackVisualizer | null>(null);
   const animFrameRef = useRef<number>(0);
   const [probeFailure, setProbeFailure] = useState<WebGPUProbeBreadcrumb | null>(null);
@@ -101,7 +97,13 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const [gpuStats, setGpuStats] = useState<ReturnType<WebGPUVisualizer['getRenderInfo']> & {
     gpuTimeMs: number | null;
   } | null>(null);
-  const [activeBackend, setActiveBackend] = useState<VisualizerBackend>('webgpu');
+  // Start from the selected backend (not a hardcoded 'webgpu') so an opted-in renderer is
+  // labeled before the first track creates an analyser.
+  const [activeBackend, setActiveBackend] = useState<VisualizerBackend>(
+    () => resolveVisualizerBackend(readVisualizerPreference()),
+  );
+  // True only while a visualizer of `activeBackend` is actually running.
+  const [rendererReady, setRendererReady] = useState(false);
   const [preferenceEpoch, setPreferenceEpoch] = useState(0);
   const [canvasSessionKey, setCanvasSessionKey] = useState(
     () => resolveVisualizerBackend(readVisualizerPreference()),
@@ -126,8 +128,19 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   const [stopFlash, setStopFlash] = useState(0);
   const [visualizerMode, setVisualizerMode] = useState<'gui' | '3D'>('gui');
 
-  const [liveGpuFft] = useState(() => isLiveGpuFftEnabled());
-  const liveSpectrum = useLiveGpuSpectrum(analyser, liveGpuFft && !controlsOnly);
+  // GPU fft_spectrum drives spectrum uniforms + beat only once its golden is trusted;
+  // analyser otherwise (and always under ?no_gpu_compute / ?analyser_fft=1).
+  const [spectrumChoice] = useState(() => resolveSpectrumSource());
+  const { stats: liveSpectrum, frameRef: gpuFrameRef } = useLiveGpuSpectrum(
+    analyser,
+    spectrumChoice.source === 'gpu' && !controlsOnly,
+    analyser?.frequencyBinCount ?? 64,
+  );
+  const gpuSpectrumRef = useRef({
+    seq: -1,
+    smoothed: new Float32Array(0),
+    bytes: new Uint8Array(0) as Uint8Array<ArrayBuffer>,
+  });
 
   // 🎛 HUD: poll GPU pass timings while the panel is open (timestamp-query).
   useEffect(() => {
@@ -141,13 +154,22 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     return () => window.clearInterval(id);
   }, [showDebugPanel]);
 
-  const { beatPhaseRef, spectrumRef, processFrame } = useBeatDetection();
+  const { beatPhaseRef, spectrumRef, processFrame, processBytes } = useBeatDetection();
   const timeRef = useRef(0);
-  // Track position for the uniforms, read per frame: no re-render or rAF restart per tick.
-  const currentTimeRef = usePlaybackTimeRef();
+
+  // The init effect keys on whether an analyser exists, not on which one: a graph
+  // rebuilt for another sample rate hands its new analyser to the live visualizer
+  // (setAnalyser) and keeps the GPUDevice, pipelines and canvas (#259 W1).
+  const analyserRef = useRef(analyser);
+  analyserRef.current = analyser;
+  const hasAnalyser = analyser !== null;
+  useEffect(() => {
+    webgpuRef.current?.setAnalyser(analyser);
+    webgl2Ref.current?.setAnalyser(analyser);
+    canvas2dRef.current?.setAnalyser(analyser);
+  }, [analyser]);
 
   const destroyAllVisualizers = useCallback(() => {
-    releaseVisualizerDevice(webgpuRef.current?.getDevice() ?? null);
     webgpuRef.current?.destroy();
     webgpuRef.current = null;
     webgl2Ref.current?.destroy();
@@ -155,6 +177,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     canvas2dRef.current?.destroy();
     canvas2dRef.current = null;
     setCurrentVisualizer(null);
+    setRendererReady(false);
   }, []);
 
   const initVisualizer = useCallback(async (
@@ -169,7 +192,6 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
 
     if (requiredBackend === 'webgl2') {
       const visualizer = new WebGL2Visualizer(node);
-      glHostRef.current = visualizer;
       if (!visualizer.initialize(audioAnalyser)) {
         visualizer.destroy();
         if (cancelled()) return;
@@ -178,6 +200,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
           'webgl2-context-failed',
           'canvas.getContext("webgl2") returned null or shader compile failed',
           'webgl2',
+          buildWebGL2ContextAttributes(),
         ));
         return;
       }
@@ -186,7 +209,9 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         return;
       }
       webgl2Ref.current = visualizer;
+      createVisualizerBootReady('webgl2', visualizer.getContextAttributes());
       setProbeFailure(null);
+      setRendererReady(true);
       setCurrentVisualizer({
         backend: 'webgl2',
         readPixels: () => visualizer.readPixels(),
@@ -208,6 +233,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         }
         canvas2dRef.current = visualizer;
         setProbeFailure(null);
+        setRendererReady(true);
         setCurrentVisualizer({
           backend: 'canvas2d',
           readPixels: () => null,
@@ -225,15 +251,17 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       return;
     }
 
-    await startWebGPUSession({
-      canvas: node,
-      analyser: audioAnalyser,
-      requestedVisualizer,
-      isCancelled: cancelled,
-      createVisualizer: (canvas) => new WebGPUVisualizer(canvas),
+    await bootWebGPUWithRecovery({
+      probe: () => probeWebGPU(node, { requestedVisualizer }),
+      createVisualizer: () => new WebGPUVisualizer(node),
+      getAnalyser: () => analyserRef.current,
+      cancelled,
       onReady: (visualizer) => {
         webgpuRef.current = visualizer;
+        // The analyser may have been replaced while the pipelines compiled.
+        visualizer.setAnalyser(analyserRef.current);
         setProbeFailure(null);
+        setRendererReady(true);
         setCurrentVisualizer({
           backend: requiredBackend,
           readPixels: () => null,
@@ -244,9 +272,10 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
           getGpuDevice: () => visualizer.getDevice(),
         });
       },
-      onLost: () => {
-        webgpuRef.current = null;
+      onLost: (visualizer) => {
+        if (webgpuRef.current === visualizer) webgpuRef.current = null;
         setCurrentVisualizer(null);
+        setRendererReady(false);
       },
       onFatal: (breadcrumb) => {
         webgpuRef.current = null;
@@ -257,9 +286,23 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
   }, []);
 
   useEffect(() => subscribeVisualizerPreference(() => {
-    setCanvasSessionKey(resolveVisualizerBackend(readVisualizerPreference()));
+    const selected = resolveVisualizerBackend(readVisualizerPreference());
+    setCanvasSessionKey(selected);
+    setActiveBackend(selected);
     setPreferenceEpoch((n) => n + 1);
   }), []);
+
+  // Title and badge describe the renderer actually in use, never an assumed WebGPU.
+  const rendererStatus: RendererStatus = probeFailure ? 'failed' : rendererReady ? 'ready' : 'pending';
+  const rendererLabel = getRendererLabel(activeBackend, rendererStatus);
+  useEffect(() => {
+    if (controlsOnly) return undefined;
+    const original = document.title;
+    return () => { document.title = original; };
+  }, [controlsOnly]);
+  useEffect(() => {
+    if (!controlsOnly) document.title = rendererLabel.title;
+  }, [controlsOnly, rendererLabel.title]);
 
   // Default is fail-closed WebGPU. WebGL2 / Canvas2D only when the user opted in.
   useEffect(() => {
@@ -267,13 +310,11 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     const isCancelled = () => cancelled;
 
     const init = async () => {
-      // A replaced canvas keeps its GL context until told otherwise; drop it before anything
-      // (the WebGPU probe included) runs on the new one.
-      glHostRef.current = retireGlHost(glHostRef.current, canvasRef.current);
-      if (!canvasRef.current || !analyser || controlsOnly) return;
+      const audioAnalyser = analyserRef.current;
+      if (!canvasRef.current || !hasAnalyser || !audioAnalyser || controlsOnly) return;
 
       destroyAllVisualizers();
-      await initVisualizer(canvasRef.current, analyser, isCancelled);
+      await initVisualizer(canvasRef.current, audioAnalyser, isCancelled);
     };
 
     init();
@@ -282,12 +323,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       cancelled = true;
       destroyAllVisualizers();
     };
-  }, [analyser, controlsOnly, destroyAllVisualizers, initVisualizer, preferenceEpoch]);
-
-  // Unmount: the canvas is detached by now (StrictMode's simulated unmount keeps it attached).
-  useEffect(() => () => {
-    glHostRef.current = retireGlHost(glHostRef.current, null);
-  }, []);
+  }, [hasAnalyser, controlsOnly, destroyAllVisualizers, initVisualizer, preferenceEpoch]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -298,17 +334,53 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       e.preventDefault();
       const next = cycleDebugMode(handle.getDebugMode());
       handle.setDebugMode(next);
-      console.log(`[${activeBackend} debug] mode: ${next}`);
+      debug.log(`${activeBackend}:debug`, `mode: ${next}`);
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [activeBackend]);
 
   // Animation loop — shared uniform/audio path for GPU backends
+  // Everything the loop reads that React owns, refreshed each render. The loop is
+  // started once and never restarted by a prop or clock change (#258 bug 9).
+  const frameInputsRef = useRef({ analyser, isPlaying, duration, volume, modeNone, modeIR, visualizerMode });
+  frameInputsRef.current = { analyser, isPlaying, duration, volume, modeNone, modeIR, visualizerMode };
+  const analyserBytesRef = useRef<Uint8Array<ArrayBuffer>>(new Uint8Array(0));
+
   useEffect(() => {
-    const loop = () => {
-      timeRef.current += 0.016;
-      processFrame(analyser);
+    let last: number | null = null;
+    const loop = (now: number) => {
+      const { analyser, isPlaying, duration, volume, modeNone, modeIR, visualizerMode } = frameInputsRef.current;
+      // Real frame time, clamped so a background tab does not jump the animation.
+      timeRef.current += last === null ? 0 : Math.min(Math.max((now - last) / 1000, 0), 0.1);
+      last = now;
+      // One spectrum read per frame feeds both beat detection and the audio bars.
+      let freqData: Uint8Array<ArrayBuffer> | null = null;
+      const gpuFrame = gpuFrameRef.current;
+      if (analyser && gpuFrame?.trusted && gpuFrame.spectrum.length > 0) {
+        const gpu = gpuSpectrumRef.current;
+        if (gpu.bytes.length !== gpuFrame.spectrum.length) {
+          gpu.smoothed = new Float32Array(gpuFrame.spectrum.length);
+          gpu.bytes = new Uint8Array(gpuFrame.spectrum.length);
+        }
+        if (gpu.seq !== gpuFrame.seq) {
+          gpu.seq = gpuFrame.seq;
+          amplitudesToAnalyserBytes(gpuFrame.spectrum, analyser, gpu.smoothed, gpu.bytes);
+          processBytes(gpu.bytes, analyser.context.sampleRate);
+        } else {
+          processBytes(null); // GPU runs at METER_HZ: hold bands between results
+        }
+        freqData = gpu.bytes;
+      } else if (analyser) {
+        if (analyserBytesRef.current.length !== analyser.frequencyBinCount) {
+          analyserBytesRef.current = new Uint8Array(analyser.frequencyBinCount);
+        }
+        freqData = analyserBytesRef.current;
+        analyser.getByteFrequencyData(freqData);
+        processBytes(freqData, analyser.context.sampleRate);
+      } else {
+        processFrame(null);
+      }
 
       const canvas = canvasRef.current;
       const frameUniforms = buildFrameUniforms({
@@ -323,15 +395,12 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
         modeNone,
         modeIR,
         isPlaying,
-        currentTime: currentTimeRef.current,
+        currentTime: engine.clock.now(),
         duration,
         volume,
       });
 
-      if (analyser) {
-        const freqData = new Uint8Array(analyser.frequencyBinCount);
-        analyser.getByteFrequencyData(freqData);
-
+      if (freqData) {
         const webgpu = webgpuRef.current;
         const webgl2 = webgl2Ref.current;
         const canvas2d = canvas2dRef.current;
@@ -364,20 +433,15 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
 
     animFrameRef.current = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(animFrameRef.current);
-  }, [
-    analyser, processFrame, beatPhaseRef, spectrumRef,
-    isPlaying, currentTimeRef, duration, volume, modeNone, modeIR, visualizerMode,
-  ]);
+  }, [engine, processFrame, processBytes, gpuFrameRef, beatPhaseRef, spectrumRef]);
 
-  const handlePlay = useCallback(() => {
-    onPlay();
-  }, [onPlay]);
+  const { togglePlay, stop, previous, next, playQueueIndex, setVolume, toggleMute, addFiles, loadUrl, loadDemo } = actions;
 
   const handleStop = useCallback(() => {
     setStopFlash(1);
     setTimeout(() => setStopFlash(0), 300);
-    onStop();
-  }, [onStop]);
+    stop();
+  }, [stop]);
 
   const handleNone = useCallback(() => {
     setModeNone(prev => {
@@ -409,18 +473,23 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
     const files = Array.from(e.target.files || []).filter(
       f => f.name.endsWith('.flac') || f.name.endsWith('.wav') || f.name.endsWith('.mp3') || f.type.includes('audio')
     );
-    if (files.length > 0 && onFileSelect) {
-      onFileSelect(files);
-    }
+    if (files.length > 0) addFiles(files);
     e.target.value = '';
-  }, [onFileSelect]);
+  }, [addFiles]);
+
+  // Stable so TopScreen's ResizeObserver is not rebuilt on every render (#259 W6).
+  const handleCanvasResize = useCallback(() => {
+    webgpuRef.current?.resize();
+    webgl2Ref.current?.resize();
+    canvas2dRef.current?.resize();
+  }, []);
 
   const handleOpenFiles = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
 
   return (
-    <div className="relative flex flex-col items-center justify-center min-h-screen bg-black">
+    <div className="relative flex w-full flex-col items-center justify-center pt-14">
       {showFallbackToggle && onToggleFallback && (
         <button
           onClick={onToggleFallback}
@@ -446,6 +515,15 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             Required backend: <strong className="text-purple-200">{activeBackend}</strong>
             <br />
             DEBUG_VISUALIZER: <code>{window.DEBUG_VISUALIZER ?? 'unset'}</code>
+            <br />
+            {/* COOP/COEP precondition for SAB rings, the WASM engine and analysis tap (docs/DEPLOYMENT.md). */}
+            crossOriginIsolated:{' '}
+            <strong
+              className={window.crossOriginIsolated ? 'text-green-300' : 'text-red-400'}
+              data-testid="cross-origin-isolated"
+            >
+              {window.crossOriginIsolated ? 'yes' : 'no — SAB off, WASM engine unavailable'}
+            </strong>
           </div>
           {gpuStats && (
             <div className="mt-2 text-[10px] text-gray-300" data-testid="gpu-pass-time">
@@ -461,9 +539,17 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
               {gpuStats.display.toneMapping ? ` · HDR ${gpuStats.display.toneMapping}` : ''}
             </div>
           )}
+          <div className="mt-1 text-[10px] text-gray-300" data-testid="spectrum-source">
+            Spectrum:{' '}
+            <strong className="text-green-300">
+              {liveSpectrum?.trusted ? 'GPU fft_spectrum' : 'AnalyserNode'}
+            </strong>
+            {' '}({spectrumChoice.reason}
+            {spectrumChoice.source === 'gpu' && !liveSpectrum?.trusted ? ', golden warming up' : ''})
+          </div>
           {liveSpectrum && (
             <div className="mt-1 text-[10px] text-gray-300">
-              Live FFT (?gpu_fft): {liveSpectrum.backend} · N={liveSpectrum.fftSize}
+              Live FFT: {liveSpectrum.backend} · N={liveSpectrum.fftSize}
               {' · '}{liveSpectrum.elapsedMs.toFixed(2)} ms
               <br />
               PCM: {liveSpectrum.source === 'analyser' ? 'analyser' : `${liveSpectrum.source} ring`}
@@ -471,7 +557,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
               {liveSpectrum.goldenMaxDiff === null ? '—' : liveSpectrum.goldenMaxDiff.toExponential(1)}
             </div>
           )}
-          <div className="mt-2 text-[10px] text-gray-500">
+          <div className="mt-2 text-[10px] text-gray-400">
             Handle: <code>window.currentVisualizer</code>
             {' · '}Chores: <code>window.__gpuChores</code>
           </div>
@@ -494,26 +580,17 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             canvasSessionKey={canvasSessionKey}
             artist={currentTrack?.author}
             title={currentTrack?.title || currentTrack?.name}
+            album={trackAlbum ? (trackYear ? `${trackAlbum} (${trackYear})` : trackAlbum) : undefined}
+            artworkUrl={trackMeta.artworkUrl ?? currentTrack?.cover_url ?? null}
+            specs={formatSpecBadges(trackMeta.metadata?.specs)}
             activeBackend={activeBackend}
+            rendererBadge={rendererLabel.badge}
             probeFailure={probeFailure}
-            onCanvasResize={() => {
-              webgpuRef.current?.resize();
-              webgl2Ref.current?.resize();
-              canvas2dRef.current?.resize();
-            }}
+            onCanvasResize={handleCanvasResize}
             onCanvasDoubleClick={handleToggle3D}
             isLoading={isLoading}
           />
-          <LiveWaveformOverview
-            minmax={overviewMinmax}
-            duration={duration}
-            onSeek={onSeek}
-            analyser={analyser}
-            rms={overviewRms}
-            peak={overviewPeak}
-            backend={overviewBackend}
-            reason={overviewReason}
-          />
+          <PlaybackScrubber />
         </div>
 
         <div className="shader-gui-top-right">
@@ -536,24 +613,48 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
           </div>
 
           <div className="shader-gui-buttons">
-            <Button type="prev" active={false} onClick={() => onPrevious?.()} />
+            <Button type="prev" active={false} onClick={previous} />
             <Button type="none" active={modeNone === 1} onClick={handleNone} />
             <Button type="ir" active={modeIR === 1} onClick={handleIR} />
             <Button type="stop" active={stopFlash > 0} onClick={handleStop} />
-            <Button type="play" active={isPlaying} onClick={handlePlay} />
-            <Button type="next" active={false} onClick={() => onNext?.()} />
+            <Button type="play" active={isPlaying} onClick={togglePlay} />
+            <Button type="next" active={false} onClick={next} />
           </div>
 
-          {onFileSelect && (
-            <button
-              onClick={handleOpenFiles}
-              className="shader-button"
-              title="Open local audio files"
-              aria-label="Open Files"
-            >
-              <span className="button-icon">📂</span>
-            </button>
+          {canLoadUrl && (
+            <div className="shader-url-wrap">
+              <button
+                onClick={() => setShowUrlLoader(v => !v)}
+                className="shader-button"
+                title="Load from URL / demo playlist"
+                aria-label="Load from URL"
+                aria-expanded={showUrlLoader}
+              >
+                <span className="button-icon">🔗</span>
+              </button>
+              {showUrlLoader && (
+                <div className="shader-url-panel">
+                  <UrlLoader
+                    onLoadUrl={(url) => {
+                      const err = loadUrl(url);
+                      if (!err) setShowUrlLoader(false);
+                      return err;
+                    }}
+                    onLoadDemo={() => { loadDemo(); setShowUrlLoader(false); }}
+                  />
+                </div>
+              )}
+            </div>
           )}
+
+          <button
+            onClick={handleOpenFiles}
+            className="shader-button"
+            title="Open local audio files"
+            aria-label="Open Files"
+          >
+            <span className="button-icon">📂</span>
+          </button>
         </div>
         </>
         )}
@@ -562,23 +663,21 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
           <BottomScreen
             tracks={queue}
             currentIndex={queueCurrentIndex}
-            onTrackClick={onTrackClick}
+            onTrackClick={playQueueIndex}
             isLoading={isLoading}
           />
         </div>
 
         <div className="shader-gui-volume-col">
-          <VolumeSlider value={muted ? 0 : volume} onChange={onVolumeChange} />
-          {onMute && (
-            <button
-              onClick={onMute}
-              className="shader-mute-btn"
-              title={muted ? 'Unmute (M)' : 'Mute (M)'}
-              aria-label={muted ? 'Unmute' : 'Mute'}
-            >
-              {muted ? '🔇' : '🔊'}
-            </button>
-          )}
+          <VolumeSlider value={muted ? 0 : volume} onChange={setVolume} />
+          <button
+            onClick={toggleMute}
+            className="shader-mute-btn"
+            title={muted ? 'Unmute (M)' : 'Mute (M)'}
+            aria-label={muted ? 'Unmute' : 'Mute'}
+          >
+            {muted ? '🔇' : '🔊'}
+          </button>
         </div>
       </div>
     </Chassis>
@@ -588,7 +687,7 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
       multiple
       accept=".flac,.wav,.mp3,audio/flac,audio/wav,audio/x-wav,audio/mpeg"
       onChange={handleFileInput}
-      className="hidden"
+      hidden
       aria-hidden="true"
     />
     </div>

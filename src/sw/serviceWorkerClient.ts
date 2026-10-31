@@ -1,9 +1,10 @@
-import { publicUrl } from '../utils/publicUrl';
 import {
   isSWServerMessage,
   type SWClientMessage,
   type SWServerMessage,
 } from './swMessages';
+import { assetUrl, PUBLIC_PATH } from '../utils/publicPath';
+import { debug } from '../utils/debug';
 
 type MessageHandler = (message: SWServerMessage) => void;
 
@@ -25,16 +26,6 @@ export function isServiceWorkerSupported(): boolean {
   return typeof navigator !== 'undefined' && 'serviceWorker' in navigator;
 }
 
-/**
- * Where the worker is served and the scope it may control: the directory that
- * holds the bundle, which is the site root unless the app is deployed under a path.
- */
-export function serviceWorkerLocation(): { scriptUrl: string; scope: string } {
-  const scriptUrl = publicUrl('service-worker.js');
-  const scope = new URL('./', new URL(scriptUrl, document.baseURI)).pathname;
-  return { scriptUrl, scope };
-}
-
 export function getServiceWorkerRegistration(): ServiceWorkerRegistration | null {
   return registration;
 }
@@ -49,8 +40,9 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
   }
 
   try {
-    const { scriptUrl, scope } = serviceWorkerLocation();
-    registration = await navigator.serviceWorker.register(scriptUrl, { scope });
+    registration = await navigator.serviceWorker.register(assetUrl('service-worker.js'), {
+      scope: PUBLIC_PATH,
+    });
 
     navigator.serviceWorker.addEventListener('message', (event: MessageEvent) => {
       dispatchMessage(event.data);
@@ -78,7 +70,8 @@ export async function registerServiceWorker(): Promise<ServiceWorkerRegistration
 
     return registration;
   } catch (err) {
-    console.warn('[SW] Registration failed:', err);
+    // Offline support is optional; a failed registration must not surface as an app error.
+    debug.warn('SW_REGISTRATION_FAILED', err);
     return null;
   }
 }

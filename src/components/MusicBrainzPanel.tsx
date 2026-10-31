@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlaylistTrack } from '../audioLoader';
+import type { PlaylistTrack } from '../types/library';
 import { searchMusicBrainz, MusicBrainzMatch } from '../api/songApi';
 
 interface MusicBrainzPanelProps {
@@ -81,6 +81,8 @@ export const MusicBrainzPanel: React.FC<MusicBrainzPanelProps> = ({ track, onApp
   ] as Row[]).filter(r => r.value) : [];
 
   return (
+    // Containment only: clicks inside the panel must not play the library row underneath.
+    // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
     <div
       className="musicbrainz-panel space-y-2 text-sm"
       role="region"
@@ -135,9 +137,9 @@ export const MusicBrainzPanel: React.FC<MusicBrainzPanelProps> = ({ track, onApp
                   <span className="text-gray-400">{r.label}: </span>
                   <span className="text-white break-words">{r.value}</span>
                   {r.current && r.current !== r.value && (
-                    <span className="block text-xs text-gray-500 truncate">current: {r.current}</span>
+                    <span className="block text-xs text-gray-400 truncate">current: {r.current}</span>
                   )}
-                  {!r.field && <span className="block text-xs text-gray-500">(not editable via API)</span>}
+                  {!r.field && <span className="block text-xs text-gray-400">(not editable via API)</span>}
                 </label>
               </li>
             ))}
@@ -147,7 +149,7 @@ export const MusicBrainzPanel: React.FC<MusicBrainzPanelProps> = ({ track, onApp
               type="button"
               onClick={apply}
               disabled={status === 'saving' || selected.size === 0}
-              className="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600 disabled:opacity-50"
+              className="px-3 py-1 bg-purple-600 text-white rounded hover:bg-purple-700 disabled:opacity-50"
             >
               {status === 'saving' ? 'Saving…' : `Apply ${selected.size} field${selected.size === 1 ? '' : 's'}`}
             </button>

@@ -254,7 +254,7 @@ export function useListeningRoom({
       setSession({ roomId: created.room_id, role: 'host', hostToken: created.host_token });
       const link = joinUrlFor(created.room_id);
       try {
-        await navigator.clipboard.writeText(link);
+        await window.navigator.clipboard.writeText(link);
         notifyRef.current('Listening room created — join link copied', 'success');
       } catch {
         notifyRef.current(`Listening room created: ${link}`, 'success');
@@ -295,7 +295,7 @@ export function useListeningRoom({
   const copyJoinLink = useCallback(async () => {
     if (!session) return;
     try {
-      await navigator.clipboard.writeText(joinUrlFor(session.roomId));
+      await window.navigator.clipboard.writeText(joinUrlFor(session.roomId));
       notifyRef.current('Join link copied', 'success');
     } catch {
       notifyRef.current(joinUrlFor(session.roomId), 'info');

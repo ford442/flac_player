@@ -1,36 +1,46 @@
-import type { ShaderGUIUniforms, VisualizerMode } from '../../webgpuVisualizer';
+import type { ShaderGUIUniforms, VisualizerMode } from '../webgpuVisualizer';
 import type { WebGL2DebugConfig, WebGL2DebugMode } from '../types';
-import { compileShader, linkProgram, collectUniforms } from './glUtils';
+import { compileShader, linkProgram, collectUniforms, setUniform, type UniformInfo } from './glUtils';
 import { FULLSCREEN_VERTEX, GUI_FRAGMENT, FLAT_FRAGMENT } from './shaders/waveform';
 import { createDebugConfig, debugModeToUniform } from './debugModes';
 import { downsampleAudioData } from '../visualSync';
 import { DEFAULT_WAVEFORM_UNIFORMS } from '../waveformContract';
-import { loseGlContext, type GlContextHost } from './glContext';
+import { buildWebGL2ContextAttributes } from '../webgpu/canvasConfig';
 
 type GLPass = {
   program: WebGLProgram;
-  uniforms: Record<string, WebGLUniformLocation | null>;
+  /** Uniforms of this program only, typed from the GLSL declarations. */
+  uniforms: Record<string, UniformInfo>;
 };
 
-const GUI_UNIFORM_NAMES = [
-  'u_resolution', 'u_time', 'u_beatPhase',
-  'u_rsycrb', 'u_fractal', 'u_pulse',
-  'u_audioLevel', 'u_audioLevelL', 'u_audioLevelR',
-  'u_spectrum0', 'u_spectrum1', 'u_spectrum2', 'u_spectrum3', 'u_spectrum4',
-  'u_modeNone', 'u_modeIR', 'u_isPlaying', 'u_playbackProgress',
-  'u_volume', 'u_colorShift', 'u_audioData', 'u_debugMode',
-];
+/**
+ * `WEBGL_lose_context` per canvas. destroy() releases the context with
+ * loseContext(); a later visualizer on the same canvas gets that lost context
+ * back from getContext() and needs this object (getExtension returns null on a
+ * lost context) to restore it.
+ */
+const loseContextByCanvas = new WeakMap<HTMLCanvasElement, WEBGL_lose_context>();
 
-const FLAT_UNIFORM_NAMES = ['u_resolution', 'u_time', 'u_audioLevel'];
+/**
+ * Resolves once the `webglcontextlost` event from destroy()'s loseContext() has
+ * been dispatched and cancelled. Chrome only allows restoreContext() after that
+ * dispatch returns, and destroy → initialize on one canvas happens synchronously.
+ */
+const releasedByCanvas = new WeakMap<HTMLCanvasElement, Promise<void>>();
+
+type LastFrame = 'gui' | 'flat' | null;
 
 /**
  * WebGL2 reference renderer for ShaderGUI waveform effects.
  * Mirrors WebGPUVisualizer's public API for drop-in backend switching.
+ *
+ * Context loss: `webglcontextlost` is preventDefault-ed so the browser may
+ * restore it; rendering is a no-op while lost and `webglcontextrestored`
+ * rebuilds both programs. Nothing else (no buffers or textures: the passes are
+ * a vertex-less fullscreen triangle and uniform arrays) holds GL objects.
  */
-export class WebGL2Visualizer implements GlContextHost {
+export class WebGL2Visualizer {
   private gl: WebGL2RenderingContext | null = null;
-  /** The canvas's context, kept past destroy() until releaseContext(). */
-  private ownedGl: WebGL2RenderingContext | null = null;
   private canvas: HTMLCanvasElement;
   private analyser: AnalyserNode | null = null;
   private guiPass: GLPass | null = null;
@@ -41,10 +51,34 @@ export class WebGL2Visualizer implements GlContextHost {
   private mode: VisualizerMode = 'flat';
   private time = 0;
   private onTogglePlay: (() => void) | null = null;
+  private contextAttributes: WebGLContextAttributes | null = null;
+  private contextLost = false;
+  private lastFrame: LastFrame = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
   }
+
+  private readonly onContextLost = (event: Event): void => {
+    // Without preventDefault the browser never fires webglcontextrestored.
+    event.preventDefault();
+    this.contextLost = true;
+    // Programs died with the context; deleting them would only log errors.
+    this.guiPass = null;
+    this.flatPass = null;
+    console.warn('[WebGL2Visualizer] context lost; waiting for restore');
+  };
+
+  private readonly onContextRestored = (): void => {
+    const gl = this.gl;
+    if (!gl) return;
+    try {
+      this.buildPasses(gl);
+      this.contextLost = false;
+    } catch (err) {
+      console.error('[WebGL2Visualizer] rebuild after context restore failed:', err);
+    }
+  };
 
   setMode(mode: VisualizerMode): void {
     this.mode = mode;
@@ -56,21 +90,37 @@ export class WebGL2Visualizer implements GlContextHost {
 
   initialize(analyser: AnalyserNode): boolean {
     this.destroy();
-    const gl = this.canvas.getContext('webgl2', {
-      alpha: false,
-      premultipliedAlpha: false,
-      antialias: true,
-    });
+    // antialias stays false: the 3D cube is WebGPU-only, so every GL pass is the
+    // fullscreen ShaderGUI shader, which does its own glow.
+    const requested = buildWebGL2ContextAttributes();
+    const gl = this.canvas.getContext('webgl2', requested);
     if (!gl) return false;
 
+    this.gl = gl;
+    this.analyser = analyser;
+    this.canvas.addEventListener('webglcontextlost', this.onContextLost);
+    this.canvas.addEventListener('webglcontextrestored', this.onContextRestored);
+
+    if (gl.isContextLost()) {
+      // A previous visualizer on this canvas released it (destroy → loseContext):
+      // ask for it back; onContextRestored builds the passes.
+      const loseContext = loseContextByCanvas.get(this.canvas);
+      if (!loseContext) {
+        this.destroy();
+        return false;
+      }
+      this.contextLost = true;
+      const released = releasedByCanvas.get(this.canvas) ?? Promise.resolve();
+      void released.then(() => {
+        if (this.gl === gl && gl.isContextLost()) loseContext.restoreContext();
+      });
+      return true;
+    }
+
+    const loseContext = gl.getExtension('WEBGL_lose_context');
+    if (loseContext) loseContextByCanvas.set(this.canvas, loseContext);
     try {
-      this.gl = gl;
-      this.ownedGl = gl;
-      this.analyser = analyser;
-      this.guiPass = this.createPass(gl, FULLSCREEN_VERTEX, GUI_FRAGMENT, 'gui', GUI_UNIFORM_NAMES);
-      this.flatPass = this.createPass(gl, FULLSCREEN_VERTEX, FLAT_FRAGMENT, 'flat', FLAT_UNIFORM_NAMES);
-      gl.disable(gl.DEPTH_TEST);
-      gl.disable(gl.BLEND);
+      this.buildPasses(gl);
       return true;
     } catch (err) {
       console.error('[WebGL2Visualizer] init failed:', err);
@@ -79,28 +129,47 @@ export class WebGL2Visualizer implements GlContextHost {
     }
   }
 
+  /** Programs + fixed state for a fresh (or restored) context. */
+  private buildPasses(gl: WebGL2RenderingContext): void {
+    this.contextAttributes = gl.getContextAttributes() ?? buildWebGL2ContextAttributes();
+    // The shaders write sRGB values; say so rather than inherit a wide-gamut default.
+    if ('drawingBufferColorSpace' in gl) gl.drawingBufferColorSpace = 'srgb';
+    this.guiPass = this.createPass(gl, FULLSCREEN_VERTEX, GUI_FRAGMENT, 'gui');
+    this.flatPass = this.createPass(gl, FULLSCREEN_VERTEX, FLAT_FRAGMENT, 'flat');
+    gl.disable(gl.DEPTH_TEST);
+    gl.disable(gl.BLEND);
+  }
+
+  /** True while the context is lost (rendering is skipped until it is restored). */
+  isContextLost(): boolean {
+    return this.contextLost;
+  }
+
   private createPass(
     gl: WebGL2RenderingContext,
     vsSrc: string,
     fsSrc: string,
     label: string,
-    uniformNames: string[],
   ): GLPass {
     const vs = compileShader(gl, gl.VERTEX_SHADER, vsSrc, `${label}-vs`);
     const fs = compileShader(gl, gl.FRAGMENT_SHADER, fsSrc, `${label}-fs`);
     const program = linkProgram(gl, vs, fs, label);
     gl.deleteShader(vs);
     gl.deleteShader(fs);
-    return { program, uniforms: collectUniforms(gl, program, uniformNames) };
+    return { program, uniforms: collectUniforms(gl, program, label) };
   }
 
   setUniforms(data: ShaderGUIUniforms): void {
     this.guiUniforms = data;
   }
 
+  /** Swap the spectrum source (graph rebuilt at another rate) without touching GL. */
+  setAnalyser(analyser: AnalyserNode | null): void {
+    this.analyser = analyser;
+  }
+
   setAudioData(data: Uint8Array | Float32Array): void {
-    const sampled = downsampleAudioData(data, 64);
-    this.guiAudioData.set(sampled);
+    downsampleAudioData(data, 64, this.analyser?.context?.sampleRate, this.guiAudioData);
   }
 
   setDebugConfig(partial: Partial<WebGL2DebugConfig>): void {
@@ -121,33 +190,33 @@ export class WebGL2Visualizer implements GlContextHost {
 
   private bindGuiUniforms(gl: WebGL2RenderingContext, pass: GLPass): void {
     const u = this.guiUniforms;
-    const loc = pass.uniforms;
+    // Uniform locations belong to one program; set them on that program, not whichever was last bound.
+    gl.useProgram(pass.program);
+    const set = (name: string, value: number | number[] | Float32Array): void =>
+      setUniform(gl, pass.uniforms[name], value);
 
-    gl.uniform2f(loc.u_resolution, u.resolution[0], u.resolution[1]);
-    gl.uniform1f(loc.u_time, u.time);
-    gl.uniform1f(loc.u_beatPhase, u.beatPhase);
-    gl.uniform1f(loc.u_rsycrb, u.rsycrb);
-    gl.uniform1f(loc.u_fractal, u.fractal);
-    gl.uniform1f(loc.u_pulse, u.pulse);
-    gl.uniform1f(loc.u_audioLevel, u.audioLevel);
-    gl.uniform1f(loc.u_audioLevelL, u.audioLevelL);
-    gl.uniform1f(loc.u_audioLevelR, u.audioLevelR);
-    gl.uniform1f(loc.u_spectrum0, u.spectrum0);
-    gl.uniform1f(loc.u_spectrum1, u.spectrum1);
-    gl.uniform1f(loc.u_spectrum2, u.spectrum2);
-    gl.uniform1f(loc.u_spectrum3, u.spectrum3);
-    gl.uniform1f(loc.u_spectrum4, u.spectrum4);
-    gl.uniform1f(loc.u_modeNone, u.modeNone);
-    gl.uniform1f(loc.u_modeIR, u.modeIR);
-    gl.uniform1f(loc.u_isPlaying, u.isPlaying);
-    gl.uniform1f(loc.u_playbackProgress, u.playbackProgress);
-    gl.uniform1f(loc.u_volume, u.volume);
-    gl.uniform1f(loc.u_colorShift, u.colorShift);
-    gl.uniform1f(loc.u_debugMode, debugModeToUniform(this.debug.mode));
-
-    if (loc.u_audioData) {
-      gl.uniform1fv(loc.u_audioData, this.guiAudioData);
-    }
+    set('u_resolution', [u.resolution[0], u.resolution[1]]);
+    set('u_time', u.time);
+    set('u_beatPhase', u.beatPhase);
+    set('u_rsycrb', u.rsycrb);
+    set('u_fractal', u.fractal);
+    set('u_pulse', u.pulse);
+    set('u_audioLevel', u.audioLevel);
+    set('u_audioLevelL', u.audioLevelL);
+    set('u_audioLevelR', u.audioLevelR);
+    set('u_spectrum0', u.spectrum0);
+    set('u_spectrum1', u.spectrum1);
+    set('u_spectrum2', u.spectrum2);
+    set('u_spectrum3', u.spectrum3);
+    set('u_spectrum4', u.spectrum4);
+    set('u_modeNone', u.modeNone);
+    set('u_modeIR', u.modeIR);
+    set('u_isPlaying', u.isPlaying);
+    set('u_playbackProgress', u.playbackProgress);
+    set('u_volume', u.volume);
+    set('u_colorShift', u.colorShift);
+    set('u_debugMode', debugModeToUniform(this.debug.mode));
+    set('u_audioData', this.guiAudioData);
   }
 
   private drawFullscreen(gl: WebGL2RenderingContext, program: WebGLProgram): void {
@@ -158,11 +227,12 @@ export class WebGL2Visualizer implements GlContextHost {
   renderGUI(): void {
     const gl = this.gl;
     const pass = this.guiPass;
-    if (!gl || !pass) return;
+    if (!gl || !pass || this.contextLost) return;
 
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     this.bindGuiUniforms(gl, pass);
     this.drawFullscreen(gl, pass.program);
+    this.lastFrame = 'gui';
   }
 
   render(): void {
@@ -179,36 +249,48 @@ export class WebGL2Visualizer implements GlContextHost {
     const temp = new Uint8Array(this.analyser.frequencyBinCount);
     this.analyser.getByteFrequencyData(temp);
     let sum = 0;
-    for (let i = 0; i < temp.length; i++) sum += temp[i];
+    for (let i = 0; i < temp.length; i++) sum += temp[i]!;
     return sum / temp.length / 255.0;
   }
 
   renderFlat(): void {
+    if (!this.gl || !this.flatPass || this.contextLost) return;
+    this.time += 0.016;
+    this.drawFlat();
+  }
+
+  private drawFlat(): void {
     const gl = this.gl;
     const pass = this.flatPass;
     if (!gl || !pass) return;
-
-    this.time += 0.016;
     const audioLevel = this.getAudioLevel();
 
     gl.viewport(0, 0, this.canvas.width, this.canvas.height);
     gl.useProgram(pass.program);
-    gl.uniform2f(pass.uniforms.u_resolution, this.canvas.width, this.canvas.height);
-    gl.uniform1f(pass.uniforms.u_time, this.time);
-    gl.uniform1f(pass.uniforms.u_audioLevel, audioLevel);
+    setUniform(gl, pass.uniforms['u_resolution'], [this.canvas.width, this.canvas.height]);
+    setUniform(gl, pass.uniforms['u_time'], this.time);
+    setUniform(gl, pass.uniforms['u_audioLevel'], audioLevel);
     this.drawFullscreen(gl, pass.program);
+    this.lastFrame = 'flat';
   }
 
   resize(): void {
     // Canvas dimensions are managed by TopScreen; viewport updated each frame.
   }
 
+  /**
+   * RGBA of the current frame (bottom-left origin). The drawing buffer is not
+   * preserved after compositing, so this redraws the last frame (same uniforms,
+   * clock not advanced) and reads it back in the same task.
+   */
   readPixels(): Uint8Array | null {
     const gl = this.gl;
-    if (!gl) return null;
+    if (!gl || this.contextLost || !this.lastFrame) return null;
     const w = this.canvas.width;
     const h = this.canvas.height;
     if (w <= 0 || h <= 0) return null;
+    if (this.lastFrame === 'gui') this.renderGUI();
+    else this.drawFlat();
     const pixels = new Uint8Array(w * h * 4);
     gl.readPixels(0, 0, w, h, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
     return pixels;
@@ -218,30 +300,42 @@ export class WebGL2Visualizer implements GlContextHost {
     return this.canvas;
   }
 
+  /** Attributes the browser actually granted (for the probe breadcrumb / HUD). */
+  getContextAttributes(): WebGLContextAttributes | null {
+    return this.contextAttributes;
+  }
+
   /**
-   * Free this visualizer's GL objects. The context stays with the canvas so the next
-   * initialize() on it works; {@link releaseContext} drops the context itself.
+   * Delete the programs and release the context (WEBGL_lose_context) so
+   * renderer switches don't pile up live contexts until GC.
    */
   destroy(): void {
     const gl = this.gl;
-    if (gl) {
+    this.canvas.removeEventListener('webglcontextlost', this.onContextLost);
+    this.canvas.removeEventListener('webglcontextrestored', this.onContextRestored);
+    if (gl && !gl.isContextLost()) {
       if (this.guiPass) gl.deleteProgram(this.guiPass.program);
       if (this.flatPass) gl.deleteProgram(this.flatPass.program);
+      const loseContext = loseContextByCanvas.get(this.canvas);
+      if (loseContext) {
+        // restoreContext() (next initialize on this canvas) needs a cancelled lost
+        // event, and may only run once its dispatch has returned (next task).
+        releasedByCanvas.set(this.canvas, new Promise<void>((resolve) => {
+          this.canvas.addEventListener('webglcontextlost', (e) => {
+            e.preventDefault();
+            setTimeout(resolve, 0);
+          }, { once: true });
+        }));
+        loseContext.loseContext();
+      }
     }
     this.gl = null;
+    this.contextAttributes = null;
+    this.contextLost = false;
+    this.lastFrame = null;
     this.guiPass = null;
     this.flatPass = null;
     this.analyser = null;
     this.onTogglePlay = null;
-  }
-
-  /**
-   * Lose the GL context (WEBGL_lose_context) once the canvas is being replaced or unmounted.
-   * The canvas can host neither WebGL2 nor WebGPU afterwards: discard it.
-   */
-  releaseContext(): void {
-    this.destroy();
-    loseGlContext(this.ownedGl);
-    this.ownedGl = null;
   }
 }

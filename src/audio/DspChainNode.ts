@@ -1,5 +1,5 @@
 import { DEFAULT_EQ_BANDS } from './EQChain';
-import { publicUrl } from '../utils/publicUrl';
+import { assetUrl } from '../utils/publicPath';
 import { createAnalysisRingBuffer, readerForRingBuffer, type AnalysisRingReader } from './analysisRing';
 import {
   DSP_CHAIN_PROCESSOR_NAME,
@@ -12,19 +12,19 @@ import {
 
 /**
  * Speaker DSP (ReplayGain -> limiter -> volume -> EQ) as one AudioWorkletNode
- * running src/sdl/dsp_chain.h compiled to public/dsp-chain.wasm, for every
- * backend (the `sdl` engine included). AudioContextManager wires it between
+ * running src/sdl/dsp_chain.h compiled to public/dsp-chain.wasm — the same
+ * code SDL runs in its audio callback. AudioContextManager wires it between
  * the backend input and the analyser and keeps ReplayGainNode / EQChain as the
  * fallback when the module or AudioWorklet is unavailable (mirrors SpeexDSP →
  * linear resampling).
  *
  * The processor also copies its output into an analysis ring (analysisRing.ts)
- * when the page is cross-origin isolated — the one shared PCM tap
- * (getAnalysisTap()).
+ * when the page is cross-origin isolated — the Web Audio backends' side of the
+ * shared PCM tap that SDL writes from its audio callback.
  */
 
 const DSP_CHAIN_PROCESSOR_URL = new URL('./worklets/dspChainProcessor.js', import.meta.url);
-export const DSP_CHAIN_WASM_URL = publicUrl('dsp-chain.wasm');
+export const DSP_CHAIN_WASM_URL = assetUrl('dsp-chain.wasm');
 /** dsp_chain.h DSP_MAX_CHANNELS. */
 export const DSP_MAX_CHANNELS = 8;
 const READY_TIMEOUT_MS = 3000;

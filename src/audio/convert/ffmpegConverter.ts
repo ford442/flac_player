@@ -1,12 +1,12 @@
 /**
  * Lazy-loaded ffmpeg.wasm converter for local MP3 ↔ FLAC.
  *
- * The UMD glue + classic worker are served from /ffmpeg/ (same origin) so webpack
+ * The UMD glue + classic worker are served from <base>/ffmpeg/ (same origin) so webpack
  * does not rewrite Worker construction. The large ffmpeg-core.wasm is fetched once
  * from CDN into a blob URL (COEP-safe).
  */
 
-import { publicUrl } from '../../utils/publicUrl';
+import { assetUrl } from '../../utils/publicPath';
 import {
   buildFfmpegArgs,
   memfsInputName,
@@ -35,7 +35,7 @@ export interface ConvertResult {
 const CORE_VERSION = '0.12.6';
 const CORE_BASE = `https://cdn.jsdelivr.net/npm/@ffmpeg/core@${CORE_VERSION}/dist/umd`;
 /** Same-origin UMD build (copied to public/ffmpeg/). */
-const FFMPEG_UMD = publicUrl('ffmpeg/ffmpeg.js');
+const FFMPEG_UMD = assetUrl('ffmpeg/ffmpeg.js');
 
 /** Minimal surface we use from @ffmpeg/ffmpeg. */
 interface FFmpegInstance {

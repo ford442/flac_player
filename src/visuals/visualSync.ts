@@ -3,7 +3,8 @@
 
 import type { WaveformUniforms } from './waveformContract';
 import { packWaveformUniforms } from './waveformContract';
-import type { ShaderGUIUniforms } from '../webgpuVisualizer';
+import { BandMapper, DEFAULT_SPECTRUM_RATE } from './spectrumBands';
+import type { ShaderGUIUniforms } from './webgpuVisualizer';
 
 /**
  * Create and configure an AnalyserNode connected to an audio source.
@@ -33,27 +34,31 @@ export function getVisualizationData(analyser: AnalyserNode): {
   return { frequency: freqData, waveform: waveData };
 }
 
+const barMappers = new Map<number, BandMapper>();
+
 /**
- * Downsample raw analyser bins to a fixed count for GPU uniform arrays.
- * Matches WebGPUVisualizer.setAudioData() bin-averaging logic.
+ * Reduce a linear 0..Nyquist spectrum (analyser bytes or GPU bins) to `targetBins`
+ * log-spaced bars between 20 Hz and min(20 kHz, Nyquist), 0..1 each. Shared by the
+ * WebGPU and WebGL2 visualizers so both draw the same bars at any context rate.
+ * Pass `out` (length `targetBins`) to avoid an allocation per frame.
  */
 export function downsampleAudioData(
   data: Uint8Array | Float32Array,
   targetBins = 64,
+  sampleRate: number = DEFAULT_SPECTRUM_RATE,
+  out?: Float32Array,
 ): Float32Array {
-  const out = new Float32Array(targetBins);
-  const sourceBins = data.length;
-  const binRatio = sourceBins / targetBins;
-  for (let i = 0; i < targetBins; i++) {
-    let sum = 0;
-    const start = Math.floor(i * binRatio);
-    const end = Math.floor((i + 1) * binRatio);
-    for (let j = start; j < end; j++) {
-      sum += data[j];
-    }
-    out[i] = sum / ((end - start) * 255);
+  let mapper = barMappers.get(targetBins);
+  if (!mapper) {
+    mapper = BandMapper.logBars(targetBins);
+    barMappers.set(targetBins, mapper);
   }
-  return out;
+  const bars = mapper.map(data, sampleRate);
+  if (out) {
+    out.set(bars);
+    return out;
+  }
+  return bars.slice();
 }
 
 /**
@@ -87,6 +92,7 @@ export function buildFrameUniforms(params: {
   volume: number;
 }): ShaderGUIUniforms {
   const progress = params.duration > 0 ? params.currentTime / params.duration : 0;
+  const [s0 = 0, s1 = 0, s2 = 0, s3 = 0, s4 = 0] = params.spectrum;
   return {
     resolution: [params.canvasWidth, params.canvasHeight],
     time: params.time,
@@ -94,14 +100,14 @@ export function buildFrameUniforms(params: {
     rsycrb: params.rsycrb,
     fractal: params.fractal,
     pulse: params.pulse,
-    audioLevel: params.spectrum[0] + params.spectrum[1] + params.spectrum[2],
-    audioLevelL: params.spectrum[0],
-    audioLevelR: params.spectrum[1],
-    spectrum0: params.spectrum[0],
-    spectrum1: params.spectrum[1],
-    spectrum2: params.spectrum[2],
-    spectrum3: params.spectrum[3],
-    spectrum4: params.spectrum[4],
+    audioLevel: s0 + s1 + s2,
+    audioLevelL: s0,
+    audioLevelR: s1,
+    spectrum0: s0,
+    spectrum1: s1,
+    spectrum2: s2,
+    spectrum3: s3,
+    spectrum4: s4,
     modeNone: params.modeNone,
     modeIR: params.modeIR,
     isPlaying: params.isPlaying ? 1 : 0,

@@ -33,13 +33,10 @@ export const getPreviousQueueIndex = (
   repeatMode: RepeatMode
 ): number => {
   if (queueLength <= 0) return -1;
-
-  if (repeatMode === 'all') {
-    return (queueCurrentIndex - 1 + queueLength) % queueLength;
-  }
-
-  if (queueCurrentIndex > 0) return queueCurrentIndex - 1;
-  return -1;
+  const currentIndex = queueCurrentIndex >= 0 && queueCurrentIndex < queueLength ? queueCurrentIndex : -1;
+  if (currentIndex > 0) return currentIndex - 1;
+  if (currentIndex === -1) return queueLength - 1;
+  return repeatMode === 'all' ? queueLength - 1 : -1;
 };
 
 export const handleQueueAutoAdvance = (
@@ -86,6 +83,7 @@ export const reorderQueueItem = (
   if (startIndex === endIndex) return queue;
   const next = [...queue];
   const [removed] = next.splice(startIndex, 1);
+  if (removed === undefined) return queue;
   next.splice(endIndex, 0, removed);
   return next;
 };
@@ -131,3 +129,28 @@ export const removeFromQueue = (
 ): PlaylistTrack[] => queue.filter((_, i) => i !== index);
 
 export const clearQueue = (): PlaylistTrack[] => [];
+
+/**
+ * Where to play `track` from: its existing queue slot, else appended. `addTrackToQueue`
+ * dedupes by id, so `queue.length` is the wrong index for a track already queued (#258).
+ */
+export const queueTrackForPlayback = (
+  queue: PlaylistTrack[],
+  track: PlaylistTrack
+): { queue: PlaylistTrack[]; index: number } => {
+  const existing = queue.findIndex(t => t.id === track.id);
+  if (existing >= 0) return { queue, index: existing };
+  return { queue: [...queue, track], index: queue.length };
+};
+
+/** Like {@link queueTrackForPlayback}, but a new track goes right after the current one. */
+export const insertTrackNextForPlayback = (
+  queue: PlaylistTrack[],
+  track: PlaylistTrack,
+  queueCurrentIndex: number
+): { queue: PlaylistTrack[]; index: number } => {
+  const existing = queue.findIndex(t => t.id === track.id);
+  if (existing >= 0) return { queue, index: existing };
+  const { queue: next, insertAt } = playNextTrack(queue, track, queueCurrentIndex);
+  return { queue: next, index: insertAt };
+};

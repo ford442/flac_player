@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { METER_HZ, reduceRms } from '../gpu-chores';
 import type { GpuChoreBackend } from '../gpu-chores';
 import { formatTime } from '../utils/audioUtils';
-import { usePlaybackTime } from '../hooks/usePlaybackEngine';
+import { sliderKeyValue } from '../utils/sliderKeys';
 import './WaveformOverview.css';
 
 export interface WaveformOverviewProps {
@@ -55,8 +55,8 @@ function paintOverview(
 
   ctx.lineWidth = Math.max(1, step * 0.9);
   for (let i = 0; i < bins; i++) {
-    const min = peaks[i * 2];
-    const max = peaks[i * 2 + 1];
+    const min = peaks[i * 2]!;
+    const max = peaks[i * 2 + 1]!;
     const x = (i + 0.5) * step;
     const y0 = mid - max * mid;
     const y1 = mid - min * mid;
@@ -163,11 +163,21 @@ export const WaveformOverview: React.FC<WaveformOverviewProps> = ({
     return () => window.clearInterval(id);
   }, [analyser]);
 
+  const canSeek = onSeek !== undefined && duration > 0;
+
   const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
-    if (!onSeek || duration <= 0) return;
+    if (!onSeek || !canSeek) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
     onSeek(ratio * duration);
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!onSeek || !canSeek) return;
+    const next = sliderKeyValue(event.key, currentTime, { max: duration, step: 5, page: 30 });
+    if (next === null) return;
+    event.preventDefault();
+    onSeek(next);
   };
 
   const fileMeters = rms !== null && rms !== undefined;
@@ -177,15 +187,19 @@ export const WaveformOverview: React.FC<WaveformOverviewProps> = ({
       ref={hostRef}
       className={`waveform-overview ${className ?? ''}`.trim()}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
       title={onSeek ? 'Click to seek' : ''}
-      style={{ cursor: onSeek && duration > 0 ? 'pointer' : 'default' }}
+      style={{ cursor: canSeek ? 'pointer' : 'default' }}
       data-gpu-chores-backend={backend ?? 'none'}
       data-gpu-chores-reason={reason ?? ''}
       role="slider"
+      tabIndex={onSeek ? 0 : -1}
       aria-label="Seek position"
+      aria-disabled={!canSeek || undefined}
       aria-valuemin={0}
-      aria-valuemax={duration || 0}
-      aria-valuenow={currentTime}
+      aria-valuemax={Math.round(duration) || 0}
+      aria-valuenow={Math.round(currentTime)}
+      aria-valuetext={`${formatTime(currentTime)} of ${formatTime(duration)}`}
     >
       <canvas ref={canvasRef} className="waveform-overview-canvas" />
       <div className="waveform-overview-meta">
@@ -197,15 +211,6 @@ export const WaveformOverview: React.FC<WaveformOverviewProps> = ({
       </div>
     </div>
   );
-};
-
-/**
- * WaveformOverview on the PlaybackEngine clock. Only this leaf re-renders per
- * `timeupdate`; its parents (ShaderGUI, transport bar) stay put.
- */
-export const LiveWaveformOverview: React.FC<Omit<WaveformOverviewProps, 'currentTime'>> = (props) => {
-  const currentTime = usePlaybackTime();
-  return <WaveformOverview {...props} currentTime={currentTime} />;
 };
 
 export default WaveformOverview;

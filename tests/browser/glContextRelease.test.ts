@@ -4,8 +4,8 @@ import { loseCanvasGlContext } from '../../src/visuals/webgl2/glContext';
 import { probeWebGPU } from '../../src/visuals/webgpuProbe';
 
 /**
- * Real-browser check of the WebGL2 teardown contract: destroy() keeps the canvas's context for
- * re-init, releaseContext() loses it for good, and a probe on the replacement canvas still works.
+ * Real-browser check that renderer teardown releases WebGL resources before the replacement canvas
+ * is probed for WebGPU.
  */
 const analyser = {
   frequencyBinCount: 32,
@@ -17,21 +17,15 @@ function hasWebGL2(): boolean {
 }
 
 describe('WebGL2 context release', () => {
-  it.skipIf(!hasWebGL2())('keeps the context across destroy() and loses it on releaseContext()', () => {
+  it.skipIf(!hasWebGL2())('releases the context when the visualizer is destroyed', () => {
     const canvas = document.createElement('canvas');
     const first = new WebGL2Visualizer(canvas);
     expect(first.initialize(analyser)).toBe(true);
     const gl = canvas.getContext('webgl2') as WebGL2RenderingContext;
 
     first.destroy();
-    expect(gl.isContextLost()).toBe(false);
-    const second = new WebGL2Visualizer(canvas);
-    expect(second.initialize(analyser)).toBe(true);
-    expect(gl.isContextLost()).toBe(false);
-
-    second.releaseContext();
     expect(gl.isContextLost()).toBe(true);
-    // The canvas is spent: it hands back the same lost context and can never host WebGPU.
+    // The canvas is spent: it hands back the same lost context.
     expect(canvas.getContext('webgl2')).toBe(gl);
     expect(canvas.getContext('webgpu')).toBeNull();
   });
@@ -47,7 +41,7 @@ describe('WebGL2 context release', () => {
     const glCanvas = document.createElement('canvas');
     const visualizer = new WebGL2Visualizer(glCanvas);
     visualizer.initialize(analyser);
-    visualizer.releaseContext();
+    visualizer.destroy();
 
     const gpuCanvas = document.createElement('canvas');
     const probe = await probeWebGPU(gpuCanvas, { publish: false });

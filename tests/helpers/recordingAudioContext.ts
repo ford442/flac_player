@@ -4,33 +4,9 @@ type RecordingNodeKind =
   | 'compressor'
   | 'biquad'
   | 'analyser'
-  | 'channel-splitter'
-  | 'channel-merger'
-  | 'buffer-source';
-
-interface ChannelConfig {
-  channelCount: number;
-  channelCountMode: ChannelCountMode;
-  channelInterpretation: ChannelInterpretation;
-}
-
-/** Spec defaults per node type; the compressor is the one clamped to stereo. */
-const CHANNEL_DEFAULTS: Record<RecordingNodeKind, ChannelConfig> = {
-  destination: { channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'speakers' },
-  gain: { channelCount: 2, channelCountMode: 'max', channelInterpretation: 'speakers' },
-  compressor: { channelCount: 2, channelCountMode: 'clamped-max', channelInterpretation: 'speakers' },
-  biquad: { channelCount: 2, channelCountMode: 'max', channelInterpretation: 'speakers' },
-  analyser: { channelCount: 2, channelCountMode: 'max', channelInterpretation: 'speakers' },
-  'channel-splitter': { channelCount: 2, channelCountMode: 'explicit', channelInterpretation: 'discrete' },
-  'channel-merger': { channelCount: 1, channelCountMode: 'explicit', channelInterpretation: 'speakers' },
-  'buffer-source': { channelCount: 2, channelCountMode: 'max', channelInterpretation: 'speakers' },
-};
-
-export interface RecordingEdge {
-  to: RecordingAudioNode;
-  output: number;
-  input: number;
-}
+  | 'buffer-source'
+  | 'splitter'
+  | 'merger';
 
 export class RecordingAudioParam {
   value: number;
@@ -54,100 +30,40 @@ export class RecordingAudioParam {
   }
 }
 
+export interface RecordingConnection {
+  destination: AudioNode;
+  output: number;
+  input: number;
+}
+
 export class RecordingAudioNode {
   readonly connections: AudioNode[] = [];
-  readonly edges: RecordingEdge[] = [];
+  /** Same edges as `connections`, with output / input indices. */
+  readonly ports: RecordingConnection[] = [];
   disconnectCalls = 0;
-  channelCount: number;
-  channelCountMode: ChannelCountMode;
-  channelInterpretation: ChannelInterpretation;
 
   constructor(
     readonly context: RecordingAudioContext,
     readonly kind: RecordingNodeKind
-  ) {
-    ({
-      channelCount: this.channelCount,
-      channelCountMode: this.channelCountMode,
-      channelInterpretation: this.channelInterpretation,
-    } = CHANNEL_DEFAULTS[kind]);
-  }
+  ) {}
 
   connect(destination: AudioNode, output = 0, input = 0): AudioNode {
     this.connections.push(destination);
-    this.edges.push({ to: destination as unknown as RecordingAudioNode, output, input });
+    this.ports.push({ destination, output, input });
     return destination;
   }
 
   disconnect(): void {
     this.disconnectCalls += 1;
     this.connections.length = 0;
-    this.edges.length = 0;
+    this.ports.length = 0;
   }
 }
 
-export class RecordingChannelSplitterNode extends RecordingAudioNode {
-  constructor(context: RecordingAudioContext, readonly numberOfOutputs: number) {
-    super(context, 'channel-splitter');
-    this.channelCount = numberOfOutputs;
+export class RecordingChannelNode extends RecordingAudioNode {
+  constructor(context: RecordingAudioContext, kind: 'splitter' | 'merger', readonly channels: number) {
+    super(context, kind);
   }
-}
-
-export class RecordingChannelMergerNode extends RecordingAudioNode {
-  constructor(context: RecordingAudioContext, readonly numberOfInputs: number) {
-    super(context, 'channel-merger');
-  }
-}
-
-/** Every node reachable from `from` by connections (excluding `from`). */
-export function reachableNodes(from: RecordingAudioNode): RecordingAudioNode[] {
-  const seen = new Set<RecordingAudioNode>();
-  const visit = (node: RecordingAudioNode) => {
-    for (const { to } of node.edges) {
-      if (seen.has(to)) continue;
-      seen.add(to);
-      visit(to);
-    }
-  };
-  visit(from);
-  return [...seen];
-}
-
-/**
- * Channels arriving at `target` when `source` emits `sourceChannels`, following the
- * spec's up/down-mix rules ('max', 'clamped-max', 'explicit'; splitter outputs are
- * mono, a merger emits one channel per input). Undefined if `target` is unreachable.
- */
-export function channelsAt(
-  source: RecordingAudioNode,
-  sourceChannels: number,
-  target: RecordingAudioNode
-): number | undefined {
-  const reach = [source, ...reachableNodes(source)];
-  const incoming = (node: RecordingAudioNode): Array<{ from: RecordingAudioNode }> =>
-    reach.flatMap((from) => from.edges.filter((e) => e.to === node).map(() => ({ from })));
-  const memo = new Map<RecordingAudioNode, number>();
-  const emitted = (from: RecordingAudioNode): number => {
-    if (from === source) return sourceChannels;
-    if (from instanceof RecordingChannelSplitterNode) return 1;
-    return computedInput(from);
-  };
-  const computedInput = (node: RecordingAudioNode): number => {
-    const cached = memo.get(node);
-    if (cached !== undefined) return cached;
-    let result: number;
-    if (node instanceof RecordingChannelMergerNode) {
-      result = node.numberOfInputs;
-    } else if (node.channelCountMode === 'explicit') {
-      result = node.channelCount;
-    } else {
-      const widest = Math.max(1, ...incoming(node).map(({ from }) => emitted(from)));
-      result = node.channelCountMode === 'clamped-max' ? Math.min(widest, node.channelCount) : widest;
-    }
-    memo.set(node, result);
-    return result;
-  };
-  return reach.includes(target) ? computedInput(target) : undefined;
 }
 
 export class RecordingGainNode extends RecordingAudioNode {
@@ -257,17 +173,11 @@ export class RecordingAudioContext {
   /** Return true to make the constructor throw for these options (NotSupportedError). */
   static rejectOptions: ((options: AudioContextOptions & { sinkId?: string }) => boolean) | null = null;
   static maxChannelCount = 2;
-  /** State a new context starts in ('suspended' models a gesture-gated start). */
-  static initialState: AudioContextState | 'interrupted' = 'running';
-  /** Lifecycle calls across instances, in order: `resume:<index>` / `close:<index>`. */
-  static readonly events: string[] = [];
 
-  readonly index: number;
   readonly constructorOptions: AudioContextOptions;
   readonly sampleRate: number;
   readonly latencyHint: AudioContextLatencyCategory | number | undefined;
   state: AudioContextState = 'running';
-  private readonly stateListeners = new Set<() => void>();
   currentTime = 0;
   readonly destination: AudioDestinationNode;
   readonly baseLatency = 0.01;
@@ -277,6 +187,8 @@ export class RecordingAudioContext {
   readonly gainNodes: RecordingGainNode[] = [];
   readonly compressorNodes: RecordingDynamicsCompressorNode[] = [];
   readonly bufferSources: RecordingAudioBufferSourceNode[] = [];
+  readonly channelNodes: RecordingChannelNode[] = [];
+  private readonly listeners = new Map<string, Set<(event: Event) => void>>();
 
   constructor(options: AudioContextOptions & { sinkId?: string } = {}) {
     if (RecordingAudioContext.rejectOptions?.(options)) {
@@ -286,8 +198,6 @@ export class RecordingAudioContext {
     this.sampleRate = options.sampleRate ?? 44100;
     this.latencyHint = options.latencyHint;
     this.sinkId = options.sinkId ?? '';
-    this.state = RecordingAudioContext.initialState as AudioContextState;
-    this.index = RecordingAudioContext.instances.length;
     const destination = new RecordingDestinationNode(this);
     destination.maxChannelCount = RecordingAudioContext.maxChannelCount;
     this.destination = destination as unknown as AudioDestinationNode;
@@ -310,12 +220,16 @@ export class RecordingAudioContext {
     return node as unknown as DynamicsCompressorNode;
   }
 
-  createChannelSplitter(numberOfOutputs = 6): ChannelSplitterNode {
-    return new RecordingChannelSplitterNode(this, numberOfOutputs) as unknown as ChannelSplitterNode;
+  createChannelSplitter(outputs = 6): ChannelSplitterNode {
+    const node = new RecordingChannelNode(this, 'splitter', outputs);
+    this.channelNodes.push(node);
+    return node as unknown as ChannelSplitterNode;
   }
 
-  createChannelMerger(numberOfInputs = 6): ChannelMergerNode {
-    return new RecordingChannelMergerNode(this, numberOfInputs) as unknown as ChannelMergerNode;
+  createChannelMerger(inputs = 6): ChannelMergerNode {
+    const node = new RecordingChannelNode(this, 'merger', inputs);
+    this.channelNodes.push(node);
+    return node as unknown as ChannelMergerNode;
   }
 
   createBiquadFilter(): BiquadFilterNode {
@@ -347,42 +261,52 @@ export class RecordingAudioContext {
   suspendCalls = 0;
   readonly addedModules: string[] = [];
   readonly audioWorklet = {
-    addModule: async (url: string): Promise<void> => {
-      this.addedModules.push(url);
+    addModule: async (url: string | URL): Promise<void> => {
+      this.addedModules.push(String(url));
     },
   };
 
-  addEventListener(type: string, listener: () => void): void {
-    if (type === 'statechange') this.stateListeners.add(listener);
-  }
-
-  removeEventListener(type: string, listener: () => void): void {
-    if (type === 'statechange') this.stateListeners.delete(listener);
-  }
-
-  /** Change state the way the platform does: assign, then fire `statechange`. */
-  setState(state: AudioContextState | 'interrupted'): void {
-    this.state = state as AudioContextState;
-    for (const listener of [...this.stateListeners]) listener();
-  }
-
   resumeCalls = 0;
+  /** Make resume() reject (WebKit outside a user gesture). */
+  refuseResume = false;
 
   async resume(): Promise<void> {
     this.resumeCalls += 1;
-    RecordingAudioContext.events.push(`resume:${this.index}`);
-    if (this.state === 'closed') throw new DOMException('closed', 'InvalidStateError');
-    if (this.state !== 'running') this.setState('running');
+    if (this.refuseResume) throw new DOMException('not allowed', 'NotAllowedError');
+    this.setState('running');
   }
 
   async suspend(): Promise<void> {
     this.suspendCalls += 1;
-    this.state = 'suspended';
+    this.setState('suspended');
   }
 
   async close(): Promise<void> {
-    RecordingAudioContext.events.push(`close:${this.index}`);
     this.setState('closed');
+  }
+
+  addEventListener(type: string, listener: (event: Event) => void): void {
+    let set = this.listeners.get(type);
+    if (!set) {
+      set = new Set();
+      this.listeners.set(type, set);
+    }
+    set.add(listener);
+  }
+
+  removeEventListener(type: string, listener: (event: Event) => void): void {
+    this.listeners.get(type)?.delete(listener);
+  }
+
+  dispatch(type: string): void {
+    this.listeners.get(type)?.forEach((listener) => listener(new Event(type)));
+  }
+
+  /** Change state the way the browser does (e.g. 'interrupted' on iOS) and fire statechange. */
+  setState(state: AudioContextState | 'interrupted'): void {
+    if (this.state === state) return;
+    this.state = state as AudioContextState;
+    this.dispatch('statechange');
   }
 }
 
@@ -390,16 +314,12 @@ export class RecordingAudioContext {
 export function installRecordingAudioContext(): () => void {
   const previous = globalThis.AudioContext;
   RecordingAudioContext.instances.length = 0;
-  RecordingAudioContext.events.length = 0;
   RecordingAudioContext.rejectOptions = null;
   RecordingAudioContext.maxChannelCount = 2;
-  RecordingAudioContext.initialState = 'running';
   Object.defineProperty(globalThis, 'AudioContext', {
     configurable: true,
     writable: true,
-    // A fresh subclass per install: module-level caches keyed on the constructor
-    // (the sample-rate probe memo) must not carry answers between tests.
-    value: class extends RecordingAudioContext {},
+    value: RecordingAudioContext,
   });
 
   return () => {
@@ -409,8 +329,6 @@ export function installRecordingAudioContext(): () => void {
       value: previous,
     });
     RecordingAudioContext.instances.length = 0;
-    RecordingAudioContext.events.length = 0;
     RecordingAudioContext.rejectOptions = null;
-    RecordingAudioContext.initialState = 'running';
   };
 }

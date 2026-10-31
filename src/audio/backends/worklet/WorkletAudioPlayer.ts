@@ -1,14 +1,16 @@
 // Audio player using AudioWorkletNode (flac-processor) for buffered and hi-fi
-// streaming playback. Without AudioWorklet it fails closed (`playable: false`,
-// loads reject) instead of running a ScriptProcessor on the main thread. The
-// shared AudioContext is never suspended here: pause is a message to the processor.
-import { decodeAudio } from '../../../audioDecoder';
+// streaming playback. AudioWorklet is required (there is no ScriptProcessor
+// fallback). Under COOP/COEP hi-fi PCM and the projectM tap travel through
+// SharedArrayBuffer rings; port messages carry control only. The shared
+// AudioContext is never suspended here: pause is a message to the processor.
+import { decodeAudio } from '../../audioDecoder';
 import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextManager } from '../../AudioContextManager';
 import { ensureContextForBuffer, ensureContextForUrl } from '../../ensureContextForSource';
 import { createStreamResampler, resampleInterleaved, type StreamResampler } from '../../resampler';
 import { HifiStreamSession, type HifiTrackSource } from '../../hifiStreamPipeline';
 import { getOrFetchTrack } from '../../../storage/trackCache';
 import type { PlaybackPathInfo } from '../../../utils/playbackPath';
+import { debug } from '../../../utils/debug';
 import { describePlaybackPath } from '../../../utils/playbackPath';
 import type { AudioBackendCapabilities, AudioPlaybackState, DecodedPcmView } from '../../../types/audio';
 import {
@@ -21,22 +23,33 @@ import {
 import { BaseAudioBackend } from '../BaseAudioBackend';
 import {
   FLAC_PROCESSOR_NAME,
+  clampPlaybackRate,
   type FlacProcessorInbound,
   type FlacProcessorOptions,
   type FlacProcessorOutbound,
 } from '../../worklets/flacProcessorMessages';
+import { createPlayRing, sharedPlayRingSupported } from '../../worklets/playRingSAB';
 import { HifiStreamFeeder } from './hifiStreamFeeder';
+import { PcmTapReader } from './pcmTapReader';
 
-/** Static same-origin processor module (emitted as an asset by webpack / served by Vite). */
-const FLAC_PROCESSOR_URL = new URL('../../worklets/flacProcessor.js', import.meta.url);
+/**
+ * Load the processor module. Keep the literal `context.audioWorklet.addModule(new URL(…))`
+ * shape: webpack bundles it as a worklet entry (`module.parser.javascript.worker` in
+ * webpack.config.js), so the processor can import shared TypeScript; Vite serves it directly.
+ */
+function addFlacProcessorModule(context: BaseAudioContext): Promise<void> {
+  return context.audioWorklet.addModule(new URL('../../worklets/flacProcessor.ts', import.meta.url));
+}
 
 const STREAM_RING_SECONDS = 30;
 
-const UNPLAYABLE_MESSAGE = 'The AudioWorklet output needs AudioWorklet, which this browser does not provide; use Streaming instead.';
-
-/** AudioWorklet exists here (secure contexts in current browsers). */
-function hasAudioWorklet(): boolean {
-  return typeof AudioWorkletNode === 'function';
+export interface WorkletAudioPlayerOptions {
+  /**
+   * Use SharedArrayBuffer rings for hi-fi PCM and the projectM tap. Defaults to
+   * true when the page is cross-origin isolated; false forces the `chunk` /
+   * `projectm-pcm` message fallback.
+   */
+  sharedRing?: boolean;
 }
 
 export class WorkletAudioPlayer extends BaseAudioBackend {
@@ -53,7 +66,10 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   private duration: number = 0;
   private currentTime: number = 0;
   private playbackRate: number = 1.0;
-  private playable = hasAudioWorklet();
+  /** addModule failed (or AudioWorklet is missing): every load throws. */
+  private workletUnavailable = false;
+  private readonly sharedRing: boolean;
+  private tapReader: PcmTapReader | null = null;
   private streamFeeder: HifiStreamFeeder | null = null;
   private onPCMBlock?: (buffer: Float32Array, channels: number, sampleRate: number) => void;
   private playbackPath: PlaybackPathInfo | null = null;
@@ -79,8 +95,12 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   private pendingNextSampleRate = 0;
   private readonly unsubscribeGraph: () => void;
 
-  constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
+  constructor(
+    private contextManager: AudioContextManager = sharedAudioContextManager,
+    options: WorkletAudioPlayerOptions = {}
+  ) {
     super();
+    this.sharedRing = options.sharedRing ?? sharedPlayRingSupported();
     this.unsubscribeGraph = contextManager.subscribeGraphRecreated(() => {
       this.stopNode();
       this.gainNode = null;
@@ -95,24 +115,37 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     else port.postMessage(msg);
   }
 
+  /** New processor node wired to the gain stage, with the current rate and tap state. */
   private createFlacNode(ctx: AudioContext, options: FlacProcessorOptions): AudioWorkletNode {
-    return new AudioWorkletNode(ctx, FLAC_PROCESSOR_NAME, {
+    this.tapReader = this.sharedRing ? new PcmTapReader(options.channels) : null;
+    const node = new AudioWorkletNode(ctx, FLAC_PROCESSOR_NAME, {
       numberOfInputs: 0,
       numberOfOutputs: 1,
       outputChannelCount: [options.channels],
-      processorOptions: options,
+      processorOptions: { ...options, tapRing: this.tapReader?.buffer },
     });
+    this.workletNode = node;
+    node.connect(this.gainNode!);
+    this.attachWorkletPort(node);
+    this.post({ type: 'setPlaybackRate', rate: this.playbackRate });
+    this.post({ type: 'setTap', enabled: Boolean(this.onPCMBlock) });
+    return node;
+  }
+
+  private get workletSupported(): boolean {
+    return !this.workletUnavailable && typeof AudioWorkletNode !== 'undefined';
   }
 
   getCapabilities(): AudioBackendCapabilities {
     return {
-      playable: this.playable,
+      playable: this.workletSupported,
       // Hi-fi streams restart the decoder at the target frame (hifiStreamPipeline.ts).
       seek: true,
-      playbackRate: false,
+      // Varispeed in the processor (tempo + pitch, like SDL); honest when AudioWorklet is missing.
+      playbackRate: this.workletSupported,
       // Hi-fi streams splice same-format successors into the ring; crossfade mode
       // is treated as gapless here (overlap stays native-streaming / web-audio).
-      gapless: true,
+      gapless: this.workletSupported,
       crossfade: false,
       sinkId: isAudioContextSinkSupported(),
     };
@@ -123,19 +156,32 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   }
 
   private async ensureWorkletGraph(sampleRate?: number, channels?: number): Promise<AudioContext> {
+    if (!this.workletSupported) {
+      this.workletUnavailable = true;
+      this.notifyStateChange();
+      throw new Error('The Worklet output needs AudioWorklet (a secure context). Switch to Streaming or Web Audio output.');
+    }
     await this.contextManager.ensureForTrack({ sampleRate, channels });
     const ctx = this.contextManager.getContext();
     if (this.audioContext === ctx && this.gainNode) return ctx;
 
-    if (!ctx.audioWorklet) {
-      this.playable = false;
-      throw new Error(UNPLAYABLE_MESSAGE);
+    if (!ctx.audioWorklet || typeof AudioWorkletNode === 'undefined') {
+      this.workletUnavailable = true;
+      this.notifyStateChange();
+      throw new Error('The Worklet output needs AudioWorklet (a secure context). Switch to Streaming or Web Audio output.');
     }
-    // A failed fetch of the module rejects this load; the next one retries.
-    await ctx.audioWorklet.addModule(FLAC_PROCESSOR_URL.href);
+    try {
+      await addFlacProcessorModule(ctx);
+    } catch (err) {
+      this.workletUnavailable = true;
+      this.notifyStateChange();
+      throw new Error(`AudioWorklet processor failed to load: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
     this.audioContext = ctx;
     this.gainNode = ctx.createGain();
     this.contextManager.connectInput(this.gainNode);
+    debug.log('AudioWorkletPlayer', `Using AudioWorklet (${this.sharedRing ? 'SharedArrayBuffer rings' : 'message transport'})`);
     return ctx;
   }
 
@@ -147,16 +193,17 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   }
 
   /**
-   * Register a callback that receives interleaved PCM blocks (512 samples/ch)
-   * directly from the audio worklet thread.  Use this to feed a projectM
-   * visualizer with audio-clock-synchronized PCM data.
+   * Register a callback that receives interleaved PCM blocks (512 frames) of the
+   * samples the processor sends to the output — audio-clock synchronized, for
+   * projectM. Read from the shared tap ring when available (no PCM in messages).
    *
-   * Pass `undefined` to unregister.
+   * Pass `undefined` to unregister (the processor stops tapping).
    */
   setPCMCallback(
     callback: ((buffer: Float32Array, channels: number, sampleRate: number) => void) | undefined
   ): void {
     this.onPCMBlock = callback;
+    this.post({ type: 'setTap', enabled: Boolean(callback) });
   }
 
   private setPrebuffering(active: boolean): void {
@@ -283,6 +330,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   private attachWorkletPort(node: AudioWorkletNode): void {
     node.port.onmessage = (e: MessageEvent<FlacProcessorOutbound>) => {
       if (e.data.type === 'ended') {
+        if (this.isStreaming && e.data.epoch !== this.streamEpoch) return;
         this.isPlaying = false;
         if (this.isStreaming) {
           // Keep the node and session: seek (or play → restart) works after the end.
@@ -306,6 +354,12 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
         this.currentTime = e.data.position;
         // The UI only learns about playback progress through state callbacks.
         this.notifyStateChange();
+      } else if (e.data.type === 'pcmTap') {
+        const onBlock = this.onPCMBlock;
+        const reader = this.tapReader;
+        if (onBlock && reader && this.workletNode === node) {
+          reader.drain((block) => onBlock(block, reader.channels, this.sampleRate));
+        }
       } else if (e.data.type === 'projectm-pcm') {
         if (this.onPCMBlock) {
           this.onPCMBlock(e.data.buffer, e.data.channels, e.data.sampleRate);
@@ -315,7 +369,10 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   }
 
   async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
-    if (!this.playable) throw new Error(UNPLAYABLE_MESSAGE);
+    if (!this.workletSupported) {
+      this.workletUnavailable = true;
+      throw new Error('The Worklet output needs AudioWorklet (a secure context). Switch to Streaming or Web Audio output.');
+    }
     await ensureContextForBuffer(this.contextManager, arrayBuffer);
     const audioContext = await this.ensureWorkletGraph();
     if (!audioContext) throw new Error('AudioWorklet context failed to initialize');
@@ -347,7 +404,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
         decodedData.sampleRate
       );
 
-      console.log('[AudioWorkletPlayer] Loaded audio:', {
+      debug.log('AudioWorkletPlayer:loaded', {
         channels: this.channels,
         sampleRate: this.sampleRate,
         duration: this.duration,
@@ -383,7 +440,10 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       onProgress?: (loaded: number, total: number | null) => void;
     } = {}
   ): Promise<void> {
-    if (!this.playable) throw new Error(UNPLAYABLE_MESSAGE);
+    if (!this.workletSupported) {
+      this.workletUnavailable = true;
+      throw new Error('The Worklet output needs AudioWorklet (a secure context). Switch to Streaming or Web Audio output.');
+    }
     // Set before any await: a preloadNext() racing this load goes to the session.
     this.playbackPath = describePlaybackPath('hifi-stream');
     this.adoptPreloadForStream(url);
@@ -411,7 +471,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
         // Same rate on both sides: the resampler keeps running across the join
         // (the marker lands within the filter latency, < 3 ms, of the true boundary).
         this.splicedDurations.push(duration);
-        this.post({ type: 'markSegment' });
+        this.post({ type: 'markSegment', at: this.streamFeeder?.writePos });
       },
       onDecodeEnded: () => {
         this.drainResampler();
@@ -484,7 +544,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       ? await createStreamResampler(channels, sampleRate, this.sampleRate)
       : null;
     if (this.streamResampler) {
-      console.log(`[AudioWorkletPlayer] Resampling ${sampleRate} → ${this.sampleRate} Hz (${this.streamResampler.kind})`);
+      debug.log('AudioWorkletPlayer', `Resampling ${sampleRate} → ${this.sampleRate} Hz (${this.streamResampler.kind})`);
     }
     this.currentTime = 0;
     this.duration = 0;
@@ -494,37 +554,48 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     this.streamFinished = false;
     this.splicedDurations = [];
 
-    await this.contextManager.whenRunning();
+    await this.contextManager.resume();
 
-    const node = this.createFlacNode(this.audioContext!, {
+    this.createFlacNode(this.audioContext!, {
       sampleRate: this.sampleRate,
       channels,
       ringBufferSeconds: STREAM_RING_SECONDS,
     });
-    this.workletNode = node;
-    node.connect(this.gainNode!);
     this.streamFeeder?.release();
-    this.streamFeeder = new HifiStreamFeeder(
-      Math.floor(STREAM_RING_SECONDS * this.sampleRate * channels)
-    );
-    this.post({ type: 'startStreaming', channels, sampleRate: this.sampleRate });
-    this.attachWorkletPort(node);
+    // Whole frames, so a frame never straddles the ring wrap.
+    const capacity = Math.floor(STREAM_RING_SECONDS * this.sampleRate) * channels;
+    const ring = this.sharedRing ? createPlayRing(capacity, true) : null;
+    this.streamFeeder = new HifiStreamFeeder(capacity, ring);
+    this.post({
+      type: 'startStreaming',
+      channels,
+      sampleRate: this.sampleRate,
+      ring: ring?.buffer as SharedArrayBuffer | undefined,
+    });
 
     this.isPlaying = true;
     this.notifyStateChange();
   }
 
-  private postPcm(pcm: Float32Array): void {
-    if (pcm.length === 0) return;
-    this.streamFeeder?.noteWritten(pcm.length);
-    this.post({ type: 'chunk', buffer: pcm }, [pcm.buffer]);
+  private writePcm(pcm: Float32Array): void {
+    const feeder = this.streamFeeder;
+    if (pcm.length === 0 || !feeder) return;
+    if (feeder.ring) {
+      const stored = feeder.push(pcm);
+      if (stored < pcm.length) {
+        console.warn(`[AudioWorkletPlayer] Play ring full: dropped ${pcm.length - stored} samples`);
+      }
+      return;
+    }
+    // Chunk fallback. A subarray view would transfer (and detach) its whole parent buffer.
+    const owned = pcm.byteOffset === 0 && pcm.byteLength === pcm.buffer.byteLength ? pcm : pcm.slice();
+    feeder.noteWritten(owned.length);
+    this.post({ type: 'chunk', buffer: owned }, [owned.buffer]);
   }
 
   appendChunk(interleavedBuffer: Float32Array): void {
     if (!this.workletNode || !this.isStreaming) return;
-    const pcm = this.streamResampler ? this.streamResampler.process(interleavedBuffer) : interleavedBuffer;
-    // A subarray view would transfer (and detach) its whole parent buffer.
-    this.postPcm(pcm.byteOffset === 0 && pcm.byteLength === pcm.buffer.byteLength ? pcm : pcm.slice());
+    this.writePcm(this.streamResampler ? this.streamResampler.process(interleavedBuffer) : interleavedBuffer);
   }
 
   /** Emit the resampler's filter tail (end of a track's samples). */
@@ -532,12 +603,12 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     if (!this.streamResampler || !this.isStreaming) return;
     const tail = this.streamResampler.flush();
     this.streamResampler.reset();
-    this.postPcm(tail.slice());
+    this.writePcm(tail);
   }
 
   endStreaming(): void {
     if (!this.workletNode || !this.isStreaming) return;
-    this.post({ type: 'endStreaming' });
+    if (!this.streamFeeder?.markEnded()) this.post({ type: 'endStreaming' });
   }
 
   // ---------------------------------------------------------------------------
@@ -554,7 +625,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       return;
     }
 
-    void this.contextManager.whenRunning();
+    void this.contextManager.resume(); // suspended (idle / autoplay) or interrupted (iOS)
 
     if (this.isStreaming) {
       if (this.streamFinished) {
@@ -569,26 +640,22 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       return;
     }
 
-    this.createWorkletNode(this.currentTime > 0);
-
+    this.createWorkletNode(Math.floor(this.currentTime * this.sampleRate) * this.channels);
     this.isPlaying = true;
     this.notifyStateChange();
   }
 
-  private createWorkletNode(fromPosition: boolean): void {
+  private createWorkletNode(startSample: number): void {
     if (!this.audioContext || !this.gainNode || !this.audioBuffer) return;
 
-    const node = this.createFlacNode(this.audioContext, {
+    this.createFlacNode(this.audioContext, {
       sampleRate: this.sampleRate,
       channels: this.channels,
     });
-    this.workletNode = node;
-    node.connect(this.gainNode);
     this.post({ type: 'buffer', buffer: this.audioBuffer, channels: this.channels });
-    this.attachWorkletPort(node);
     this._sendQueuedBufferToWorklet();
 
-    if (fromPosition) {
+    if (startSample > 0) {
       this.post({ type: 'seek', position: this.currentTime });
     }
   }
@@ -597,8 +664,9 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     if (!this.isPlaying) return;
 
     if (this.isStreaming) {
-      // Never suspend the shared AudioContext (EQ, analyser and the other backends share it).
-      // The processor holds its ring position; the feeder stops the decoder.
+      // The backend never suspends the shared AudioContext; AudioContextManager does
+      // after IDLE_SUSPEND_MS of paused transport. The processor holds its ring
+      // position; the feeder stops the decoder.
       this.post({ type: 'pause' });
       this.streamFeeder?.setPaused(true);
       this.isPlaying = false;
@@ -626,9 +694,11 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   private stopNode(): void {
     if (this.workletNode) {
       this.post({ type: 'stop' });
+      this.workletNode.port.onmessage = null;
       this.workletNode.disconnect();
       this.workletNode = null;
     }
+    this.tapReader = null;
   }
 
   seek(time: number): void {
@@ -666,8 +736,10 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     this.splicedDurations = [];
     this.streamFinished = false;
     this.streamResampler?.reset();
-    this.streamFeeder?.reset();
-    this.post({ type: 'seekStream', position: target, epoch: this.streamEpoch });
+    // Shared ring: the processor skips to the write position at this instant, so
+    // samples the restarted decoder writes before it sees the message survive.
+    const readFrom = this.streamFeeder?.reset();
+    this.post({ type: 'seekStream', position: target, epoch: this.streamEpoch, readFrom });
     if (!this.isPlaying) {
       // After `ended` the processor is not paused; hold it until play().
       this.post({ type: 'pause' });
@@ -700,16 +772,13 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     this.contextManager.setVolume(volume);
   }
 
-  private _warnedPlaybackRate = false;
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  setPlaybackRate(_rate: number): void {
-    // AudioWorkletPlayer does not support variable playback rate;
-    // the worklet processes at fixed sampleRate. Switch to Streaming mode for speed control.
-    if (!this._warnedPlaybackRate) {
-      this._warnedPlaybackRate = true;
-      console.warn('AudioWorkletPlayer: playback rate control is not supported. Switch to Streaming mode to use this feature.');
-    }
+  /**
+   * Varispeed in the processor: tempo and pitch move together (as SDL /
+   * `preservesPitch = false`). Position and duration stay in media seconds.
+   */
+  setPlaybackRate(rate: number): void {
+    this.playbackRate = clampPlaybackRate(rate);
+    this.post({ type: 'setPlaybackRate', rate: this.playbackRate });
   }
 
   setEQBandGain(bandIndex: number, gainDb: number): void {

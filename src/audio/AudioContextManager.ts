@@ -8,7 +8,6 @@ import {
 } from './DspChainNode';
 import { applyAnalyserPolicy } from './analyserPolicy';
 import { setAnalysisTap } from './analysisRing';
-import { createSerialQueue } from '../utils/serialQueue';
 import { ReplayGainNode } from './ReplayGainNode';
 import {
   DEFAULT_AUDIO_CONTEXT_POLICY,
@@ -16,13 +15,18 @@ import {
   destinationChannelCount,
   latencyHintsEqual,
   latencyModeToHint,
-  probeSampleRateSupported,
+  isRenderSizeHintSupported,
+  isNativeRateRequestedByUrl,
+  isSampleRateAccepted,
   relaxContextOptions,
+  renderSizeModeToHint,
   shouldRecreateContext,
   type AudioContextLatencyHint,
   type AudioContextOptionsWithSink,
   type AudioContextOptionsPolicy,
   type LatencyMode,
+  type RenderSizeHint,
+  type RenderSizeMode,
 } from './sampleRatePolicy';
 
 export interface EnsureTrackAudioOptions {
@@ -38,6 +42,10 @@ export interface AudioOutputInfo {
   /** Seconds from graph to the device (`AudioContext.outputLatency`). */
   outputLatency: number | null;
   latencyHint: AudioContextLatencyHint;
+  /** renderSizeHint the live context was built with (undefined = omitted / relaxed away). */
+  renderSizeHint: RenderSizeHint | undefined;
+  /** `AudioContext.renderQuantumSize` when exposed (frames per callback), else null. */
+  renderQuantumSize: number | null;
   channelCount: number;
   /** '' = system default output. */
   sinkId: string;
@@ -45,7 +53,7 @@ export interface AudioOutputInfo {
   graphGeneration: number;
   /**
    * Who runs ReplayGain / limiter / volume / EQ for Web Audio backends:
-   * 'wasm' = dsp_chain.h in the `dsp-chain` worklet,
+   * 'wasm' = dsp_chain.h in the `dsp-chain` worklet (same code as SDL),
    * 'web-audio' = BiquadFilterNode / DynamicsCompressorNode fallback.
    */
   dspEngine: DspEngine;
@@ -53,24 +61,33 @@ export interface AudioOutputInfo {
 
 export type DspEngine = 'wasm' | 'web-audio';
 
+/**
+ * Lifecycle of the shared context as the rest of the app sees it. `interrupted`
+ * is WebKit's state while a call / Siri holds the audio session; `none` is
+ * before the first graph.
+ */
+export type AudioGraphState = 'none' | 'running' | 'suspended' | 'interrupted' | 'closed';
+
+/** Paused this long, the context is suspended (stops rendering EQ / analyser, releases the iOS session). */
+export const IDLE_SUSPEND_MS = 10_000;
+
+/** Chromium's "render, but play nowhere" sink for external playback integrations. */
+const SILENT_SINK = { type: 'none' } as const;
+type SinkTarget = string | typeof SILENT_SINK;
+
 /** Longest ensureForTrack waits for the DSP worklet before playing through the fallback. */
 const DSP_ATTACH_WAIT_MS = 1500;
 
-/** Longest {@link AudioContextManager.whenRunning} waits for a context to start by default. */
-const RUNNING_WAIT_MS = 500;
-
-/** Gestures that count as the user activation Web Audio needs to start a context. */
-const UNLOCK_EVENTS = ['pointerdown', 'touchend', 'keydown'] as const;
-
-/** `AudioContext.state` also reports `'interrupted'` on iOS Safari, which lib.dom omits. */
-function contextState(ctx: BaseAudioContext): string {
-  return ctx.state;
-}
-
 type SinkAudioContext = AudioContext & {
   sinkId?: string | { type: string };
-  setSinkId?: (sinkId: string) => Promise<void>;
+  setSinkId?: (sinkId: SinkTarget) => Promise<void>;
 };
+
+/** Safari's Audio Session API (16.4+). */
+type NavigatorWithAudioSession = Navigator & { audioSession?: { type: string } };
+
+/** Events that count as a user activation for `resume()` on WebKit / Chromium. */
+const GESTURE_EVENTS = ['pointerdown', 'pointerup', 'keydown', 'touchend'] as const;
 
 /** True when `AudioContext.setSinkId` exists (Chromium 110+). */
 export function isAudioContextSinkSupported(): boolean {
@@ -81,20 +98,24 @@ export function isAudioContextSinkSupported(): boolean {
 /**
  * Owns the application-lifetime Web Audio graph.
  *
- * Every backend (the `sdl` engine's worklet included) connects disposable
- * source/input nodes via {@link connectInput}; the speaker DSP -> Analyser ->
- * destination chain is rebuilt when sample rate or latency hint changes.
- * Speaker DSP is the `dsp-chain` worklet (dsp_chain.h in WASM) once it loads,
- * else ReplayGain -> master Gain -> EQ as Web Audio nodes.
+ * Web Audio backends connect disposable source/input nodes via {@link connectInput};
+ * the speaker DSP -> Analyser -> destination chain is rebuilt when sample rate or
+ * latency hint changes. Speaker DSP is the `dsp-chain` worklet (dsp_chain.h in
+ * WASM, identical to SDL) once it loads, else ReplayGain -> master Gain -> EQ
+ * as Web Audio nodes.
+ * External playback integrations can tap PCM into the analyser via
+ * {@link connectVisualizerFeed} while {@link setExternalPlaybackActive} mutes Web Audio speakers.
  *
- * The context is created lazily at the track's native rate by {@link ensureForTrack}.
- * Setters (volume, EQ, ReplayGain, sink) only store state until a graph exists.
- * {@link getContext} is the one lazy creator: calling it before `ensureForTrack`
- * opens the device-default rate and the first track may recreate the graph.
+ * The context is created lazily at the device rate by {@link ensureForTrack} (or
+ * {@link unlock}, inside a user gesture) and kept for the page's lifetime; latency,
+ * render-size or (opt-in) file-rate changes rebuild it. Setters (volume, EQ,
+ * ReplayGain, sink) only store state until a graph exists.
  *
- * Only the manager decides the context's run state: backends share it with each
- * other and the visualizer tap, so `suspend()` is refused and {@link whenRunning}
- * is the one way to get a running context.
+ * Lifecycle: {@link getState} / {@link subscribeState} follow the context's
+ * `statechange`. The owner reports whether playback is wanted via
+ * {@link setPlaybackActive}; while it is, a suspended or interrupted context is
+ * resumed on the next gesture or when the page becomes visible, and while it is
+ * not, the context is suspended after {@link IDLE_SUSPEND_MS}.
  */
 export class AudioContextManager {
   private context: AudioContext | null = null;
@@ -107,21 +128,33 @@ export class AudioContextManager {
   private inputGain: GainNode | null = null;
   private dspChain: DspChainNode | null = null;
   private dspAttach: Promise<void> = Promise.resolve();
+  private visualizerFeedGain: GainNode | null = null;
+  private externalPlaybackActive = false;
   private replayGainLinear = 1;
   private limiterEnabled = false;
   private volume = 1;
   private eqGains: number[] = DEFAULT_EQ_BANDS.map(() => 0);
   private policy: AudioContextOptionsPolicy = { ...DEFAULT_AUDIO_CONTEXT_POLICY };
   private appliedLatencyHint: AudioContextLatencyHint = this.policy.latencyHint;
+  private appliedRenderSizeHint: RenderSizeHint | undefined = undefined;
+  /** Set when the constructor rejected renderSizeHint; not retried until the mode changes. */
+  private renderSizeHintRejected = false;
   private graphGeneration = 0;
   private readonly graphListeners = new Set<() => void>();
   private lastTrackChannels: number | undefined;
   private sinkId = '';
   /** Rates whose constructor threw; skipped so each track does not retry them. */
   private readonly rejectedSampleRates = new Set<number>();
-  /** Graph changes (first build, rate / latency recreate) run one at a time. */
-  private readonly graphChanges = createSerialQueue();
-  private disarmGestureResume: (() => void) | null = null;
+  private readonly stateListeners = new Set<(state: AudioGraphState) => void>();
+  private lastState: AudioGraphState = 'none';
+  /** Something is playing or about to (the engine's transport, not the context's state). */
+  private playbackActive = false;
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  private lifecycleInstalled = false;
+
+  constructor(private readonly idleSuspendMs = IDLE_SUSPEND_MS) {
+    if (isNativeRateRequestedByUrl()) this.policy.recreateOnSampleRateMismatch = true;
+  }
 
   subscribeGraphRecreated(listener: () => void): () => void {
     this.graphListeners.add(listener);
@@ -145,11 +178,28 @@ export class AudioContextManager {
   async setLatencyMode(mode: LatencyMode): Promise<void> {
     const hint = latencyModeToHint(mode);
     this.policy.latencyHint = hint;
-    await this.graphChanges(async () => {
-      if (!this.context) return;
-      if (latencyHintsEqual(this.appliedLatencyHint, hint)) return;
-      await this.recreateGraph(this.context.sampleRate);
-    });
+    if (!this.context) return;
+    if (latencyHintsEqual(this.appliedLatencyHint, hint)) return;
+    await this.recreateGraph(this.context.sampleRate);
+  }
+
+  /**
+   * Render quantum hint. Ignored (omitted) where the browser has no
+   * `renderQuantumSize`; a rejected value is relaxed away at construct time.
+   */
+  async setRenderSizeMode(mode: RenderSizeMode): Promise<void> {
+    const hint = renderSizeModeToHint(mode);
+    if (hint === this.policy.renderSizeHint) return;
+    this.policy.renderSizeHint = hint;
+    this.renderSizeHintRejected = false;
+    if (!this.context) return;
+    if (this.requestedRenderSizeHint() === this.appliedRenderSizeHint) return;
+    await this.recreateGraph(this.context.sampleRate);
+  }
+
+  private requestedRenderSizeHint(): RenderSizeHint | undefined {
+    if (this.renderSizeHintRejected || !isRenderSizeHintSupported()) return undefined;
+    return this.policy.renderSizeHint;
   }
 
   /**
@@ -166,34 +216,30 @@ export class AudioContextManager {
       this.lastTrackChannels = options.channels;
       this.applyDestinationChannels();
     }
-    return this.graphChanges(() => this.prepareGraph(options.sampleRate));
-  }
-
-  private async prepareGraph(fileRate: number | undefined): Promise<AudioContext> {
-    const live = this.context;
-    // Probing exists to avoid a pointless recreate. A first build has nothing to
-    // protect: constructContext relaxes a rejected rate itself, so one attempt.
-    const targetRate = chooseContextSampleRate(
-      fileRate,
-      (rate) => !live
-        ? !this.rejectedSampleRates.has(rate)
-        : rate === live.sampleRate || (!this.rejectedSampleRates.has(rate) && probeSampleRateSupported(rate))
-    );
+    // Device rate unless the (opt-in) native-rate policy asks for the file's.
+    const targetRate = this.policy.recreateOnSampleRateMismatch
+      ? chooseContextSampleRate(
+        options.sampleRate,
+        (rate) => !this.rejectedSampleRates.has(rate) && isSampleRateAccepted(rate)
+      )
+      : this.policy.sampleRate;
+    const nextHint = this.policy.latencyHint;
 
     let context: AudioContext;
-    if (!live) {
+    if (!this.context) {
       context = this.buildGraph(targetRate);
     } else if (shouldRecreateContext({
-      liveRate: live.sampleRate,
+      liveRate: this.context.sampleRate,
       targetRate,
       liveHint: this.appliedLatencyHint,
-      nextHint: this.policy.latencyHint,
+      nextHint,
+      liveRenderSize: this.appliedRenderSizeHint,
+      nextRenderSize: this.requestedRenderSizeHint(),
       recreateOnMismatch: this.policy.recreateOnSampleRateMismatch,
     })) {
-      // Waits for the DSP worklet itself before publishing the new graph.
-      return this.recreateGraph(targetRate ?? live.sampleRate);
+      context = await this.recreateGraph(targetRate ?? this.context.sampleRate);
     } else {
-      context = live;
+      context = this.context;
     }
     await this.waitForDspAttach();
     return context;
@@ -230,6 +276,12 @@ export class AudioContextManager {
     return this.dspChain ? 'wasm' : 'web-audio';
   }
 
+  /** Feed SDL PCM tap worklet into the analyser (parallel to masterGain path). */
+  connectVisualizerFeed(node: AudioNode): void {
+    this.getContext();
+    node.connect(this.visualizerFeedGain!);
+  }
+
   getSinkId(): string {
     return this.sinkId;
   }
@@ -243,7 +295,9 @@ export class AudioContextManager {
     this.sinkId = sinkId;
     const ctx = this.context as SinkAudioContext | null;
     if (!ctx || typeof ctx.setSinkId !== 'function') return true;
-    if (this.currentContextSinkId(ctx) === sinkId) return true;
+    // External playback owns the speakers; apply the stored id when it hands them back.
+    if (this.externalPlaybackActive) return true;
+    if (this.currentContextSinkId(ctx) === sinkId && !isSilentSink(ctx.sinkId)) return true;
     try {
       await ctx.setSinkId(sinkId);
       return true;
@@ -269,6 +323,8 @@ export class AudioContextManager {
       baseLatency: finite(ctx.baseLatency),
       outputLatency: finite(ctx.outputLatency),
       latencyHint: this.appliedLatencyHint,
+      renderSizeHint: this.appliedRenderSizeHint,
+      renderQuantumSize: finite((ctx as { renderQuantumSize?: unknown }).renderQuantumSize),
       channelCount: ctx.destination.channelCount,
       sinkId: this.currentContextSinkId(ctx),
       state: ctx.state,
@@ -278,38 +334,154 @@ export class AudioContextManager {
   }
 
   /**
-   * Resolve true once the context is running, false if it is not by `timeoutMs`
-   * (or there is no graph; this does not create one).
-   *
-   * A `suspended` context, and iOS Safari's `interrupted` (a call, Siri), are both
-   * brought back with `resume()`; the graph is never rebuilt for either. The
-   * `resume()` call is issued before the first await, so calling this inside the
-   * click that unlocks audio keeps the activation. When that is not enough, the
-   * next user gesture anywhere on the page resumes it.
+   * Mute Web Audio speakers while an external playback integration owns output.
+   * Where supported the context also moves to a `{ type: 'none' }` sink so it
+   * renders for the analyser without holding a real output device open.
    */
-  async whenRunning(timeoutMs = RUNNING_WAIT_MS): Promise<boolean> {
-    const ctx = this.context;
-    if (!ctx) return false;
-    const state = contextState(ctx);
-    if (state === 'running') return true;
-    if (state === 'closed') return false;
-
-    this.armGestureResume(ctx);
-    await new Promise<void>((resolve) => {
-      const done = () => {
-        clearTimeout(timer);
-        ctx.removeEventListener('statechange', check);
-        resolve();
-      };
-      const check = () => {
-        if (contextState(ctx) === 'running' || contextState(ctx) === 'closed') done();
-      };
-      const timer = setTimeout(done, timeoutMs);
-      ctx.addEventListener('statechange', check);
-      // A rejection (closed, or still interrupted) leaves statechange / the timeout to decide.
-      ctx.resume().then(check, () => undefined);
+  setExternalPlaybackActive(active: boolean): void {
+    if (active === this.externalPlaybackActive) return;
+    this.externalPlaybackActive = active;
+    if (this.speakerGain) {
+      this.speakerGain.gain.value = active ? 0 : 1;
+    }
+    const ctx = this.context as SinkAudioContext | null;
+    if (!ctx || typeof ctx.setSinkId !== 'function') return;
+    const target: SinkTarget = active ? SILENT_SINK : this.sinkId;
+    ctx.setSinkId(target).catch((err) => {
+      console.warn('[AudioContextManager] setSinkId failed', { target, err });
     });
-    return contextState(ctx) === 'running';
+  }
+
+  isExternalPlaybackActive(): boolean {
+    return this.externalPlaybackActive;
+  }
+
+  /**
+   * Resume a suspended or interrupted graph. No-op before a graph exists (does
+   * not create one). Never rejects: outside a user gesture the browser may refuse,
+   * and the gesture listener ({@link installLifecycle}) retries.
+   */
+  async resume(): Promise<void> {
+    this.cancelIdleSuspend();
+    const context = this.context;
+    if (!context || !isResumable(context.state)) return;
+    try {
+      await context.resume();
+    } catch (err) {
+      console.warn('[AudioContextManager] resume() refused; waiting for a user gesture', err);
+    }
+  }
+
+  /**
+   * Call synchronously inside a user gesture (play / track click): creates the
+   * graph if there is none and resumes it, so WebKit starts it `running` instead
+   * of after the awaited network probe, outside the gesture.
+   */
+  unlock(): void {
+    this.installLifecycle();
+    if (!this.context) this.initialize();
+    void this.resume();
+  }
+
+  getState(): AudioGraphState {
+    return this.lastState;
+  }
+
+  subscribeState(listener: (state: AudioGraphState) => void): () => void {
+    this.stateListeners.add(listener);
+    return () => {
+      this.stateListeners.delete(listener);
+    };
+  }
+
+  /**
+   * Whether the app wants sound (transport playing or loading). Active resumes
+   * now; inactive suspends the context after {@link IDLE_SUSPEND_MS} so paused
+   * playback stops rendering and releases the OS audio session.
+   */
+  setPlaybackActive(active: boolean): void {
+    this.playbackActive = active;
+    if (active) {
+      void this.resume();
+      return;
+    }
+    this.cancelIdleSuspend();
+    this.idleTimer = setTimeout(() => {
+      this.idleTimer = null;
+      const ctx = this.context;
+      if (this.playbackActive || !ctx || ctx.state !== 'running') return;
+      ctx.suspend().catch(() => { /* closed meanwhile */ });
+    }, this.idleSuspendMs);
+  }
+
+  isPlaybackActive(): boolean {
+    return this.playbackActive;
+  }
+
+  /**
+   * Install the page-level listeners once: gesture unlock (resume while playback
+   * is wanted), `visibilitychange` (resume on return), and
+   * `navigator.audioSession.type = 'playback'` (Safari: plays with the ringer
+   * switch off, ducks for calls like a media app). Safe to call repeatedly.
+   */
+  installLifecycle(): void {
+    if (this.lifecycleInstalled || typeof window === 'undefined') return;
+    this.lifecycleInstalled = true;
+    const session = (navigator as NavigatorWithAudioSession).audioSession;
+    if (session) {
+      try {
+        session.type = 'playback';
+      } catch {
+        /* read-only in this engine */
+      }
+    }
+    const onGesture = () => {
+      if (this.playbackActive && this.context && isResumable(this.context.state)) void this.resume();
+    };
+    for (const type of GESTURE_EVENTS) {
+      window.addEventListener(type, onGesture, { capture: true, passive: true });
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') onGesture();
+    });
+  }
+
+  private cancelIdleSuspend(): void {
+    if (this.idleTimer === null) return;
+    clearTimeout(this.idleTimer);
+    this.idleTimer = null;
+  }
+
+  private watchContext(ctx: AudioContext): void {
+    ctx.addEventListener?.('statechange', () => {
+      if (ctx !== this.context) return;
+      this.publishState();
+      // An interruption ended (iOS returns to 'suspended') or the OS suspended us: retry.
+      if (this.playbackActive && isResumable(ctx.state)) void this.resume();
+    });
+    // Chromium: the sink went away (device unplugged) — fall back to the system default.
+    ctx.addEventListener?.('error', (event) => {
+      if (ctx !== this.context) return;
+      console.warn('[AudioContextManager] output device error; using the system default', event);
+      if (this.sinkId) void this.setSinkId('');
+    });
+    ctx.addEventListener?.('sinkchange', () => {
+      if (ctx === this.context) this.notifyGraphListeners();
+    });
+    this.publishState();
+  }
+
+  private publishState(): void {
+    const state = (this.context?.state as AudioGraphState | undefined) ?? 'none';
+    if (state === this.lastState) return;
+    this.lastState = state;
+    for (const listener of this.stateListeners) {
+      try {
+        listener(state);
+      } catch (err) {
+        console.warn('[AudioContextManager] state listener threw', err);
+      }
+    }
   }
 
   setVolume(volume: number): void {
@@ -357,32 +529,41 @@ export class AudioContextManager {
     if (sampleRate !== undefined) {
       options.sampleRate = sampleRate;
     }
-    if (this.sinkId && isAudioContextSinkSupported()) {
-      options.sinkId = this.sinkId;
+    if (isAudioContextSinkSupported()) {
+      if (this.externalPlaybackActive) options.sinkId = SILENT_SINK;
+      else if (this.sinkId) options.sinkId = this.sinkId;
+    }
+    const renderSizeHint = this.requestedRenderSizeHint();
+    if (renderSizeHint !== undefined) {
+      options.renderSizeHint = renderSizeHint;
     }
 
     const { context, options: applied } = this.constructContext(options);
     this.context = context;
+    this.watchContext(context);
     this.appliedLatencyHint = applied.latencyHint ?? this.policy.latencyHint;
-    this.refuseSuspend(this.context);
+    this.appliedRenderSizeHint = applied.renderSizeHint;
     this.replayGain = new ReplayGainNode(this.context);
     this.masterGain = this.context.createGain();
     this.eqChain = new EQChain(this.context);
     this.analyser = this.context.createAnalyser();
     applyAnalyserPolicy(this.analyser);
     this.speakerGain = this.context.createGain();
+    this.visualizerFeedGain = this.context.createGain();
+    this.visualizerFeedGain.gain.value = 1;
     this.inputGain = this.context.createGain();
 
     this.inputGain.connect(this.replayGain.input);
-    this.replayGain.connect(this.masterGain);
+    this.replayGain.output.connect(this.masterGain);
     this.masterGain.connect(this.eqChain.input);
     this.eqChain.output.connect(this.analyser);
+    this.visualizerFeedGain.connect(this.analyser);
     this.analyser.connect(this.speakerGain);
     this.speakerGain.connect(this.context.destination);
 
     this.applyStoredGraphState();
     this.applyDestinationChannels();
-    if (options.sinkId !== undefined && applied.sinkId === undefined) {
+    if (options.sinkId !== undefined && applied.sinkId === undefined && !this.externalPlaybackActive) {
       // Constructor relaxation dropped the sink (e.g. it was the rate that failed); retry live.
       void this.setSinkId(this.sinkId);
     }
@@ -475,6 +656,9 @@ export class AudioContextManager {
         if (typeof attempt.latencyHint === 'number' && next.latencyHint !== attempt.latencyHint) {
           this.policy.latencyHint = next.latencyHint ?? 'interactive';
         }
+        if (attempt.renderSizeHint !== undefined && next.renderSizeHint === undefined) {
+          this.renderSizeHintRejected = true;
+        }
         if (attempt.sampleRate !== undefined && next.sampleRate === undefined) {
           this.rejectedSampleRates.add(attempt.sampleRate);
         }
@@ -493,6 +677,7 @@ export class AudioContextManager {
     if (!ctx) return;
     const destination = ctx.destination;
     const count = destinationChannelCount(this.lastTrackChannels, destination.maxChannelCount);
+    if (count !== undefined) this.replayGain?.setChannelCount(count);
     if (count !== undefined && destination.channelCount !== count) {
       try {
         destination.channelCount = count;
@@ -502,8 +687,6 @@ export class AudioContextManager {
         console.warn('[AudioContextManager] destination.channelCount rejected', { count, err });
       }
     }
-    // The fallback limiter is built per channel above stereo.
-    this.replayGain?.setChannelCount(this.dspChannelCount(ctx));
     // An attached DSP worklet has a fixed width; rebuild it when the track's differs.
     if (this.dspChain && this.dspChain.channels !== this.dspChannelCount(ctx)) {
       this.dspAttach = this.attachDspChain(ctx);
@@ -517,52 +700,18 @@ export class AudioContextManager {
       this.replayGain.setLimiterEnabled(this.limiterEnabled);
     }
     if (this.eqChain) this.eqChain.setAllGains(this.eqGains);
+    if (this.speakerGain) {
+      this.speakerGain.gain.value = this.externalPlaybackActive ? 0 : 1;
+    }
   }
 
-  /**
-   * Replace the context. The old graph is cut from its destination up front so two
-   * contexts never sound at once, but the old context is closed only once the new
-   * one is running. `graphGeneration` and the listeners move together, last: by
-   * then the new `inputGain` is routed and the context reports real latencies, so
-   * a listener (or Settings) reading {@link getOutputInfo} sees the new graph whole.
-   */
   private async recreateGraph(sampleRate: number | undefined): Promise<AudioContext> {
-    const previous = this.retireGraph();
-    const next = this.buildGraph(sampleRate);
-    await this.whenRunning();
-    await this.waitForDspAttach();
-    if (previous.context && previous.context.state !== 'closed') {
-      try {
-        await previous.context.close();
-      } catch {
-        /* already closed */
-      }
-    }
-    this.graphGeneration += 1;
-    for (const listener of this.graphListeners) {
-      try {
-        listener();
-      } catch (err) {
-        console.warn('[AudioContextManager] graph listener threw', err);
-      }
-    }
-    return next;
-  }
-
-  /** Silence and drop the live graph; the caller owns closing the returned context. */
-  private retireGraph(): { context: AudioContext | null } {
-    const context = this.context;
-    // speakerGain feeds the destination: cutting it is what makes the old context silent.
-    this.speakerGain?.disconnect();
-    this.inputGain?.disconnect();
-    this.analyser?.disconnect();
+    const previous = this.context;
     this.replayGain?.disconnect();
-    this.masterGain?.disconnect();
     this.eqChain?.disconnect();
     this.dspChain?.disconnect();
     this.dspChain = null;
     setAnalysisTap('dsp-chain', null);
-    this.disarmGestureResume?.();
     this.inputGain = null;
     this.context = null;
     this.replayGain = null;
@@ -570,41 +719,39 @@ export class AudioContextManager {
     this.eqChain = null;
     this.analyser = null;
     this.speakerGain = null;
-    return { context };
+    this.visualizerFeedGain = null;
+
+    const next = this.buildGraph(sampleRate);
+    this.graphGeneration += 1;
+    if (!this.playbackActive) this.setPlaybackActive(false); // re-arm the idle suspend for the new context
+    if (previous && previous.state !== 'closed') {
+      try {
+        await previous.close();
+      } catch {
+        /* already closed */
+      }
+    }
+    this.notifyGraphListeners();
+    return next;
   }
 
-  /**
-   * Shared with every backend and the visualizer tap, so one backend's `suspend()`
-   * would mute the others. Run state is only ever restored here ({@link whenRunning}).
-   */
-  private refuseSuspend(ctx: AudioContext): void {
-    Object.defineProperty(ctx, 'suspend', {
-      configurable: true,
-      value: (): Promise<void> => {
-        console.warn('[AudioContextManager] context.suspend() ignored: the context is shared');
-        return Promise.resolve();
-      },
-    });
+  private notifyGraphListeners(): void {
+    for (const listener of this.graphListeners) {
+      try {
+        listener();
+      } catch (err) {
+        console.warn('[AudioContextManager] graph listener threw', err);
+      }
+    }
   }
+}
 
-  /** Resume `ctx` on the next user gesture, until it runs (or the graph is retired). */
-  private armGestureResume(ctx: AudioContext): void {
-    if (this.disarmGestureResume || typeof document === 'undefined') return;
-    const resume = () => {
-      ctx.resume().catch(() => undefined);
-    };
-    const disarm = () => {
-      for (const type of UNLOCK_EVENTS) document.removeEventListener(type, resume, true);
-      ctx.removeEventListener('statechange', onChange);
-      this.disarmGestureResume = null;
-    };
-    const onChange = () => {
-      if (contextState(ctx) === 'running' || contextState(ctx) === 'closed') disarm();
-    };
-    for (const type of UNLOCK_EVENTS) document.addEventListener(type, resume, true);
-    ctx.addEventListener('statechange', onChange);
-    this.disarmGestureResume = disarm;
-  }
+function isResumable(state: AudioContextState | 'interrupted'): boolean {
+  return state === 'suspended' || state === 'interrupted';
+}
+
+function isSilentSink(sinkId: unknown): boolean {
+  return typeof sinkId === 'object' && sinkId !== null && (sinkId as { type?: unknown }).type === 'none';
 }
 
 export const sharedAudioContextManager = new AudioContextManager();

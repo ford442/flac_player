@@ -5,8 +5,10 @@ import {
   latencyHintsEqual,
   latencyModeToHint,
   destinationChannelCount,
-  probeSampleRateSupported,
+  isSampleRateAccepted,
   relaxContextOptions,
+  renderSizeModeToHint,
+  isRenderSizeMode,
   shouldRecreateContext,
 } from '../src/audio/sampleRatePolicy';
 import { resampleInterleavedLinear } from '../src/audio/linearResampler';
@@ -78,7 +80,7 @@ describe('sampleRatePolicy', () => {
   });
 });
 
-describe('probeSampleRateSupported', () => {
+describe('isSampleRateAccepted', () => {
   let restore: (() => void) | undefined;
 
   afterEach(() => {
@@ -92,65 +94,18 @@ describe('probeSampleRateSupported', () => {
       isSampleRateSupported?: (rate: number) => boolean;
     };
     Ctor.isSampleRateSupported = (rate) => rate === 48000;
-    expect(probeSampleRateSupported(48000)).toBe(true);
-    expect(probeSampleRateSupported(192000)).toBe(false);
-    expect(RecordingAudioContext.instances).toHaveLength(0);
+    expect(isSampleRateAccepted(48000)).toBe(true);
+    expect(isSampleRateAccepted(192000)).toBe(false);
     delete Ctor.isSampleRateSupported;
   });
 
-  it('falls back to a construct/close probe', () => {
+  it('never opens a throwaway context (constructor relaxation catches rejected rates)', () => {
     restore = installRecordingAudioContext();
-    expect(probeSampleRateSupported(96000)).toBe(true);
-    expect(RecordingAudioContext.instances[0]?.state).toBe('closed');
+    expect(isSampleRateAccepted(96000)).toBe(true);
+    expect(isSampleRateAccepted(0)).toBe(false);
+    expect(RecordingAudioContext.instances).toHaveLength(0);
   });
 
-  it('opens the throwaway context once per rate, not once per call', () => {
-    restore = installRecordingAudioContext();
-    expect(probeSampleRateSupported(96000)).toBe(true);
-    expect(probeSampleRateSupported(96000)).toBe(true);
-    expect(RecordingAudioContext.instances).toHaveLength(1);
-    expect(probeSampleRateSupported(192000)).toBe(true);
-    expect(RecordingAudioContext.instances).toHaveLength(2);
-  });
-
-  it('remembers a rejection as well as a success', () => {
-    restore = installRecordingAudioContext();
-    let attempts = 0;
-    RecordingAudioContext.rejectOptions = (o) => {
-      attempts += 1;
-      return o.sampleRate === 384000;
-    };
-    expect(probeSampleRateSupported(384000)).toBe(false);
-    expect(probeSampleRateSupported(384000)).toBe(false);
-    expect(attempts).toBe(1);
-  });
-
-  it('asks isSampleRateSupported once per rate', () => {
-    restore = installRecordingAudioContext();
-    const Ctor = globalThis.AudioContext as typeof AudioContext & {
-      isSampleRateSupported?: (rate: number) => boolean;
-    };
-    const asked: number[] = [];
-    Ctor.isSampleRateSupported = (rate) => {
-      asked.push(rate);
-      return rate <= 48000;
-    };
-    expect(probeSampleRateSupported(48000)).toBe(true);
-    expect(probeSampleRateSupported(48000)).toBe(true);
-    expect(probeSampleRateSupported(96000)).toBe(false);
-    expect(probeSampleRateSupported(96000)).toBe(false);
-    expect(asked).toEqual([48000, 96000]);
-  });
-
-  it('keeps separate answers per AudioContext implementation', () => {
-    const first = installRecordingAudioContext();
-    expect(probeSampleRateSupported(96000)).toBe(true);
-    first();
-
-    restore = installRecordingAudioContext();
-    RecordingAudioContext.rejectOptions = () => true;
-    expect(probeSampleRateSupported(96000)).toBe(false);
-  });
 });
 
 describe('resampleInterleavedLinear', () => {
@@ -167,6 +122,35 @@ describe('resampleInterleavedLinear', () => {
 });
 
 describe('context option fallbacks', () => {
+  it('drops renderSizeHint after sinkId and before sampleRate', () => {
+    let o = relaxContextOptions({
+      latencyHint: 'playback', sinkId: 'dac', renderSizeHint: 512, sampleRate: 96000,
+    });
+    expect(o).toEqual({ latencyHint: 'playback', renderSizeHint: 512, sampleRate: 96000 });
+    o = relaxContextOptions(o!);
+    expect(o).toEqual({ latencyHint: 'playback', sampleRate: 96000 });
+    o = relaxContextOptions(o!);
+    expect(o).toEqual({ latencyHint: 'playback' });
+  });
+
+  it('maps render size modes to hints (default omits the option)', () => {
+    expect(renderSizeModeToHint('default')).toBeUndefined();
+    expect(renderSizeModeToHint('hardware')).toBe('hardware');
+    expect(renderSizeModeToHint('256')).toBe(256);
+    expect(renderSizeModeToHint('512')).toBe(512);
+    expect(isRenderSizeMode('512')).toBe(true);
+    expect(isRenderSizeMode('1024')).toBe(false);
+  });
+
+  it('recreates when the render size hint changes', () => {
+    const base = {
+      liveRate: 48000, targetRate: 48000, liveHint: 'playback' as const,
+      nextHint: 'playback' as const, recreateOnMismatch: true,
+    };
+    expect(shouldRecreateContext({ ...base, liveRenderSize: undefined, nextRenderSize: undefined })).toBe(false);
+    expect(shouldRecreateContext({ ...base, liveRenderSize: undefined, nextRenderSize: 512 })).toBe(true);
+  });
+
   it('relaxes numeric hint, then sinkId, then sampleRate', () => {
     let o = relaxContextOptions({ latencyHint: 0.03, sinkId: 'dac', sampleRate: 96000 });
     expect(o).toEqual({ latencyHint: 'interactive', sinkId: 'dac', sampleRate: 96000 });

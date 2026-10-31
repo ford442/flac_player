@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { AudioContextManager } from '../../src/audio/AudioContextManager';
 import { createAudioBackend } from '../../src/audio/createAudioBackend';
 import type { ConfigurableAudioBackend } from '../../src/types/audio';
-import type { AudioOutputMode } from '../../src/hooks/usePlayerState';
+import type { AudioOutputMode } from '../../src/types/audio';
 
 const FIXTURE_DURATION_SECONDS = 1;
 const ACTIVITY_TIMEOUT_MS = 1_500;
@@ -88,7 +88,7 @@ describe('real browser audio pipeline', () => {
       await backend.loadFromArrayBuffer(await response.arrayBuffer(), 'test.flac');
 
       expect(backend.getState().duration).toBeCloseTo(FIXTURE_DURATION_SECONDS, 2);
-      await manager.whenRunning();
+      await manager.resume();
       await backend.play();
 
       const activity = await waitForAnalyserActivity(backend.getAnalyser()!);
@@ -152,7 +152,7 @@ describe('real browser audio pipeline', () => {
 
       expect(backend.getPlaybackPath?.()?.strategy).toBe('buffered');
       expect(backend.getState().duration).toBeCloseTo(FIXTURE_DURATION_SECONDS, 2);
-      await manager.whenRunning();
+      await manager.resume();
       await backend.play();
 
       const activity = await waitForAnalyserActivity(backend.getAnalyser()!);
