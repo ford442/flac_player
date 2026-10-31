@@ -4,6 +4,7 @@ ReplayGain tag extraction for local audio files (FLAC Vorbis comments, ID3 TXXX)
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -56,7 +57,10 @@ def extract_replaygain_from_file(
     if allowed_root is not None:
         try:
             root_path = Path(allowed_root).resolve()
-            file_path = file_path.resolve()
+            filename = os.path.basename(os.fspath(path))
+            if filename in ('', '.', '..'):
+                return {}
+            file_path = (root_path / filename).resolve()
             file_path.relative_to(root_path)
         except (OSError, RuntimeError, ValueError):
             return {}
