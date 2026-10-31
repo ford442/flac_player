@@ -40,7 +40,11 @@ def _parse_peak(value: Optional[str]) -> Optional[float]:
         return None
 
 
-def extract_replaygain_from_file(path: str | Path) -> Dict[str, Any]:
+def extract_replaygain_from_file(
+    path: str | Path,
+    *,
+    allowed_root: str | Path | None = None,
+) -> Dict[str, Any]:
     """
     Read ReplayGain tags from a local audio file.
     Returns a dict with optional replaygain_* keys suitable for SongMetadata.
@@ -49,6 +53,14 @@ def extract_replaygain_from_file(path: str | Path) -> Dict[str, Any]:
         return {}
 
     file_path = Path(path)
+    if allowed_root is not None:
+        try:
+            root_path = Path(allowed_root).resolve()
+            file_path = file_path.resolve()
+            file_path.relative_to(root_path)
+        except (OSError, RuntimeError, ValueError):
+            return {}
+
     if not file_path.is_file():
         return {}
 

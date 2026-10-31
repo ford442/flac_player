@@ -484,7 +484,7 @@ async def upload_song(
             'replaygain_track_peak', 'replaygain_album_peak',
         )):
             try:
-                rg_tags = extract_replaygain_from_file(local_path)
+                rg_tags = extract_replaygain_from_file(local_path, allowed_root=MUSIC_DIR)
                 for key, value in rg_tags.items():
                     if song_data.get(key) is None:
                         song_data[key] = value
@@ -805,7 +805,7 @@ async def redirect_to_playlist(share_id: str):
     if not share:
         raise HTTPException(status_code=404, detail="Share not found")
     
-    return RedirectResponse(url=f"/?share={share_id}")
+    return RedirectResponse(url=f"/?share={quote(share_id, safe='')}")
 
 
 # =============================================================================
