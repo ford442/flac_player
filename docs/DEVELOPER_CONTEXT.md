@@ -4,7 +4,7 @@ Last updated: September 2026
 
 ## 1. High-Level Architecture & Intent
 
-*   **Core Purpose:** High-performance in-browser audio player for FLAC/WAV and library-backed streaming. Features a **four-backend audio engine** (streaming, Web Audio, AudioWorklet, SDL3 WASM), a fail-closed WebGPU ShaderGUI, and an optional projectM Milkdrop host.
+*   **Core Purpose:** High-performance in-browser audio player for FLAC/WAV and library-backed streaming. Features a **four-backend audio engine** (streaming, Web Audio, AudioWorklet, SDL-free C++ WASM engine), a fail-closed WebGPU ShaderGUI, and an optional projectM Milkdrop host.
 *   **Tech Stack:**
     *   **Frontend:** React 18, TypeScript, CSS3.
     *   **Build:** Webpack 5, Babel, lazy dynamic imports for WASM backends.
@@ -26,9 +26,8 @@ Last updated: September 2026
 | Streaming (default) | `src/audio/backends/StreamingAudioPlayer.ts` |
 | Buffered Web Audio | `src/audio/backends/WebAudioPlayer.ts` |
 | AudioWorklet + PCM tap | `src/audio/backends/worklet/WorkletAudioPlayer.ts`, processor `src/audio/worklets/flacProcessor.ts`, SAB ring `src/audio/worklets/playRingSAB.ts` |
-| SDL3 WASM | `src/audio/backends/Sdl3AudioPlayer.ts` |
-| SDL → analyser bridge | `src/audio/SdlPcmBridge.ts`, `src/sdl/pcm_ring.h` |
-| SDL3 play ring | `src/sdl/play_ring.h`, `src/audio/playRingBackpressure.ts` |
+| WASM engine (legacy mode `sdl`) | `src/audio/backends/Sdl3AudioPlayer.ts`, `src/audio/worklets/sdlEngineProcessor.js` |
+| WASM engine state and play ring | `src/sdl/engine_state.h`, `src/sdl/play_ring.h`, `src/audio/playRingBackpressure.ts` |
 | Library / API client | `src/api/http.ts`, `src/api/songApi.ts`, `src/api/library.ts` (TanStack Query) |
 | Offline cache | `src/storage/trackCache.ts`, `src/components/OfflineCache.tsx` |
 | Queue persistence | `src/storage/queueStorage.ts` |
@@ -44,16 +43,16 @@ Last updated: September 2026
 ## 3. Complexity Hotspots
 
 *   **WASM memory interop (`Sdl3AudioPlayer.ts` under `src/audio/backends/`):**
-    *   Manual `malloc`, HEAP views, channel interleaving. PTHREADS builds expose memory differently (`wasmMemory.buffer` vs `HEAPU8.buffer`). `heapF32()` re-reads `HEAPF32` / `wasmMemory.buffer` after grow.
-    *   **`INITIAL_MEMORY` is 64 MiB** (`67108864`) with `ALLOW_MEMORY_GROWTH=1` and **`MAXIMUM_MEMORY` 512 MiB** (`536870912`). Without the explicit cap, pthreads+growth still set `Memory.maximum` to 32768 pages (**2 GiB**). The 512 MiB flag **lowers** that SAB max. SDL3 stream mode uses `play_ring.h` (~1.5 MiB); buffered `_create_audio_buffer` rejects >384 MiB of f32 PCM. Debug: `scripts/build-wasm.sh --debug` (`-O0 -g ASSERTIONS SAFE_HEAP`, 32 MiB floor, same 512 MiB max).
-    *   **Toolchain pin:** every WASM artifact is built with the emsdk in `scripts/emsdk-version` (`scripts/emsdk-env.sh` refuses another emcc). Same pin + same sources → bit-identical artifacts; each `*-source.sha256` covers the pin, so bumping it forces a rebuild of all three graphs. SDL3 compiles with `-fno-exceptions -fno-rtti` (OOM → `malloc` nullptr) and logs through `sdl_log_error` / `sdl_log_debug` (no iostream; debug lines compile out under `-DNDEBUG`). No `-flto` yet (needs a measured size/CPU comparison), no `--closure`.
+    *   Manual `malloc`, shared-memory views, and channel interleaving. `heapF32()` refreshes its view after WASM memory growth.
+    *   The WASM heap is capped at 512 MiB. Streaming uses `play_ring.h`; buffered `_create_audio_buffer` rejects more than 384 MiB of f32 PCM.
+    *   **Toolchain pin:** every WASM artifact is built with the emsdk in `scripts/emsdk-version` (`scripts/emsdk-env.sh` refuses another emcc). The C++ engine uses `-fno-exceptions -fno-rtti`; allocation failure is returned to JavaScript instead of aborting.
     *   **Other WASM heaps:** SpeexDSP resampler: 4 MiB initial, **16 MiB `MAXIMUM_MEMORY`**, `-msimd128`, no pthread; `resampler.ts` feeds `rs_process` in ~1 MiB slices so whole-file conversion never stages the file in the heap, and `rs_create` rejects > 8 channels (→ linear fallback). projectM host: default 16 MiB initial, **256 MiB `MAXIMUM_MEMORY`** (measured: stays at 16 MiB rendering at 4K with preset switching), no SDL (WebGL2 context via `emscripten_webgl_create_context`), exception catching on (libprojectM throws on bad presets), WebGL2-only (`FULL_ES3`, which implies `FULL_ES2`), `-O2`, no pthread; hashed in `public/projectm/projectm-source.sha256`.
-    *   **Keep `-pthread`:** JS `_push_pcm` (main thread) and the SDL audio callback (pthread) share the play ring atomics. The viz tap (`SdlPcmBridge`) uses `Atomics` on `wasmMemory`. Dropping pthreads would require posting PCM onto the audio thread or polling non-shared HEAP.
-*   **SDL PCM ring → AudioWorklet (`SdlPcmBridge.ts`):**
-    *   Viz ring written in the SDL audio callback; JS worklet reads and feeds `AnalyserNode`. Separate from the play ring (`play_ring.h`).
+    *   **Keep `-pthread`:** it enables the shared WASM memory used by the main-thread producer and AudioWorklet consumer. The audio callback is not part of this engine.
+*   **WASM engine → AudioWorklet (`sdlEngineProcessor.js`):**
+    *   The processor reads the play ring and feeds the shared Web Audio graph; speaker DSP and the analysis tap run in the `dsp-chain` worklet.
     *   Decoder high-water: pause JS decode when play-ring fill &gt; 75% (`src/audio/playRingBackpressure.ts`).
 *   **Cross-origin isolation (`webpack.config.js`, hosting headers):**
-    *   COOP/COEP is required for SharedArrayBuffer (worklet play ring and tap, analysis ring) and SDL pthreads; AudioWorklet and projectM work without it. Per-host header blocks: `docs/DEPLOYMENT.md`.
+    *   COOP/COEP is required for SharedArrayBuffer and the `sdl` WASM engine; other AudioWorklet paths can fall back to message transport. Per-host header blocks: `docs/DEPLOYMENT.md`.
 *   **WebGPU lifecycle (`src/visuals/webgpuVisualizer.ts`):**
     *   `GpuDeviceService` (`src/visuals/webgpu/deviceService.ts`) requests the adapter (compatibility-mode retry; fallback adapters refused unless `?webgpu=fallback-ok`) and device **once** per session and lends it to `WebGPUVisualizer` and gpu-chores. Borrowers never destroy it; only `device.lost` drops it (`deviceLostRecovery.ts`). A new analyser reaches the live visualizer through `setAnalyser()`, so sample-rate or graph changes keep the device. `window.webgpuProbe.deviceRequests` counts requests.
     *   gpu-chores **adopts** that same device for peak/RMS compute and never calls `requestDevice()`. Kill switch: `?no_gpu_compute`.

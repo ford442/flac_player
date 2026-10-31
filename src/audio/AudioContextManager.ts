@@ -71,7 +71,7 @@ export type AudioGraphState = 'none' | 'running' | 'suspended' | 'interrupted' |
 /** Paused this long, the context is suspended (stops rendering EQ / analyser, releases the iOS session). */
 export const IDLE_SUSPEND_MS = 10_000;
 
-/** Chromium's "render, but play nowhere" sink, used while SDL owns the speakers. */
+/** Chromium's "render, but play nowhere" sink for external playback integrations. */
 const SILENT_SINK = { type: 'none' } as const;
 type SinkTarget = string | typeof SILENT_SINK;
 
@@ -103,9 +103,8 @@ export function isAudioContextSinkSupported(): boolean {
  * latency hint changes. Speaker DSP is the `dsp-chain` worklet (dsp_chain.h in
  * WASM, identical to SDL) once it loads, else ReplayGain -> master Gain -> EQ
  * as Web Audio nodes.
- * SDL backends tap PCM into the analyser via {@link connectVisualizerFeed} while
- * {@link setExternalPlaybackActive} mutes Web Audio speakers (SDL owns output and
- * runs its own EQ / ReplayGain in WASM — see docs/AUDIO_BACKENDS.md).
+ * External playback integrations can tap PCM into the analyser via
+ * {@link connectVisualizerFeed} while {@link setExternalPlaybackActive} mutes Web Audio speakers.
  *
  * The context is created lazily at the device rate by {@link ensureForTrack} (or
  * {@link unlock}, inside a user gesture) and kept for the page's lifetime; latency,
@@ -296,7 +295,7 @@ export class AudioContextManager {
     this.sinkId = sinkId;
     const ctx = this.context as SinkAudioContext | null;
     if (!ctx || typeof ctx.setSinkId !== 'function') return true;
-    // SDL owns the speakers; the stored id is applied when it hands them back.
+    // External playback owns the speakers; apply the stored id when it hands them back.
     if (this.externalPlaybackActive) return true;
     if (this.currentContextSinkId(ctx) === sinkId && !isSilentSink(ctx.sinkId)) return true;
     try {
@@ -335,7 +334,7 @@ export class AudioContextManager {
   }
 
   /**
-   * Mute Web Audio speakers when SDL owns playback; analyser still receives PCM.
+   * Mute Web Audio speakers while an external playback integration owns output.
    * Where supported the context also moves to a `{ type: 'none' }` sink so it
    * renders for the analyser without holding a real output device open.
    */

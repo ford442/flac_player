@@ -4,11 +4,11 @@ This document provides essential information for AI coding agents working on the
 
 ## Project Overview
 
-FLAC Player is a high-fidelity audio player web application with a **React/TypeScript frontend** and a **FastAPI Python backend**. It plays FLAC and WAV audio files directly in the browser and features a **four-backend audio engine** (streaming, Web Audio API, AudioWorklet, SDL3 WASM) with real-time WebGPU shader visualization. It also includes advanced library management: track rating, tagging, smart playlist mixing, and playlist sharing.
+FLAC Player is a high-fidelity audio player web application with a **React/TypeScript frontend** and a **FastAPI Python backend**. It plays FLAC and WAV audio files directly in the browser and features a **four-backend audio engine** (streaming, Web Audio API, AudioWorklet, SDL-free C++ WASM engine) with real-time WebGPU shader visualization. It also includes advanced library management: track rating, tagging, smart playlist mixing, and playlist sharing.
 
 **Key Capabilities:**
 - Play FLAC/WAV audio from URLs (HTTP/HTTPS, Google Cloud Storage)
-- Four audio output backends: **Streaming** (default), Web Audio API, AudioWorklet, SDL3 (WASM)
+- Four audio output backends: **Streaming** (default), Web Audio API, AudioWorklet, WASM engine (legacy mode name: `sdl`)
 - Real-time audio visualization using WebGPU shaders (flat waveform + 3D cube + hardware GUI modes)
 - Music library management with ratings, tags, search, and filtering
 - Smart Mix: auto-generate queues based on shared tags
@@ -25,7 +25,7 @@ FLAC Player is a high-fidelity audio player web application with a **React/TypeS
 | Build System | Webpack 5 (ts-loader, postcss-loader), ESLint |
 | Audio (Native) | Web Audio API (`AudioContext`, `AnalyserNode`, `BufferSourceNode`) |
 | Audio (Worklet) | `AudioWorkletNode` running `flacProcessor.ts` (bundled worklet entry); SharedArrayBuffer play + tap rings, `chunk` message fallback; AudioWorklet required |
-| Audio (WASM) | SDL3 compiled via Emscripten |
+| Audio (WASM) | C++ playback engine compiled via Emscripten; AudioWorklet output into the shared Web Audio graph (no SDL audio device) |
 | Visualization | WebGPU API with WGSL shaders |
 | Backend | FastAPI, Pydantic v2, aiocache, httpx, uvicorn |
 | Storage | JSON file persistence (`data/songs/index.json`) |
@@ -43,8 +43,8 @@ FLAC Player is a high-fidelity audio player web application with a **React/TypeS
 flac_player/
 ├── public/                      # Static assets
 │   ├── index.html              # HTML template
-│   ├── sdl-audio.js            # SDL3 WASM module (generated via Emscripten)
-│   └── sdl-audio.wasm          # SDL3 WASM binary (generated)
+│   ├── sdl-audio.js            # C++ WASM playback module (generated via Emscripten)
+│   └── sdl-audio.wasm          # C++ WASM playback binary (generated)
 ├── src/
 │   ├── components/
 │   │   ├── Player.tsx          # Main player UI component (~446 lines)
@@ -71,11 +71,10 @@ flac_player/
 │   │   ├── useKnob.ts              # Rotary knob: pointer drag + ARIA slider keys
 │   │   └── useShaderUniforms.ts    # Shader uniform state management
 │   ├── sdl/
-│   │   ├── audio_engine.cpp    # SDL3 C++ audio engine
-│   │   ├── pcm_ring.h / play_ring.h
-│   │   ├── analysis_ring.h     # broadcast post-DSP PCM tap (layout shared with src/audio/analysisRing.ts)
+│   │   ├── audio_engine.cpp    # C++ PCM and transport engine; no SDL audio device
+│   │   ├── engine_state.h / play_ring.h
 │   │   ├── dsp_fft.h           # fft_spectrum CPU golden (f32 Stockham, wasm SIMD) — built into dsp-chain.wasm
-│   │   ├── dsp_chain.h         # ReplayGain/limiter/volume/EQ — shared by SDL and the dsp-chain worklet
+│   │   ├── dsp_chain.h         # ReplayGain/limiter/volume/EQ — compiled for the shared DSP worklet
 │   │   └── build.sh            # wrapper -> scripts/build-wasm.sh --sdl3
 │   ├── dsp/
 │   │   └── dsp_wasm_entry.cpp  # C exports over dsp_chain.h + dsp_fft.h -> public/dsp-chain.wasm (scripts/build-dsp-wasm.sh)
@@ -88,16 +87,16 @@ flac_player/
 │   ├── audio/                  # Shared graph + backend factory
 │   │   ├── createAudioBackend.ts
 │   │   ├── flacDecoder.ts, audioDecoder.ts   # decode (worker: src/workers/flacDecoderWorker.ts)
-│   │   ├── AudioContextManager.ts, DspChainNode.ts, EQChain.ts, ReplayGainNode.ts, SdlPcmBridge.ts, analyserPolicy.ts
+│   │   ├── AudioContextManager.ts, DspChainNode.ts, EQChain.ts, ReplayGainNode.ts, analyserPolicy.ts
 │   │   ├── analysisRing.ts     # analysis ring reader / SAB allocation / active-tap registry
 │   │   ├── wasmFft.ts          # main-thread dsp_fft.h (dsp-chain.wasm `fft_spectrum`)
-│   │   ├── worklets/           # flacProcessor.ts (bundled worklet entry) + playRingSAB.ts / flacProcessorMessages.ts shared with the main thread; sdlPcmTapProcessor.js, dspChainProcessor.js (static, @ts-check)
+│   │   ├── worklets/           # flacProcessor.ts, sdlEngineProcessor.js, dspChainProcessor.js (static, @ts-check)
 │   │   └── backends/           # Four selectable implementations
 │   │       ├── StreamingAudioPlayer.ts   # default — HTMLAudio + range requests
 │   │       ├── WebAudioPlayer.ts         # buffered Web Audio API
 │   │       ├── WorkletAudioPlayer.ts     # re-export of worklet/WorkletAudioPlayer
 │   │       ├── worklet/                  # AudioWorklet orchestration, hi-fi ring feeder, projectM tap reader
-│   │       └── Sdl3AudioPlayer.ts        # SDL3 WASM
+│   │       └── Sdl3AudioPlayer.ts        # C++ WASM engine (legacy mode `sdl`)
 │   ├── player/                 # PlaybackEngine (backend lifecycle, load tokens, queue cursor, clock), zustand store, selectors, persistence (#258)
 │   ├── hooks/
 │   │   ├── usePlayerActions.ts       # Room-aware transport/queue actions (provided via PlayerActionsContext)
@@ -222,17 +221,17 @@ through selectors (`player/selectors.ts`) and call `useActions()`. `Player.tsx` 
 1. **Streaming** (`audio/backends/StreamingAudioPlayer.ts`) - Default. HTMLAudioElement + HTTP range requests; crossfade support
 2. **Web Audio** (`audio/backends/WebAudioPlayer.ts`) - Full fetch + decode; buffered `BufferSourceNode`
 3. **AudioWorklet** (`audio/backends/WorkletAudioPlayer.ts`) - Low-latency worklet; SAB play ring (hi-fi), varispeed playback rate, `setPCMCallback` for projectM PCM tap
-4. **SDL3** (`audio/backends/Sdl3AudioPlayer.ts`) - C++ SDL3 compiled to WASM; PCM ring → `SdlPcmBridge` → analyser
+4. **WASM engine** (`audio/backends/Sdl3AudioPlayer.ts`, mode `sdl`) - C++ PCM engine in shared WASM memory, played by `sdl-engine` AudioWorklet into the shared graph
 
 See `docs/AUDIO_BACKENDS.md` for selection guidance.
 
 Switching backends recreates the player instance and resets audio state.
 
 ### WASM Memory Management (CRITICAL)
-The SDL audio players require careful memory handling:
+The WASM engine requires careful memory handling:
 
 ```typescript
-// SDL3: Uses _create_audio_buffer() to allocate, then write to HEAPF32
+// WASM engine: allocate PCM, then write through a view of current shared memory
 const ptr = module._create_audio_buffer(length);
 const floatIndex = ptr / 4;
 module.HEAPF32.set(interleaved, floatIndex);
@@ -251,9 +250,7 @@ Cross-Origin-Embedder-Policy: require-corp
 - **Development**: Webpack dev server adds these automatically (`webpack.config.js` devServer.headers)
 - **Production**: Must be configured on hosting server (see `netlify.toml`/`vercel.json`)
 
-Without these headers:
-- SharedArrayBuffer will be undefined (the worklet hi-fi path falls back to `chunk` messages)
-- SDL WASM backends may fall back to ScriptProcessor or fail
+Without these headers, SharedArrayBuffer is unavailable and the `sdl` mode reports `playable: false` and rejects loads. There is no ScriptProcessor fallback; other AudioWorklet paths can use message transport.
 
 ### WebGPU Visualizer
 - Three modes: `'flat'` (waveform), `'3D'` (rotating cube with screen), `'gui'` (ShaderGUI hardware panel)
@@ -333,7 +330,7 @@ Manual testing checklist:
 1. Load a track from the library (streaming default — instant start)
 2. Test play/pause/seek controls
 3. Verify WebGPU visualization responds to audio
-4. Switch between all five audio backends
+4. Switch between all four audio backends
 5. Test EQ panel and crossfade toggle (streaming mode)
 6. Test offline track download / evict
 7. Test playlist loading from `/api/songs`
@@ -395,7 +392,7 @@ password, superseded by `scripts/deploy.py`'s bundle-upload flow) has been remov
 
 1. **Streaming vs buffered**: Streaming requires URL + CORS + Accept-Ranges; cannot load raw ArrayBuffers. Crossfade is streaming-only.
 2. **Test coverage**: Vitest unit tests (`queueUtils`, `audioDecoder`, `rendererSelection`) + Playwright smoke suite + a real decode→playback→analyser integration harness (`tests/browser/audioPipeline.test.ts`, shipped via [#196](https://github.com/ford442/flac_player/issues/196))
-3. **WASM Build**: `scripts/build-wasm.sh` builds SDL3 only; also `bash src/sdl/build.sh`; `npm run verify:wasm` checks artifact freshness in CI
+3. **WASM Build**: `scripts/build-wasm.sh` builds the SDL-free playback engine; also `bash src/sdl/build.sh`; `npm run verify:wasm` checks artifact freshness in CI
 4. **Memory Constraints**: WASM heap grows from a 64 MiB floor up to **512 MiB** (`MAXIMUM_MEMORY`). Large files use the play ring, not a full-buffer vector.
 5. **Shader-to-CSS layout**: Knob/LED UVs live in `src/visuals/waveformContract.ts`. Changing CSS layout requires updating that contract once (both GPU shaders inject it).
 

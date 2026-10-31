@@ -93,7 +93,7 @@ registerRoute(
   }),
 );
 
-/** Static WASM / SDL glue – cache-first for offline SDL backends. */
+/** Static WASM glue – cache-first for offline SDL / projectM. */
 registerRoute(
   ({ url, request }) => request.method === 'GET'
     && url.origin === self.location.origin

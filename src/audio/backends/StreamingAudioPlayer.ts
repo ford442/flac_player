@@ -604,6 +604,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
       return this.workletPlayer.getCapabilities();
     }
     return {
+      playable: true,
       seek: true,
       playbackRate: true,
       gapless: true,

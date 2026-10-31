@@ -54,9 +54,9 @@ export async function stubWasmBackendImports(page: Page): Promise<void> {
       _pause: () => {},
       _stop: () => {},
       _seek: () => {},
-      _set_volume: () => {},
-      _get_pcm_ring_state: () => 0,
-      _get_pcm_ring_data: () => 0,
+      _get_engine_state: () => 0,
+      _get_play_ring_state: () => 0,
+      _get_play_ring_data: () => 0,
       HEAPF32: new Float32Array(0),
       HEAPU8: new Uint8Array(0),
     };

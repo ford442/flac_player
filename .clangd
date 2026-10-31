@@ -1,0 +1,4 @@
+# clangd: compile flags for src/sdl/*.h and tests/native/*.cpp come from the
+# host-compiled native tests. Generate them with `npm run test:native`.
+CompileFlags:
+  CompilationDatabase: .build/native

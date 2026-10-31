@@ -452,7 +452,7 @@ Compact transport UI (`EmbedPlayerView`) is shown. PCM bridge is wired automatic
 - The framed player is cross-origin isolated only if the parent page is isolated
   too and grants `allow="cross-origin-isolated"`. Otherwise it runs without
   `SharedArrayBuffer`: the worklet ring and tap fall back to message transport
-  and SDL3 is unavailable (see `docs/DEPLOYMENT.md` → Cross-origin isolation).
+  and the WASM engine is unavailable (see `docs/DEPLOYMENT.md` → Cross-origin isolation).
   PCM still flows.
 - If the parent page sends COEP `require-corp`, the player's HTML must be served
   with `Cross-Origin-Resource-Policy: cross-origin`. The shipped configs send
@@ -479,7 +479,7 @@ https://<player-url>/?share=<id>&aesthetic=projectm
 
 ### Requirements
 
-- **Cross-origin isolation** (COOP/COEP) for `SharedArrayBuffer`: the worklet play ring, the projectM PCM tap ring and the SDL3 `-pthread` backend. Configured in the `webpack.config.js` dev server, `netlify.toml` and `vercel.json`; other hosts in `docs/DEPLOYMENT.md`. The projectM host itself is built **without** `-pthread` (`scripts/build-projectm-wasm.sh`) and runs without isolation.
+- **Cross-origin isolation** (COOP/COEP) for `SharedArrayBuffer`: the worklet play ring and projectM PCM tap, plus the WASM engine's shared memory. Configured in the `webpack.config.js` dev server, `netlify.toml` and `vercel.json`; other hosts in `docs/DEPLOYMENT.md`. The projectM host itself is built **without** `-pthread` (`scripts/build-projectm-wasm.sh`) and runs without isolation.
 - **Cleanup:** Call the teardown returned by `createProjectMPCMFeed(player)` when destroying the player backend. Track changes invoke `notifyInAppProjectMTrackChange()` (no audio glitch — PCM stream continues).
 
 ### Presets (Phase 2)

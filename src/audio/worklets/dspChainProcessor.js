@@ -2,15 +2,15 @@
 /* global sampleRate */
 // AudioWorkletProcessor running the speaker DSP chain from src/sdl/dsp_chain.h
 // (ReplayGain -> limiter -> volume -> EQ) compiled to public/dsp-chain.wasm by
-// scripts/build-dsp-wasm.sh. Same object code as the SDL audio callback, so the
-// Web Audio backends and SDL sound identical. Static same-origin module (no blob
+// scripts/build-dsp-wasm.sh, for every backend: the `sdl` engine's worklet
+// feeds this graph too (#268). Static same-origin module (no blob
 // URL). Message types live in dspChainMessages.ts.
 //
 // The module is STANDALONE_WASM with no imports: it is instantiated
 // synchronously here and never touches the network from the audio thread.
 //
 // The processed output is also copied into the analysis ring (header layout in
-// src/audio/analysisRing.ts / src/sdl/analysis_ring.h) when one is passed —
+// src/audio/analysisRing.ts; this is its only writer) when one is passed —
 // a memcpy per quantum; analysis itself runs on the readers' threads.
 
 // analysisRing.ts header words (this static module cannot import TS).

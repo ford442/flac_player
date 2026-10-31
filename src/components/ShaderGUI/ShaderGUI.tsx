@@ -516,13 +516,13 @@ export const ShaderGUI: React.FC<ShaderGUIProps> = ({
             <br />
             DEBUG_VISUALIZER: <code>{window.DEBUG_VISUALIZER ?? 'unset'}</code>
             <br />
-            {/* COOP/COEP precondition for SAB rings, SDL3 pthreads and the analysis tap (docs/DEPLOYMENT.md). */}
+            {/* COOP/COEP precondition for SAB rings, the WASM engine and analysis tap (docs/DEPLOYMENT.md). */}
             crossOriginIsolated:{' '}
             <strong
               className={window.crossOriginIsolated ? 'text-green-300' : 'text-red-400'}
               data-testid="cross-origin-isolated"
             >
-              {window.crossOriginIsolated ? 'yes' : 'no — SAB off, SDL3 unavailable'}
+              {window.crossOriginIsolated ? 'yes' : 'no — SAB off, WASM engine unavailable'}
             </strong>
           </div>
           {gpuStats && (

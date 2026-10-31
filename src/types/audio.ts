@@ -26,6 +26,13 @@ export interface DecodedPcmView {
  * inferring from output mode or playback path.
  */
 export interface AudioBackendCapabilities {
+  /**
+   * False when this backend cannot make sound in this browser: the worklet
+   * backends need AudioWorklet, and `sdl` also needs cross-origin isolation
+   * (SharedArrayBuffer). Loads then reject; nothing falls back to a
+   * main-thread ScriptProcessor.
+   */
+  playable: boolean;
   seek: boolean;
   playbackRate: boolean;
   gapless: boolean;
@@ -36,6 +43,7 @@ export interface AudioBackendCapabilities {
 
 /** Permissive default for callers that have no backend yet. */
 export const DEFAULT_AUDIO_BACKEND_CAPABILITIES: AudioBackendCapabilities = {
+  playable: true,
   seek: true,
   playbackRate: true,
   gapless: true,

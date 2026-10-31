@@ -16,15 +16,15 @@ Need projectM PCM tap at audio-clock rate (~86 blocks/s)?
 Need full in-memory buffer + simplest Web Audio graph?
   └─ YES → web-audio
 
-Experimenting with C++ SDL WASM output?
-  └─ YES → sdl (SDL3)
+Experimenting with C++ WASM playback?
+  └─ YES → sdl (WASM engine; legacy mode name)
 ```
 
 ## Gapless / crossfade matrix
 
 Queue transition mode is configured in **Settings → Queue transitions** (`flac_player_gapless_mode`, `flac_player_crossfade_ms`).
 
-| Mode | Streaming (native `<audio>`) | Streaming (hi-fi worklet path) | Web Audio | Worklet | SDL3 |
+| Mode | Streaming (native `<audio>`) | Streaming (hi-fi worklet path) | Web Audio | Worklet | WASM engine |
 |------|-------------------------------|-------------------------------|-----------|---------|--------|
 | **Gapless** | ✓ Header-parsed duration, dual `<audio>` handoff | ✓ Decode-ahead splice into the worklet ring (same rate/channels) | ✓ Scheduled `BufferSourceNode` | ✓ Worklet buffer queue (buffered) / ring splice (hi-fi) | ✓ Hi-fi stream: splice into the play ring (same rate/channels) · buffered: — |
 | **Crossfade** | ✓ Dual `<audio>` + gain ramps | Gapless handoff (no overlap) | Gapless handoff when overlap minimal | Gapless handoff | Gapless handoff on hi-fi stream (no overlap) |
@@ -35,12 +35,12 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 - **Sample-accurate duration:** `src/utils/audioHeader.ts` probes FLAC `STREAMINFO` / WAV `fmt`+`data` via HTTP Range on the first 64 KiB.
 - **Pre-buffering:** The player calls `preloadNext()` ~8 s before track end (or immediately when the queue changes). The queue panel shows **pre-buffering next** while decode/fetch is in progress.
 - **Internal transitions:** When a backend has already started the next track, `onEnded` receives `{ alreadyPlayingNext: true }` so the UI advances the queue index without reloading audio.
-- **Hi-fi paths (worklet ring / SDL play ring):** see [Hi-fi stream seek and gapless](#hi-fi-stream-seek-and-gapless). **Crossfade overlap stays native-streaming + web-audio only**: the hi-fi rings hold one timeline, so crossfade mode is treated as gapless there. Buffered SDL (small files) has no queue; tracks stop at EOF and advance via `onEnded` → `playTrack`.
+- **Hi-fi paths (worklet ring / WASM-engine play ring):** see [Hi-fi stream seek and gapless](#hi-fi-stream-seek-and-gapless). **Crossfade overlap stays native-streaming + web-audio only**: the hi-fi rings hold one timeline, so crossfade mode is treated as gapless there. Buffered WASM-engine tracks load individually.
 - **Sample-rate policy (#259 A8, was #194):** `AudioContextManager` opens **one** shared graph at the **output device's rate** and keeps it for the page's lifetime; tracks at other rates are converted into it (see [One context at the device rate](#decision-record-one-context-at-the-device-rate)). Only a latency-hint or render-quantum change rebuilds the graph (ReplayGain, master volume, EQ, analyser, `externalPlaybackActive` restored), with a brief gap. `?ctxrate=native` (or `setPolicy({ recreateOnSampleRateMismatch: true })`) restores the old open-at-file-rate behavior for A/B. Latency hint is Settings → **Output latency** (`flac_player_latency_mode`, default `playback`).
   - **streaming (native `<audio>`):** media-element clock; the browser's media pipeline converts to the context rate.
   - **web-audio:** a file-rate decode goes through the SpeexDSP resampler into an `AudioBuffer` at the context rate (Chromium's `AudioBufferSourceNode` would otherwise resample by linear interpolation). `decodeAudioData` results are already at the context rate.
   - **worklet:** PCM is consumed 1:1 with the context callback rate at 1× (see [Worklet transport and playback rate](#worklet-transport-and-playback-rate) for other speeds). The processor is given the file (or context) rate via `processorOptions`; when the file rate differs from the context's, the SpeexDSP WASM resampler (`resampler.ts`, stateful across stream chunks) converts PCM, with linear interpolation as the load-failure fallback — see [Sample-rate conversion](#sample-rate-conversion). No resampler is created when the context already runs at the file rate. Seek uses the processor's own `this.sampleRate`.
-  - **sdl:** WASM device opens at file rate. Large FLACs use the C++ play ring (`play_ring.h`); the analyser tap is still `SdlPcmBridge` at `context.sampleRate`. `_set_audio_data` / `_set_stream_format` return `1` on success; TypeScript rejects the load on `!== 1`. WASM heap is capped at 512 MiB (`MAXIMUM_MEMORY`).
+  - **sdl:** PCM is resampled to the shared `AudioContext` rate, then the C++ engine feeds the `sdl-engine` AudioWorklet from its play ring (`play_ring.h`). Speaker DSP and analysis use the shared graph. `_set_audio_data` / `_set_stream_format` return `1` on success; TypeScript rejects the load on `!== 1`. WASM heap is capped at 512 MiB (`MAXIMUM_MEMORY`).
 - **ReplayGain / loudness matching:** Settings → **Loudness (ReplayGain)** (`flac_player_replaygain_mode`, `flac_player_replaygain_limiter`). Applies a dedicated gain stage **before** the master volume fader on streaming, web-audio, and worklet backends. Every backend runs the same `dsp_chain.h` stage (plus the limiter) in WASM — see [Speaker-path DSP](#speaker-path-dsp-eq--replaygain). Client-side tag fetch uses a 64 KiB range request when API metadata is missing. Crossfade overlap may briefly mismatch levels when adjacent tracks have very different tags ([#184](https://github.com/ford442/flac_player/issues/184)).
 
 ## Backend reference
@@ -116,42 +116,42 @@ Queue transition mode is configured in **Settings → Queue transitions** (`flac
 
 ---
 
-### 4. SDL3 WASM (`sdl`)
+### 4. WASM engine (`sdl`)
 
-**Files:** `src/audio/backends/Sdl3AudioPlayer.ts`, `src/sdl/audio_engine.cpp`, `src/sdl/play_ring.h`, `public/sdl-audio.*`
+**Files:** `src/audio/backends/Sdl3AudioPlayer.ts`, `src/sdl/audio_engine.cpp`, `src/sdl/engine_state.h`, `src/sdl/play_ring.h`, `src/audio/worklets/sdlEngineProcessor.js`, `public/sdl-audio.*`
 
 **How it works:**
 
-- **Small files (buffered):** full fetch → decode → `_create_audio_buffer` / `_set_audio_data` (compat path).
-- **Large files (≥ 32 MB) or `forceStream`:** `HifiStreamSession` (`hifiStreamPipeline.ts`) → `_set_stream_format` → `_push_pcm` into a **play ring** (`PLAY_RING_CAPACITY` = 384000 floats, ~2 s stereo f32 @ 96 kHz). JS pauses decode when fill &gt; 75% (`get_play_ring_fill`). The SDL callback drains the play ring into a pre-sized scratch, runs speaker DSP (`dsp_chain.h`) in place, then writes the **viz** ring (`pcm_ring.h`, 65536 floats) for `SdlPcmBridge` and the **analysis** ring (`analysis_ring.h`, see [Analysis ring](#analysis-ring-shared-pcm-tap)).
+- **Small files (buffered):** full fetch → decode → `_create_audio_buffer` / `_set_audio_data`.
+- **Large files or `forceStream`:** `HifiStreamSession` (`hifiStreamPipeline.ts`) → `_set_stream_format` → `_push_pcm` into the C++ **play ring** (`PLAY_RING_CAPACITY` = 384000 floats). JS pauses decode when fill &gt; 75% (`get_play_ring_fill`). The `sdl-engine` AudioWorklet reads PCM from shared WASM memory and feeds it into the shared audio graph; the `dsp-chain` worklet handles speaker DSP and the analysis tap.
 
-**Stream-mode seek:** `seek(t)` calls `_seek_stream(t)`, which (under the SDL stream lock) clears the SDL stream, play ring, viz ring, DSP history and the ended flag, and sets the clock to `t`; the session then restarts the decoder at the frame containing `t` (HTTP Range). A push loop parked on a full ring belongs to the aborted run and exits on its next check, so a seek never deadlocks `playRingBackpressure`. See [Hi-fi stream seek and gapless](#hi-fi-stream-seek-and-gapless).
+**Stream-mode seek:** `seek(t)` calls `_seek_stream(t)`, which clears the play ring and sets the clock to `t`; the session then restarts the decoder at the frame containing `t` (HTTP Range). An epoch handoff keeps the AudioWorklet and main thread in sync, and a push loop parked on a full ring exits on its next check. See [Hi-fi stream seek and gapless](#hi-fi-stream-seek-and-gapless).
 
-**Playback rate:** `_set_playback_rate(r)` → `SDL_SetAudioStreamFrequencyRatio` (clamped 0.25–4; pitch follows speed). `get_current_time` stays in **media seconds**: `playHead` counts file samples handed to SDL, and queued output bytes are scaled by `r` back to file samples before being subtracted.
+**Playback rate:** `_set_playback_rate(r)` is clamped to 0.25–4; the AudioWorklet interpolates source frames at that ratio, so pitch follows speed. The engine clock remains in media seconds.
 
-**Device format:** `_get_device_format(int* freq, int* ch)` is logged at init (SDL resamples file rate → device on bind).
+**Audio graph:** PCM is played by the shared AudioWorklet and flows through the shared `AudioContextManager` graph. Output-device and latency settings apply to this mode too.
 
-Buffered `_create_audio_buffer` rejects lengths above 384 MiB of f32 PCM and returns `nullptr` on allocation failure (the buffer is `malloc`-backed, so OOM never aborts); `_set_audio_data` / `_set_stream_format` return `0` if `SDL_CreateAudioStream` / `SDL_BindAudioStream` fail, and the JS player throws instead of hanging.
+The engine uses a bounded play ring for streaming and rejects buffered allocations above 384 MiB of f32 PCM. Allocation or engine setup failures are returned to JavaScript instead of aborting or hanging.
 
-**Gapless:** Hi-fi stream only — the successor is pushed into the play ring right behind the current track; a rate/channel change is not spliced (`ensureForTrack` reload). Buffered SDL loads each track with `stop()` between files.
+**Gapless:** Hi-fi stream only — the successor is pushed into the play ring behind the current track; a rate/channel change is not spliced (`ensureForTrack` reload). Buffered tracks load individually.
 
-**Output device:** SDL opens its own Emscripten audio context, so Settings → **Output device** (`AudioContext.setSinkId`) does not apply; it uses the system default.
+**Requirements:** AudioWorklet and cross-origin isolation are required. If either is unavailable, the mode is disabled or loads reject before fetching audio. There is no SDL audio device and no ScriptProcessor fallback; the internal `sdl` mode name is retained for compatibility.
 
-**Build:** `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh`. Debug: `scripts/build-wasm.sh --debug --sdl3`. Release: `-O3 -DNDEBUG -msimd128` (stereo EQ uses f64x2 lanes; scalar fallback otherwise, bit-identical — `npm run test:dsp-golden`), `INITIAL_MEMORY=64 MiB`, `MAXIMUM_MEMORY=512 MiB`. SDL2 **playback** was retired (#212); the projectM **video** host (`npm run build:projectm`) is plain WebGL2 with no SDL (#259).
+**Build:** `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh`. The legacy build target name `sdl3` remains; the playback module itself links no SDL. Release uses `-O3 -DNDEBUG -msimd128`, `INITIAL_MEMORY=64 MiB`, and `MAXIMUM_MEMORY=512 MiB`. `npm run build:projectm` builds the separate WebGL2 projectM host.
 
 ---
 
 ## Shared features (all backends)
 
-| Feature | Streaming | Web Audio | Worklet | SDL3 |
+| Feature | Streaming | Web Audio | Worklet | WASM engine |
 |---------|-----------|-----------|---------|--------|
 | EQ (5-band) | ✓ | ✓ | ✓ | ✓ |
-| Analyser → visualizer | ✓ | ✓ | ✓ | ✓ (PCM bridge) |
+| Analyser → visualizer | ✓ | ✓ | ✓ | ✓ (shared graph) |
 | projectM PCM tap | Analyser fallback | Analyser fallback | ✓ native | Analyser fallback |
 | Gapless queue | ✓ (native + worklet paths) | ✓ | ✓ | ✓ hi-fi stream / — buffered |
 | Crossfade | ✓ (native path) | ✓ | — | — |
 | Offline cache (`trackCache`) | URL fetch | ArrayBuffer | ArrayBuffer | ArrayBuffer |
-| Playback rate | ✓ (native + worklet paths) | ✓ | ✓ (varispeed in the processor) | ✓ (SDL frequency ratio) |
+| Playback rate | ✓ (native + worklet paths) | ✓ | ✓ (varispeed in the processor) | ✓ (AudioWorklet) |
 | Seek | ✓ (native, buffered, hi-fi) | ✓ | ✓ buffered + hi-fi | ✓ buffered + hi-fi (`_seek_stream`) |
 
 The UI reads these from `AudioBackend.getCapabilities()` (`AudioBackendCapabilities`) and disables controls the live backend cannot honor.
@@ -177,16 +177,16 @@ gapless     = after the last PCM of A, decode B into the same ring (markSegment 
 Each restart takes a pre-warmed decoder worker, so a seek does not pay worker/WASM startup. The shared `AudioContext` is never suspended.
 
 - **Worklet:** `seekStream { position, epoch, readFrom }` drops the ring up to `readFrom` — the writer's position at the moment of the seek, so PCM the restarted decoder writes before the message lands survives — and restarts the clock at `position`. `position`, `segmentEnded` and `ended` messages carry the epoch, so late messages from before the seek are ignored by the UI and by `HifiStreamFeeder` backpressure. Positions are posted every ~100 ms of media time.
-- **SDL3:** `_seek_stream(t)` (see above). JS tracks samples pushed on the C++ `playHead` scale so splice points line up with `get_current_time`.
+- **WASM engine:** `_seek_stream(t)` (see above). JS tracks samples pushed on the C++ engine clock so splice points line up with `get_current_time`.
 
 **Gapless** (`HifiStreamSession`): `preloadNext()` on a hi-fi stream queues the successor and probes its header right away. When the current decode ends, a successor with the **same channels and sample rate** is decoded straight into the same ring; otherwise the stream ends normally and the queue reloads through `ensureForTrack`. When playback crosses the splice, the backend fires `onEnded({ alreadyPlayingNext: true })` and restarts its clock at 0 with the successor's `STREAMINFO` duration. Only one decoder runs at a time and nothing holds a whole decoded track; memory is bounded by the ring (worklet 30 s, SDL `PLAY_RING_CAPACITY`). A successor shorter than the ring may end before the app queues the one after it — that transition then reloads normally.
 
 | Bound | Target | Measured (`tests/browser/hifiSeek.test.ts`, headless Chromium) |
 |-------|--------|------------------------------------------------------------------|
 | First sample after seek | = target sample | exact, worklet (index-coded fixture) |
-| UI clock vs audible output after settle | ± 100 ms | within bound, worklet + SDL3, seeks to 30 s / 39.5 s / 0 / 12.345 s |
-| Gapless handoff gap (same rate/channels) | ≤ 20 ms (≤ one render quantum of extra silence) | 0 samples, worklet + SDL3 |
-| Seek while the push loop is parked on a full ring | no deadlock | SDL3: pause → fill > 70 % → seek × 2 → play · worklet (`hifiWorkletRing.test.ts`, both transports): fill > 65 % → pause → seek × 2 → play, fill reads 0 right after the seek |
+| UI clock vs audible output after settle | ± 100 ms | within bound, worklet + WASM engine, seeks to 30 s / 39.5 s / 0 / 12.345 s |
+| Gapless handoff gap (same rate/channels) | ≤ 20 ms (≤ one render quantum of extra silence) | 0 samples, worklet + WASM engine |
+| Seek while the push loop is parked on a full ring | no deadlock | WASM engine: pause → fill > 70 % → seek × 2 → play · worklet (`hifiWorkletRing.test.ts`, both transports): fill > 65 % → pause → seek × 2 → play, fill reads 0 right after the seek |
 
 With a resampler active (worklet at a non-native context rate) the splice marker lands within the filter latency (< 3 ms) of the true boundary; the audio itself stays continuous because the resampler keeps its state across the join.
 
@@ -211,7 +211,7 @@ decode worker ─► `chunk` postMessage ─► processor-local ring (same layou
 - **Chunk fallback** (`SharedArrayBuffer` unavailable, or `new WorkletAudioPlayer(manager, { sharedRing: false })`): the processor builds the same ring in its own memory and fills it from `chunk` messages; the tap posts transferred 512-frame blocks. Seek, gapless splice and playback rate behave the same.
 - **Processor build:** `flacProcessor.ts` is loaded with `context.audioWorklet.addModule(new URL('…/flacProcessor.ts', import.meta.url))`. Webpack turns that call into a bundled worklet entry (`module.parser.javascript.worker` in `webpack.config.js`; `output.publicPath: '/'` because a worklet cannot auto-detect it); Vite serves the module directly in tests. No blob URLs.
 
-**Playback rate** (`setPlaybackRate`, clamped 0.25–4 like `useAudioSettings.ts` and SDL): the processor consumes its source at `rate ×` the callback rate through a 4-point Hermite interpolator — varispeed, so pitch follows tempo exactly like SDL's `SDL_SetAudioStreamFrequencyRatio` and `<audio>` with `preservesPitch = false`. At 1× the interpolator is bypassed and output is bit-exact; returning to 1× snaps to the next whole frame. Applies to hi-fi streams and buffered tracks. `position` stays in **media seconds** at any rate (it counts source frames, minus the few carried in the interpolator), and position messages tick every 100 ms of media time. Rate changes are independent of the feeder: while paused nothing is consumed and the decoder stays parked. SpeexDSP remains the fixed-ratio *sample-rate* converter (below); it is not used for tempo.
+**Playback rate** (`setPlaybackRate`, clamped 0.25–4 like `useAudioSettings.ts` and the WASM engine): the processor consumes its source at `rate ×` the callback rate through a 4-point Hermite interpolator — varispeed, so pitch follows tempo. At 1× the interpolator is bypassed and output is bit-exact; returning to 1× snaps to the next whole frame. Applies to hi-fi streams and buffered tracks. `position` stays in **media seconds** at any rate (it counts source frames, minus the few carried in the interpolator), and position messages tick every 100 ms of media time. Rate changes are independent of the feeder: while paused nothing is consumed and the decoder stays parked. SpeexDSP remains the fixed-ratio *sample-rate* converter (below); it is not used for tempo.
 
 | Bound | Target | Measured (`tests/browser/hifiWorkletRing.test.ts`, headless Chromium) |
 |-------|--------|------------------------------------------------------------------|
@@ -222,7 +222,7 @@ decode worker ─► `chunk` postMessage ─► processor-local ring (same layou
 
 ## Sample-rate conversion
 
-Used whenever a file's rate differs from the context's (the device rate, see the decision record below) on the **worklet** path (buffered PCM and hi-fi stream chunks) and the **web-audio** path (whole decoded buffers). SDL3 opens its stream at the file rate and lets SDL convert on bind.
+Used whenever a file's rate differs from the context's (the device rate, see the decision record below) on buffered and streaming paths, including the `sdl` WASM engine.
 
 | Converter | Source | When |
 |-----------|--------|------|
@@ -246,19 +246,17 @@ Build: `npm run build:wasm:resampler` (downloads + verifies the SpeexDSP tarball
 
 ## Speaker-path DSP (EQ / ReplayGain)
 
-EQ and ReplayGain must affect what the speakers play on every backend (prerequisite for #209 studio DSP). Every backend runs **the same C++** — `src/sdl/dsp_chain.h` (ReplayGain → limiter → volume → 5 RBJ biquads, wasm SIMD stereo) — compiled twice: into `sdl-audio.wasm` for the SDL callback and into a tiny standalone `dsp-chain.wasm` for an AudioWorklet in the shared Web Audio graph.
+Every backend feeds the shared `AudioContextManager` graph. The `dsp-chain` AudioWorklet runs the same C++ DSP implementation (`src/sdl/dsp_chain.h`, compiled to `public/dsp-chain.wasm`) for all backends; `EQChain.ts` and `ReplayGainNode.ts` provide the Web Audio fallback.
 
 | Backend | Where DSP runs | Speaker path |
 |---------|----------------|--------------|
-| streaming / web-audio / worklet | `dsp-chain` AudioWorklet (`dspChainProcessor.js` + `public/dsp-chain.wasm`) on the shared graph (`AudioContextManager`) | `input → dsp-chain (RG → limiter → volume → EQ) → analyser → speakerGain → destination` |
-| streaming / web-audio / worklet — **fallback** | Web Audio nodes, when the module or AudioWorklet is unavailable, or `?dsp=webaudio` | `input → ReplayGainNode → master Gain → EQChain → analyser → speakerGain → destination` |
-| sdl | `dsp_chain.h` in-process, inside the SDL stream callback (never the extra module — no cross-thread calls from the pthread) | `play ring / buffer → scratch → ReplayGain → limiter → volume → 5 biquads → SDL + viz ring` |
+| streaming / web-audio / worklet / `sdl` | `dsp-chain` AudioWorklet (`dspChainProcessor.js` + `public/dsp-chain.wasm`) on the shared graph | `input → dsp-chain (ReplayGain → limiter → volume → EQ) → analyser → speakerGain → destination` |
+| all backends — **fallback** | Web Audio nodes, when the WASM module or AudioWorklet is unavailable, or `?dsp=webaudio` | `input → ReplayGainNode → master Gain → EQChain → analyser → speakerGain → destination` |
 
-Settings → **Output latency** shows which engine is live (**EQ / limiter**: `Worklet WASM`, `Web Audio nodes`, or `SDL WASM`).
+Settings → **Output latency** shows the live DSP engine (`Worklet WASM` or `Web Audio nodes`).
 
-- **One band layout:** `DEFAULT_EQ_BANDS` (type / frequency / Q) is the single JS source of truth. `Sdl3AudioPlayer` pushes it via `_set_eq_band(index, type, freq, q, gainDb)`; `DspChainNode` pushes the same values (`DSP_EQ_TYPE_CODES`) to the worklet's `set_eq_band` export. Coefficients follow the Web Audio `BiquadFilterNode` formulas (shelves use S = 1 and ignore Q), recomputed at the context / stream rate. `set_replaygain(linear, limiter)`: threshold −1 dBFS, ratio 20, 3 ms / 100 ms, no makeup gain. Volume is the fader only and sits after the limiter (as the master `GainNode` does in the fallback).
-- **No double-apply:** while SDL plays, `setExternalPlaybackActive(true)` zeroes `speakerGain`; the `SdlPcmBridge` tap enters **after** the speaker DSP (`visualizerFeedGain → analyser`), so the analyser sees exactly the processed PCM SDL played. The shared graph still stores EQ/RG values; switching to streaming destroys the SDL backend, unmutes the graph, and applies them once.
-- **Older prebuilt SDL WASM** without the DSP exports: EQ is visualizer-only and ReplayGain folds into `_set_volume` (clamped at unity) — rebuild with `npm run build:wasm:sdl3`.
+- **One band layout:** `DEFAULT_EQ_BANDS` (type / frequency / Q) is the single JS source of truth. `DspChainNode` sends these values to the worklet's `set_eq_band` export. Coefficients follow the Web Audio `BiquadFilterNode` formulas (shelves use S = 1 and ignore Q), recomputed at the context rate. `set_replaygain(linear, limiter)`: threshold −1 dBFS, ratio 20, 3 ms / 100 ms, no makeup gain. Volume is the fader only and sits after the limiter.
+- The `sdl` mode's `sdl-engine` AudioWorklet feeds PCM into this shared DSP path; it does not open a separate device or apply DSP a second time.
 
 ### DSP worklet (`dsp-chain`)
 
@@ -268,33 +266,23 @@ Settings → **Output latency** shows which engine is live (**EQ / limiter**: `W
 
 ### Analysis ring (shared PCM tap)
 
-One shared-memory tap of the post-DSP PCM the user hears, for every analysis consumer (gpu-chores `fft_spectrum`, the `dsp_fft.h` WASM spectrum; projectM and the ShaderGUI spectrum next — #233). The audio thread only `memcpy`s its block in; analysis runs on the readers' threads at UI rate.
+The `dsp-chain` worklet writes a SharedArrayBuffer tap of post-DSP PCM for analysis consumers. `AnalysisRingReader` reads the newest frames; analysis runs on reader threads at UI rate, not in the audio callback. The tap is available when `crossOriginIsolated`; consumers otherwise use the `AnalyserNode`.
 
-| Backend | Writer | Ring memory |
-|---------|--------|-------------|
-| SDL3 | `fill_audio_callback` → `analysis_ring_write` (`src/sdl/analysis_ring.h`), after `dsp_process` | SDL module's `wasmMemory` (SharedArrayBuffer, `-pthread`); `_get_analysis_ring_state` / `_get_analysis_ring_data` |
-| Streaming / Web Audio / Worklet | `dspChainProcessor.js` copies each processed quantum | `SharedArrayBuffer` from `createAnalysisRingBuffer()` (only when `crossOriginIsolated`) |
-
-- **Layout** (8 × u32 header, shared by `analysis_ring.h`, `src/audio/analysisRing.ts` and the inline writer in `dspChainProcessor.js`): `writePos` (floats since reset), `generation` (bumped on reset / format change), `capacity` (2^17 floats, 512 KiB), `channels`, `sampleRate`. Offsets are checked by `tests/native/analysis_golden.cpp`.
-- **Broadcast, not SPSC:** unlike `pcm_ring.h` nothing is consumed. `AnalysisRingReader.readLatest(frames)` copies the newest whole frames and re-checks `generation` / `writePos` after the copy; a copy the writer reset or lapped is retried, then dropped — never returned torn. Writers copy data before publishing `writePos`, at most `ANALYSIS_RING_MAX_BLOCK` (8192) floats at a time, so readers stay that far behind it (a window is at most 15360 frames at 8 channels, 61440 stereo).
-- **Reset:** SDL `stop` / `seek` / `seek_stream` / format change; worklet `reset` message (seek, new stream).
-- **Active tap:** `getAnalysisTap()` returns SDL's ring while `SdlPcmBridge` is connected (the dsp-chain worklet then only processes silence), else the dsp-chain worklet's; null without SharedArrayBuffer or before the worklet loads, and consumers fall back to the `AnalyserNode`. While SDL is paused its callback stops, so its ring keeps the last window (the worklet keeps writing silence); a consumer that must decay on pause should watch `writePos` advance.
-
-### A/B tolerance (SDL vs worklet vs fallback)
+### A/B tolerance (WASM DSP vs fallback)
 
 | Comparison | Result | Test |
 |-----------|--------|------|
-| SDL `dsp_chain.h` vs worklet `dsp-chain.wasm` | **Bit-identical.** `npm run test:dsp-golden` prints an FNV-1a hash of its SIMD output (8 bands, 1 kHz / 440 Hz stereo, ReplayGain 2.5 + limiter, odd chunk sizes); the test replays those vectors through `dsp-chain.wasm` and expects the same hash | `tests/dspChainWasm.test.ts`, `tests/native/dsp_simd_golden.cpp` |
+| `dsp_chain.h` native golden vs worklet `dsp-chain.wasm` | **Bit-identical.** `npm run test:dsp-golden` prints an FNV-1a hash of its SIMD output (8 bands, 1 kHz / 440 Hz stereo, ReplayGain 2.5 + limiter, odd chunk sizes); the test replays those vectors through `dsp-chain.wasm` and expects the same hash | `tests/dspChainWasm.test.ts`, `tests/native/dsp_simd_golden.cpp` |
 | `dsp-chain.wasm` vs analytic `BiquadFilterNode` response, 60 Hz–12 kHz tones, all 5 bands non-zero | **< 0.01 dB** | `tests/dspChainWasm.test.ts` |
 | `dsp-chain` worklet vs Chromium `EQChain` (`BiquadFilterNode` × 5), same tones | **< 0.01 dB** (measured ~1e-4 dB) | `tests/browser/dspChain.test.ts` |
 | Analysis ring vs worklet output (Chromium `OfflineAudioContext`) | **Bit-exact** frames | `tests/browser/analysisTap.test.ts` |
-| Limiter: worklet vs fallback `DynamicsCompressorNode` | **Not matched.** The compressor has look-ahead and its own detector. The WASM limiter is the reference; it is what SDL runs. | — |
+| Limiter: worklet vs fallback `DynamicsCompressorNode` | **Not matched.** The compressor has look-ahead and its own detector. The WASM limiter is the reference. | — |
 
 Flat EQ, unity ReplayGain and volume are a bit-exact pass-through in the worklet.
 
 ### Crossfade and multichannel (later phases)
 
-- Worklet / SDL "crossfade" is still a **gapless splice**: the hi-fi rings hold one timeline. An overlap fade in the processor waits on the SharedArrayBuffer play ring (crossfading `postMessage` chunks is fragile). Native `<audio>` streaming remains the only overlap fade.
+- Worklet / WASM-engine "crossfade" is still a **gapless splice**: the hi-fi rings hold one timeline. An overlap fade in the processor waits on the SharedArrayBuffer play ring (crossfading `postMessage` chunks is fragile). Native `<audio>` streaming remains the only overlap fade.
 - `DSP_MAX_CHANNELS = 8`. The worklet follows the destination width, so a 5.1 file on a stereo device is folded down by Web Audio's `'speakers'` mix before the DSP; there is no surround / HRTF Settings UI yet. On a surround device the fallback chain keeps full width too: its limiter is out of the chain while off, and while on it runs one `DynamicsCompressorNode` per channel pair (the node is clamped to 2 channels), split and merged around them (`ReplayGainNode.ts`). `tests/browser/multichannel.test.ts` checks 5.1 / 7.1 on both engines.
 
 ## AudioContext lifecycle and output (`AudioContextManager`)
@@ -306,7 +294,7 @@ Flat EQ, unity ReplayGain and volume are a bit-exact pass-through in the worklet
 - **Render quantum.** Settings → **Output latency → Render quantum** persists `flac_player_render_size` (`default` = option omitted / 128 frames, `hardware`, `256`, `512`). It is sent as `AudioContextOptions.renderSizeHint` only when `AudioContext.prototype.renderQuantumSize` exists (Chromium). Elsewhere the buttons are disabled. Changing it recreates the graph. Larger quanta mean fewer worklet wakeups per second; `FlacProcessor` resizes its varispeed scratch for quanta above 128. The readout shows the live `renderQuantumSize`.
 - **Channels.** `destination.channelCount` follows the track (`max(2, channels)`, capped at `maxChannelCount`), `channelCountMode = 'explicit'`, `'speakers'` interpretation.
 - **Output device.** Settings → **Output device** persists `flac_player_output_device` (`{ id, label }`, `''` = default). Uses `navigator.mediaDevices.selectAudioOutput` where present, otherwise an `enumerateDevices()` list, applied with `AudioContext.setSinkId` (Chromium 110+) and passed as `sinkId` to future constructors. Chromium may blank output ids until the page holds a media permission; the list then offers **Show devices…**, which takes a microphone permission, stops the stream at once and lists again. Browsers without `setSinkId` keep the default sink. A rejected device falls back to default with a toast; a context `error` event (device unplugged) falls back to default too, and `sinkchange` refreshes the readout.
-- **SDL3.** It opens its own option-less context and ScriptProcessor in the emsdk SDL port (#260 replaces it), so the sink, latency hint and render quantum apply only to the shared graph that feeds its analyser. While SDL owns the speakers that graph moves to a `{ type: 'none' }` sink (Chromium), so it renders for the visualizer without holding a second device open. SDL3 is a `-pthread` build: without cross-origin isolation the engine pickers show it disabled ("needs cross-origin isolation") instead of failing on load.
+- **WASM engine (`sdl` mode).** Its AudioWorklet feeds the shared graph, so output-device, latency, and render-quantum settings apply. It requires cross-origin isolation for shared WASM memory and is disabled when that requirement is unavailable.
 - **Latency readout.** Settings → **Output latency** shows context rate, `baseLatency`, `outputLatency`, destination channels, and the speaker DSP engine (`useAudioOutputInfo`, polled each second, refreshed on graph recreate).
 
 ### Decision record: one context at the device rate
@@ -328,7 +316,7 @@ Flat EQ, unity ReplayGain and volume are a bit-exact pass-through in the worklet
 | Contexts per session | one per rate change (+ probes) | one |
 | Analyser bin width | varies with the file rate | fixed by the device rate |
 
-**Decision.** One context at the device rate. The stability gains are concrete, and the bit-exact path is unchanged where it ever existed. `?ctxrate=native` keeps the old behavior for listening tests. Revisit if a browser ever lets a page switch the device rate; until then, native rate belongs to SDL3 (#260), which opens its device stream at the file rate.
+**Decision.** One context at the device rate. The stability gains are concrete, and the bit-exact path is unchanged where it ever existed. `?ctxrate=native` keeps the old behavior for listening tests. Revisit if a browser ever lets a page switch the device rate.
 
 **Consequences.** `tests/audioContextManager.test.ts` asserts a 10-track mixed-rate session constructs exactly one context, and the e2e smoke counts every constructed context (closed ones included). Hz-aware analyser bands (#259 A6) still matter: the device rate decides the bin width.
 

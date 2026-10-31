@@ -9,7 +9,7 @@ A React/TypeScript high-fidelity audio player with **four interchangeable audio 
 ## Key Features
 
 ### Audio
-- **Four backends:** Streaming (default), Web Audio, AudioWorklet, SDL3 WASM
+- **Four backends:** Streaming (default), Web Audio, AudioWorklet, SDL-free WASM engine (legacy mode `sdl`)
 - **FLAC/WAV/MP3** via browser decode, libflac WASM, or CDN streaming
 - **5-band EQ**, playback rate (streaming / Web Audio), volume
 - **Crossfade / gapless** (streaming mode, 3 s fade)
@@ -31,7 +31,7 @@ A React/TypeScript high-fidelity audio player with **four interchangeable audio 
 ### Build & quality
 - TypeScript strict mode, ESLint, `npm run typecheck`
 - Playwright smoke tests (`npm run test:e2e`)
-- WASM artifacts (SDL, optional projectM) committed to `public/`
+- WASM artifacts (playback engine, DSP, resampler, optional projectM) committed to `public/`
 - CI: lint, typecheck, verify:wasm, production build
 
 ## Project Structure (abbreviated)
@@ -40,8 +40,8 @@ A React/TypeScript high-fidelity audio player with **four interchangeable audio 
 flac_player/
 ├── src/
 │   ├── components/       Player, LibraryView, QueuePanel, ShaderGUI, VisualizerShell, ProjectMHost
-│   ├── audio/            createAudioBackend, AudioContextManager, EQChain, SdlPcmBridge, flacDecoder, audioDecoder
-│   │   └── backends/     BaseAudioBackend + Streaming, WebAudio, Worklet, Sdl3
+│   ├── audio/            createAudioBackend, AudioContextManager, EQChain, analysisRing, flacDecoder, audioDecoder
+│   │   └── backends/     BaseAudioBackend + Streaming, WebAudio, Worklet, WASM engine
 │   ├── player/           PlaybackEngine, zustand store, selectors, persistence
 │   ├── hooks/            usePlayerActions, useLibraryState, useAudioSettings
 │   ├── api/              http.ts, schemas.ts, songApi.ts, library.ts
@@ -60,9 +60,9 @@ flac_player/
 npm install
 npm start                    # dev server, COOP/COEP headers
 npm run build                # production (prebuilt WASM in public/)
-npm run build:all            # rebuild SDL WASM + webpack
-npm run build:wasm           # SDL3 only
-npm run build:wasm:sdl3      # SDL3 only (also: bash src/sdl/build.sh)
+npm run build:all            # rebuild WASM modules + webpack
+npm run build:wasm           # playback engine
+npm run build:wasm:sdl3      # playback engine (legacy script name)
 npm run build:projectm       # optional Milkdrop WASM
 npm run verify:wasm          # CI artifact freshness check
 npm run typecheck && npm run lint
@@ -80,7 +80,7 @@ Live against **`https://storage.noahcohn.com`**:
 
 Foundation refactor ([#193](https://github.com/ford442/flac_player/issues/193)) is **done**: playback backends live under `src/audio/backends/` with shared `BaseAudioBackend`, and playback lifecycle is owned by `usePlaybackController`. Native-rate `AudioContext` ([#194](https://github.com/ford442/flac_player/issues/194)) is **done**. WASM dual-backend hardening ([#212](https://github.com/ford442/flac_player/issues/212)) is **done** (512 MiB heap cap, configure ABI, SDL2 playback retired). Stream-seek ABI, SIMD DSP and SDL playback rate ([#219](https://github.com/ford442/flac_player/issues/219)) and hi-fi seek/gapless ([#220](https://github.com/ford442/flac_player/issues/220)) are **done**, as is the GPU FFT / WebGPU pass work ([#221](https://github.com/ford442/flac_player/issues/221)). See [ROADMAP.md](./ROADMAP.md).
 - **Shareable playlists** — `?share=<id>` loads from `/api/share/<id>`
-- **Four audio backends** — user-selectable; lazy-loaded SDL3 WASM chunk
+- **Four audio backends** — user-selectable; lazy-loaded WASM engine chunk
 - **Visualizer** — required WebGPU ShaderGUI + optional projectM split mode
 - **Offline cache** — per-track download via Cache API
 - **Tests** — Playwright smoke suite + decoder unit test
@@ -90,7 +90,7 @@ Foundation refactor ([#193](https://github.com/ford442/flac_player/issues/193)) 
 - Modern browser (Chrome 90+, Firefox 88+, Safari 14+)
 - Web Audio API (required)
 - WebGPU (required for ShaderGUI; audio remains available on probe failure)
-- HTTPS + COOP/COEP for AudioWorklet / SDL WASM / projectM
+- HTTPS + COOP/COEP for shared-memory AudioWorklet transport and the WASM engine
 
 ## Documentation Map
 

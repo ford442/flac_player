@@ -25,8 +25,8 @@ const GAPLESS_MAX_GAP_FRAMES = Math.round(0.02 * RATE);
 
 interface SdlInternals {
   module: {
-    _get_pcm_ring_state(): number;
-    _get_pcm_ring_data(): number;
+    _get_play_ring_state(): number;
+    _get_play_ring_data(): number;
     _get_play_ring_fill(): number;
     _get_play_ring_capacity(): number;
     HEAPF32?: Float32Array;
@@ -34,18 +34,17 @@ interface SdlInternals {
   };
 }
 
-/** SDL: newest `frames` frames of the viz ring (post-DSP samples handed to SDL). */
+/** SDL: newest consumed frames from the engine's SPSC play ring. */
 function sdlRecentIndices(backend: ConfigurableAudioBackend, frames: number): number[] {
   const m = (backend as unknown as SdlInternals).module;
   const buffer = (m.HEAPF32 ?? new Float32Array(m.wasmMemory!.buffer)).buffer;
-  const state = m._get_pcm_ring_state();
-  const u32 = new Uint32Array(buffer, state, 3);
-  const writePos = Atomics.load(u32, 0);
-  const cap = u32[2];
-  const data = new Float32Array(buffer, m._get_pcm_ring_data(), cap);
-  const count = Math.min(frames * 2, cap, writePos);
+  const state = new Uint32Array(buffer, m._get_play_ring_state(), 4);
+  const readPos = Atomics.load(state, 1);
+  const cap = m._get_play_ring_capacity();
+  const data = new Float32Array(buffer, m._get_play_ring_data(), cap);
+  const count = Math.min(frames * 2, cap, readPos);
   const pcm = new Float32Array(count);
-  for (let i = 0; i < count; i++) pcm[i] = data[(writePos - count + i) % cap];
+  for (let i = 0; i < count; i++) pcm[i] = data[(readPos - count + i) & (cap - 1)];
   return indicesOf(pcm, 2);
 }
 

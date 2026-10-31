@@ -105,6 +105,7 @@ describe('isSampleRateAccepted', () => {
     expect(isSampleRateAccepted(0)).toBe(false);
     expect(RecordingAudioContext.instances).toHaveLength(0);
   });
+
 });
 
 describe('resampleInterleavedLinear', () => {

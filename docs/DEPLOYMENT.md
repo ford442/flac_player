@@ -32,7 +32,7 @@ sites from embedding the bundle.
 |---|---|
 | Worklet backend play ring / projectM tap | Falls back to `chunk` / `postMessage` transport (works, more main-thread copies) |
 | Analysis ring (`?gpu_fft=1` live spectrum, WASM FFT golden) | Off; the visualizer reads the `AnalyserNode` |
-| SDL3 backend (`-pthread` build) | Fails to initialize |
+| WASM engine (legacy mode `sdl`) | Disabled; it requires shared WASM memory |
 | Streaming (default), EQ, ShaderGUI, projectM | Unaffected (projectM is built without `-pthread`) |
 
 The 🎛 debug panel in ShaderGUI shows `crossOriginIsolated: yes/no`.
@@ -186,7 +186,7 @@ GitHub Pages **cannot set response headers**, so a Pages deploy is never
 cross-origin isolated. Playback, EQ, ShaderGUI and projectM work. The
 `SharedArrayBuffer` features listed in
 [Cross-origin isolation](#cross-origin-isolation-required-headers) degrade or
-are unavailable (SDL3 doesn't start). The app's own service worker doesn't
+are unavailable (the WASM engine doesn't start). The app's own service worker doesn't
 inject COOP/COEP into navigation responses. A coi-serviceworker-style shim would
 need that, and it would only take effect after a reload. It isn't implemented,
 so use a host that sets headers if you need the full feature set.
@@ -368,7 +368,7 @@ Open the 🎛 debug panel and check `crossOriginIsolated: yes`.
 - `net::ERR_BLOCKED_BY_RESPONSE.NotSameOriginAfterDefaultedToSameOriginByCoep`:
   a cross-origin resource has neither CORS nor `Cross-Origin-Resource-Policy: cross-origin`
 
-### SDL3 Backend Fails ("SDL Module failed to initialize")
+### WASM Engine Fails to Initialize
 - The page isn't cross-origin isolated; see the headers above and the 🎛 panel
 
 ### WebGPU Not Working

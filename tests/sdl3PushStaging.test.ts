@@ -5,13 +5,17 @@ import { Sdl3AudioPlayer } from '../src/audio/backends/Sdl3AudioPlayer';
 const RING_CAPACITY = 256;
 
 function fakeModule() {
-  const heap = new Float32Array(4096);
+  const buffer = new SharedArrayBuffer(4096 * 4);
+  const heap = new Float32Array(buffer);
   const pushed: number[][] = [];
   const mod = {
     HEAPF32: heap,
-    _init_audio: vi.fn(() => 0), // initializeModule bails early; the test drives the module directly
+    wasmMemory: { buffer },
+    _init_audio: vi.fn(() => 1),
+    _set_playback_rate: vi.fn(),
     _malloc: vi.fn(() => 1024), // byte offset → float index 256
     _free: vi.fn(),
+    _set_output_owner: vi.fn(),
     _cleanup: vi.fn(),
     _stop: vi.fn(),
     _get_play_ring_capacity: vi.fn(() => RING_CAPACITY),
@@ -38,10 +42,11 @@ describe('Sdl3AudioPlayer push staging', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
     const { mod, pushed } = fakeModule();
     vi.stubGlobal('crossOriginIsolated', true); // the pthread build is gated on isolation
+    vi.stubGlobal('AudioWorkletNode', class {});
     win.createSdlAudioModule = async () => mod;
 
     const player = new Sdl3AudioPlayer(new AudioContextManager());
-    await expect(player.initialize()).rejects.toThrow(/failed to initialize/);
+    await player.initialize();
 
     const pcm = Float32Array.from({ length: RING_CAPACITY * 3 + 17 }, (_, i) => i);
     const push = (player as unknown as {

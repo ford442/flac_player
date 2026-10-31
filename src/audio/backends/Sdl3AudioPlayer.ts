@@ -1,19 +1,28 @@
+// The `sdl` output mode: the C++ engine (src/sdl/audio_engine.cpp) owns the
+// PCM — a buffered track or the play ring a hi-fi stream is pushed into — and
+// the `sdl-engine` AudioWorkletProcessor plays it on the audio thread, out of
+// the module's shared memory, into the shared graph. Speaker DSP (EQ /
+// ReplayGain / limiter / volume) and the analysis ring are the dsp-chain
+// worklet's, as for every other Web Audio backend; this file only writes PCM
+// and transport words. No second AudioContext, no ScriptProcessor: without
+// AudioWorklet and cross-origin isolation the mode reports `playable: false`
+// and loads reject.
 import { decodeAudio } from '../audioDecoder';
-import { AudioContextManager, sharedAudioContextManager } from '../AudioContextManager';
-import { DEFAULT_EQ_BANDS } from '../EQChain';
-import { DSP_EQ_TYPE_CODES } from '../worklets/dspChainMessages';
-import { SdlPcmModule, sharedSdlPcmBridge } from '../SdlPcmBridge';
+import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextManager } from '../AudioContextManager';
+import { createStreamResampler, resampleInterleaved, type StreamResampler } from '../resampler';
 import { WASM_ASSETS, loadWasmScript } from '../wasmLoader';
-import { outputModeUnavailableReason } from '../outputModeSupport';
+import { SDL_ENGINE_PROCESSOR_NAME, type SdlEngineOptions } from '../worklets/sdlEngineMessages';
 import type { AudioBackendCapabilities, AudioPlaybackState, DecodedPcmView } from '../../types/audio';
 import { isGaplessActive, DEFAULT_CROSSFADE_MS, DEFAULT_GAPLESS_MODE, type GaplessSettings, type PreloadNextOptions } from '../../types/gapless';
 import { BaseAudioBackend } from './BaseAudioBackend';
 import { HifiStreamSession, type HifiTrackSource } from '../hifiStreamPipeline';
 import { describePlaybackPath, type PlaybackPathInfo } from '../../utils/playbackPath';
 import { playRingShouldPause } from '../playRingBackpressure';
-import debug from '../../utils/debug';
 
-interface SdlModule extends SdlPcmModule {
+/** Static same-origin processor module (emitted as an asset by webpack / served by Vite). */
+const SDL_ENGINE_PROCESSOR_URL = new URL('../worklets/sdlEngineProcessor.js', import.meta.url);
+
+interface SdlModule {
   _init_audio(): number;
   _create_audio_buffer(length: number): number;
   _set_audio_data(length: number, channels: number, sampleRate: number): number;
@@ -27,33 +36,45 @@ interface SdlModule extends SdlPcmModule {
   _resume_audio(): void;
   _stop(): void;
   _seek(time: number): void;
-  /** Stream-mode ring reset (audio_engine.cpp). Optional so an older prebuilt WASM still loads. */
-  _seek_stream?(seconds: number): number;
-  /** SDL_SetAudioStreamFrequencyRatio, clamped 0.25..4 in C++. */
-  _set_playback_rate?(ratio: number): number;
-  _get_device_format?(freqPtr: number, channelsPtr: number): number;
+  _seek_stream(seconds: number): number;
+  _rebase(): void;
+  /** Clamped 0.25..4 in C++; the processor interpolates (pitch follows speed). */
+  _set_playback_rate(ratio: number): number;
   _get_current_time(): number;
-  _set_volume(volume: number): void;
-  /** Speaker DSP (dsp_chain.h). Optional so an older prebuilt WASM still loads. */
-  _set_eq_band?(index: number, type: number, frequency: number, q: number, gainDb: number): void;
-  _set_replaygain?(linear: number, limiterEnabled: number): void;
-  _get_pcm_ring_state(): number;
-  _get_pcm_ring_data(): number;
+  _is_drained(): number;
+  _set_output_owner(id: number): void;
+  _get_engine_state(): number;
+  _get_play_ring_state(): number;
+  _get_play_ring_data(): number;
   _cleanup(): void;
   _malloc(size: number): number;
   _free(ptr: number): void;
-  HEAPF32?: Float32Array;
-  HEAPU8?: Uint8Array;
   wasmMemory?: WebAssembly.Memory;
-  buffer?: ArrayBuffer;
 }
 
 declare global {
   function createSdlAudioModule(): Promise<SdlModule>;
-  interface Window {
-  }
 }
 
+/**
+ * The engine's audio thread is an AudioWorklet reading a SharedArrayBuffer, so
+ * it needs both. Without them the mode fails closed (no ScriptProcessor).
+ */
+export function isSdlEngineSupported(): boolean {
+  return typeof AudioWorkletNode === 'function'
+    && typeof SharedArrayBuffer === 'function'
+    && globalThis.crossOriginIsolated === true;
+}
+
+const UNSUPPORTED_MESSAGE =
+  'The WASM engine needs AudioWorklet and a cross-origin isolated page (SharedArrayBuffer); use Streaming instead.';
+
+/** Processor ids; 0 means "no owner" in EngineState. */
+let lastOwner = 0;
+function nextOwner(): number {
+  lastOwner = (lastOwner % 0xfffffffe) + 1;
+  return lastOwner;
+}
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -61,136 +82,109 @@ function sleep(ms: number): Promise<void> {
 
 export class Sdl3AudioPlayer extends BaseAudioBackend {
   private module: SdlModule | null = null;
-  private isReady: boolean = false;
-  private isPlaying: boolean = false;
-  private duration: number = 0;
+  private isReady = false;
+  private readonly supported = isSdlEngineSupported();
+  private isPlaying = false;
+  private duration = 0;
   private pollInterval: number | null = null;
   private initialization: Promise<void>;
-  /** Set when this page cannot run the pthread build (no cross-origin isolation). */
-  private readonly unavailable: string | null;
+  /** Decoded buffered track at the file rate (getDecodedPcm). */
   private decodedPcm: Float32Array | null = null;
-  private decodedChannels = 1;
-  private decodedSampleRate = 0;
+  private fileSampleRate = 0;
+  private channels = 1;
+  /** Rate of the PCM in the engine: the AudioContext rate when it was loaded. */
+  private engineRate = 0;
   private isStreaming = false;
-  private streamDecodeEnded = false;
   private endedNotified = false;
   private playbackPath: PlaybackPathInfo | null = null;
   private session: HifiStreamSession | null = null;
+  private streamResampler: StreamResampler | null = null;
+  /** Aborted on every seek / stop: work for an older decode run must not touch the engine. */
+  private streamRun: AbortController | null = null;
+  /** Bumped by stop(): a buffered load that lost the race does not configure the engine. */
+  private loadToken = 0;
   /**
-   * Interleaved samples pushed into the play ring, on the C++ playHead scale
-   * (seek_stream sets playHead = floor(t × rate) × channels; push adds count).
+   * Interleaved samples pushed into the play ring, on the engine clock's scale
+   * (seek_stream starts it at floor(t × engineRate) × channels; pushes add count).
    */
   private pushedAbs = 0;
-  /** Gapless splice points on the playHead scale, in ring order. */
+  /** Gapless splice points on that scale, in ring order. */
   private boundaries: Array<{ abs: number; duration: number | null }> = [];
-  /** Media time (C++ clock) at which the audible track began. */
+  /** Media time (engine clock) at which the audible track began. */
   private segmentOffset = 0;
   private gaplessSettings: GaplessSettings = { mode: DEFAULT_GAPLESS_MODE, crossfadeMs: DEFAULT_CROSSFADE_MS };
   private nextSource: HifiTrackSource | null = null;
-  private limiterEnabled = false;
-  /**
-   * One heap block (play-ring capacity) reused by every push_pcm call so the
-   * decode loop does not malloc/free per chunk. Freed in destroy().
-   */
-  private pushStaging = 0;
+  private playbackRate = 1;
+  private node: AudioWorkletNode | null = null;
+  /** Contexts the processor module was added to. */
+  private readonly workletContexts = new WeakSet<BaseAudioContext>();
+  private heapView: Float32Array | null = null;
+  private stagingPtr = 0;
+  private stagingCapacity = 0;
+  private readonly unsubscribeGraph: () => void;
 
   constructor(private contextManager: AudioContextManager = sharedAudioContextManager) {
     super();
-    this.unavailable = outputModeUnavailableReason('sdl');
-    this.initialization = this.unavailable ? Promise.resolve() : this.initializeModule();
+    this.unsubscribeGraph = contextManager.subscribeGraphRecreated(() => this.onGraphRecreated());
+    this.initialization = this.supported ? this.initializeModule() : Promise.resolve();
   }
 
   async initialize(): Promise<void> {
-    if (this.unavailable) throw new Error(`SDL3 ${this.unavailable}; this page is not isolated`);
+    if (!this.supported) throw new Error(UNSUPPORTED_MESSAGE);
     await this.initialization;
-    if (!this.isReady) throw new Error('SDL Module failed to initialize');
+    if (!this.isReady) throw new Error('SDL engine failed to initialize');
   }
 
   getPlaybackPath(): PlaybackPathInfo | null {
     return this.playbackPath;
   }
 
-  private async initializeModule() {
-    debug.log('SdlAudioPlayer', 'Initializing module');
-    if (!window.createSdlAudioModule) {
-      await loadWasmScript(WASM_ASSETS.sdl3);
-      debug.log('SdlAudioPlayer', 'sdl-audio.js loaded');
-    }
-
+  private async initializeModule(): Promise<void> {
     try {
-      this.module = await window.createSdlAudioModule();
-
+      if (!window.createSdlAudioModule) await loadWasmScript(WASM_ASSETS.sdl3);
+      const module = await window.createSdlAudioModule();
       if (this.destroyed) {
-        this.module._cleanup();
-        this.module = null;
+        module._cleanup();
         return;
       }
-
-      const success = this.module._init_audio();
-      if (!success) {
-        console.error('[SdlAudioPlayer] Failed to initialize SDL audio (init_audio returned 0)');
-      } else {
-        debug.log('SdlAudioPlayer', 'SDL audio initialized');
-        this.isReady = true;
-        this.applyNativeEq(this.contextManager.getEQGains());
-        this.applyNativeReplayGain();
-        this.setVolume(this.lastVolume);
-        this.module._set_playback_rate?.(this.playbackRate);
-        this.logDeviceFormat();
-        this.startPolling();
+      if (!(module.wasmMemory?.buffer instanceof SharedArrayBuffer)) {
+        console.error('[SdlAudioPlayer] Engine memory is not shared; was sdl-audio.wasm built with -pthread?');
+        return;
       }
+      if (!module._init_audio()) {
+        console.error('[SdlAudioPlayer] init_audio failed (play ring allocation)');
+        return;
+      }
+      this.module = module;
+      module._set_playback_rate(this.playbackRate);
+      this.isReady = true;
+      this.startPolling();
     } catch (err) {
-      console.error('[SdlAudioPlayer] Error initializing SDL module:', err);
+      console.error('[SdlAudioPlayer] Error initializing the engine module:', err);
     }
   }
 
-  private logDeviceFormat(): void {
-    const m = this.module;
-    if (!m?._get_device_format) return;
-    const ptr = m._malloc(8);
-    try {
-      if (m._get_device_format(ptr, ptr + 4) === 1) {
-        const heap = new Int32Array(this.heapF32().buffer, ptr, 2);
-        debug.log('SdlAudioPlayer', `SDL device format: ${heap[0]} Hz, ${heap[1]} ch (streams at file rate; SDL resamples on bind)`);
-      }
-    } finally {
-      m._free(ptr);
-    }
-  }
-
-  private startPolling() {
+  private startPolling(): void {
     if (this.pollInterval) window.clearInterval(this.pollInterval);
-    this.pollInterval = window.setInterval(() => {
-      if (!this.module) return;
-      const current = this.module._get_current_time();
-      if (this.isStreaming) this.checkBoundaries(current);
-      if (this.isPlaying) {
-        this.notifyStateChange();
-        if (this.endedNotified) return;
-        const streamDrained = this.isStreaming
-          && this.streamDecodeEnded
-          && this.module._get_play_ring_fill() === 0;
-        const bufferedEnded = !this.isStreaming
-          && this.duration > 0
-          && current >= this.duration - 0.25;
-        if (streamDrained || bufferedEnded) {
-          this.endedNotified = true;
-          this.isPlaying = false;
-          this.notifyStateChange();
-          if (this.onEndedCallback) {
-            try { this.onEndedCallback(); } catch (err) { console.warn('onEnded handler threw', err); }
-          }
-        }
-      }
-    }, 100);
+    this.pollInterval = window.setInterval(() => this.poll(), 100);
   }
 
-  private cancelStream(): void {
-    this.session?.cancel();
-    this.session = null;
-    this.boundaries = [];
-    this.segmentOffset = 0;
-    this.pushedAbs = 0;
+  private poll(): void {
+    const module = this.module;
+    if (!module) return;
+    if (this.isStreaming) this.checkBoundaries(module._get_current_time());
+    if (!this.isPlaying) return;
+    this.notifyStateChange();
+    if (this.endedNotified || module._is_drained() !== 1) return;
+    // Buffered: the processor read the last frame. Stream: the decoder ended
+    // (set_stream_ended) and the processor emptied the ring.
+    this.endedNotified = true;
+    this.isPlaying = false;
+    module._pause_audio();
+    this.notifyStateChange();
+    if (this.onEndedCallback) {
+      try { this.onEndedCallback(); } catch (err) { console.warn('onEnded handler threw', err); }
+    }
   }
 
   /**
@@ -198,9 +192,11 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
    * playing. Audio is already continuous; this only moves the UI clock (100 ms poll).
    */
   private checkBoundaries(current: number): void {
-    const frameSamples = this.decodedSampleRate * this.decodedChannels;
+    const frameSamples = this.engineRate * this.channels;
     if (frameSamples <= 0) return;
-    while (this.boundaries.length > 0 && current * frameSamples >= this.boundaries[0]!.abs) {
+    while (this.boundaries.length > 0) {
+      const next = this.boundaries[0];
+      if (!next || current * frameSamples < next.abs) break;
       const b = this.boundaries.shift()!;
       this.segmentOffset = b.abs / frameSamples;
       this.duration = b.duration ?? 0;
@@ -213,12 +209,75 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
   }
 
   private heapF32(): Float32Array {
-    if (!this.module) throw new Error('SDL module not ready');
-    if (this.module.HEAPF32) return this.module.HEAPF32;
-    if (this.module.wasmMemory?.buffer) {
-      return new Float32Array(this.module.wasmMemory.buffer);
+    const buffer = this.module?.wasmMemory?.buffer;
+    if (!buffer) throw new Error('SDL engine not ready');
+    // A shared Memory hands out a new, longer buffer after it grows.
+    if (this.heapView?.buffer !== buffer) this.heapView = new Float32Array(buffer);
+    return this.heapView;
+  }
+
+  /**
+   * Node per load, connected to the shared graph's input. The owner id goes in
+   * before construction, so the previous processor retires at its next quantum.
+   */
+  private async attachNode(ctx: AudioContext, channels: number): Promise<void> {
+    const module = this.module;
+    if (!module?.wasmMemory) throw new Error('SDL engine not ready');
+    if (!this.workletContexts.has(ctx)) {
+      await ctx.audioWorklet.addModule(SDL_ENGINE_PROCESSOR_URL.href);
+      this.workletContexts.add(ctx);
     }
-    throw new Error('Unable to access WebAssembly HEAPF32 memory view.');
+    this.detachNode();
+    const owner = nextOwner();
+    module._set_output_owner(owner);
+    const processorOptions: SdlEngineOptions = {
+      memory: module.wasmMemory,
+      statePtr: module._get_engine_state(),
+      ringStatePtr: module._get_play_ring_state(),
+      ringDataPtr: module._get_play_ring_data(),
+      owner,
+    };
+    const node = new AudioWorkletNode(ctx, SDL_ENGINE_PROCESSOR_NAME, {
+      numberOfInputs: 0,
+      numberOfOutputs: 1,
+      outputChannelCount: [channels],
+      processorOptions,
+    });
+    this.contextManager.connectInput(node);
+    this.node = node;
+  }
+
+  private detachNode(): void {
+    this.module?._set_output_owner(0);
+    this.node?.disconnect();
+    this.node = null;
+  }
+
+  /**
+   * The context was replaced (latency change, or a rate change for another
+   * load): the old processor died with it. Carry the position into a fresh
+   * epoch and play on through a node in the new context.
+   */
+  private onGraphRecreated(): void {
+    const module = this.module;
+    if (!module || !this.node || this.destroyed) return;
+    this.detachNode();
+    module._rebase();
+    void this.attachNode(this.contextManager.getContext(), this.channels).catch((err) => {
+      console.error('[SdlAudioPlayer] Could not reattach after a graph recreate:', err);
+    });
+  }
+
+  private cancelStream(): void {
+    this.streamRun?.abort();
+    this.streamRun = null;
+    this.session?.cancel();
+    this.session = null;
+    this.streamResampler?.destroy();
+    this.streamResampler = null;
+    this.boundaries = [];
+    this.segmentOffset = 0;
+    this.pushedAbs = 0;
   }
 
   /**
@@ -237,17 +296,18 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
         await sleep(8);
         continue;
       }
-      if (!this.pushStaging) this.pushStaging = module._malloc(cap * 4);
-      const ptr = this.pushStaging;
-      if (!ptr) {
-        await sleep(8);
-        continue;
-      }
-      // No await between staging and push: an overlapping (aborted) run cannot
-      // touch the shared block in between.
       const n = Math.min(interleaved.length - offset, cap - fill);
-      this.heapF32().set(interleaved.subarray(offset, offset + n), ptr / 4);
-      const written = module._push_pcm(ptr, n);
+      if (this.stagingCapacity < cap) {
+        if (this.stagingPtr) module._free(this.stagingPtr);
+        this.stagingPtr = module._malloc(cap * 4);
+        this.stagingCapacity = this.stagingPtr ? cap : 0;
+        if (!this.stagingPtr) {
+          await sleep(8);
+          continue;
+        }
+      }
+      this.heapF32().set(interleaved.subarray(offset, offset + n), this.stagingPtr / 4);
+      const written = module._push_pcm(this.stagingPtr, n);
       if (written <= 0) {
         await sleep(8);
         continue;
@@ -257,69 +317,49 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
     }
   }
 
-  async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
-    debug.log('SdlAudioPlayer', { loadAudio: arrayBuffer.byteLength });
-    await this.initialize();
-    if (!this.module || !this.isReady) {
-      console.warn('[SdlAudioPlayer] Module not ready during loadAudio call.');
-      if (!this.module) throw new Error('SDL Module not initialized');
-    }
+  private requireEngine(): SdlModule {
+    if (!this.supported) throw new Error(UNSUPPORTED_MESSAGE);
+    if (!this.module || !this.isReady) throw new Error('SDL engine not initialized');
+    return this.module;
+  }
 
-    this.cancelStream();
+  async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
+    await this.initialize();
+    const module = this.requireEngine();
+    this.stop();
+    const token = this.loadToken;
     this.isStreaming = false;
-    this.streamDecodeEnded = false;
     this.endedNotified = false;
     this.playbackPath = describePlaybackPath('buffered');
-    this.stop();
     this.notifyStateChange();
 
-    try {
-      const result = await decodeAudio(arrayBuffer, undefined, filename);
-      debug.log('SdlAudioPlayer', { decoded: { channels: result.channels, sampleRate: result.sampleRate, duration: result.duration } });
+    const result = await decodeAudio(arrayBuffer, undefined, filename);
+    const { channels, sampleRate } = result;
+    await this.contextManager.ensureForTrack({ sampleRate, channels });
+    const ctx = this.contextManager.getContext();
+    const rate = ctx.sampleRate;
+    // Speex to the context rate; the processor then copies frames 1:1.
+    const pcm = rate === sampleRate
+      ? result.interleavedBuffer
+      : await resampleInterleaved(result.interleavedBuffer, channels, sampleRate, rate);
+    if (token !== this.loadToken || this.destroyed) return;
 
-      this.duration = result.duration;
-
-      const channels = result.channels;
-      const interleaved = result.interleavedBuffer;
-      const interleavedLength = interleaved.length;
-      this.decodedPcm = interleaved;
-      this.decodedChannels = channels;
-      this.decodedSampleRate = result.sampleRate;
-
-      const ptr = this.module._create_audio_buffer(interleavedLength);
-      if (!ptr) {
-        throw new Error('[SdlAudioPlayer] _create_audio_buffer failed to allocate memory.');
-      }
-
-      try {
-        const floatIndex = ptr / 4;
-        this.heapF32().set(interleaved, floatIndex);
-        const configured = this.module._set_audio_data(interleavedLength, channels, result.sampleRate);
-        if (configured !== 1) {
-          throw new Error('SDL stream configure failed (set_audio_data)');
-        }
-
-        await this.contextManager.ensureForTrack({
-          sampleRate: result.sampleRate,
-          channels: channels,
-        });
-        await this.contextManager.resume();
-        await sharedSdlPcmBridge.connect(this.contextManager, this.module, channels);
-      } catch (err) {
-        console.error('[SdlAudioPlayer] Failed to write audio data into WASM heap:', err, {
-          ptr,
-          interleavedLength,
-          hasWasmMemory: !!this.module.wasmMemory,
-          hasHEAPF32: !!this.module.HEAPF32
-        });
-        throw err;
-      }
-
-      this.notifyStateChange();
-    } catch (error) {
-      console.error('[SdlAudioPlayer] Error loading audio in SDL player:', error);
-      throw error;
+    const ptr = module._create_audio_buffer(pcm.length);
+    if (!ptr) throw new Error('SDL engine could not allocate the track (create_audio_buffer)');
+    this.heapF32().set(pcm, ptr / 4);
+    if (module._set_audio_data(pcm.length, channels, rate) !== 1) {
+      throw new Error('SDL engine configure failed (set_audio_data)');
     }
+    this.duration = result.duration;
+    this.decodedPcm = result.interleavedBuffer;
+    this.fileSampleRate = sampleRate;
+    this.channels = channels;
+    this.engineRate = rate;
+
+    await this.contextManager.resume();
+    if (token !== this.loadToken || this.destroyed) return;
+    await this.attachNode(ctx, channels);
+    this.notifyStateChange();
   }
 
   loadFromArrayBuffer(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
@@ -335,45 +375,52 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
     } = {}
   ): Promise<void> {
     await this.initialize();
-    if (!this.module || !this.isReady) {
-      throw new Error('SDL Module not initialized');
-    }
-
-    this.cancelStream();
+    const module = this.requireEngine();
     this.stop();
-    this.isPlaying = false;
     this.isStreaming = true;
-    this.streamDecodeEnded = false;
     this.endedNotified = false;
     this.decodedPcm = null;
     this.duration = options.expectedDuration ?? 0;
     this.playbackPath = describePlaybackPath('hifi-stream');
+    this.streamRun = new AbortController();
 
-    const session = new HifiStreamSession({
+    const session: HifiStreamSession = new HifiStreamSession({
       onFormat: async ({ channels, sampleRate }) => {
-        if (!this.module) return;
-        this.decodedChannels = channels;
-        this.decodedSampleRate = sampleRate;
-        const configured = this.module._set_stream_format(channels, sampleRate);
-        if (configured !== 1) {
-          throw new Error('SDL stream configure failed (set_stream_format)');
+        await this.contextManager.ensureForTrack({ sampleRate, channels });
+        if (this.session !== session) return;
+        const ctx = this.contextManager.getContext();
+        const rate = ctx.sampleRate;
+        this.streamResampler?.destroy();
+        this.streamResampler = rate !== sampleRate ? await createStreamResampler(channels, sampleRate, rate) : null;
+        if (this.session !== session) return;
+        if (module._set_stream_format(channels, rate) !== 1) {
+          throw new Error('SDL engine configure failed (set_stream_format)');
         }
+        this.channels = channels;
+        this.fileSampleRate = sampleRate;
+        this.engineRate = rate;
         this.pushedAbs = 0;
         this.duration = (await session.audibleDuration) ?? options.expectedDuration ?? 0;
-        await this.contextManager.ensureForTrack({ sampleRate, channels });
         await this.contextManager.resume();
-        await sharedSdlPcmBridge.connect(this.contextManager, this.module, channels);
-        this.module._play();
+        if (this.session !== session) return;
+        await this.attachNode(ctx, channels);
+        module._play();
         this.isPlaying = true;
         this.notifyStateChange();
       },
-      pushPcm: (pcm, signal) => this.pushPcmWithBackpressure(pcm, signal),
+      pushPcm: async (pcm, signal) => {
+        // A cancelled session's decoder must not feed the next session's resampler.
+        if (signal.aborted || this.session !== session) return;
+        await this.pushPcmWithBackpressure(this.streamResampler ? this.streamResampler.process(pcm) : pcm, signal);
+      },
       onSplice: ({ duration }) => {
+        // Same rate on both sides: the resampler runs on across the join (the
+        // boundary lands within its filter latency, < 3 ms, of the true one).
         this.boundaries.push({ abs: this.pushedAbs, duration });
       },
       onDecodeEnded: () => {
-        this.streamDecodeEnded = true;
-        this.module?._set_stream_ended(1);
+        if (this.session !== session) return;
+        void this.finishStream(this.streamRun?.signal);
       },
       onError: (err) => console.error('[SdlAudioPlayer] Stream error:', err),
     });
@@ -396,6 +443,15 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  /** Push the resampler's filter tail, then tell the processor no more PCM is coming. */
+  private async finishStream(signal: AbortSignal | undefined): Promise<void> {
+    if (!signal || signal.aborted) return;
+    const tail = this.streamResampler?.flush();
+    this.streamResampler?.reset();
+    if (tail && tail.length > 0) await this.pushPcmWithBackpressure(tail, signal);
+    if (!signal.aborted) this.module?._set_stream_ended(1);
   }
 
   setGaplessSettings(settings: GaplessSettings): void {
@@ -424,12 +480,14 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
   }
 
   play(): void {
-    if (!this.module) return;
-    if (this.isStreaming && this.endedNotified) {
-      // Ring drained at end of stream: restart from the top.
+    const module = this.module;
+    if (!module) return;
+    if (this.endedNotified) {
+      // Played to the end: restart from the top.
       this.seek(0);
     }
-    this.module._play();
+    void this.contextManager.resume();
+    module._play();
     this.isPlaying = true;
     this.notifyStateChange();
   }
@@ -442,44 +500,45 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
   }
 
   stop(): void {
+    this.loadToken++;
     this.cancelStream();
-    if (!this.module) return;
-    this.module._stop();
-    sharedSdlPcmBridge.resetRing(this.module);
     this.isPlaying = false;
+    if (this.module) {
+      this.module._stop();
+      this.detachNode();
+    }
     this.notifyStateChange();
   }
 
   seek(time: number): void {
-    if (!this.module) return;
+    const module = this.module;
+    if (!module) return;
     if (this.isStreaming) {
       this.seekStream(time);
       return;
     }
-    this.module._seek(time);
+    module._seek(Math.max(0, this.duration > 0 ? Math.min(time, this.duration) : time));
+    this.endedNotified = false;
     this.notifyStateChange();
   }
 
   /**
-   * Hi-fi stream seek: C++ resets the play/viz rings and DSP under the stream
-   * lock and moves the clock to `time` (seek_stream); the session aborts the
-   * current decode (its push loop exits even when parked on a full ring) and
-   * restarts at the target frame. The shared AudioContext is never suspended.
+   * Hi-fi stream seek: the engine skips the processor past everything already
+   * in the ring and holds the clock at `time` (seek_stream); the session aborts
+   * the current decode (its push loop exits even when parked on a full ring)
+   * and restarts at the target frame. The shared AudioContext keeps running.
    */
   private seekStream(time: number): void {
     const module = this.module;
     if (!module || !this.session?.isActive) return;
-    if (typeof module._seek_stream !== 'function') {
-      console.warn('[SdlAudioPlayer] Seek not supported in streaming mode (WASM lacks _seek_stream)');
-      return;
-    }
     const target = Math.max(0, this.duration > 0 ? Math.min(time, this.duration) : time);
+    this.streamRun?.abort();
+    this.streamRun = new AbortController();
     if (module._seek_stream(target) !== 1) return;
-    sharedSdlPcmBridge.resetRing(module);
+    this.streamResampler?.reset();
     this.boundaries = [];
     this.segmentOffset = 0;
-    this.pushedAbs = Math.floor(target * this.decodedSampleRate) * this.decodedChannels;
-    this.streamDecodeEnded = false;
+    this.pushedAbs = Math.floor(target * this.engineRate) * this.channels;
     this.endedNotified = false;
     this.session.seek(target);
     this.notifyStateChange();
@@ -495,10 +554,17 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
   }
 
   getCapabilities(): AudioBackendCapabilities {
-    // SDL owns speaker output: no crossfade overlap, no Web Audio sink. Hi-fi streams
-    // seek via _seek_stream and splice same-format successors (gapless).
-    const seek = !this.isStreaming || !this.module || typeof this.module._seek_stream === 'function';
-    return { seek, playbackRate: this.hasNativeRate(), gapless: this.isStreaming, crossfade: false, sinkId: false };
+    // One processor reads one ring: no overlap for crossfade. Hi-fi streams
+    // splice same-format successors (gapless). Output goes through the shared
+    // graph, so the Web Audio sink applies.
+    return {
+      playable: this.supported,
+      seek: true,
+      playbackRate: true,
+      gapless: this.isStreaming,
+      crossfade: false,
+      sinkId: isAudioContextSinkSupported(),
+    };
   }
 
   getState(): AudioPlaybackState {
@@ -506,71 +572,30 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
       isPlaying: this.isPlaying,
       currentTime: this.getCurrentTime(),
       duration: this.getDuration(),
-      isLoading: false
+      isLoading: false,
     };
   }
 
   setVolume(volume: number): void {
-    this.setVolumeBase(volume, (effective) => {
-      if (this.module) {
-        this.module._set_volume(effective);
-      }
-    });
+    this.contextManager.setVolume(volume);
   }
 
-  private playbackRate = 1;
-
-  private hasNativeRate(): boolean {
-    // Before the module loads, report the capability the current build ships.
-    return !this.module || typeof this.module._set_playback_rate === 'function';
-  }
-
-  /** Tempo via SDL resampling (pitch follows speed). Clock stays in media seconds. */
+  /** Tempo by interpolation in the processor (pitch follows speed). Clock stays in media seconds. */
   setPlaybackRate(rate: number): void {
     this.playbackRate = Math.max(0.25, Math.min(4, Number.isFinite(rate) ? rate : 1));
-    this.module?._set_playback_rate?.(this.playbackRate);
+    this.module?._set_playback_rate(this.playbackRate);
   }
 
-  /** WASM runs EQ / ReplayGain / limiter on the speaker path (dsp_chain.h). */
-  private hasNativeDsp(): boolean {
-    return typeof this.module?._set_eq_band === 'function'
-      && typeof this.module?._set_replaygain === 'function';
-  }
-
-  /** Legacy WASM without DSP exports: fold ReplayGain into `_set_volume` (clamps at 1). */
-  protected effectiveVolume(volume: number): number {
-    return this.hasNativeDsp() ? volume : super.effectiveVolume(volume);
-  }
-
-  private applyNativeEq(gains: number[]): void {
-    if (!this.module || !this.hasNativeDsp()) return;
-    DEFAULT_EQ_BANDS.forEach((band, i) => {
-      this.module!._set_eq_band!(i, DSP_EQ_TYPE_CODES[band.type] ?? 1, band.frequency, band.Q, gains[i] ?? 0);
-    });
-  }
-
-  private applyNativeReplayGain(): void {
-    if (!this.module || !this.hasNativeDsp()) return;
-    this.module._set_replaygain!(this.replayGainLinear, this.limiterEnabled ? 1 : 0);
-  }
-
-  // The shared graph keeps the values (speakers are muted while SDL plays, and the
-  // viz tap bypasses its EQ), so a later switch to a Web Audio backend applies them once.
   setEQGains(gains: number[]): void {
     this.contextManager.setEQGains(gains);
-    this.applyNativeEq(this.contextManager.getEQGains());
   }
 
   setReplayGainLinear(linear: number): void {
-    this.applyReplayGainLinear(linear, () => this.setVolume(this.lastVolume));
-    this.contextManager.setReplayGainLinear(this.replayGainLinear);
-    this.applyNativeReplayGain();
+    this.contextManager.setReplayGainLinear(linear);
   }
 
   setReplayGainLimiter(enabled: boolean): void {
-    this.limiterEnabled = enabled;
     this.contextManager.setReplayGainLimiter(enabled);
-    this.applyNativeReplayGain();
   }
 
   getAnalyser(): AnalyserNode | null {
@@ -581,20 +606,21 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
     if (!this.decodedPcm || this.isStreaming) return null;
     return {
       pcm: this.decodedPcm,
-      channels: this.decodedChannels,
-      sampleRate: this.decodedSampleRate,
+      channels: this.channels,
+      sampleRate: this.fileSampleRate,
     };
   }
 
   destroy(): void {
     this.destroyed = true;
+    this.unsubscribeGraph();
     this.stop();
-    sharedSdlPcmBridge.disconnect(this.contextManager);
     if (this.pollInterval) clearInterval(this.pollInterval);
-    if (this.module) {
-      if (this.pushStaging) this.module._free(this.pushStaging);
-      this.pushStaging = 0;
-      this.module._cleanup();
-    }
+    this.pollInterval = null;
+    if (this.module && this.stagingPtr) this.module._free(this.stagingPtr);
+    this.stagingPtr = 0;
+    this.stagingCapacity = 0;
+    this.module?._cleanup();
+    this.module = null;
   }
 }

@@ -1,6 +1,6 @@
 /**
  * Main-thread reader for the processor's shared projectM tap ring (overwrite-on-full,
- * like the SDL viz ring in pcm_ring.h). The processor writes every output frame and
+ * like the WASM engine's post-DSP analysis ring. The processor writes every output frame and
  * posts a payload-free `pcmTap` per 512 frames; {@link PcmTapReader.drain} then
  * hands each complete block to the callback.
  */

@@ -22,7 +22,7 @@ flowchart TB
     Streaming["StreamingAudioPlayer<br/>default — HTMLAudio + range requests"]
     WebAudio["WebAudioPlayer<br/>buffered Web Audio API"]
     Worklet["WorkletAudioPlayer<br/>worklet + libflac decode"]
-    SDL3["Sdl3AudioPlayer<br/>SDL3 WASM"]
+    WasmEngine["WASM engine<br/>C++ WASM + AudioWorklet"]
   end
 
   subgraph Load["Loading & library"]
@@ -58,14 +58,14 @@ flowchart TB
   Streaming --> ACM
   WebAudio --> ACM
   Worklet --> ACM
-  SDL3 --> ACM
+  WasmEngine --> ACM
   ACM --> EQ --> Analyser
   Analyser --> Probe
   Probe -->|adapter + device + canvas context ready| WebGPU
   Probe -->|failure without GL opt-in; audio unaffected| Fatal
   Analyser -->|visualizer=webgl2 or Settings| WebGL2
   Worklet -->|PCM tap| ProjectM
-  SDL3 -->|PCM ring bridge| Analyser
+  WasmEngine -->|shared AudioWorklet graph| ACM
 ```
 
 ## Audio data flow
@@ -200,19 +200,19 @@ In-app ProjectMHost OR postMessage / BroadcastChannel('projectm-audio')
 ### AudioContextManager (`src/audio/AudioContextManager.ts`)
 
 - Single shared `AudioContext`
-- Speaker DSP (ReplayGain → limiter → volume → 5-band EQ) in the `dsp-chain` AudioWorklet: `src/sdl/dsp_chain.h` compiled to `public/dsp-chain.wasm`, the same code SDL runs; `EQChain.ts` / `ReplayGainNode.ts` when it cannot load (see `docs/AUDIO_BACKENDS.md` → Speaker-path DSP)
+- Speaker DSP (ReplayGain → limiter → volume → 5-band EQ) in the `dsp-chain` AudioWorklet: `src/sdl/dsp_chain.h` compiled to `public/dsp-chain.wasm`; `EQChain.ts` / `ReplayGainNode.ts` are the fallback (see `docs/AUDIO_BACKENDS.md` → Speaker-path DSP)
 - Analyser policy (`fftSize`, smoothing, dB range) set explicitly from `analyserPolicy.ts`
 - Application-lifetime device: backends connect/disconnect sources and never `suspend()` it
 - `connectInput()` / `connectVisualizerFeed()` routing
-- SDL backends mute Web Audio destination while WASM owns speakers; PCM is tapped back for the analyser
+- The WASM engine's `sdl-engine` AudioWorklet feeds PCM into this shared graph; it does not open a separate audio device
 
-### SDL PCM bridge (`src/audio/SdlPcmBridge.ts`)
+### WASM playback engine (`src/audio/backends/Sdl3AudioPlayer.ts`)
 
-Visualizer tap only: lock-free ring in C++ (`src/sdl/pcm_ring.h`, 65536 floats) → AudioWorklet → `AnalyserNode` for SDL3. SDL3 **playback** uses a separate play ring (`src/sdl/play_ring.h`, 384000 floats) fed by `_push_pcm`.
+The C++ engine owns buffered PCM and the streaming play ring (`src/sdl/play_ring.h`). The `sdl-engine` AudioWorklet reads that shared memory and connects to `AudioContextManager`; there is no SDL audio device, second context, or ScriptProcessor.
 
 ### Analysis ring (`src/audio/analysisRing.ts`)
 
-Broadcast SharedArrayBuffer tap of post-DSP PCM for analysis consumers: written by the SDL callback (`src/sdl/analysis_ring.h`) or the `dsp-chain` worklet, read at UI rate by `AnalysisRingReader` (`getAnalysisTap()` picks the live writer). Feeds the `?gpu_fft=1` live spectrum and its `dsp_fft.h` WASM golden (`src/audio/wasmFft.ts`). See `docs/AUDIO_BACKENDS.md` → Analysis ring.
+Broadcast SharedArrayBuffer tap of post-DSP PCM for analysis consumers: written by the `dsp-chain` worklet and read at UI rate by `AnalysisRingReader` (`getAnalysisTap()`). Feeds the `?gpu_fft=1` live spectrum and its `dsp_fft.h` WASM golden (`src/audio/wasmFft.ts`). See `docs/AUDIO_BACKENDS.md` → Analysis ring.
 
 ## Library & storage (client)
 
@@ -255,14 +255,14 @@ Key endpoints: `GET /api/songs`, `POST /api/songs/{id}/play`, `POST /api/share`,
 
 | Artifact | Build command | Committed in `public/` |
 |----------|---------------|------------------------|
-| SDL3 | `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh` (`--debug` via `scripts/build-wasm.sh --debug --sdl3`) | `sdl-audio.js`, `sdl-audio.wasm` |
+| WASM engine (legacy mode `sdl`) | `npm run build:wasm` / `npm run build:wasm:sdl3` or `bash src/sdl/build.sh` (`--debug` via `scripts/build-wasm.sh --debug --sdl3`) | `sdl-audio.js`, `sdl-audio.wasm` |
 | projectM | `npm run build:projectm` | `projectm/projectm-host.*` (optional; WebGL2 host, no SDL; presets fetched at runtime via `projectm/presets.json`) |
 
 CI runs `npm run verify:wasm` against `public/wasm-source.sha256`. Production webpack uses `--env skipWasm=true` and copies prebuilt binaries.
 
 ## Cross-origin isolation
 
-Required for SharedArrayBuffer: the worklet play ring and PCM tap (they fall back to `postMessage`), the analysis ring (off without it) and the SDL3 `-pthread` build (disabled in the engine pickers without it). AudioWorklet, streaming and projectM (no pthreads) work without it. Every deploy target's headers are in `docs/DEPLOYMENT.md`:
+Required for SharedArrayBuffer and the `sdl` WASM engine (disabled in the picker without it). The regular worklet ring falls back to `postMessage`, and analysis-ring consumers fall back to the `AnalyserNode`. Streaming and projectM work without cross-origin isolation. Every deploy target's headers are in `docs/DEPLOYMENT.md`:
 
 ```
 Cross-Origin-Opener-Policy: same-origin
