@@ -94,6 +94,19 @@ describe('SpeexDSP resampler vs linear', () => {
     expect(maxDiff).toBeLessThan(1e-6);
   });
 
+  it('resamples a whole long 8-channel track inside the capped heap', async () => {
+    // 30 s x 8 ch at 44.1 kHz is 42 MB of input (46 MB out): more than the
+    // module's 32 MiB MAXIMUM_MEMORY, so this only works when run() stages slices.
+    let module: Awaited<ReturnType<SpeexResamplerFactory>> | undefined;
+    const capturing: SpeexResamplerFactory = async () => (module = await speexFactory());
+    const input = sine(1000, 44100, 30, 8);
+    const out = await resampleInterleaved(input, 8, 44100, 48000, { factory: capturing });
+    expect(out.length).toBe(48000 * 30 * 8);
+    expect(thdnDb(out, 8, 1000, 48000)).toBeGreaterThan(100);
+    // HEAPF32 is replaced on growth, so this is the heap's final size.
+    expect(module!.HEAPF32.buffer.byteLength).toBeLessThanOrEqual(32 * 1024 * 1024);
+  }, 60_000);
+
   it('falls back to linear when the WASM module fails to load', async () => {
     const broken: SpeexResamplerFactory = () => Promise.reject(new Error('no wasm'));
     const rs = await createStreamResampler(2, 44100, 48000, { factory: broken });

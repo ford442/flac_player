@@ -284,8 +284,8 @@ export class FlacProcessor extends AudioWorkletProcessor {
 
   // ---------------------------------------------------------------------------
   // Varispeed: consume the source at `playbackRate` × the callback rate with a
-  // 4-point Hermite interpolator (tempo and pitch move together, as with SDL's
-  // SDL_SetAudioStreamFrequencyRatio). At 1× the direct path runs untouched.
+  // 4-point Hermite interpolator (tempo and pitch move together, as in the
+  // WASM engine). At 1× the direct path runs untouched.
   // ---------------------------------------------------------------------------
 
   private varispeedBuffer(frames: number): Float32Array {

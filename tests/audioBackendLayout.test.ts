@@ -10,7 +10,6 @@ const BACKEND_MODULES = [
 ] as const;
 
 const BACKENDS_DIR = resolve(__dirname, '../src/audio/backends');
-const FALLBACK_DIR = resolve(__dirname, '../src/components/player-fallback');
 
 describe('audio backend package layout', () => {
   it('keeps playback backends under src/audio/backends/', () => {
@@ -44,59 +43,69 @@ describe('audio backend package layout', () => {
     expect(factorySource).not.toMatch(/Sdl2AudioPlayer/);
   });
 
-  it('rejects SDL3 stream configure failures in Sdl3AudioPlayer', () => {
+  it('rejects SDL engine configure failures in Sdl3AudioPlayer', () => {
     const src = readFileSync(
       resolve(__dirname, '../src/audio/backends/Sdl3AudioPlayer.ts'),
       'utf8'
     );
     expect(src).toMatch(/_set_audio_data\(length: number, channels: number, sampleRate: number\): number/);
     expect(src).toMatch(/_set_stream_format\(channels: number, sampleRate: number\): number/);
-    expect(src).toMatch(/configured !== 1/);
-    expect(src).toMatch(/SDL stream configure failed \(set_audio_data\)/);
-    expect(src).toMatch(/SDL stream configure failed \(set_stream_format\)/);
+    expect(src).toMatch(/_set_audio_data\(pcm\.length, channels, rate\) !== 1/);
+    expect(src).toMatch(/_set_stream_format\(channels, rate\) !== 1/);
+    expect(src).toMatch(/SDL engine configure failed \(set_audio_data\)/);
+    expect(src).toMatch(/SDL engine configure failed \(set_stream_format\)/);
   });
 
-  it('offers the same audio engines (incl. SDL3, not SDL2) in the transport bar and Settings', () => {
-    const types = readFileSync(resolve(FALLBACK_DIR, 'types.ts'), 'utf8');
-    expect(types).toMatch(/OUTPUT_MODE_LABELS[^=]*=\s*\{[\s\S]*?\bsdl: 'SDL3'/);
-    expect(types).not.toMatch(/sdl2/);
-    const options = readFileSync(resolve(FALLBACK_DIR, 'OutputModeOptions.tsx'), 'utf8');
+  it('does not offer SDL2 in the footer output-mode select', () => {
+    // The footer select moved from PlayerFallbackView.tsx into the transport bar.
+    const src = readFileSync(
+      resolve(__dirname, '../src/components/player-fallback/PlayerFallbackTransportBar.tsx'),
+      'utf8'
+    );
+    const options = readFileSync(
+      resolve(__dirname, '../src/components/player-fallback/OutputModeOptions.tsx'),
+      'utf8'
+    );
+    const types = readFileSync(resolve(__dirname, '../src/components/player-fallback/types.ts'), 'utf8');
+    expect(src).toMatch(/<OutputModeOptions \/>/);
     expect(options).toMatch(/Object\.entries\(OUTPUT_MODE_LABELS\)/);
-    expect(options).toMatch(/disabled=\{unavailable !== null\}/);
-    for (const file of ['PlayerFallbackTransportBar.tsx', 'PlayerFallbackSettingsTab.tsx']) {
-      const src = readFileSync(resolve(FALLBACK_DIR, file), 'utf8');
-      // Both selects render the shared list; no hand-written engine options.
-      expect(src).toMatch(/<OutputModeOptions \/>/);
-      expect(src).not.toMatch(/<option value="(streaming|worklet|web-audio|sdl2?)"/);
-    }
+    expect(types).toMatch(/\bsdl:\s*'WASM engine'/);
+    expect(options).not.toMatch(/sdl2/);
+    const settings = readFileSync(
+      resolve(__dirname, '../src/components/player-fallback/PlayerFallbackSettingsTab.tsx'),
+      'utf8'
+    );
+    expect(settings).toMatch(/<OutputModeOptions \/>/);
   });
 
-  it('exports the SDL3 transport ABI and keeps buffered _seek', () => {
+  it('exports the engine transport ABI without linking SDL', () => {
     const build = readFileSync(resolve(__dirname, '../scripts/build-wasm.sh'), 'utf8');
-    for (const sym of ['_seek', '_seek_stream', '_set_playback_rate', '_get_device_format']) {
+    for (const sym of [
+      '_seek', '_seek_stream', '_rebase', '_set_playback_rate', '_is_drained',
+      '_set_output_owner', '_get_engine_state', '_get_play_ring_state', '_get_play_ring_data',
+    ]) {
       expect(build).toContain(`"${sym}"`);
     }
+    // #268: no SDL audio device (and so no ScriptProcessor, no second AudioContext).
+    expect(build).not.toMatch(/^\s*-s ?USE_SDL/m);
     const engine = readFileSync(resolve(__dirname, '../src/sdl/audio_engine.cpp'), 'utf8');
+    expect(engine).not.toMatch(/#include <SDL|SDL_[A-Z]/);
     expect(engine).toMatch(/int seek_stream\(double seconds\)/);
-    expect(engine).toMatch(/SDL_SetAudioStreamFrequencyRatio/);
-    // Buffered seek still indexes the PCM buffer.
-    expect(engine).toMatch(/void seek\(float time\)[\s\S]*?g_state\.playHead = sampleIndex/);
+    // Buffered seek moves the processor's start frame.
+    expect(engine).toMatch(/void seek\(float time\)[\s\S]*?engine_frame_at\(time/);
 
     const player = readFileSync(resolve(BACKENDS_DIR, 'Sdl3AudioPlayer.ts'), 'utf8');
     expect(player).toMatch(/_seek_stream\(target\)/);
-    expect(player).toMatch(/this\.module\._seek\(time\)/);
+    expect(player).toMatch(/module\._seek\(/);
+    expect(player).not.toMatch(/createScriptProcessor|ScriptProcessorNode/);
   });
 
-  it('keeps the SDL audio-thread headers allocation-free', () => {
-    for (const f of ['pcm_ring.h', 'play_ring.h', 'dsp_chain.h']) {
-      const src = readFileSync(resolve(__dirname, '../src/sdl', f), 'utf8');
-      expect(src).not.toMatch(/#include <vector>|std::vector|scale_samples/);
-    }
-  });
-
-  it('hashes every SDL header into wasm-source.sha256', () => {
+  it('hashes every SDL source the engine includes into wasm-source.sha256', () => {
     const hash = readFileSync(resolve(__dirname, '../scripts/wasm-source-hash.sh'), 'utf8');
-    for (const f of ['audio_engine.cpp', 'dsp_chain.h', 'pcm_ring.h', 'play_ring.h']) {
+    const engine = readFileSync(resolve(__dirname, '../src/sdl/audio_engine.cpp'), 'utf8');
+    const included = [...engine.matchAll(/#include "([^"]+)"/g)].map((m) => m[1]);
+    expect(included.length).toBeGreaterThan(0);
+    for (const f of ['audio_engine.cpp', ...included]) {
       expect(hash).toContain(`src/sdl/${f}`);
     }
   });

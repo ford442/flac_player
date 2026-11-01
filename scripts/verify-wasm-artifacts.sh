@@ -12,8 +12,8 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 PUBLIC="$PROJECT_ROOT/public"
 
 # Byte sizes below catch an empty/truncated/LFS-pointer .wasm that a hash match can't
-# (the hash covers sources, not the committed binary). Floors are ~half of today's
-# sizes; raise them deliberately if a graph legitimately shrinks.
+# (the hash covers sources, not the committed binary). SDL is intentionally small
+# now that its engine no longer links SDL or the main-thread audio shim.
 min_bytes() {
   local artifact="$1" min="$2" size
   size="$(wc -c < "$artifact" | tr -d '[:space:]')"
@@ -68,8 +68,8 @@ if [ -f "$PUBLIC/projectm/projectm-host.wasm" ]; then
     "$PUBLIC/projectm/projectm-host.js" "$PUBLIC/projectm/projectm-host.wasm"
 fi
 
-min_bytes "$PUBLIC/sdl-audio.wasm" 300000
-min_bytes "$PUBLIC/sdl-audio.js" 50000
+min_bytes "$PUBLIC/sdl-audio.wasm" 20000
+min_bytes "$PUBLIC/sdl-audio.js" 20000
 min_bytes "$PUBLIC/speex-resampler.wasm" 10000
 min_bytes "$PUBLIC/speex-resampler.js" 2000
 min_bytes "$PUBLIC/dsp-chain.wasm" 10000

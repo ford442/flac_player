@@ -86,8 +86,8 @@ export const PlayerFallbackSettingsTab: React.FC<PlayerFallbackSettingsTabProps>
           </p>
           {outputMode === 'sdl' && (
             <p className="text-xs text-amber-300/90">
-              SDL3 is experimental: it needs cross-origin isolation (COOP/COEP headers) and
-              plays through the WASM engine to the speakers, so Web Audio output is muted.
+              The WASM engine is experimental and needs cross-origin isolation (COOP/COEP headers).
+              It plays through the shared AudioWorklet and audio graph.
             </p>
           )}
         </div>

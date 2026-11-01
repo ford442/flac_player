@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import type { ConfigurableAudioBackend } from '../types/audio';
 import type { PlaylistTrack } from '../types/library';
 import { fetchReplayGainFromUrl } from '../utils/fetchReplayGain';
@@ -9,8 +8,11 @@ import {
   type ReplayGainSettings,
 } from '../utils/replayGain';
 
+/** A backend or the PlaybackEngine (which re-applies it to each new backend). */
+export type ReplayGainTarget = Pick<ConfigurableAudioBackend, 'setReplayGainLinear' | 'setReplayGainLimiter'>;
+
 export interface ReplayGainApplicationOptions {
-  player: ConfigurableAudioBackend | null;
+  player: ReplayGainTarget | null;
   track: PlaylistTrack;
   queue: PlaylistTrack[];
   settings: ReplayGainSettings;
@@ -40,19 +42,4 @@ export function applyReplayGainToPlayer({
   const linear = computeReplayGainLinear(track, settings, albumReferenceDb);
   player.setReplayGainLinear(linear);
   player.setReplayGainLimiter?.(settings.limiterEnabled);
-}
-
-export function useReplayGainApplication() {
-  const applyReplayGain = useCallback(async (
-    player: ConfigurableAudioBackend | null,
-    track: PlaylistTrack,
-    queue: PlaylistTrack[],
-    settings: ReplayGainSettings
-  ): Promise<PlaylistTrack> => {
-    const enriched = await enrichTrackReplayGain(track);
-    applyReplayGainToPlayer({ player, track: enriched, queue, settings });
-    return enriched;
-  }, []);
-
-  return { applyReplayGain };
 }

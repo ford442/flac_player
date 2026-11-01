@@ -37,6 +37,8 @@ export interface UseListeningRoomOptions {
   player: ListeningRoomPlayer;
   /** Changes whenever local playback state changes (host publishes on change). */
   playbackKey: unknown;
+  /** Clock ticks between playbackKey changes (seeks, drift); host observes on each. */
+  subscribePlayback?: (listener: () => void) => () => void;
   /** Host's local queue, published when it changes. */
   queue: RoomQueueState;
   onNotify: (message: string, type: 'success' | 'error' | 'info') => void;
@@ -94,7 +96,7 @@ function initialSession(roomId: string | null): Session | null {
 }
 
 export function useListeningRoom({
-  initialRoomId, player, playbackKey, queue, onNotify, onLeft,
+  initialRoomId, player, playbackKey, subscribePlayback, queue, onNotify, onLeft,
 }: UseListeningRoomOptions): UseListeningRoomResult {
   const [session, setSession] = useState<Session | null>(() => initialSession(initialRoomId));
   const [title, setTitle] = useState('');
@@ -231,8 +233,10 @@ export function useListeningRoom({
   // Host: publish immediately on local playback changes (play/pause/seek/track).
   useEffect(() => {
     if (session?.role !== 'host' || !connected) return;
-    publisherRef.current?.observe(playerRef.current.getHostSample());
-  }, [session, connected, playbackKey]);
+    const observe = () => { publisherRef.current?.observe(playerRef.current.getHostSample()); };
+    observe();
+    return subscribePlayback?.(observe);
+  }, [session, connected, playbackKey, subscribePlayback]);
 
   // Host: publish queue edits (debounced; drag-reorder fires in bursts).
   const queueKey = JSON.stringify(queue);

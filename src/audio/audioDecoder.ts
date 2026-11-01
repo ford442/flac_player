@@ -20,7 +20,6 @@ export function isFlacByExtension(filename?: string): boolean {
 
 /**
  * True when a WASM FLAC decode produced complete, playable audio.
- *
  * @wasm-audio-decoders/flac hands libFLAC only the frames (codec-parser strips
  * fLaC + STREAMINFO), and libFLAC then fails on many valid frames with
  * LOST_SYNC / BAD_HEADER. Depending on where that starts, the result is either
@@ -34,7 +33,6 @@ export function isUsableFlacDecode(result: FlacDecoderResult | null | undefined)
   if (!Number.isFinite(result.duration) || result.duration <= 0) return false;
   return !result.errors;
 }
-
 /** STREAMINFO sample rate (20 bits at byte 18), or 0 if the header is absent. */
 export function readFlacStreamInfoSampleRate(buf: ArrayBuffer): number {
   // "fLaC" + 4-byte block header + STREAMINFO (type 0) needs >= 21 bytes.
@@ -130,7 +128,6 @@ async function decodeFlacWithFallback(
 /**
  * Decode an audio file, automatically routing to FLAC decoder or native decoder based on format.
  * Returns the decoded audio in a standardized format compatible with both Web Audio and worklet backends.
- * 
  * @param arrayBuffer - The audio data to decode
  * @param audioContext - Optional AudioContext for decoding native formats. If not provided, only FLAC will be supported.
  * @param filename - Optional filename for extension-based format detection
@@ -144,16 +141,15 @@ export async function decodeAudio(
 
   if (isFlac) {
     // WASM FLAC decoder, with decodeAudioData fallback (OfflineAudioContext
-    // when no audioContext is given, e.g. SDL mode)
+    // when no audioContext is given, e.g. the WASM engine mode)
     const { decoderResult } = await decodeFlacWithFallback(arrayBuffer, audioContext);
     return decoderResult;
   } else {
     // Use native AudioContext.decodeAudioData for MP3 and other formats
     if (!audioContext) {
-      throw new Error('Cannot decode MP3 or other non-FLAC formats in SDL mode. Please use Web Audio or AudioWorklet playback mode, or convert your audio to FLAC format.');
+      throw new Error('Cannot decode MP3 or other non-FLAC formats in WASM engine mode. Please use Web Audio or AudioWorklet playback mode, or convert your audio to FLAC format.');
     }
     const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-    
     // Convert AudioBuffer to FlacDecoderResult format for consistency
     return convertAudioBufferToDecoderResult(audioBuffer);
   }

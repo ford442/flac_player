@@ -2,10 +2,9 @@
 // (public/dsp-chain.{js,wasm}, built by scripts/build-dsp-wasm.sh), plus the
 // src/sdl/dsp_fft.h spectrum for main-thread analysis (src/audio/wasmFft.ts).
 //
-// Same object code as the SDL speaker path: ReplayGain -> limiter -> volume ->
-// EQ. No SDL, no pthread; the worklet is the only thread that touches state, so
-// the atomics in DspParams are uncontended. The setters keep the SDL export
-// names (set_eq_band / set_replaygain) so JS pushes DEFAULT_EQ_BANDS the same way.
+// ReplayGain -> limiter -> volume -> EQ for every backend (the `sdl` engine
+// plays into the same graph since #268). No pthread; the worklet is the only
+// thread that touches state, so the atomics in DspParams are uncontended.
 
 #include <emscripten/emscripten.h>
 #include "../sdl/dsp_chain.h"

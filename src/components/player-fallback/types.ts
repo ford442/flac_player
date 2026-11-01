@@ -9,7 +9,7 @@ export const OUTPUT_MODE_LABELS: Readonly<Record<AudioOutputMode, string>> = {
   streaming: 'Streaming (recommended)',
   worklet: 'AudioWorklet (buffered)',
   'web-audio': 'Web Audio (buffered)',
-  sdl: 'SDL3',
+  sdl: 'WASM engine',
 };
 
 export type ViewTab = 'library' | 'now-playing' | 'queue' | 'playlists' | 'generate' | 'convert' | 'settings';

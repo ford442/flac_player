@@ -23,7 +23,7 @@ export interface AudioOutputControls {
   onRevealDevices?: () => void;
   onSelectOutputDevice: (deviceId?: string, label?: string) => Promise<void>;
   info: AudioOutputInfo | null;
-  /** SDL owns the device; the Web Audio sink does not apply. */
+  /** The WASM engine output mode is selected. */
   externalPlayback: boolean;
   /** AudioContext renderSizeHint (callback quantum). Omitted → row hidden. */
   renderSize?: {
@@ -39,7 +39,7 @@ function formatMs(seconds: number | null): string {
 }
 
 function formatDspEngine({ info, externalPlayback }: AudioOutputControls): string {
-  if (externalPlayback) return 'SDL WASM';
+  if (externalPlayback) return 'WASM engine';
   if (!info) return '—';
   return info.dspEngine === 'wasm' ? 'Worklet WASM' : 'Web Audio nodes';
 }
@@ -247,7 +247,7 @@ export const EQPanel: React.FC<EQPanelProps> = ({
         )}
         <p className="text-xs text-gray-400 mt-2">
           Applies before the master volume fader. Gain is clamped to ±12 dB.
-          SDL3 applies EQ and gain in WASM on the speaker path; crossfade overlap may briefly mismatch levels.
+          The WASM engine uses the shared speaker DSP; crossfade overlap may briefly mismatch levels.
         </p>
       </div>
 
@@ -301,8 +301,8 @@ export const EQPanel: React.FC<EQPanelProps> = ({
         )}
         <p className="text-xs text-gray-400 mt-2">
           Recreates the shared AudioContext. Same-rate albums stay gapless; a rate, latency or
-          render-quantum change may produce a brief audible gap. SDL3 output ignores these and the
-          output device below (Emscripten opens the default device).
+          render-quantum change may produce a brief audible gap. The WASM engine uses this shared
+          AudioContext and output device too.
         </p>
         {audioOutput && (
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1 mt-3 text-xs">
@@ -398,7 +398,7 @@ export const EQPanel: React.FC<EQPanelProps> = ({
           )}
           {audioOutput.externalPlayback && (
             <p className="text-xs text-gray-400 mt-2">
-              SDL3 opens its own device; this choice applies to streaming, Web Audio, and worklet.
+              This output device also applies to the WASM engine.
             </p>
           )}
         </div>

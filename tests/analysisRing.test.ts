@@ -5,7 +5,6 @@ import {
   ANALYSIS_RING_GENERATION,
   ANALYSIS_RING_HEADER_BYTES,
   ANALYSIS_RING_WRITE_POS,
-  AnalysisRingReader,
   createAnalysisRingBuffer,
   getAnalysisTap,
   readerForRingBuffer,
@@ -13,10 +12,9 @@ import {
 } from '../src/audio/analysisRing';
 import type { DspChainOptions } from '../src/audio/worklets/dspChainMessages';
 
-// The analysis ring's JS writer lives inline in dspChainProcessor.js (a static
+// The analysis ring's writer lives inline in dspChainProcessor.js (a static
 // worklet module). Load that file into a minimal AudioWorkletGlobalScope and
-// read what it writes back through AnalysisRingReader — the same reader that
-// consumes SDL's analysis_ring.h out of the SDL module's shared memory.
+// read what it writes back through AnalysisRingReader.
 
 const RATE = 48000;
 const wasmBytes = readFileSync(path.resolve(__dirname, '../public/dsp-chain.wasm'));
@@ -42,7 +40,6 @@ beforeAll(async () => {
 });
 
 afterEach(() => {
-  setAnalysisTap('sdl', null);
   setAnalysisTap('dsp-chain', null);
 });
 
@@ -170,15 +167,12 @@ describe('analysis ring (dsp-chain worklet writer → AnalysisRingReader)', () =
     expect(() => quantum(p, 0)).not.toThrow();
   });
 
-  it('prefers the SDL tap while SDL owns output', () => {
+  it('publishes the dsp-chain ring as the tap until it is cleared', () => {
     const dsp = readerForRingBuffer(ringBuffer(1024));
-    const sdl = new AnalysisRingReader(ringBuffer(1024), 0, ANALYSIS_RING_HEADER_BYTES);
     expect(getAnalysisTap()).toBeNull();
     setAnalysisTap('dsp-chain', dsp);
     expect(getAnalysisTap()).toEqual({ source: 'dsp-chain', reader: dsp });
-    setAnalysisTap('sdl', sdl);
-    expect(getAnalysisTap()).toEqual({ source: 'sdl', reader: sdl });
-    setAnalysisTap('sdl', null);
-    expect(getAnalysisTap()?.source).toBe('dsp-chain');
+    setAnalysisTap('dsp-chain', null);
+    expect(getAnalysisTap()).toBeNull();
   });
 });

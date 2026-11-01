@@ -138,6 +138,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
 
   getCapabilities(): AudioBackendCapabilities {
     return {
+      playable: this.workletSupported,
       // Hi-fi streams restart the decoder at the target frame (hifiStreamPipeline.ts).
       seek: true,
       // Varispeed in the processor (tempo + pitch, like SDL); honest when AudioWorklet is missing.
@@ -155,6 +156,11 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   }
 
   private async ensureWorkletGraph(sampleRate?: number, channels?: number): Promise<AudioContext> {
+    if (!this.workletSupported) {
+      this.workletUnavailable = true;
+      this.notifyStateChange();
+      throw new Error('The Worklet output needs AudioWorklet (a secure context). Switch to Streaming or Web Audio output.');
+    }
     await this.contextManager.ensureForTrack({ sampleRate, channels });
     const ctx = this.contextManager.getContext();
     if (this.audioContext === ctx && this.gainNode) return ctx;
@@ -363,6 +369,10 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   }
 
   async loadAudio(arrayBuffer: ArrayBuffer, filename?: string): Promise<void> {
+    if (!this.workletSupported) {
+      this.workletUnavailable = true;
+      throw new Error('The Worklet output needs AudioWorklet (a secure context). Switch to Streaming or Web Audio output.');
+    }
     await ensureContextForBuffer(this.contextManager, arrayBuffer);
     const audioContext = await this.ensureWorkletGraph();
     if (!audioContext) throw new Error('AudioWorklet context failed to initialize');
@@ -430,6 +440,10 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       onProgress?: (loaded: number, total: number | null) => void;
     } = {}
   ): Promise<void> {
+    if (!this.workletSupported) {
+      this.workletUnavailable = true;
+      throw new Error('The Worklet output needs AudioWorklet (a secure context). Switch to Streaming or Web Audio output.');
+    }
     // Set before any await: a preloadNext() racing this load goes to the session.
     this.playbackPath = describePlaybackPath('hifi-stream');
     this.adoptPreloadForStream(url);

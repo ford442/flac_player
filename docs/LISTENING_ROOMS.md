@@ -1,6 +1,6 @@
 # Synced Listening Rooms
 
-**Status:** Implemented (MVP) — prototype server in `server/app.py` / `server/rooms.py`; production bridge port pending  
+**Status:** Implemented (MVP) — prototype server in `server/app.py` / `server/rooms.py`; production bridge port pending
 **Tracking:** [#209](https://github.com/ford442/flac_player/issues/209) (design closed as #197)  
 **Last updated:** October 2026
 
