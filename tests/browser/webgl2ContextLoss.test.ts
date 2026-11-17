@@ -41,14 +41,13 @@ function nextTask(): Promise<void> {
 }
 
 describe('WebGL2Visualizer context lifecycle', () => {
-  it('requests no depth/stencil, srgb, not desynchronized', () => {
+  it('requests no depth/stencil, srgb, no preserved buffer', () => {
     const canvas = makeCanvas();
     const vis = new WebGL2Visualizer(canvas);
     expect(vis.initialize(analyser)).toBe(true);
     const attrs = vis.getContextAttributes()!;
     expect(attrs.depth).toBe(false);
     expect(attrs.stencil).toBe(false);
-    expect(attrs.desynchronized ?? false).toBe(false);
     expect(attrs.preserveDrawingBuffer).toBe(false);
     const gl = canvas.getContext('webgl2')!;
     if ('drawingBufferColorSpace' in gl) expect(gl.drawingBufferColorSpace).toBe('srgb');

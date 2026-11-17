@@ -1,3 +1,4 @@
+import { buildAudioContextOptions, openAudioContext } from './contextContract';
 import { EQChain, DEFAULT_EQ_BANDS } from './EQChain';
 import {
   DSP_MAX_CHANNELS,
@@ -18,7 +19,6 @@ import {
   isRenderSizeHintSupported,
   isNativeRateRequestedByUrl,
   isSampleRateAccepted,
-  relaxContextOptions,
   renderSizeModeToHint,
   shouldRecreateContext,
   type AudioContextLatencyHint,
@@ -523,20 +523,17 @@ export class AudioContextManager {
   }
 
   private buildGraph(sampleRate: number | undefined): AudioContext {
-    const options: AudioContextOptionsWithSink = {
-      latencyHint: this.policy.latencyHint,
-    };
-    if (sampleRate !== undefined) {
-      options.sampleRate = sampleRate;
-    }
+    let sinkId: AudioContextOptionsWithSink['sinkId'];
     if (isAudioContextSinkSupported()) {
-      if (this.externalPlaybackActive) options.sinkId = SILENT_SINK;
-      else if (this.sinkId) options.sinkId = this.sinkId;
+      if (this.externalPlaybackActive) sinkId = SILENT_SINK;
+      else if (this.sinkId) sinkId = this.sinkId;
     }
-    const renderSizeHint = this.requestedRenderSizeHint();
-    if (renderSizeHint !== undefined) {
-      options.renderSizeHint = renderSizeHint;
-    }
+    const options = buildAudioContextOptions({
+      latencyHint: this.policy.latencyHint,
+      sampleRate,
+      sinkId,
+      renderSizeHint: this.requestedRenderSizeHint(),
+    });
 
     const { context, options: applied } = this.constructContext(options);
     this.context = context;
@@ -641,30 +638,22 @@ export class AudioContextManager {
   private constructContext(
     options: AudioContextOptionsWithSink
   ): { context: AudioContext; options: AudioContextOptionsWithSink } {
-    let attempt = options;
-    for (;;) {
-      try {
-        return { context: new AudioContext(attempt), options: attempt };
-      } catch (err) {
-        const next = relaxContextOptions(attempt);
-        if (!next) throw err;
-        console.warn('[AudioContextManager] AudioContext options rejected; retrying', {
-          rejected: attempt,
-          retry: next,
-          err,
-        });
-        if (typeof attempt.latencyHint === 'number' && next.latencyHint !== attempt.latencyHint) {
-          this.policy.latencyHint = next.latencyHint ?? 'interactive';
-        }
-        if (attempt.renderSizeHint !== undefined && next.renderSizeHint === undefined) {
-          this.renderSizeHintRejected = true;
-        }
-        if (attempt.sampleRate !== undefined && next.sampleRate === undefined) {
-          this.rejectedSampleRates.add(attempt.sampleRate);
-        }
-        attempt = next;
+    return openAudioContext(options, (rejected, retry, err) => {
+      console.warn('[AudioContextManager] AudioContext options rejected; retrying', {
+        rejected,
+        retry,
+        err,
+      });
+      if (typeof rejected.latencyHint === 'number' && retry.latencyHint !== rejected.latencyHint) {
+        this.policy.latencyHint = retry.latencyHint ?? 'interactive';
       }
-    }
+      if (rejected.renderSizeHint !== undefined && retry.renderSizeHint === undefined) {
+        this.renderSizeHintRejected = true;
+      }
+      if (rejected.sampleRate !== undefined && retry.sampleRate === undefined) {
+        this.rejectedSampleRates.add(rejected.sampleRate);
+      }
+    });
   }
 
   private currentContextSinkId(ctx: SinkAudioContext): string {
