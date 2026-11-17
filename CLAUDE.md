@@ -71,6 +71,8 @@ sync. Writers only memcpy — FFT / analysis runs on reader threads (`src/sdl/ds
 The engine calls `unlock()` synchronously from user play commands and reports
 `setPlaybackActive(playing|loading)`; the manager resumes on gesture / visibility / `statechange`
 (incl. iOS `interrupted`) and suspends after 10 s idle. Never open throwaway contexts.
+The output contract (AudioContext / WebGPU device / WebGL2 options and who may construct them) is the
+comment block in `src/audio/contextContract.ts`; `openAudioContext` there is the only `new AudioContext`.
 
 **Buffered (web-audio, worklet, SDL):**
 ```

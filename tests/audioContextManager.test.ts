@@ -45,6 +45,26 @@ describe('AudioContextManager native-rate policy (opt-in)', () => {
     expect(manager.getContext().sampleRate).toBe(48000);
   });
 
+  it('closes the 96 kHz context when a 44.1 kHz track rebuilds the graph', async () => {
+    restore = installRecordingAudioContext();
+    allowAllSampleRates();
+    const manager = nativeRateManager();
+    await manager.ensureForTrack({ sampleRate: 96000 });
+    await manager.ensureForTrack({ sampleRate: 44100 });
+    const instances = RecordingAudioContext.instances;
+    expect(instances.map((c) => c.sampleRate)).toEqual([96000, 44100]);
+    expect(instances.filter((c) => c.state !== 'closed')).toEqual([manager.getContext()]);
+  });
+
+  it('opens one context for 96 kHz then 44.1 kHz under the default device-rate policy', async () => {
+    restore = installRecordingAudioContext();
+    const manager = new AudioContextManager();
+    await manager.ensureForTrack({ sampleRate: 96000 });
+    await manager.ensureForTrack({ sampleRate: 44100 });
+    expect(RecordingAudioContext.instances).toHaveLength(1);
+    expect(RecordingAudioContext.instances[0].constructorOptions.sampleRate).toBeUndefined();
+  });
+
   it('recreates on rate mismatch and restores volume, EQ, ReplayGain, and mute', async () => {
     restore = installRecordingAudioContext();
     allowAllSampleRates();

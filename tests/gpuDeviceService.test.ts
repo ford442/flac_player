@@ -118,6 +118,33 @@ describe('GpuDeviceService (#259 W1/W2)', () => {
     expect(dev.destroy).not.toHaveBeenCalled();
   });
 
+  it("forwards a 'unknown' device loss to the recovery hook but not our own 'destroyed'", async () => {
+    const boot = async (dev: ReturnType<typeof fakeDevice>) => {
+      const service = new GpuDeviceService({ gpu: () => fakeGpu({ core: fakeAdapter(() => dev.device) }), lendToChores: false });
+      const el = canvas();
+      const result = await probeWebGPU(el, { deviceService: service, publish: false });
+      if (!result.ok) throw new Error('probe failed');
+      const visualizer = new WebGPUVisualizer(el);
+      const onLost = vi.fn();
+      visualizer.setOnDeviceLost(onLost);
+      await visualizer.initialize(null, result);
+      return onLost;
+    };
+
+    const reset = fakeDevice();
+    const onReset = await boot(reset);
+    reset.lose('unknown');
+    await flush();
+    expect(onReset).toHaveBeenCalledOnce();
+    expect(onReset).toHaveBeenCalledWith('unknown');
+
+    const ours = fakeDevice();
+    const onOurs = await boot(ours);
+    ours.lose('destroyed');
+    await flush();
+    expect(onOurs).not.toHaveBeenCalled();
+  });
+
   it('removes its window listeners on destroy', async () => {
     const add = vi.spyOn(window, 'addEventListener');
     const remove = vi.spyOn(window, 'removeEventListener');

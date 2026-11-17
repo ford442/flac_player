@@ -5,7 +5,7 @@ import { FULLSCREEN_VERTEX, GUI_FRAGMENT, FLAT_FRAGMENT } from './shaders/wavefo
 import { createDebugConfig, debugModeToUniform } from './debugModes';
 import { downsampleAudioData } from '../visualSync';
 import { DEFAULT_WAVEFORM_UNIFORMS } from '../waveformContract';
-import { buildWebGL2ContextAttributes } from '../webgpu/canvasConfig';
+import { buildWebGL2ContextAttributes, getWebGL2Context } from '../webgpu/canvasConfig';
 
 type GLPass = {
   program: WebGLProgram;
@@ -92,8 +92,7 @@ export class WebGL2Visualizer {
     this.destroy();
     // antialias stays false: the 3D cube is WebGPU-only, so every GL pass is the
     // fullscreen ShaderGUI shader, which does its own glow.
-    const requested = buildWebGL2ContextAttributes();
-    const gl = this.canvas.getContext('webgl2', requested);
+    const gl = getWebGL2Context(this.canvas);
     if (!gl) return false;
 
     this.gl = gl;

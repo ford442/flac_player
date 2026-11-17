@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   buildCanvasConfiguration,
   buildDeviceDescriptor,
   buildWebGL2ContextAttributes,
+  getWebGL2Context,
   readGlStrict,
   VISUALIZER_DEVICE_LABEL,
   CANVAS_RENDER_ATTACHMENT,
@@ -20,13 +21,14 @@ import {
 import { buildWaveformWGSL, waveformWGSL } from '../src/shaders/waveform';
 
 describe('webgl2 context attributes', () => {
-  it('defaults: no MSAA, no depth/stencil, no preserved buffer, not desynchronized, lenient caveat', () => {
+  it('defaults: no MSAA, no depth/stencil, no preserved buffer, desynchronized, lenient caveat', () => {
     expect(buildWebGL2ContextAttributes({ search: '' })).toEqual({
       alpha: false,
       depth: false,
       stencil: false,
       premultipliedAlpha: false,
       antialias: false,
+      desynchronized: true,
       powerPreference: 'high-performance',
       preserveDrawingBuffer: false,
       failIfMajorPerformanceCaveat: false,
@@ -40,6 +42,16 @@ describe('webgl2 context attributes', () => {
     expect(attrs.failIfMajorPerformanceCaveat).toBe(true);
     expect(readGlStrict('?gl=strict')).toBe(true);
     expect(readGlStrict('?gl=loose')).toBe(false);
+  });
+
+  it('retries getContext without desynchronized when it is rejected', () => {
+    const gl = {} as WebGL2RenderingContext;
+    const getContext = vi.fn((_kind: string, attrs: WebGLContextAttributes) =>
+      (attrs.desynchronized ? null : gl));
+    const canvas = { getContext } as unknown as HTMLCanvasElement;
+    expect(getWebGL2Context(canvas, buildWebGL2ContextAttributes({ search: '' }))).toBe(gl);
+    expect(getContext).toHaveBeenCalledTimes(2);
+    expect(getContext.mock.calls[1][1]).toMatchObject({ desynchronized: false, powerPreference: 'high-performance' });
   });
 
   it('antialias is opt-in per pass', () => {

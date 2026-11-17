@@ -4,7 +4,7 @@ import {
   probeWebGPU,
   type BrowserIdentity,
 } from '../src/visuals/webgpuProbe';
-import { CANVAS_RENDER_ATTACHMENT } from '../src/visuals/webgpu/canvasConfig';
+import { CANVAS_RENDER_ATTACHMENT, REQUIRED_DEVICE_LIMITS } from '../src/visuals/webgpu/canvasConfig';
 
 const chrome: BrowserIdentity = {
   brand: 'Google Chrome',
@@ -31,12 +31,14 @@ function featureSet(names: string[] = []) {
 function fakeAdapter(
   extras: {
     features?: string[];
+    limits?: Record<string, number>;
     requestDevice?: GPUAdapter['requestDevice'];
   } = {},
 ): GPUAdapter {
   return {
     info: adapterInfo(),
     features: featureSet(extras.features ?? []),
+    limits: extras.limits,
     requestDevice: extras.requestDevice ?? vi.fn(async () => ({ destroy: vi.fn() })),
   } as unknown as GPUAdapter;
 }
@@ -176,6 +178,44 @@ describe('WebGPU boot probe', () => {
       powerPreference: 'high-performance',
       requestedFeatures: ['timestamp-query'],
     });
+  });
+
+  it('requests the chores limits the adapter meets and drops the ones it cannot', async () => {
+    const requestDevice = vi.fn(async () => ({ destroy: vi.fn() }) as unknown as GPUDevice);
+    const adapter = fakeAdapter({
+      limits: {
+        maxBufferSize: 256 * 1024 * 1024,
+        // Below what the reduce upload needs: must be dropped, not fail requestDevice.
+        maxStorageBufferBindingSize: 1024,
+        maxComputeInvocationsPerWorkgroup: 256,
+      },
+      requestDevice,
+    });
+    const context = { configure: vi.fn() } as unknown as GPUCanvasContext;
+
+    const result = await probeWebGPU(
+      { getContext: vi.fn(() => context) } as unknown as HTMLCanvasElement,
+      { gpu: fakeGpu(adapter), browser: chrome },
+    );
+
+    expect(result.ok).toBe(true);
+    expect(requestDevice).toHaveBeenCalledWith({
+      label: 'flac-player-visualizer',
+      requiredLimits: {
+        maxBufferSize: REQUIRED_DEVICE_LIMITS.maxBufferSize,
+        maxComputeInvocationsPerWorkgroup: REQUIRED_DEVICE_LIMITS.maxComputeInvocationsPerWorkgroup,
+      },
+    });
+  });
+
+  it('configures the canvas exactly once during boot', async () => {
+    const context = { configure: vi.fn() } as unknown as GPUCanvasContext;
+    const result = await probeWebGPU(
+      { getContext: vi.fn(() => context) } as unknown as HTMLCanvasElement,
+      { gpu: fakeGpu(fakeAdapter()), browser: chrome },
+    );
+    expect(result.ok).toBe(true);
+    expect(context.configure).toHaveBeenCalledTimes(1);
   });
 
   it('honors ?gpu=low for adapter power preference', async () => {

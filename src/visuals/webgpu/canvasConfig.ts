@@ -1,3 +1,10 @@
+import {
+  GPU_CHORES_WORKGROUP_SIZE,
+  GPU_FFT_WORKGROUP_SIZE,
+  GPU_MAX_UPLOAD_SAMPLES,
+  MAX_FFT_SIZE,
+} from '../../gpu-chores/constants';
+
 /**
  * Optional features requested only when the adapter already exposes them.
  * - timestamp-query: ShaderGUI pass timings (`gpuTimeMs` in the 🎛 HUD).
@@ -38,14 +45,52 @@ export function selectDeviceFeatures(adapter: { features: FeatureSet }): GPUFeat
 export const VISUALIZER_DEVICE_LABEL = 'flac-player-visualizer';
 
 /**
- * requiredLimits stay omitted: fft_spectrum (N ≤ MAX_FFT_SIZE) fits the WebGPU
- * default limits, and requiring more would drop Intel iGPU adapters.
+ * Limits the gpu-chores passes actually bind, sized from their own caps:
+ * - reduce uploads ≤ GPU_MAX_UPLOAD_SAMPLES f32 (one storage binding);
+ * - FFT work buffers are ≤ MAX_FFT_SIZE complex f32 per window;
+ * - both kernels use 64-wide workgroups.
+ * These sit at or under the WebGPU defaults today; requesting them makes the
+ * dependency explicit, and {@link selectDeviceLimits} drops any the adapter cannot
+ * meet instead of failing requestDevice (Intel iGPUs / compat adapters).
  */
-export function buildDeviceDescriptor(adapter: { features: FeatureSet }): GPUDeviceDescriptor {
+export const GPU_CHORES_STORAGE_BYTES = Math.max(GPU_MAX_UPLOAD_SAMPLES * 4, MAX_FFT_SIZE * 8);
+
+export const REQUIRED_DEVICE_LIMITS = {
+  maxBufferSize: GPU_CHORES_STORAGE_BYTES,
+  maxStorageBufferBindingSize: GPU_CHORES_STORAGE_BYTES,
+  maxComputeInvocationsPerWorkgroup: Math.max(GPU_CHORES_WORKGROUP_SIZE, GPU_FFT_WORKGROUP_SIZE),
+} as const;
+
+export type RequiredDeviceLimit = keyof typeof REQUIRED_DEVICE_LIMITS;
+
+export type LimitSet = Partial<Record<RequiredDeviceLimit, number>>;
+
+/**
+ * Intersect REQUIRED_DEVICE_LIMITS with adapter.limits, the same way features are:
+ * a limit the adapter does not report, or reports below what we need, is left out
+ * (the device then gets the default and the chore falls back to Worker/CPU).
+ */
+export function selectDeviceLimits(adapter: { limits?: LimitSet }): Record<string, number> {
+  const out: Record<string, number> = {};
+  const limits = adapter.limits;
+  if (!limits) return out;
+  for (const name of Object.keys(REQUIRED_DEVICE_LIMITS) as RequiredDeviceLimit[]) {
+    const supported = limits[name];
+    const wanted = REQUIRED_DEVICE_LIMITS[name];
+    if (typeof supported === 'number' && supported >= wanted) out[name] = wanted;
+  }
+  return out;
+}
+
+export function buildDeviceDescriptor(
+  adapter: { features: FeatureSet; limits?: LimitSet },
+): GPUDeviceDescriptor {
+  const descriptor: GPUDeviceDescriptor = { label: VISUALIZER_DEVICE_LABEL };
   const requiredFeatures = selectDeviceFeatures(adapter);
-  return requiredFeatures.length > 0
-    ? { label: VISUALIZER_DEVICE_LABEL, requiredFeatures }
-    : { label: VISUALIZER_DEVICE_LABEL };
+  if (requiredFeatures.length > 0) descriptor.requiredFeatures = requiredFeatures;
+  const requiredLimits = selectDeviceLimits(adapter);
+  if (Object.keys(requiredLimits).length > 0) descriptor.requiredLimits = requiredLimits;
+  return descriptor;
 }
 
 export interface WebGL2AttributeOptions {
@@ -62,16 +107,19 @@ export function readGlStrict(
   return new URLSearchParams(query).get('gl') === 'strict';
 }
 
-/**
- * WebGL2 context attributes for the opt-in fallback. Mirrors the WebGPU
- * powerPreference (`?gpu=low`). No depth / stencil: every pass is a fullscreen
- * triangle with depth testing off. Not `desynchronized` (a low-latency inking
- * hint that tears), and no preserved buffer: debug readback re-renders and reads
- * inside the same task (WebGL2Visualizer.readPixels).
- */
 /** lib.dom omits `xrCompatible` (WebXR spec); browsers accept it on getContext. */
 export type WebGL2ContextAttributes = WebGLContextAttributes & { xrCompatible?: boolean };
 
+/**
+ * WebGL2 context attributes for the opt-in fallback. Mirrors the WebGPU
+ * powerPreference (`?gpu=low`). No depth / stencil / MSAA: every pass is a
+ * fullscreen triangle with depth testing off and its own glow. `desynchronized`
+ * skips a compositor frame on Chromium so the canvas tracks the audio clock
+ * ({@link getWebGL2Context} retries without it). No preserved buffer: debug
+ * readback re-renders and reads inside the same task (WebGL2Visualizer.readPixels).
+ * failIfMajorPerformanceCaveat stays false — the compat canvas may be slow — unless
+ * `?gl=strict`.
+ */
 export function buildWebGL2ContextAttributes(
   options: WebGL2AttributeOptions = {},
 ): WebGL2ContextAttributes {
@@ -82,11 +130,22 @@ export function buildWebGL2ContextAttributes(
     stencil: false,
     premultipliedAlpha: false,
     antialias: options.antialias ?? false,
+    desynchronized: true,
     powerPreference: readGpuPowerPreference(search),
     preserveDrawingBuffer: false,
     failIfMajorPerformanceCaveat: readGlStrict(search),
     xrCompatible: false,
   };
+}
+
+/** `getContext('webgl2', attrs)`, retried once without `desynchronized` when that is rejected. */
+export function getWebGL2Context(
+  canvas: HTMLCanvasElement,
+  attributes: WebGL2ContextAttributes = buildWebGL2ContextAttributes(),
+): WebGL2RenderingContext | null {
+  const gl = canvas.getContext('webgl2', attributes);
+  if (gl || !attributes.desynchronized) return gl;
+  return canvas.getContext('webgl2', { ...attributes, desynchronized: false });
 }
 
 export type CanvasToneMappingMode = 'standard' | 'extended';
