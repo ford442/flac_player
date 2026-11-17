@@ -8,6 +8,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
   sha256sum \
     scripts/build-wasm.sh \
     scripts/emsdk-version \
+    scripts/wasm-flags.sh \
     src/sdl/audio_engine.cpp \
     src/sdl/engine_state.h \
     src/sdl/pcm_scrub.h \

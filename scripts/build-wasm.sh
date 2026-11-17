@@ -10,10 +10,9 @@
 #   scripts/build-wasm.sh --debug      # -O0 -g ASSERTIONS SAFE_HEAP (combine with target)
 #   scripts/build-wasm.sh --debug --sdl3
 #
-# Emscripten is pinned (scripts/emsdk-version, docs/WASM_TOOLCHAIN.md). Keep
-# -flto off until a follow-up confirms public/sdl-audio.wasm is byte-stable
-# under the pin; add it in its own PR, never together with a pin bump.
-# Do not add --closure 1 (pthread + MODULARIZE glue).
+# Emscripten is pinned (scripts/emsdk-version, docs/WASM_TOOLCHAIN.md) and every
+# flag comes from scripts/wasm-flags.sh (profile `audio-callback`). -flto is a
+# follow-up in its own PR, never together with a pin bump. Do not add --closure 1.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -51,29 +50,17 @@ mkdir -p "$SDL_DIR/build" "$OUT_DIR"
 
 PROJECT_ROOT="$PROJECT_ROOT" source "$SCRIPT_DIR/emsdk-env.sh"
 
-# -pthread is what makes wasmMemory a SharedArrayBuffer: the sdl-engine worklet
-# reads the play ring, buffered PCM and transport words from it with Atomics.
-# No thread is ever started. 64 MiB floor: play ring (2 MiB) + pthread runtime;
-# ALLOW_MEMORY_GROWTH is on for buffered PCM. Without an explicit MAXIMUM_MEMORY,
-# Emscripten still sets Memory.maximum to 32768 pages (2 GiB) for pthreads+growth;
-# we lower that SAB max to 512 MiB. Do not raise to 1 GiB: files >= 32 MB
-# compressed stream through play_ring.h, and 512 MiB fail-closes pathological
-# full-buffer loads (create_audio_buffer returns null above 384 MiB of PCM).
-RELEASE_INITIAL_MEMORY=67108864   # 64 MiB
-DEBUG_INITIAL_MEMORY=33554432     # 32 MiB
-MAXIMUM_MEMORY=536870912          # 512 MiB
-
-if [[ "$DEBUG" -eq 1 ]]; then
-  OPT_FLAGS=(-O0 -g -s ASSERTIONS=1 -s SAFE_HEAP=1)
-  INITIAL_MEMORY="$DEBUG_INITIAL_MEMORY"
-  echo "WASM debug profile: -O0 -g ASSERTIONS=1 SAFE_HEAP=1 INITIAL_MEMORY=$INITIAL_MEMORY MAXIMUM_MEMORY=$MAXIMUM_MEMORY"
-else
-  # -msimd128: the template flags for every engine graph (dsp-chain.wasm needs
-  # them for dsp_chain.h / dsp_fft.h); harmless here.
-  OPT_FLAGS=(-O3 -DNDEBUG -msimd128)
-  INITIAL_MEMORY="$RELEASE_INITIAL_MEMORY"
-  echo "WASM release profile: -O3 -DNDEBUG -msimd128 INITIAL_MEMORY=$INITIAL_MEMORY MAXIMUM_MEMORY=$MAXIMUM_MEMORY"
-fi
+# Flags: the `audio-callback` profile (scripts/wasm-flags.sh). -pthread only makes
+# wasmMemory a SharedArrayBuffer: the sdl-engine worklet reads the play ring, buffered
+# PCM and transport words from it with Atomics; no thread is ever started. The 512 MiB
+# MAXIMUM_MEMORY also lowers the 2 GiB SAB maximum Emscripten would set for
+# pthreads+growth. Do not raise it to 1 GiB: files >= 32 MB compressed stream through
+# play_ring.h, and 512 MiB fail-closes pathological full-buffer loads
+# (create_audio_buffer returns null above 384 MiB of PCM).
+PROFILE_ARGS=()
+[[ "$DEBUG" -eq 1 ]] && PROFILE_ARGS+=(--debug)
+source "$SCRIPT_DIR/wasm-flags.sh"
+wasm_profile audio-callback ${PROFILE_ARGS[@]+"${PROFILE_ARGS[@]}"}
 
 # Exports (keep in sync with audio_engine.cpp EMSCRIPTEN_KEEPALIVE and the
 # SdlModule interface in Sdl3AudioPlayer.ts):
@@ -90,20 +77,12 @@ RUNTIME_EXPORTS='["ccall","cwrap","HEAPF32","HEAPU8","wasmMemory","getValue","se
 
 build_sdl3() {
   local out_js="$OUT_DIR/sdl-audio.js"
-  echo "Compiling audio_engine.cpp -> $out_js (INITIAL_MEMORY=$INITIAL_MEMORY MAXIMUM_MEMORY=$MAXIMUM_MEMORY)"
+  echo "Compiling audio_engine.cpp -> $out_js"
   em++ "$SDL_DIR/audio_engine.cpp" \
-    -std=c++17 \
-    -pthread \
-    -s WASM=1 \
+    "${WASM_FLAGS[@]}" \
     -s EXPORTED_FUNCTIONS="$ENGINE_EXPORTS" \
     -s EXPORTED_RUNTIME_METHODS="$RUNTIME_EXPORTS" \
-    -s ALLOW_MEMORY_GROWTH=1 \
-    -s INITIAL_MEMORY="$INITIAL_MEMORY" \
-    -s MAXIMUM_MEMORY="$MAXIMUM_MEMORY" \
-    -s MODULARIZE=1 \
     -s EXPORT_NAME="createSdlAudioModule" \
-    -s ENVIRONMENT="web,worker" \
-    "${OPT_FLAGS[@]}" \
     -o "$out_js"
   ls -lh "$OUT_DIR"/sdl-audio.* 2>/dev/null || true
 }

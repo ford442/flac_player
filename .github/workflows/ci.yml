@@ -94,6 +94,7 @@ jobs:
             toolchain:
               - 'scripts/emsdk-version'
               - 'scripts/emsdk-env.sh'
+              - 'scripts/wasm-flags.sh'
               - '.github/workflows/ci.yml'
             sdl:
               - 'src/sdl/**'
@@ -111,6 +112,7 @@ jobs:
               - 'scripts/build-dsp-wasm.sh'
               - 'scripts/dsp-source-hash.sh'
             projectm:
+              - 'scripts/wasm-flags.sh'
               - 'src/projectm/**'
               - 'scripts/build-projectm-wasm.sh'
               - 'scripts/projectm-source-hash.sh'
@@ -128,7 +130,8 @@ jobs:
           echo "sdl=$(any "$TOOLCHAIN" "$SDL")" >> "$GITHUB_OUTPUT"
           echo "resampler=$(any "$TOOLCHAIN" "$RESAMPLER")" >> "$GITHUB_OUTPUT"
           echo "dsp=$(any "$TOOLCHAIN" "$DSP")" >> "$GITHUB_OUTPUT"
-          # projectM is slow (libprojectM CMake build): only its own sources or a pin bump.
+          # projectM is slow (libprojectM CMake build): only its own sources, the flag
+          # profiles (its hash covers wasm-flags.sh) or a pin bump.
           echo "projectm=$(any "$PIN" "$PROJECTM")" >> "$GITHUB_OUTPUT"
           cat "$GITHUB_OUTPUT"
       - name: Install pinned Emscripten
