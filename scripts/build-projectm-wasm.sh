@@ -16,7 +16,7 @@
 # (pm_add_pcm); it is not on the SDL audio callback. Add it only with a
 # measured audio-tap benefit.
 #
-# Heap: MAXIMUM_MEMORY caps growth (see PM_MAXIMUM_MEMORY below). Without it
+# Heap: MAXIMUM_MEMORY caps growth (profile `projectm`). Without it
 # Emscripten allows growth to 2 GiB.
 #
 # Reproducibility: built with the emsdk pinned in scripts/emsdk-version. The
@@ -111,16 +111,12 @@ if [ ! -f "$LIB_PROJECTM" ]; then
   emmake make -C "$LIB_BUILD" -j"$(nproc)" projectM
 fi
 
-if [[ "$DEBUG" -eq 1 ]]; then
-  PM_OPT_FLAGS=(-O0 -g -s ASSERTIONS=1 -s SAFE_HEAP=1)
-  echo "projectM debug profile: -O0 -g ASSERTIONS=1 SAFE_HEAP=1"
-else
-  PM_OPT_FLAGS=(-O2)
-fi
-
-# FULL_ES3 already implies FULL_ES2 (emscripten tools/link.py), so FULL_ES2=1
-# is not passed separately. MIN_WEBGL_VERSION=2: no WebGL1 context path.
-PM_MAXIMUM_MEMORY=268435456   # 256 MiB
+# Flags: profile `projectm` (scripts/wasm-flags.sh): -O2, WebGL2 only, 256 MiB cap.
+# FULL_ES3 already implies FULL_ES2 (emscripten tools/link.py).
+PROFILE_ARGS=()
+[[ "$DEBUG" -eq 1 ]] && PROFILE_ARGS+=(--debug)
+source "$SCRIPT_DIR/wasm-flags.sh"
+wasm_profile projectm ${PROFILE_ARGS[@]+"${PROFILE_ARGS[@]}"}
 
 echo "Compiling projectm_host.cpp -> $OUT_DIR/projectm-host.js"
 # Link from $OUT_DIR with a relative -o so nothing checkout-specific lands in the glue.
@@ -131,18 +127,10 @@ em++ "$HOST_CPP" \
   -I"$BUILD_ROOT/src/src/api/include" \
   "$LIB_PROJECTM" \
   "$LIB_EVAL" \
-  -s NO_DISABLE_EXCEPTION_CATCHING \
-  -s MIN_WEBGL_VERSION=2 \
-  -s MAX_WEBGL_VERSION=2 \
-  -s FULL_ES3=1 \
-  -s ALLOW_MEMORY_GROWTH=1 \
-  -s MAXIMUM_MEMORY="$PM_MAXIMUM_MEMORY" \
-  -s MODULARIZE=1 \
+  "${WASM_FLAGS[@]}" \
   -s EXPORT_NAME="createProjectMModule" \
-  -s ENVIRONMENT=web \
   -s EXPORTED_FUNCTIONS='["_pm_init","_pm_resize","_pm_add_pcm","_pm_load_preset_data","_pm_set_preset_locked","_pm_set_beat_sensitivity","_pm_set_paused","_pm_destroy","_malloc","_free"]' \
   -s EXPORTED_RUNTIME_METHODS='["HEAPF32","HEAPU8","wasmMemory"]' \
-  "${PM_OPT_FLAGS[@]}" \
   -o projectm-host.js
 cd "$PROJECT_ROOT"
 

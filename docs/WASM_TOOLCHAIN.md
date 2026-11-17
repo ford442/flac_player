@@ -52,12 +52,25 @@ fails until step 3 is done. Never bump the pin in the same PR as `-flto`.
 
 ## Compile commands
 
-| Graph | Script | Output | Optimization | Heap |
+Every flag lives in **`scripts/wasm-flags.sh`** as a named profile; each build script
+sources it after `emsdk-env.sh` and calls `wasm_profile <name>`, which prints one
+line (`emsdk 6.0.11 profile audio-callback: ...`), so all four builds log the same
+emsdk release. Export lists, sources and output names stay in the build scripts,
+next to the C ABI they mirror (`audio_engine.cpp` `EMSCRIPTEN_KEEPALIVE`,
+`dsp_wasm_entry.cpp`). Every source hash covers `wasm-flags.sh`: changing a flag
+means rebuilding the graphs and committing their artifacts and `*.sha256`.
+
+| Profile | Script | Output | Codegen | Heap |
 |---|---|---|---|---|
-| `sdl` engine (the template) | `scripts/build-wasm.sh` | `public/sdl-audio.*` | `-O3 -DNDEBUG -msimd128 -pthread` | 64 MiB initial, growth, **512 MiB max** |
-| Speaker DSP + FFT golden | `scripts/build-dsp-wasm.sh` | `public/dsp-chain.*` | `-O3 -DNDEBUG -msimd128` | 1 MiB fixed (`STANDALONE_WASM`, no growth) |
-| SpeexDSP resampler | `scripts/build-resampler-wasm.sh` | `public/speex-resampler.*` | `-O3 -DNDEBUG` | 4 MiB initial, growth, **32 MiB max** |
-| projectM host | `scripts/build-projectm-wasm.sh` | `public/projectm/projectm-host.*` | `-O2` | 16 MiB initial (default), growth, **256 MiB max** |
+| `audio-callback` (the `sdl` engine) | `scripts/build-wasm.sh` | `public/sdl-audio.*` | `-O3 -DNDEBUG -msimd128 -std=c++17 -fno-exceptions -fno-rtti -pthread` | 64 MiB initial, growth, **512 MiB max**, 64 KiB stack |
+| `standalone-dsp` (speaker DSP + FFT) | `scripts/build-dsp-wasm.sh`, `scripts/test-dsp-golden.sh` | `public/dsp-chain.*` | `audio-callback` codegen without `-pthread`, plus `-fno-threadsafe-statics` | 1 MiB fixed (`STANDALONE_WASM`, no growth), 64 KiB stack |
+| `resampler` (SpeexDSP, C) | `scripts/build-resampler-wasm.sh` | `public/speex-resampler.*` | `-O3 -DNDEBUG -msimd128` | 4 MiB initial, growth, **16 MiB max** |
+| `projectm` (video host) | `scripts/build-projectm-wasm.sh` | `public/projectm/projectm-host.*` | `-O2` | 16 MiB initial (default), growth, **256 MiB max** |
+
+`npm run test:dsp-golden` compiles `tests/native/*_golden.cpp` with the
+`standalone-dsp` codegen flags (`WASM_CODEGEN_FLAGS`), so the golden checks the
+code `dsp-chain.wasm` ships with, not a separate `-O2` build. `dsp_chain.h` is
+compiled only by `standalone-dsp` and `audio-callback`; do not add a third build.
 
 Why every growable heap has a `MAXIMUM_MEMORY`: without one, Emscripten lets
 growth reach 2 GiB (and with `-pthread` reserves a 2 GiB SharedArrayBuffer
@@ -78,7 +91,7 @@ footgun until #268.
   `.build/native` for clangd).
 - **Resampler.** `src/audio/resampler.ts` stages at most 16384 frames
   (512 KiB at 8 ch) each way per `rs_process` slice, so a whole buffered track
-  resamples inside the 32 MiB cap (`tests/resampler.test.ts` resamples 42 MB of
+  resamples inside the 16 MiB cap (`tests/resampler.test.ts` resamples 42 MB of
   8-channel input with the capped module).
 - **projectM.** `USE_SDL=2` video host, WebGL2, `FULL_ES2` only: `FULL_ES3`
   implies `FULL_ES2` and only adds emulation for `glMapBufferRange`,

@@ -7,10 +7,11 @@
 # -> EQ) and src/sdl/dsp_fft.h (the `fft_spectrum` CPU golden, used on the main
 # thread by src/audio/wasmFft.ts) through the thin C ABI in
 # src/dsp/dsp_wasm_entry.cpp. No SDL, no
-# pthread: the same object code SDL runs in its audio callback, here run by
-# src/audio/worklets/dspChainProcessor.js. STANDALONE_WASM keeps export names
-# unminified and the import object empty, so the worklet instantiates the raw
-# .wasm synchronously; the MODULARIZE glue is for main-thread / tooling use.
+# pthread: the same object code the engine graph can compile, here run by
+# src/audio/worklets/dspChainProcessor.js. Flags: profile `standalone-dsp`
+# (scripts/wasm-flags.sh). STANDALONE_WASM keeps export names unminified and the
+# import object empty, so the worklet instantiates the raw .wasm synchronously;
+# the MODULARIZE glue is for main-thread / tooling use.
 # src/audio/DspChainNode.ts falls back to EQChain / ReplayGainNode when this
 # module fails to load.
 set -euo pipefail
@@ -21,6 +22,9 @@ OUT_DIR="$PROJECT_ROOT/public"
 
 PROJECT_ROOT="$PROJECT_ROOT" source "$SCRIPT_DIR/emsdk-env.sh"
 
+source "$SCRIPT_DIR/wasm-flags.sh"
+wasm_profile standalone-dsp
+
 mkdir -p "$OUT_DIR"
 
 EXPORTS='["_scratch_ptr","_scratch_floats","_set_eq_band","_set_replaygain","_request_reset","_process","_fft_out_ptr","_fft_lines_ptr","_fft_spectrum"]'
@@ -28,17 +32,9 @@ EXPORTS='["_scratch_ptr","_scratch_floats","_set_eq_band","_set_replaygain","_re
 echo "Compiling dsp_chain.h -> $OUT_DIR/dsp-chain.js"
 em++ \
   "$PROJECT_ROOT/src/dsp/dsp_wasm_entry.cpp" \
-  -std=c++17 \
-  -O3 -DNDEBUG -msimd128 \
-  -fno-exceptions -fno-rtti -fno-threadsafe-statics \
-  -s STANDALONE_WASM=1 --no-entry \
+  "${WASM_FLAGS[@]}" \
   -s EXPORTED_FUNCTIONS="$EXPORTS" \
-  -s INITIAL_MEMORY=1048576 \
-  -s ALLOW_MEMORY_GROWTH=0 \
-  -s STACK_SIZE=65536 \
-  -s MODULARIZE=1 \
   -s EXPORT_NAME="createDspChainModule" \
-  -s ENVIRONMENT="web,worker" \
   -o "$OUT_DIR/dsp-chain.js"
 ls -lh "$OUT_DIR"/dsp-chain.*
 

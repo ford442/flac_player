@@ -182,6 +182,8 @@ npm run build:projectm     # optional Milkdrop host
 npm run verify:wasm        # CI artifact check
 ```
 
+Flags come from named profiles in `scripts/wasm-flags.sh` (`audio-callback`, `standalone-dsp`,
+`resampler`, `projectm`); a new C++ library gets a profile there, never an inline `em++` line.
 All four are built with the emsdk in `scripts/emsdk-version` (the build refuses any other
 emcc; if `$EMSDK` points at another release, `export EMSDK=$PWD/emsdk`). SDL3 and
 `dsp-chain` both compile `src/sdl/dsp_chain.h` — rebuild both when it changes. Never merge

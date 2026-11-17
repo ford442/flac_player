@@ -66,13 +66,10 @@ typedef uint32_t spx_uint32_t;
 #endif
 H
 
-if [[ "$DEBUG" -eq 1 ]]; then
-  OPT_FLAGS=(-O0 -g -s ASSERTIONS=1 -s SAFE_HEAP=1)
-  echo "Resampler debug profile: -O0 -g ASSERTIONS=1 SAFE_HEAP=1 (scalar)"
-else
-  OPT_FLAGS=(-O3 -DNDEBUG -msimd128)
-  echo "Resampler release profile: -O3 -DNDEBUG -msimd128"
-fi
+PROFILE_ARGS=()
+[[ "$DEBUG" -eq 1 ]] && PROFILE_ARGS+=(--debug)
+source "$SCRIPT_DIR/wasm-flags.sh"
+wasm_profile resampler ${PROFILE_ARGS[@]+"${PROFILE_ARGS[@]}"}
 
 EXPORTS='["_rs_create","_rs_process","_rs_last_consumed","_rs_input_latency","_rs_reset","_rs_destroy","_malloc","_free"]'
 
@@ -82,16 +79,10 @@ emcc \
   "$PROJECT_ROOT/src/resampler/speex_resampler_wasm.c" \
   -I"$SRC_DIR/include" -I"$SRC_DIR/libspeexdsp" \
   -DFLOATING_POINT -DEXPORT= \
-  "${OPT_FLAGS[@]}" \
-  -s WASM=1 \
+  "${WASM_FLAGS[@]}" \
   -s EXPORTED_FUNCTIONS="$EXPORTS" \
   -s EXPORTED_RUNTIME_METHODS='["HEAPF32"]' \
-  -s ALLOW_MEMORY_GROWTH=1 \
-  -s INITIAL_MEMORY=4194304 \
-  -s MAXIMUM_MEMORY=16777216 \
-  -s MODULARIZE=1 \
   -s EXPORT_NAME="createSpeexResamplerModule" \
-  -s ENVIRONMENT="web,worker,node" \
   -o "$OUT_DIR/speex-resampler.js"
 ls -lh "$OUT_DIR"/speex-resampler.*
 

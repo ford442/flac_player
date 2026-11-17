@@ -8,6 +8,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
   sha256sum \
     scripts/build-resampler-wasm.sh \
     scripts/emsdk-version \
+    scripts/wasm-flags.sh \
     src/resampler/speex_resampler_wasm.c \
     | sort | sha256sum | awk '{print $1}'
 )
