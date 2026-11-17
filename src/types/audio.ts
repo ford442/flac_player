@@ -35,6 +35,13 @@ export interface AudioBackendCapabilities {
   playable: boolean;
   seek: boolean;
   playbackRate: boolean;
+  /**
+   * The speed control can keep the original pitch: the dsp-chain worklet's
+   * pitch-hold stage (src/sdl/dsp_stretch.h) for graph sources, `<audio>`
+   * preservesPitch for the native streaming path. False when only varispeed is
+   * possible (the Web Audio DSP fallback, or a format above the stretch cap).
+   */
+  pitchHold: boolean;
   gapless: boolean;
   crossfade: boolean;
   /** Output device selection (AudioContext.setSinkId). */
@@ -46,6 +53,7 @@ export const DEFAULT_AUDIO_BACKEND_CAPABILITIES: AudioBackendCapabilities = {
   playable: true,
   seek: true,
   playbackRate: true,
+  pitchHold: true,
   gapless: true,
   crossfade: true,
   sinkId: false,
@@ -78,7 +86,13 @@ export interface AudioBackend {
   stop(): void;
   seek(seconds: number): void;
   setVolume(volume: number): void;
-  setPlaybackRate(rate: number): void;
+  /**
+   * Tempo `rate` (0.25–4). `preservePitch` (default true) keeps the original
+   * pitch — time ratio 1/rate at pitch ratio 1; false is varispeed (tempo and
+   * pitch move together, the frequency-ratio behaviour). Where pitch hold is
+   * unavailable (capabilities.pitchHold false) the rate is varispeed regardless.
+   */
+  setPlaybackRate(rate: number, preservePitch?: boolean): void;
   setEQGains(gains: number[]): void;
   /** Apply ReplayGain loudness offset as a linear gain multiplier. */
   setReplayGainLinear?(linear: number): void;

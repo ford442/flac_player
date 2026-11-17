@@ -27,7 +27,11 @@ function sameInfo(a: AudioOutputInfo | null, b: AudioOutputInfo | null): boolean
     && a.sinkId === b.sinkId
     && a.state === b.state
     && a.graphGeneration === b.graphGeneration
-    && a.dspEngine === b.dspEngine;
+    && a.dspEngine === b.dspEngine
+    && a.pitch.by === b.pitch.by
+    && a.pitch.unavailable === b.pitch.unavailable
+    && a.pitch.latency === b.pitch.latency;
+  // `loudness` changes every poll; the Settings readout reads it via useLoudness().
 }
 
 /** Polls the manager; `outputLatency` drifts with the device so a subscription is not enough. */

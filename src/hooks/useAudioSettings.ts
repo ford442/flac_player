@@ -29,6 +29,7 @@ import {
 
 const EQ_STORAGE_KEY = 'flac_player_eq_gains';
 const SPEED_STORAGE_KEY = 'flac_player_playback_rate';
+const PRESERVE_PITCH_KEY = 'flac_player_preserve_pitch';
 const CROSSFADE_KEY = 'flac_player_crossfade';
 const GAPLESS_MODE_KEY = 'flac_player_gapless_mode';
 const CROSSFADE_MS_KEY = 'flac_player_crossfade_ms';
@@ -105,6 +106,15 @@ function loadStoredReplayGainMode(): ReplayGainMode {
   return DEFAULT_REPLAYGAIN_MODE;
 }
 
+/** Default on: the speed control changes tempo only; 'false' is the varispeed (chipmunk) toggle. */
+function loadStoredPreservePitch(): boolean {
+  try {
+    return localStorage.getItem(PRESERVE_PITCH_KEY) !== 'false';
+  } catch {
+    return true;
+  }
+}
+
 function loadStoredReplayGainLimiter(): boolean {
   try {
     return localStorage.getItem(REPLAYGAIN_LIMITER_KEY) === 'true';
@@ -147,6 +157,9 @@ export interface AudioSettingsHook {
   resetEQ: () => void;
   playbackRate: number;
   setPlaybackRate: (rate: number) => void;
+  /** Keep the original pitch at any speed (default); false = varispeed, pitch follows speed. */
+  preservePitch: boolean;
+  setPreservePitch: (enabled: boolean) => void;
   /** @deprecated Use gaplessMode — kept for existing call sites during migration */
   crossfadeEnabled: boolean;
   setCrossfadeEnabled: (enabled: boolean) => void;
@@ -176,6 +189,7 @@ export interface AudioSettingsHook {
 export function useAudioSettings(): AudioSettingsHook {
   const [eqGains, setEqGains] = useState<number[]>(loadStoredEQ);
   const [playbackRate, setPlaybackRateState] = useState<number>(loadStoredRate);
+  const [preservePitch, setPreservePitch] = useState<boolean>(loadStoredPreservePitch);
   const [gaplessMode, setGaplessModeState] = useState<GaplessMode>(loadStoredGaplessMode);
   const [crossfadeMs, setCrossfadeMsState] = useState<number>(loadStoredCrossfadeMs);
   const [replayGainMode, setReplayGainModeState] = useState<ReplayGainMode>(loadStoredReplayGainMode);
@@ -191,6 +205,10 @@ export function useAudioSettings(): AudioSettingsHook {
   useEffect(() => {
     try { localStorage.setItem(SPEED_STORAGE_KEY, String(playbackRate)); } catch { /* quota */ }
   }, [playbackRate]);
+
+  useEffect(() => {
+    try { localStorage.setItem(PRESERVE_PITCH_KEY, String(preservePitch)); } catch { /* quota */ }
+  }, [preservePitch]);
 
   useEffect(() => {
     try {
@@ -292,6 +310,8 @@ export function useAudioSettings(): AudioSettingsHook {
     resetEQ,
     playbackRate,
     setPlaybackRate,
+    preservePitch,
+    setPreservePitch,
     crossfadeEnabled: gaplessMode === 'crossfade',
     setCrossfadeEnabled,
     gaplessMode,

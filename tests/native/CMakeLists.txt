@@ -2,7 +2,7 @@
 #   npm run test:native     (scripts/test-native.sh: configure, build, ctest)
 #
 # Covers src/sdl/play_ring.h, engine_state.h, pcm_scrub.h, the audio_engine.cpp
-# exports and the scalar path of dsp_chain.h. The *_golden.cpp tests need wasm
+# exports, the scalar path of dsp_chain.h and dsp_loudness.h. The *_golden.cpp tests need wasm
 # SIMD and stay on em++ (npm run test:dsp-golden). compile_commands.json lands
 # in .build/native for clangd (see .clangd).
 cmake_minimum_required(VERSION 3.16)
@@ -16,6 +16,14 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 enable_testing()
+
+# Pinned third-party headers dsp_chain.h needs (Signalsmith Stretch / Linear),
+# fetched by scripts/test-native.sh. SYSTEM: their warnings are not ours to -Werror.
+set(DSP_THIRD_PARTY_DIRS "" CACHE STRING "Signalsmith include dirs (scripts/dsp-third-party.sh)")
+if(NOT DSP_THIRD_PARTY_DIRS)
+  message(FATAL_ERROR "DSP_THIRD_PARTY_DIRS is empty: run npm run test:native (scripts/test-native.sh)")
+endif()
+include_directories(SYSTEM ${DSP_THIRD_PARTY_DIRS})
 
 file(GLOB NATIVE_TESTS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*_test.cpp)
 # The engine itself, under the same warnings (and a compile command for clangd).

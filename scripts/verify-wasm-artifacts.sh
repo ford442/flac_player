@@ -57,7 +57,9 @@ check "SDL" wasm-source-hash.sh "$PUBLIC/wasm-source.sha256" "npm run build:wasm
 check "Resampler" resampler-source-hash.sh "$PUBLIC/resampler-source.sha256" "npm run build:wasm:resampler" \
   "$PUBLIC/speex-resampler.js" "$PUBLIC/speex-resampler.wasm"
 
-# dsp-chain.wasm and sdl-audio.wasm both compile src/sdl/dsp_chain.h; both hashes cover it.
+# Only dsp-chain.wasm compiles src/sdl/dsp_chain.h (+ dsp_stretch.h, dsp_loudness.h, dsp_fft.h);
+# the `sdl` engine plays into the dsp-chain worklet since #268. Its hash also covers the
+# pinned Signalsmith tarballs (scripts/dsp-third-party.sh).
 check "DSP chain" dsp-source-hash.sh "$PUBLIC/dsp-source.sha256" "npm run build:wasm:dsp" \
   "$PUBLIC/dsp-chain.js" "$PUBLIC/dsp-chain.wasm"
 

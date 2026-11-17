@@ -1,11 +1,12 @@
-import { loadDspWasm } from './DspChainNode';
+import { instantiateDspAnalysis, loadDspAnalysisInstance } from './dspAnalysisInstance';
 
 /**
  * `fft_spectrum` from src/sdl/dsp_fft.h, compiled into public/dsp-chain.wasm.
  *
- * A main-thread instance of the same module the dsp-chain worklet runs (its own
- * memory; the worklet's instance is never touched). It is the CPU golden for
- * the gpu-chores WebGPU FFT — dsp_fft.h mirrors the WGSL kernels in f32 — and a
+ * Runs on the main-thread analysis instance of the module the dsp-chain worklet
+ * runs (dspAnalysisInstance.ts: its own memory, shared with the loudness meter;
+ * the worklet's instance is never touched). It is the CPU golden for the
+ * gpu-chores WebGPU FFT — dsp_fft.h mirrors the WGSL kernels in f32 — and a
  * spectrum path that needs no WebGPU. Definition: src/gpu-chores/fft.ts.
  */
 
@@ -38,10 +39,13 @@ export class WasmFft {
     this.scratch = new Float32Array(exports.memory.buffer, exports.scratch_ptr(), exports.scratch_floats());
   }
 
-  /** Synchronous instantiation (the module has no imports). */
+  /** A private instance (synchronous: the module has no imports). */
   static fromModule(module: WebAssembly.Module): WasmFft {
-    const exports = new WebAssembly.Instance(module, {}).exports as unknown as FftExports;
-    exports._initialize?.();
+    return new WasmFft(instantiateDspAnalysis(module));
+  }
+
+  /** Over an existing analysis instance (scratch is only used inside one call). */
+  static fromExports(exports: FftExports): WasmFft {
     return new WasmFft(exports);
   }
 
@@ -79,10 +83,10 @@ export class WasmFft {
 
 let instance: Promise<WasmFft> | null = null;
 
-/** Shared main-thread instance; rejects (and retries next call) when the module is unavailable. */
+/** Over the shared analysis instance; rejects (and retries next call) when the module is unavailable. */
 export function loadWasmFft(): Promise<WasmFft> {
   if (!instance) {
-    instance = loadDspWasm().then(({ module }) => WasmFft.fromModule(module));
+    instance = loadDspAnalysisInstance().then((exports) => WasmFft.fromExports(exports));
     instance.catch(() => {
       instance = null;
     });

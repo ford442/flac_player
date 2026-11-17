@@ -460,3 +460,88 @@ describe('AudioContextManager lifecycle (#259 A3 / A4 / A5 / A7)', () => {
     expect(notified).toBe(1);
   });
 });
+
+describe('pitch hold reporting (#283)', () => {
+  let restore: (() => void) | undefined;
+
+  afterEach(() => {
+    restore?.();
+    restore = undefined;
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  function fakeDspChain(stretchLatencyFrames: number) {
+    const setPlaybackRate = vi.fn();
+    const fake = {
+      node: { connect: () => {}, disconnect: () => {} },
+      channels: 2,
+      analysisRing: null,
+      stretchLatencyFrames,
+      canHoldPitch: stretchLatencyFrames > 0,
+      stretchLatency: stretchLatencyFrames / 48000,
+      setReplayGain: () => {},
+      setVolume: () => {},
+      setEQGains: () => {},
+      setPlaybackRate,
+      disconnect: () => {},
+    };
+    return { fake, setPlaybackRate };
+  }
+
+  async function managerWithDsp(stretchLatencyFrames: number) {
+    restore = installRecordingAudioContext();
+    vi.stubGlobal('AudioWorkletNode', class {});
+    const { DspChainNode } = await import('../src/audio/DspChainNode');
+    const { fake, setPlaybackRate } = fakeDspChain(stretchLatencyFrames);
+    const create = vi.spyOn(DspChainNode, 'create').mockResolvedValue(fake as never);
+    const manager = new AudioContextManager();
+    await manager.ensureForTrack({ sampleRate: 48000, channels: 2 });
+    await vi.waitFor(() => expect(manager.getDspEngine()).toBe('wasm'));
+    return { manager, create, setPlaybackRate };
+  }
+
+  it('graph sources: the dsp-chain worklet holds pitch and gets the source rate', async () => {
+    const { manager, create, setPlaybackRate } = await managerWithDsp(7200);
+    // The worklet is built with the current rate, then retuned on change.
+    expect(create.mock.calls[0]![2]).toMatchObject({ playbackRate: 1, preservePitch: true });
+    manager.setSourceRate(1.25, true, 'graph');
+    expect(setPlaybackRate).toHaveBeenLastCalledWith(1.25, true);
+    expect(manager.getPitchHold()).toEqual({ by: 'dsp-chain', unavailable: false, latency: 0.15 });
+    expect(manager.getOutputInfo()?.pitch.by).toBe('dsp-chain');
+
+    manager.setSourceRate(1.25, false, 'graph');
+    expect(setPlaybackRate).toHaveBeenLastCalledWith(1.25, false);
+    expect(manager.getPitchHold()).toEqual({ by: 'none', unavailable: false, latency: 0 });
+  });
+
+  it('an <audio> element holds pitch itself: the chain is told 1x (room nudges never reach the stretcher)', async () => {
+    const { manager, setPlaybackRate } = await managerWithDsp(7200);
+    manager.setSourceRate(0.96, true, 'element');
+    expect(setPlaybackRate).toHaveBeenLastCalledWith(1, true);
+    expect(manager.getPitchHold().by).toBe('element');
+    manager.setSourceRate(1.04, true, 'element');
+    expect(setPlaybackRate).toHaveBeenLastCalledWith(1, true);
+  });
+
+  it('reports pitch hold unavailable above the stretch format cap', async () => {
+    const { manager } = await managerWithDsp(0);
+    expect(manager.pitchHoldAvailable()).toBe(false);
+    manager.setSourceRate(1.5, true, 'graph');
+    expect(manager.getPitchHold()).toEqual({ by: 'none', unavailable: true, latency: 0 });
+  });
+
+  it('the Web Audio fallback (no dsp-chain worklet) is varispeed and says so', async () => {
+    restore = installRecordingAudioContext();
+    const manager = new AudioContextManager();
+    // Before any graph exists nothing is known to be missing (no startup flash).
+    expect(manager.pitchHoldAvailable()).toBe(true);
+    await manager.ensureForTrack({ sampleRate: 48000, channels: 2 });
+    expect(manager.getDspEngine()).toBe('web-audio');
+    expect(manager.pitchHoldAvailable()).toBe(false);
+    manager.setSourceRate(1, true, 'graph');
+    expect(manager.getPitchHold().unavailable).toBe(false); // 1x needs no hold
+    manager.setSourceRate(1.25, true, 'graph');
+    expect(manager.getPitchHold()).toEqual({ by: 'none', unavailable: true, latency: 0 });
+  });
+});

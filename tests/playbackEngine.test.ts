@@ -304,6 +304,19 @@ describe('PlaybackEngine', () => {
     expect(b.setCrossfadeEnabled).toBeUndefined();
   });
 
+  it('passes preserve-pitch with the rate, and room nudges keep the user setting (#283)', async () => {
+    const { engine, backend, flush } = setup();
+    await flush();
+    const b = backend();
+    expect(b.setPlaybackRate).toHaveBeenLastCalledWith(1, true);
+    engine.setAudioSettings({ playbackRate: 1.25 });
+    expect(b.setPlaybackRate).toHaveBeenLastCalledWith(1.25, true);
+    engine.setAudioSettings({ preservePitch: false });
+    expect(b.setPlaybackRate).toHaveBeenLastCalledWith(1.25, false);
+    engine.nudgeRate(1.25 * 1.04);
+    expect(b.setPlaybackRate).toHaveBeenLastCalledWith(1.25 * 1.04, false);
+  });
+
   it('keeps the backend across a StrictMode detach/attach', async () => {
     const { engine, deps, flush } = setup();
     await flush();

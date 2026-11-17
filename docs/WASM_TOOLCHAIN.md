@@ -63,14 +63,29 @@ means rebuilding the graphs and committing their artifacts and `*.sha256`.
 | Profile | Script | Output | Codegen | Heap |
 |---|---|---|---|---|
 | `audio-callback` (the `sdl` engine) | `scripts/build-wasm.sh` | `public/sdl-audio.*` | `-O3 -DNDEBUG -msimd128 -std=c++17 -fno-exceptions -fno-rtti -pthread` | 64 MiB initial, growth, **512 MiB max**, 64 KiB stack |
-| `standalone-dsp` (speaker DSP + FFT) | `scripts/build-dsp-wasm.sh`, `scripts/test-dsp-golden.sh` | `public/dsp-chain.*` | `audio-callback` codegen without `-pthread`, plus `-fno-threadsafe-statics` | 1 MiB fixed (`STANDALONE_WASM`, no growth), 64 KiB stack |
+| `standalone-dsp` (speaker DSP, pitch hold, FFT, loudness) | `scripts/build-dsp-wasm.sh`, `scripts/test-dsp-golden.sh` | `public/dsp-chain.*` | `audio-callback` codegen without `-pthread`, plus `-fno-threadsafe-statics` | 6 MiB fixed (`STANDALONE_WASM`, no growth; budget next to the constant), 64 KiB stack |
 | `resampler` (SpeexDSP, C) | `scripts/build-resampler-wasm.sh` | `public/speex-resampler.*` | `-O3 -DNDEBUG -msimd128` | 4 MiB initial, growth, **16 MiB max** |
 | `projectm` (video host) | `scripts/build-projectm-wasm.sh` | `public/projectm/projectm-host.*` | `-O2` | 16 MiB initial (default), growth, **256 MiB max** |
 
 `npm run test:dsp-golden` compiles `tests/native/*_golden.cpp` with the
 `standalone-dsp` codegen flags (`WASM_CODEGEN_FLAGS`), so the golden checks the
 code `dsp-chain.wasm` ships with, not a separate `-O2` build. `dsp_chain.h` is
-compiled only by `standalone-dsp` and `audio-callback`; do not add a third build.
+compiled only by `standalone-dsp` (the `sdl` engine plays into the dsp-chain
+worklet since #268); do not add another build.
+
+**Third-party DSP headers.** `dsp_stretch.h` (pitch hold, #283) compiles
+Signalsmith Stretch 1.4.0 and Signalsmith Linear 0.6.4 — MIT, header-only,
+pinned by tarball SHA-256 in `scripts/dsp-third-party.sh`, which
+`build-dsp-wasm.sh`, `test-dsp-golden.sh` and `test-native.sh` source (it fetches
+once into `.build/dsp-third-party/`). That script is in the dsp-chain source hash,
+so a pin bump is a stale artifact until `npm run build:wasm:dsp`. Builds from
+another checkout path reproduce the committed `dsp-chain.wasm` byte for byte.
+Rubber Band is not an option (GPL).
+
+**dsp-chain memory.** Growth stays off: the worklet keeps views over the module
+memory for its life. When a stage needs more heap, raise `INITIAL_MEMORY` in the
+`standalone-dsp` profile and update the budget comment beside it
+(`dsp_stretch_golden.cpp` measures the stretcher's peak on wasm32).
 
 Why every growable heap has a `MAXIMUM_MEMORY`: without one, Emscripten lets
 growth reach 2 GiB (and with `-pthread` reserves a 2 GiB SharedArrayBuffer

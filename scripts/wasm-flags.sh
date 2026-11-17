@@ -21,8 +21,9 @@
 #                   no PTHREAD_POOL_SIZE), 64 MiB -> 512 MiB growable heap, 64 KiB stack.
 #   standalone-dsp  public/dsp-chain.*: the audio-callback codegen plus
 #                   -fno-threadsafe-statics, STANDALONE_WASM (empty import object so the
-#                   worklet instantiates the raw .wasm), 1 MiB heap, growth off, 64 KiB stack.
-#                   dsp_chain.h is compiled by this profile and audio-callback only.
+#                   worklet instantiates the raw .wasm), 6 MiB memory, growth off, 64 KiB
+#                   stack. dsp_chain.h is compiled by this profile only (the `sdl` engine
+#                   plays into the dsp-chain worklet since #268).
 #   resampler       public/speex-resampler.* (C): -O3 -DNDEBUG -msimd128, 4 MiB -> 16 MiB
 #                   growable heap. ENVIRONMENT keeps `node`: tests/resampler.test.ts loads
 #                   the glue there.
@@ -74,9 +75,18 @@ wasm_profile() {
     standalone-dsp)
       [[ "$debug" -eq 0 ]] || { echo "wasm_profile: standalone-dsp has no --debug" >&2; return 1; }
       WASM_CODEGEN_FLAGS=("${opt[@]}" "${audio_cc[@]}" -fno-threadsafe-statics)
+      # Memory budget (growth stays off, so this is all the module ever has):
+      #   ~0.70 MiB static data (scratch, FFT tables, the stretch stage's input copy)
+      #   0.06 MiB stack
+      #   4.50 MiB heap for the pitch-hold stretcher (dsp_stretch.h DSP_STRETCH_HEAP_BUDGET;
+      #        the stretch golden measures 3.74 MiB at its largest format, stereo 192 kHz,
+      #        and 0.9 MiB at stereo 48 kHz). Nothing else allocates.
+      #   = 5.3 MiB, rounded up to 6 MiB. Main-thread analysis instances (FFT, loudness)
+      #   get the same memory and never touch the heap. Raise this with the budget; do
+      #   not turn growth on (the worklet's views over memory must never detach).
       WASM_LINK_FLAGS=(
         -s STANDALONE_WASM=1 --no-entry
-        -s INITIAL_MEMORY="$(_wasm_mib 1)"
+        -s INITIAL_MEMORY="$(_wasm_mib 6)"
         -s ALLOW_MEMORY_GROWTH=0
         -s STACK_SIZE=65536
         -s MODULARIZE=1

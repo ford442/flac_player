@@ -17,6 +17,13 @@ interface DspExports {
   set_replaygain(linear: number, limiterEnabled: number): void;
   request_reset(): void;
   process(numFloats: number, channels: number, sampleRate: number, volume: number): void;
+  set_playback_rate(rate: number, preservePitch: number): void;
+  configure_stretch(channels: number, sampleRate: number): number;
+  stretch_engaged(): number;
+  loudness_reset(channels: number, sampleRate: number): void;
+  loudness_push(numFloats: number): void;
+  loudness_momentary(): number;
+  loudness_short_term(): number;
 }
 
 const wasmBytes = readFileSync(path.resolve(__dirname, '../public/dsp-chain.wasm'));
@@ -114,6 +121,40 @@ function fnv1a(samples: Float32Array): number {
 
 // `npm run test:dsp-golden` prints these for the SDL build of dsp_chain.h.
 const NATIVE_GOLDEN_FNV1A = { limiterOff: 0xd443445c, limiterOn: 0x70844a79 };
+// ...and these from tests/native/dsp_stretch_golden.cpp (pitch hold).
+const STRETCH_GOLDEN_FNV1A = { unityHold: 0x811867b3, held125: 0x815f2789 };
+
+/** dsp_stretch_golden.cpp fresh_chain(): flat EQ, unity gain, stretcher sized for stereo 48 kHz. */
+function freshStretchChain(rate: number, hold: boolean): { dsp: DspExports; scratch: Float32Array } {
+  const inst = instantiate();
+  for (let b = 0; b < 8; b++) inst.dsp.set_eq_band(b, 1, 1000, 1, 0);
+  inst.dsp.set_replaygain(1, 0);
+  expect(inst.dsp.configure_stretch(2, RATE)).toBe(7200);
+  inst.dsp.set_playback_rate(rate, hold ? 1 : 0);
+  inst.dsp.request_reset();
+  return inst;
+}
+
+/** Bit equality of two long buffers (toEqual is slow at this size). */
+function sameSamples(a: Float32Array, b: Float32Array): boolean {
+  if (a.length !== b.length) return false;
+  const x = new Uint32Array(a.buffer, a.byteOffset, a.length);
+  const y = new Uint32Array(b.buffer, b.byteOffset, b.length);
+  for (let i = 0; i < x.length; i++) if (x[i] !== y[i]) return false;
+  return true;
+}
+
+/** Least-squares amplitude of a `freq` sinusoid in channel 0, frames [from, to). */
+function toneAmplitude(x: Float32Array, freq: number, from: number, to: number): number {
+  let ss = 0, cc = 0, sc = 0, xs = 0, xc = 0;
+  for (let i = from; i < to; i++) {
+    const w = (2 * Math.PI * freq * i) / RATE;
+    const sn = Math.sin(w), cs = Math.cos(w), v = x[2 * i];
+    ss += sn * sn; cc += cs * cs; sc += sn * cs; xs += v * sn; xc += v * cs;
+  }
+  const det = ss * cc - sc * sc;
+  return Math.hypot((xs * cc - xc * sc) / det, (xc * ss - xs * sc) / det);
+}
 
 /** tests/native/dsp_simd_golden.cpp run(): 8 bands, 1 kHz / 440 Hz stereo, odd chunks. */
 function runNativeGoldenVectors(limiter: boolean): Float32Array {
@@ -145,6 +186,61 @@ describe('dsp-chain.wasm (dsp_chain.h for the AudioWorklet)', () => {
   it('is bit-identical to the SDL build on the native golden vectors', () => {
     expect(fnv1a(runNativeGoldenVectors(false)).toString(16)).toBe(NATIVE_GOLDEN_FNV1A.limiterOff.toString(16));
     expect(fnv1a(runNativeGoldenVectors(true)).toString(16)).toBe(NATIVE_GOLDEN_FNV1A.limiterOn.toString(16));
+  });
+
+  it('exports the pitch-hold and loudness entry points, with fixed memory', () => {
+    const module = new WebAssembly.Module(wasmBytes);
+    const names = WebAssembly.Module.exports(module).map((e) => e.name);
+    for (const name of [
+      'set_playback_rate', 'configure_stretch', 'stretch_engaged',
+      'loudness_reset', 'loudness_push', 'loudness_momentary', 'loudness_short_term',
+    ]) {
+      expect(names).toContain(name);
+    }
+    // standalone-dsp: 6 MiB, growth off (scripts/wasm-flags.sh documents the budget).
+    const { dsp } = instantiate();
+    expect(dsp.memory.buffer.byteLength).toBe(6 * 1024 * 1024);
+    expect(() => dsp.memory.grow(1)).toThrow();
+  });
+
+  it('pitch hold at 1.0x is bit-identical to bypass, and matches the native stretch golden', () => {
+    const input = stereoSine(1250, 3, 0.5);
+    const bypass = run(freshStretchChain(1.25, false), input);
+    expect(sameSamples(bypass, input), 'varispeed 1.25x is a bypass').toBe(true);
+    const unity = run(freshStretchChain(1, true), input);
+    expect(sameSamples(unity, input), '1.0x with pitch hold is a bypass').toBe(true);
+
+    const inst = freshStretchChain(1.25, true);
+    const held = run(inst, input);
+    expect(inst.dsp.stretch_engaged()).toBe(1);
+    expect(fnv1a(held).toString(16)).toBe(STRETCH_GOLDEN_FNV1A.held125.toString(16));
+    // A 1 kHz tone played varispeed at 1.25x comes back at 1 kHz.
+    const from = RATE / 2, to = held.length / 2 - RATE / 4;
+    expect(toneAmplitude(held, 1000, from, to)).toBeCloseTo(0.5, 1);
+    expect(toneAmplitude(held, 1250, from, to)).toBeLessThan(0.005);
+  }, 30_000);
+
+  it('pitch hold is unavailable above the format cap (the speed control stays varispeed)', () => {
+    const { dsp } = instantiate();
+    expect(dsp.configure_stretch(8, 96000)).toBe(0);
+    expect(dsp.configure_stretch(2, 384000)).toBe(0);
+    expect(dsp.configure_stretch(2, 192000)).toBeGreaterThan(0);
+    expect(dsp.configure_stretch(8, 48000)).toBeGreaterThan(0);
+  });
+
+  it('meters EBU Tech 3341 case 1 (-23 dBFS stereo sine reads -23 LUFS)', () => {
+    const { dsp, scratch } = instantiate();
+    dsp.loudness_reset(2, RATE);
+    expect(Number.isNaN(dsp.loudness_momentary())).toBe(true);
+    const amplitude = 10 ** (-23 / 20);
+    const input = stereoSine(1000, 4, amplitude);
+    for (let pos = 0; pos < input.length; pos += 4096) {
+      const piece = input.subarray(pos, Math.min(input.length, pos + 4096));
+      scratch.set(piece);
+      dsp.loudness_push(piece.length);
+    }
+    expect(dsp.loudness_momentary()).toBeCloseTo(-23, 1);
+    expect(dsp.loudness_short_term()).toBeCloseTo(-23, 1);
   });
 
   it('needs no imports, so the worklet can instantiate it synchronously', () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest';
 import { AudioContextManager } from '../src/audio/AudioContextManager';
 import { WorkletAudioPlayer } from '../src/audio/backends/WorkletAudioPlayer';
 import type { FlacProcessorInbound, FlacProcessorOptions } from '../src/audio/worklets/flacProcessorMessages';
@@ -66,6 +66,22 @@ describe('WorkletAudioPlayer hi-fi transport', () => {
     expect(node.sent).toContainEqual({ type: 'setPlaybackRate', rate: 1.5 });
     player.setPlaybackRate(10);
     expect(node.sent.at(-1)).toEqual({ type: 'setPlaybackRate', rate: 4 });
+    player.destroy();
+  });
+
+  it('plays varispeed and hands the rate + pitch hold to the dsp chain (#283)', () => {
+    const manager = new AudioContextManager();
+    const setSourceRate = vi.spyOn(manager, 'setSourceRate');
+    const player = new WorkletAudioPlayer(manager);
+    player.setPlaybackRate(1.25);
+    expect(setSourceRate).toHaveBeenLastCalledWith(1.25, true, 'graph');
+    player.setPlaybackRate(0.75, false);
+    expect(setSourceRate).toHaveBeenLastCalledWith(0.75, false, 'graph');
+    // The streaming facade reports for its own paths.
+    setSourceRate.mockClear();
+    player.setReportsSourceRate(false);
+    player.setPlaybackRate(2, true);
+    expect(setSourceRate).not.toHaveBeenCalled();
     player.destroy();
   });
 

@@ -9,6 +9,7 @@ import {
 } from './DspChainNode';
 import { applyAnalyserPolicy } from './analyserPolicy';
 import { setAnalysisTap } from './analysisRing';
+import { sharedLoudnessMeter, type LoudnessReading } from './loudnessMeter';
 import { ReplayGainNode } from './ReplayGainNode';
 import {
   DEFAULT_AUDIO_CONTEXT_POLICY,
@@ -57,9 +58,39 @@ export interface AudioOutputInfo {
    * 'web-audio' = BiquadFilterNode / DynamicsCompressorNode fallback.
    */
   dspEngine: DspEngine;
+  /** How the speed control treats pitch right now. */
+  pitch: PitchHoldInfo;
+  /**
+   * EBU R128 momentary / short-term loudness of the chain's output, from the
+   * analysis ring (src/audio/loudnessMeter.ts); null while nothing meters it.
+   */
+  loudness: LoudnessReading | null;
 }
 
 export type DspEngine = 'wasm' | 'web-audio';
+
+/**
+ * Who changes the source rate: 'graph' = a buffered source playing varispeed
+ * into the chain (BufferSourceNode, the flac / sdl-engine worklets), whose
+ * pitch the dsp-chain worklet can transpose back; 'element' = an `<audio>`
+ * element that holds pitch itself (`preservesPitch`), so the chain leaves it.
+ */
+export type RateSource = 'graph' | 'element';
+
+export interface PitchHoldInfo {
+  /**
+   * 'dsp-chain' = dsp_stretch.h in the worklet, 'element' = `<audio>`
+   * preservesPitch, 'none' = pitch follows speed (1×, varispeed, or unavailable).
+   */
+  by: 'dsp-chain' | 'element' | 'none';
+  /** Pitch hold was asked for off 1× but this graph cannot provide it (Web Audio fallback, format cap). */
+  unavailable: boolean;
+  /** Seconds the stretch delays the output while it runs (0 otherwise). */
+  latency: number;
+}
+
+/** A rate this close to 1 needs no pitch hold (dsp_stretch.h DSP_STRETCH_UNITY_EPSILON). */
+const UNITY_RATE_EPSILON = 1e-4;
 
 /**
  * Lifecycle of the shared context as the rest of the app sees it. `interrupted`
@@ -128,11 +159,16 @@ export class AudioContextManager {
   private inputGain: GainNode | null = null;
   private dspChain: DspChainNode | null = null;
   private dspAttach: Promise<void> = Promise.resolve();
+  /** attachDspChain() is loading the module: pitch hold is not known to be missing yet. */
+  private dspPending = false;
   private visualizerFeedGain: GainNode | null = null;
   private externalPlaybackActive = false;
   private replayGainLinear = 1;
   private limiterEnabled = false;
   private volume = 1;
+  private sourceRate = 1;
+  private preservePitch = true;
+  private rateSource: RateSource = 'graph';
   private eqGains: number[] = DEFAULT_EQ_BANDS.map(() => 0);
   private policy: AudioContextOptionsPolicy = { ...DEFAULT_AUDIO_CONTEXT_POLICY };
   private appliedLatencyHint: AudioContextLatencyHint = this.policy.latencyHint;
@@ -330,7 +366,31 @@ export class AudioContextManager {
       state: ctx.state,
       graphGeneration: this.graphGeneration,
       dspEngine: this.getDspEngine(),
+      pitch: this.getPitchHold(),
+      loudness: sharedLoudnessMeter.latest(),
     };
+  }
+
+  /** Who holds pitch at the current source rate (see {@link setSourceRate}). */
+  getPitchHold(): PitchHoldInfo {
+    const offUnity = Math.abs(this.sourceRate - 1) > UNITY_RATE_EPSILON;
+    if (!this.preservePitch || !offUnity) return { by: 'none', unavailable: false, latency: 0 };
+    if (this.rateSource === 'element') return { by: 'element', unavailable: false, latency: 0 };
+    const dsp = this.dspChain;
+    if (dsp?.canHoldPitch) return { by: 'dsp-chain', unavailable: false, latency: dsp.stretchLatency };
+    return { by: 'none', unavailable: !dsp && this.dspPending ? false : !this.pitchHoldAvailable(), latency: 0 };
+  }
+
+  /**
+   * Whether graph sources can keep their pitch off 1×: the dsp-chain worklet is
+   * attached and sized its stretcher (true before the graph exists or while the
+   * module loads, so the UI does not flash a fallback notice at startup).
+   */
+  pitchHoldAvailable(): boolean {
+    if (this.dspChain) return this.dspChain.canHoldPitch;
+    if (isDspWasmDisabledByUrl()) return false;
+    if (!this.context) return true;
+    return this.dspPending && isDspWasmSupported(this.context);
   }
 
   /**
@@ -518,6 +578,22 @@ export class AudioContextManager {
     this.dspChain?.setEQGains(this.eqGains);
   }
 
+  /**
+   * The rate the active source plays at, and whether the user wants its pitch
+   * kept. Buffered sources ('graph') play varispeed; with `preservePitch` the
+   * dsp-chain worklet transposes by 1/rate so only the tempo changes. An
+   * `<audio>` element ('element') holds pitch itself, so the chain is told 1×
+   * and listening-room nudges never touch the stretcher. Without the worklet
+   * (Web Audio fallback) the rate stays varispeed; getPitchHold() reports it.
+   */
+  setSourceRate(rate: number, preservePitch: boolean, source: RateSource = 'graph'): void {
+    this.sourceRate = Number.isFinite(rate) && rate > 0 ? Math.max(0.25, Math.min(4, rate)) : 1;
+    this.preservePitch = preservePitch;
+    this.rateSource = source;
+    const { playbackRate, preservePitch: hold } = this.dspSettings();
+    this.dspChain?.setPlaybackRate(playbackRate, hold);
+  }
+
   getEQGains(): number[] {
     return [...this.eqGains];
   }
@@ -582,11 +658,14 @@ export class AudioContextManager {
     if (isDspWasmDisabledByUrl() || !isDspWasmSupported(ctx)) return;
     const channels = this.dspChannelCount(ctx);
     let dsp: DspChainNode;
+    this.dspPending = true;
     try {
       dsp = await DspChainNode.create(ctx, channels, this.dspSettings());
     } catch (err) {
-      console.warn('[AudioContextManager] DSP WASM unavailable; using Web Audio EQ / ReplayGain', err);
+      console.warn('[AudioContextManager] DSP WASM unavailable; using Web Audio EQ / ReplayGain (speed is varispeed)', err);
       return;
+    } finally {
+      if (this.context === ctx) this.dspPending = false;
     }
     if (this.context !== ctx || !this.inputGain || !this.analyser) {
       dsp.disconnect();
@@ -600,6 +679,7 @@ export class AudioContextManager {
     dsp.setReplayGain(settings.replayGainLinear, settings.limiter);
     dsp.setVolume(settings.volume);
     dsp.setEQGains(settings.eqGains);
+    dsp.setPlaybackRate(settings.playbackRate, settings.preservePitch);
     dsp.node.connect(this.analyser);
     this.inputGain.disconnect();
     this.inputGain.connect(dsp.node);
@@ -616,6 +696,9 @@ export class AudioContextManager {
       replayGainLinear: this.replayGainLinear,
       limiter: this.limiterEnabled,
       volume: this.volume,
+      // An element that holds pitch itself reaches the chain at its own pitch.
+      playbackRate: this.rateSource === 'element' ? 1 : this.sourceRate,
+      preservePitch: this.preservePitch,
     };
   }
 

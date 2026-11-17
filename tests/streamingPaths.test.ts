@@ -14,7 +14,8 @@ class FakeWorklet {
   loadFromArrayBuffer = vi.fn(async () => { this.playing = false; });
   loadFromURLStreaming = vi.fn(async () => { this.playing = false; });
   constructor() { FakeWorklet.instances.push(this); }
-  setPlaybackRate(): void {}
+  setPlaybackRate = vi.fn();
+  setReportsSourceRate = vi.fn();
   setStateChangeCallback(): void {}
   setOnEndedCallback(): void {}
   setPCMCallback(): void {}
@@ -43,6 +44,7 @@ class FakeAudio extends EventTarget {
   currentTime = 0;
   duration = NaN;
   playbackRate = 1;
+  preservesPitch = true;
   seeking = false;
   readyState = 4;
   crossOrigin: string | null = null;
@@ -75,8 +77,13 @@ function fakeContextManager() {
     connectInput: () => {},
     resume: async () => {},
     setVolume: () => {},
+    setSourceRate: vi.fn(),
   };
-  return { manager: manager as unknown as AudioContextManager, recreateGraph: () => listeners.forEach((fn) => fn()) };
+  return {
+    manager: manager as unknown as AudioContextManager,
+    setSourceRate: manager.setSourceRate,
+    recreateGraph: () => listeners.forEach((fn) => fn()),
+  };
 }
 
 const { StreamingAudioPlayer } = await import('../src/audio/backends/StreamingAudioPlayer');
@@ -90,14 +97,38 @@ describe('StreamingAudioPlayer keeps one path audible (#258)', () => {
   afterEach(() => { vi.unstubAllGlobals(); });
 
   async function setup() {
-    const { manager, recreateGraph } = fakeContextManager();
+    const { manager, recreateGraph, setSourceRate } = fakeContextManager();
     const player = new StreamingAudioPlayer(manager);
     await player.initialize();
     const worklet = FakeWorklet.instances[0]!;
     const element = () => FakeAudio.instances.at(-1)!;
     const audible = () => [worklet.playing, FakeAudio.instances.some((el) => !el.paused)].filter(Boolean).length;
-    return { player, worklet, element, audible, recreateGraph };
+    return { player, worklet, element, audible, recreateGraph, setSourceRate };
   }
+
+  it('pitch hold: <audio> keeps pitch itself; the worklet paths hand the rate to the dsp chain (#283)', async () => {
+    const { player, worklet, element, setSourceRate } = await setup();
+    // The facade reports for its paths; its inner worklet must not.
+    expect(worklet.setReportsSourceRate).toHaveBeenCalledWith(false);
+
+    player.setPlaybackRate(1.25, true);
+    expect(element().preservesPitch).toBe(true);
+    expect(element().playbackRate).toBe(1.25);
+    expect(worklet.setPlaybackRate).toHaveBeenLastCalledWith(1.25, true);
+
+    await player.loadFromURL('https://music.test/a.mp3');
+    // 'element': the dsp chain hears the element at its own pitch and stays at 1x.
+    expect(setSourceRate).toHaveBeenLastCalledWith(1.25, true, 'element');
+
+    await player.loadFromURL('https://music.test/b.flac');
+    expect(setSourceRate).toHaveBeenLastCalledWith(1.25, true, 'graph');
+
+    player.setPlaybackRate(1.5, false);
+    expect(setSourceRate).toHaveBeenLastCalledWith(1.5, false, 'graph');
+    expect(worklet.setPlaybackRate).toHaveBeenLastCalledWith(1.5, false);
+    expect(element().preservesPitch).toBe(false);
+    player.destroy();
+  });
 
   it('FLAC → MP3 → FLAC never has both paths playing', async () => {
     const { player, worklet, element, audible } = await setup();

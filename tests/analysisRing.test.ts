@@ -26,10 +26,12 @@ interface ProcessorInstance {
 type ProcessorCtor = new (options: { processorOptions: DspChainOptions }) => ProcessorInstance;
 
 let DspChainProcessor: ProcessorCtor;
+/** Every message a processor posted to the main thread (the `ready` from its constructor included). */
+const posted: unknown[] = [];
 
 beforeAll(async () => {
   class FakeProcessor {
-    port = { onmessage: null, postMessage: () => {} };
+    port = { onmessage: null, postMessage: (msg: unknown) => { posted.push(msg); } };
   }
   vi.stubGlobal('AudioWorkletProcessor', FakeProcessor);
   vi.stubGlobal('sampleRate', RATE);
@@ -55,7 +57,7 @@ function processor(ring: SharedArrayBuffer | null, channels = 2): ProcessorInsta
     processorOptions: {
       wasm: new WebAssembly.Module(wasmBytes),
       channels,
-      initial: { eqBands: [], replayGain: 1, limiter: false, volume: 0.5 },
+      initial: { eqBands: [], replayGain: 1, limiter: false, volume: 0.5, playbackRate: 1, preservePitch: true },
       analysisRing: ring,
     },
   });
@@ -158,6 +160,72 @@ describe('analysis ring (dsp-chain worklet writer → AnalysisRingReader)', () =
     const snap = reader.readLatest(16)!;
     expect(snap.frames).toBe(3);
     expect(Array.from(snap.pcm)).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+
+  it('readSince hands a cursor every frame once, and flags a lap or a reset as a gap', () => {
+    const ring = ringBuffer(1024); // writer margin 512 floats: a cursor may fall 256 frames behind
+    const p = processor(ring);
+    const reader = readerForRingBuffer(ring);
+    const a = quantum(p, 0);
+    let read = reader.readSince(null)!;
+    expect(read.gap).toBe(false);
+    expect(read.pcm).toEqual(a);
+
+    const b = quantum(p, 128);
+    const c = quantum(p, 256);
+    read = reader.readSince(read.next)!;
+    expect(read.gap).toBe(false);
+    expect(read.frames).toBe(256);
+    expect(read.pcm).toEqual(new Float32Array([...b, ...c]));
+    const idle = reader.readSince(read.next)!;
+    expect(idle.frames).toBe(0);
+    expect(idle.next).toEqual(read.next);
+
+    let last = new Float32Array(0);
+    for (let q = 3; q < 6; q++) last = quantum(p, q * 128);
+    const lapped = reader.readSince(read.next)!;
+    expect(lapped.gap).toBe(true);
+    expect(lapped.frames).toBe(256);
+    expect(lapped.pcm.subarray(lapped.pcm.length - last.length)).toEqual(last);
+
+    p.port.onmessage!({ data: { type: 'reset' } });
+    const fresh = quantum(p, 0);
+    const afterReset = reader.readSince(lapped.next)!;
+    expect(afterReset.gap).toBe(true);
+    expect(afterReset.pcm).toEqual(fresh);
+  });
+
+  it('readSince reuses the caller buffer when it is large enough', () => {
+    const ring = ringBuffer(1024);
+    const p = processor(ring);
+    const reader = readerForRingBuffer(ring);
+    quantum(p, 0);
+    const out = new Float32Array(512);
+    const read = reader.readSince(null, out)!;
+    expect(read.pcm.buffer).toBe(out.buffer);
+    expect(read.frames).toBe(128);
+  });
+
+  it('ready reports the pitch-hold latency the processor sized at construction', () => {
+    posted.length = 0;
+    processor(null, 2);
+    expect(posted).toContainEqual({ type: 'ready', stretchLatencyFrames: Math.round(0.15 * RATE) });
+  });
+
+  it('a held playbackRate transposes the processor output; varispeed leaves it alone', () => {
+    const plain = processor(null);
+    const held = processor(null);
+    const vari = processor(null);
+    held.port.onmessage!({ data: { type: 'playbackRate', rate: 1.25, preservePitch: true } });
+    vari.port.onmessage!({ data: { type: 'playbackRate', rate: 1.25, preservePitch: false } });
+    let differs = false;
+    for (let q = 0; q < 200; q++) {
+      const expected = quantum(plain, q * 128);
+      expect(quantum(vari, q * 128)).toEqual(expected);
+      const h = quantum(held, q * 128);
+      if (h.some((v, i) => v !== expected[i])) differs = true;
+    }
+    expect(differs).toBe(true);
   });
 
   it('is not written when the page cannot share memory', () => {
