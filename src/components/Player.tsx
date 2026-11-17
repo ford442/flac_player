@@ -63,12 +63,14 @@ export const Player: React.FC = () => {
 
   const audio = useAudioSettings();
   const {
-    eqGains, playbackRate, gaplessSettings, replayGainSettings,
+    eqGains, playbackRate, preservePitch, gaplessSettings, replayGainSettings,
     latencyMode, renderSizeMode, setRenderSizeMode, outputDevice, onSelectOutputDevice,
   } = audio;
   useEffect(() => {
-    engine.setAudioSettings({ eqGains, playbackRate, gapless: gaplessSettings, replayGain: replayGainSettings });
-  }, [engine, eqGains, playbackRate, gaplessSettings, replayGainSettings]);
+    engine.setAudioSettings({
+      eqGains, playbackRate, preservePitch, gapless: gaplessSettings, replayGain: replayGainSettings,
+    });
+  }, [engine, eqGains, playbackRate, preservePitch, gaplessSettings, replayGainSettings]);
 
   // Shared playlists and room guests leave nothing behind in localStorage.
   useEffect(

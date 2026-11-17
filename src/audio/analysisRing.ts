@@ -16,10 +16,12 @@
  * SharedArrayBuffer from {@link createAnalysisRingBuffer}). Every backend's PCM
  * passes through it, the `sdl` engine's included (#268), so one ring carries
  * what the user hears. The ring is broadcast: readers never
- * consume, they snapshot the newest frames and detect torn copies by
- * re-checking writePos / generation afterwards. Writers copy data before
- * publishing writePos, at most {@link analysisRingBlock} floats at a time, so
- * readers stay that far behind the published position.
+ * consume, they snapshot the newest frames ({@link AnalysisRingReader.readLatest})
+ * or follow a cursor ({@link AnalysisRingReader.readSince}, for meters that must
+ * see every frame), and detect torn copies by re-checking writePos / generation
+ * afterwards. Writers copy data before publishing writePos, at most
+ * {@link analysisRingBlock} floats at a time, so readers stay that far behind
+ * the published position.
  */
 
 export const ANALYSIS_RING_HEADER_WORDS = 8;
@@ -50,6 +52,22 @@ export interface AnalysisSnapshot {
   channels: number;
   sampleRate: number;
   generation: number;
+}
+
+/** Where a {@link AnalysisRingReader.readSince} reader stopped. */
+export interface AnalysisRingCursor {
+  writePos: number;
+  generation: number;
+}
+
+export interface AnalysisRead extends AnalysisSnapshot {
+  /** Pass to the next readSince() call. */
+  next: AnalysisRingCursor;
+  /**
+   * Frames between the cursor and this read were lost (the writer lapped the
+   * reader, or reset / changed format): restart any running measurement.
+   */
+  gap: boolean;
 }
 
 export class AnalysisRingReader {
@@ -121,6 +139,67 @@ export class AnalysisRingReader {
       if (((after - start) >>> 0) > safe) continue;
 
       return { pcm: target.subarray(0, count), frames: take, channels, sampleRate, generation };
+    }
+    return null;
+  }
+
+  /**
+   * Every whole frame written since `cursor` (null: the backlog still in the
+   * ring), oldest first. `gap` is set when frames were lost in between; the read
+   * then starts at the oldest safe frame. `out` is reused when it holds the
+   * result. Null before the writer published a format, or when every attempt was torn.
+   */
+  readSince(cursor: AnalysisRingCursor | null, out?: Float32Array): AnalysisRead | null {
+    const capacity = this.data.length;
+    if (capacity === 0) return null;
+    const safe = capacity - analysisRingBlock(capacity);
+    for (let attempt = 0; attempt < READ_ATTEMPTS; attempt++) {
+      const generation = Atomics.load(this.header, ANALYSIS_RING_GENERATION);
+      const writePos = Atomics.load(this.header, ANALYSIS_RING_WRITE_POS);
+      const channels = Atomics.load(this.header, ANALYSIS_RING_CHANNELS);
+      const sampleRate = Atomics.load(this.header, ANALYSIS_RING_SAMPLE_RATE);
+      if (channels === 0) return null;
+
+      const end = writePos - (writePos % channels);
+      const maxBacklog = Math.min(end, safe - (safe % channels));
+      let start: number;
+      let gap = false;
+      if (!cursor) {
+        start = end - maxBacklog;
+      } else if (cursor.generation !== generation) {
+        start = end - maxBacklog;
+        gap = true;
+      } else {
+        const pending = (end - cursor.writePos) >>> 0;
+        if (pending > maxBacklog) {
+          start = end - maxBacklog;
+          gap = true;
+        } else {
+          start = cursor.writePos;
+        }
+      }
+      const count = (end - start) >>> 0;
+      const target = out && out.length >= count ? out : new Float32Array(count);
+      if (count > 0) {
+        const idx = start & (capacity - 1);
+        const first = Math.min(count, capacity - idx);
+        target.set(this.data.subarray(idx, idx + first), 0);
+        if (count > first) target.set(this.data.subarray(0, count - first), first);
+      }
+
+      if (Atomics.load(this.header, ANALYSIS_RING_GENERATION) !== generation) continue;
+      const after = Atomics.load(this.header, ANALYSIS_RING_WRITE_POS);
+      if (count > 0 && ((after - start) >>> 0) > safe) continue;
+
+      return {
+        pcm: target.subarray(0, count),
+        frames: count / channels,
+        channels,
+        sampleRate,
+        generation,
+        next: { writePos: end >>> 0, generation },
+        gap,
+      };
     }
     return null;
   }

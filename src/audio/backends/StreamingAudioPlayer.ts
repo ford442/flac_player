@@ -52,6 +52,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
   private gainNode: GainNode | null = null;
   private workletPlayer: WorkletAudioPlayer | null = null;
   private playbackRate = 1;
+  private preservePitch = true;
   private activePath: ActivePath | null = null;
 
   // Native <audio> path
@@ -110,7 +111,9 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
   async initialize(): Promise<void> {
     if (!this.workletPlayer) {
       this.workletPlayer = new WorkletAudioPlayer(this.contextManager);
-      this.workletPlayer.setPlaybackRate(this.playbackRate);
+      // The facade reports the rate for whichever path is active (reportRate()).
+      this.workletPlayer.setReportsSourceRate(false);
+      this.workletPlayer.setPlaybackRate(this.playbackRate, this.preservePitch);
       // Only the active path reports: a stopped worklet must not overwrite native state.
       this.workletPlayer.setStateChangeCallback((state) => {
         if (this.activePath !== 'native') this.notifyStateChange(state);
@@ -148,6 +151,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     const el = new Audio();
     el.crossOrigin = 'anonymous';
     el.preload = 'auto';
+    el.preservesPitch = this.preservePitch;
 
     el.addEventListener('timeupdate', () => {
       this.notifyStateChange();
@@ -240,6 +244,7 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
    */
   private switchPath(next: ActivePath): void {
     this.activePath = next;
+    this.reportRate();
     if (next === 'native') {
       this.workletPlayer?.stop();
     } else {
@@ -564,13 +569,31 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
     this.contextManager.setVolume(volume);
   }
 
-  setPlaybackRate(rate: number): void {
+  /**
+   * Native path: `<audio>` playbackRate with `preservesPitch` (the browser holds
+   * pitch; the dsp-chain worklet is told 1×, so listening-room nudges never
+   * touch its stretcher). Hi-fi / buffered paths: the flac worklet plays
+   * varispeed and the dsp-chain worklet transposes it back.
+   */
+  setPlaybackRate(rate: number, preservePitch = true): void {
     const clamped = Math.max(0.25, Math.min(4.0, rate));
     this.playbackRate = clamped;
-    this.audioElement.playbackRate = clamped;
-    if (this.nextAudioElement) this.nextAudioElement.playbackRate = clamped;
+    this.preservePitch = preservePitch;
+    for (const el of [this.audioElement, this.nextAudioElement]) {
+      if (!el) continue;
+      el.preservesPitch = preservePitch;
+      el.playbackRate = clamped;
+    }
     // Also when native is active: the worklet keeps it for a later hi-fi / buffered load.
-    this.workletPlayer?.setPlaybackRate(clamped);
+    this.workletPlayer?.setPlaybackRate(clamped, preservePitch);
+    this.reportRate();
+  }
+
+  /** Tell the graph who changes the rate: the element (holds pitch itself) or the worklet. */
+  private reportRate(): void {
+    if (this.activePath === null) return;
+    const source = this.activePath === 'native' ? 'element' : 'graph';
+    this.contextManager.setSourceRate(this.playbackRate, this.preservePitch, source);
   }
 
   setEQBandGain(bandIndex: number, gainDb: number): void {
@@ -607,6 +630,8 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
       playable: true,
       seek: true,
       playbackRate: true,
+      // `<audio>` preservesPitch.
+      pitchHold: true,
       gapless: true,
       crossfade: true,
       sinkId: isAudioContextSinkSupported(),

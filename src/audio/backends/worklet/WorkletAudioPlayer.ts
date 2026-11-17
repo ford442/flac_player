@@ -66,6 +66,8 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
   private duration: number = 0;
   private currentTime: number = 0;
   private playbackRate: number = 1.0;
+  private preservePitch = true;
+  private reportsSourceRate = true;
   /** addModule failed (or AudioWorklet is missing): every load throws. */
   private workletUnavailable = false;
   private readonly sharedRing: boolean;
@@ -143,6 +145,8 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
       seek: true,
       // Varispeed in the processor (tempo + pitch, like SDL); honest when AudioWorklet is missing.
       playbackRate: this.workletSupported,
+      // The dsp-chain worklet transposes the varispeed output back (dsp_stretch.h).
+      pitchHold: this.workletSupported && this.contextManager.pitchHoldAvailable(),
       // Hi-fi streams splice same-format successors into the ring; crossfade mode
       // is treated as gapless here (overlap stays native-streaming / web-audio).
       gapless: this.workletSupported,
@@ -774,11 +778,20 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
 
   /**
    * Varispeed in the processor: tempo and pitch move together (as SDL /
-   * `preservesPitch = false`). Position and duration stay in media seconds.
+   * `preservesPitch = false`); with `preservePitch` the dsp-chain worklet
+   * transposes by 1/rate. Position and duration stay in media seconds.
    */
-  setPlaybackRate(rate: number): void {
+  setPlaybackRate(rate: number, preservePitch = true): void {
     this.playbackRate = clampPlaybackRate(rate);
+    this.preservePitch = preservePitch;
     this.post({ type: 'setPlaybackRate', rate: this.playbackRate });
+    if (this.reportsSourceRate) this.contextManager.setSourceRate(this.playbackRate, preservePitch, 'graph');
+  }
+
+  /** Whether this player tells the graph its rate (the streaming facade does that for its paths). */
+  setReportsSourceRate(reports: boolean): void {
+    this.reportsSourceRate = reports;
+    if (reports) this.contextManager.setSourceRate(this.playbackRate, this.preservePitch, 'graph');
   }
 
   setEQBandGain(bandIndex: number, gainDb: number): void {

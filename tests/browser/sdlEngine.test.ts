@@ -48,7 +48,50 @@ afterEach(async () => {
   manager = null;
 });
 
+const toneUrl = new URL('/tests/fixtures/tone-5s.flac', window.location.origin).href;
+
+/** Least-squares amplitude of `freq` in channel 0 of an interleaved snapshot. */
+function toneAmplitude(pcm: Float32Array, channels: number, sampleRate: number, freq: number): number {
+  let ss = 0, cc = 0, sc = 0, xs = 0, xc = 0;
+  for (let i = 0; i * channels < pcm.length; i++) {
+    const w = (2 * Math.PI * freq * i) / sampleRate;
+    const sn = Math.sin(w), cs = Math.cos(w), v = pcm[i * channels];
+    ss += sn * sn; cc += cs * cs; sc += sn * cs; xs += v * sn; xc += v * cs;
+  }
+  const det = ss * cc - sc * sc;
+  return Math.hypot((xs * cc - xc * sc) / det, (xc * ss - xs * sc) / det);
+}
+
 describe('sdl engine (worklet on the shared graph)', () => {
+  it('keeps the pitch at 1.25x through the dsp-chain worklet; varispeed raises it (#283)', async () => {
+    manager = new AudioContextManager();
+    const mgr = manager;
+    const sdl = await createAudioBackend('sdl', mgr);
+    backend = sdl;
+    await sdl.initialize();
+    // 440 Hz at 0.088 peak per channel (44.1 kHz stereo).
+    await sdl.loadFromArrayBuffer(await (await fetch(toneUrl)).arrayBuffer(), 'tone-5s.flac');
+    sdl.setPlaybackRate(1.25, true);
+    expect(sdl.getCapabilities().pitchHold).toBe(true);
+    sdl.play();
+    await waitFor(() => mgr.getPitchHold().by === 'dsp-chain', 8000, 'dsp-chain holding pitch');
+    // Past the engage fade and the 150 ms stretch latency.
+    await waitFor(() => sdl.getCurrentTime() > 1.2, 8000, 'clock past 1.2 s');
+    const held = getAnalysisTap()!.reader.readLatest(8192)!;
+    const heldAt = (f: number) => toneAmplitude(held.pcm, held.channels, held.sampleRate, f);
+    expect(heldAt(440), 'held: 440 Hz').toBeGreaterThan(0.07);
+    expect(heldAt(550), 'held: 550 Hz').toBeLessThan(0.01);
+
+    sdl.setPlaybackRate(1.25, false);
+    expect(mgr.getPitchHold().by).toBe('none');
+    const t0 = sdl.getCurrentTime();
+    await waitFor(() => sdl.getCurrentTime() > t0 + 0.6, 8000, 'clock advancing in varispeed');
+    const vari = getAnalysisTap()!.reader.readLatest(8192)!;
+    const variAt = (f: number) => toneAmplitude(vari.pcm, vari.channels, vari.sampleRate, f);
+    expect(variAt(550), 'varispeed: 550 Hz').toBeGreaterThan(0.08);
+    expect(variAt(440), 'varispeed: 440 Hz').toBeLessThan(0.01);
+  });
+
   it('reports playable here (AudioWorklet + cross-origin isolation)', async () => {
     expect(crossOriginIsolated).toBe(true);
     const { backend } = await loadLevels();

@@ -1,8 +1,8 @@
 /**
  * Message protocol between DspChainNode (main thread) and the `dsp-chain`
  * AudioWorkletProcessor (dspChainProcessor.js), which runs src/sdl/dsp_chain.h
- * compiled to public/dsp-chain.wasm. The processor imports these via JSDoc so
- * `npm run typecheck` covers both sides.
+ * (with the dsp_stretch.h pitch-hold stage) compiled to public/dsp-chain.wasm.
+ * The processor imports these via JSDoc so `npm run typecheck` covers both sides.
  */
 
 export const DSP_CHAIN_PROCESSOR_NAME = 'dsp-chain';
@@ -20,6 +20,10 @@ export interface DspChainInitialState {
   replayGain: number;
   limiter: boolean;
   volume: number;
+  /** Varispeed rate of the source feeding the chain (1 when an `<audio>` element holds pitch itself). */
+  playbackRate: number;
+  /** Transpose by 1/playbackRate so only the tempo changes (dsp_stretch.h). */
+  preservePitch: boolean;
 }
 
 /** processorOptions for the `dsp-chain` processor. */
@@ -47,10 +51,17 @@ export type DspChainInbound =
   | ({ type: 'eqBand'; index: number } & DspChainEqBand)
   | { type: 'replayGain'; linear: number; limiter: boolean }
   | { type: 'volume'; volume: number }
+  /** Source rate / pitch hold; retunes the stretcher, never resets its window. */
+  | { type: 'playbackRate'; rate: number; preservePitch: boolean }
   /** Clear filter / limiter history (seek, new stream). */
   | { type: 'reset' };
 
 /** Processor → main thread. Exactly one of these after construction. */
 export type DspChainOutbound =
-  | { type: 'ready' }
+  /**
+   * `stretchLatencyFrames`: delay the pitch-hold stage adds while engaged, at the
+   * processor's fixed format (sized in the constructor, never on the audio
+   * callback); 0 = pitch hold unavailable at this channel count × rate.
+   */
+  | { type: 'ready'; stretchLatencyFrames: number }
   | { type: 'error'; message: string };

@@ -161,6 +161,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = ({
             <PlayerFallbackSettingsTab
               eqGains={audio.eqGains} setEQBandGain={audio.setEQBandGain} resetEQ={audio.resetEQ}
               playbackRate={audio.playbackRate} setPlaybackRate={audio.setPlaybackRate}
+              preservePitch={audio.preservePitch} setPreservePitch={audio.setPreservePitch}
               gaplessMode={audio.gaplessMode} setGaplessMode={audio.setGaplessMode}
               crossfadeMs={audio.crossfadeMs} setCrossfadeMs={audio.setCrossfadeMs}
               replayGainMode={audio.replayGainMode} setReplayGainMode={audio.setReplayGainMode}

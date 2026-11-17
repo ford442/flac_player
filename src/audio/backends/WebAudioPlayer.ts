@@ -399,6 +399,8 @@ export class WebAudioPlayer extends BaseAudioBackend {
       playable: true,
       seek: true,
       playbackRate: true,
+      // BufferSourceNode.playbackRate is varispeed; the dsp-chain worklet transposes it back.
+      pitchHold: this.contextManager.pitchHoldAvailable(),
       gapless: true,
       crossfade: true,
       sinkId: isAudioContextSinkSupported(),
@@ -419,8 +421,13 @@ export class WebAudioPlayer extends BaseAudioBackend {
     this.contextManager.setVolume(volume);
   }
 
-  setPlaybackRate(rate: number): void {
+  /**
+   * BufferSourceNode.playbackRate (varispeed: tempo and pitch together); with
+   * `preservePitch` the dsp-chain worklet transposes by 1/rate (dsp_stretch.h).
+   */
+  setPlaybackRate(rate: number, preservePitch = true): void {
     const clampedRate = Math.max(0.25, Math.min(4.0, rate));
+    this.contextManager.setSourceRate(clampedRate, preservePitch, 'graph');
     if (this.isPlaying && this.sourceNode) {
       const currentPos = this.getCurrentTime();
       this.playbackRate = clampedRate;

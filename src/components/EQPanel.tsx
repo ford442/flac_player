@@ -6,6 +6,7 @@ import type { ReplayGainMode } from '../utils/replayGain';
 import type { LatencyMode, RenderSizeMode } from '../audio/sampleRatePolicy';
 import type { AudioOutputInfo } from '../audio/AudioContextManager';
 import type { OutputDeviceOption } from '../hooks/useAudioOutputInfo';
+import { formatLufs, useLoudness } from '../hooks/useLoudness';
 import { useAudioCapabilities } from './AudioCapabilitiesContext';
 
 /** Output sink picker + read-only graph latency, composed in Player.tsx. */
@@ -44,12 +45,46 @@ function formatDspEngine({ info, externalPlayback }: AudioOutputControls): strin
   return info.dspEngine === 'wasm' ? 'Worklet WASM' : 'Web Audio nodes';
 }
 
+function formatPitchHold(info: AudioOutputInfo | null): string {
+  if (!info) return '—';
+  const { by, unavailable, latency } = info.pitch;
+  if (by === 'dsp-chain') return `Worklet WASM (+${Math.round(latency * 1000)} ms)`;
+  if (by === 'element') return '<audio> element';
+  return unavailable ? 'Unavailable (varispeed)' : 'Off';
+}
+
+/**
+ * EBU R128 rows of the hi-fi readout, metered from the analysis ring
+ * (loudnessMeter.ts). Its own component: only these rows re-render per reading.
+ */
+const LoudnessRows: React.FC = () => {
+  const reading = useLoudness();
+  const title = reading
+    ? `EBU R128 (BS.1770-4) of the output after DSP, ${reading.channels} ch at ${reading.sampleRate} Hz`
+    : 'Needs the dsp-chain worklet and cross-origin isolation (SharedArrayBuffer)';
+  return (
+    <>
+      <dt className="text-gray-400">Momentary</dt>
+      <dd className="font-mono text-purple-300" title={title} data-testid="lufs-momentary">
+        {formatLufs(reading?.momentary, reading?.live)}
+      </dd>
+      <dt className="text-gray-400">Short-term</dt>
+      <dd className="font-mono text-purple-300" title={title} data-testid="lufs-short-term">
+        {formatLufs(reading?.shortTerm, reading?.live)}
+      </dd>
+    </>
+  );
+};
+
 interface EQPanelProps {
   eqGains: number[];
   onBandChange: (index: number, gainDb: number) => void;
   onReset: () => void;
   playbackRate: number;
   onPlaybackRateChange: (rate: number) => void;
+  /** Keep pitch at any speed (default on); off = varispeed. Omitted → no toggle. */
+  preservePitch?: boolean;
+  onPreservePitchChange?: (enabled: boolean) => void;
   gaplessMode: GaplessMode;
   onGaplessModeChange: (mode: GaplessMode) => void;
   crossfadeMs: number;
@@ -99,6 +134,8 @@ export const EQPanel: React.FC<EQPanelProps> = ({
   onReset,
   playbackRate,
   onPlaybackRateChange,
+  preservePitch = true,
+  onPreservePitchChange,
   gaplessMode,
   onGaplessModeChange,
   crossfadeMs,
@@ -113,6 +150,11 @@ export const EQPanel: React.FC<EQPanelProps> = ({
 }) => {
   const capabilities = useAudioCapabilities();
   const rateDisabled = !capabilities.playbackRate;
+  // The backend (or the graph it plays into) cannot keep pitch: speed is varispeed here.
+  const pitchHoldUnavailable = !capabilities.pitchHold || Boolean(audioOutput?.info?.pitch.unavailable);
+  const pitchHeld = preservePitch && !pitchHoldUnavailable;
+  const speedLabel = pitchHeld ? 'Speed' : 'Varispeed';
+  const keepPitchLabelId = React.useId();
   return (
     <div className="eq-panel space-y-4 text-sm text-white">
       {/* EQ Section */}
@@ -175,8 +217,8 @@ export const EQPanel: React.FC<EQPanelProps> = ({
       {/* Playback Speed */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-            Speed
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400" data-testid="speed-label">
+            {speedLabel}
           </span>
           <span className="text-xs font-mono text-purple-300">{playbackRate.toFixed(2)}×</span>
         </div>
@@ -191,7 +233,7 @@ export const EQPanel: React.FC<EQPanelProps> = ({
           disabled={rateDisabled}
           className="w-full disabled:opacity-40"
           style={{ accentColor: '#a78bfa' }}
-          aria-label="Playback speed"
+          aria-label={pitchHeld ? 'Playback speed' : 'Playback varispeed'}
           title={rateDisabled ? 'Speed control is unavailable in this output mode' : undefined}
         />
 
@@ -211,6 +253,38 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             </button>
           ))}
         </div>
+
+        {onPreservePitchChange && (
+          <div className="flex items-center justify-between mt-2">
+            <span id={keepPitchLabelId} className="text-xs text-gray-400">
+              Keep pitch
+              <span className="text-gray-400/70"> — off is varispeed (chipmunk)</span>
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={preservePitch}
+              aria-labelledby={keepPitchLabelId}
+              onClick={() => onPreservePitchChange(!preservePitch)}
+              disabled={rateDisabled}
+              className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                preservePitch ? 'bg-purple-600' : 'bg-white/20'
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                  preservePitch ? 'translate-x-4' : ''
+                }`}
+              />
+            </button>
+          </div>
+        )}
+        {preservePitch && pitchHoldUnavailable && !rateDisabled && (
+          <p className="text-xs text-amber-300/90 mt-1" role="status">
+            Pitch hold needs the DSP worklet (dsp-chain.wasm), which is not running here; speed changes pitch too.
+          </p>
+        )}
       </div>
 
       {/* ReplayGain / Loudness */}
@@ -329,6 +403,14 @@ export const EQPanel: React.FC<EQPanelProps> = ({
             >
               {formatDspEngine(audioOutput)}
             </dd>
+            <dt className="text-gray-400">Pitch hold</dt>
+            <dd
+              className="font-mono text-purple-300"
+              title="Who keeps the pitch at the current speed: dsp_stretch.h in the dsp-chain worklet, or the <audio> element."
+            >
+              {formatPitchHold(audioOutput.info)}
+            </dd>
+            <LoudnessRows />
           </dl>
         )}
       </div>

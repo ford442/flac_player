@@ -55,16 +55,23 @@ track.url → HTMLAudioElement → MediaElementSource → AudioContextManager �
 (crossfade uses a second <audio> element; no full-file download)
 ```
 
-Streaming / web-audio / worklet speaker DSP (ReplayGain → limiter → volume → EQ) is the
-`dsp-chain` AudioWorklet running `src/sdl/dsp_chain.h` as WASM — the same code SDL runs in
-its callback. `EQChain` / `ReplayGainNode` are the fallback when it fails to load
-(`?dsp=webaudio` forces the fallback). Keep `DEFAULT_EQ_BANDS` the single band layout.
+Speaker DSP for every backend, `sdl` included (ReplayGain → limiter → volume → pitch hold → EQ) is
+the `dsp-chain` AudioWorklet running `src/sdl/dsp_chain.h` as WASM. `EQChain` / `ReplayGainNode` are
+the fallback when it fails to load (`?dsp=webaudio` forces the fallback). Keep `DEFAULT_EQ_BANDS`
+the single band layout.
 
-**Analysis ring (shared post-DSP PCM tap):** SDL's callback (`src/sdl/analysis_ring.h`) and the
-dsp-chain worklet (`dspChainProcessor.js`) write the same 8 × u32 header + data layout into a
-SharedArrayBuffer; `src/audio/analysisRing.ts` reads it (`getAnalysisTap()`). Keep the three in
-sync. Writers only memcpy — FFT / analysis runs on reader threads (`src/sdl/dsp_fft.h` via
-`src/audio/wasmFft.ts`, or gpu-chores WebGPU), never in an audio callback.
+**Speed vs varispeed (#283):** sources play varispeed; with "Keep pitch" (default) the chain's
+`dsp_stretch.h` (Signalsmith Stretch, pinned in `scripts/dsp-third-party.sh`) transposes by 1/rate.
+Backends report `setSourceRate(rate, preservePitch, 'graph' | 'element')`; native `<audio>` is
+`'element'` (holds pitch itself, chain stays 1× — rooms' nudges never touch the stretcher). Only
+`configure_stretch` (worklet constructor) allocates; `dsp-chain.wasm` memory is fixed (6 MiB, growth off).
+
+**Analysis ring (shared post-DSP PCM tap):** the dsp-chain worklet (`dspChainProcessor.js`) writes
+an 8 × u32 header + data layout into a SharedArrayBuffer; `src/audio/analysisRing.ts` reads it
+(`getAnalysisTap()`; `readLatest` snapshots, `readSince` cursors). Keep the two in sync. Writers only
+memcpy — FFT / analysis runs on reader threads (`src/sdl/dsp_fft.h` via `src/audio/wasmFft.ts`, the
+EBU R128 meter `src/sdl/dsp_loudness.h` via `src/audio/loudnessMeter.ts`, or gpu-chores WebGPU),
+never in an audio callback.
 
 **Context lifecycle (#259):** one shared `AudioContext` at the device rate for the session
 (decision record in `docs/AUDIO_BACKENDS.md`; `?ctxrate=native` restores per-file-rate rebuilds).
@@ -187,9 +194,9 @@ npm run verify:wasm        # CI artifact check
 Flags come from named profiles in `scripts/wasm-flags.sh` (`audio-callback`, `standalone-dsp`,
 `resampler`, `projectm`); a new C++ library gets a profile there, never an inline `em++` line.
 All four are built with the emsdk in `scripts/emsdk-version` (the build refuses any other
-emcc; if `$EMSDK` points at another release, `export EMSDK=$PWD/emsdk`). SDL3 and
-`dsp-chain` both compile `src/sdl/dsp_chain.h` — rebuild both when it changes. Never merge
-`public/*.wasm` or `*.sha256` textually; rebuild them.
+emcc; if `$EMSDK` points at another release, `export EMSDK=$PWD/emsdk`). Only `dsp-chain`
+compiles `src/sdl/dsp_chain.h`; every source hash covers `wasm-flags.sh`, so a flag change
+rebuilds all four. Never merge `public/*.wasm` or `*.sha256` textually; rebuild them.
 
 Production webpack (`npm run build`) copies prebuilt artifacts from `public/` — no emsdk required.
 

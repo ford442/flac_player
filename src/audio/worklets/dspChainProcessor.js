@@ -1,13 +1,16 @@
 // @ts-check
 /* global sampleRate */
 // AudioWorkletProcessor running the speaker DSP chain from src/sdl/dsp_chain.h
-// (ReplayGain -> limiter -> volume -> EQ) compiled to public/dsp-chain.wasm by
+// (ReplayGain -> limiter -> volume -> pitch hold -> EQ) compiled to public/dsp-chain.wasm by
 // scripts/build-dsp-wasm.sh, for every backend: the `sdl` engine's worklet
 // feeds this graph too (#268). Static same-origin module (no blob
 // URL). Message types live in dspChainMessages.ts.
 //
 // The module is STANDALONE_WASM with no imports: it is instantiated
 // synchronously here and never touches the network from the audio thread.
+// Its memory is fixed (growth off); the constructor sizes the pitch-hold
+// stretcher for this processor's format (channels, context rate), the only
+// allocation the module makes, so process() never allocates.
 //
 // The processed output is also copied into the analysis ring (header layout in
 // src/audio/analysisRing.ts; this is its only writer) when one is passed —
@@ -36,6 +39,8 @@ const RING_MAX_BLOCK = 8192;
  * @property {(index: number, type: number, freq: number, q: number, gainDb: number) => void} set_eq_band
  * @property {(linear: number, limiterEnabled: number) => void} set_replaygain
  * @property {() => void} request_reset
+ * @property {(rate: number, preservePitch: number) => void} set_playback_rate
+ * @property {(channels: number, sampleRate: number) => number} configure_stretch
  * @property {(numFloats: number, channels: number, sampleRate: number, volume: number) => void} process
  */
 
@@ -69,12 +74,16 @@ class DspChainProcessor extends AudioWorkletProcessor {
       dsp._initialize?.();
       // Memory is fixed-size (ALLOW_MEMORY_GROWTH=0), so this view never detaches.
       this.scratch = new Float32Array(dsp.memory.buffer, dsp.scratch_ptr(), dsp.scratch_floats());
-      const { eqBands, replayGain, limiter, volume } = opts.initial;
+      const { eqBands, replayGain, limiter, volume, playbackRate, preservePitch } = opts.initial;
       eqBands.forEach((b, i) => dsp.set_eq_band(i, b.filterType, b.frequency, b.q, b.gainDb));
       dsp.set_replaygain(replayGain, limiter ? 1 : 0);
+      dsp.set_playback_rate(playbackRate, preservePitch ? 1 : 0);
+      // The format is fixed for this node (explicit channelCount, the context's
+      // rate), so size the stretcher once, here, outside process().
+      const stretchLatencyFrames = dsp.configure_stretch(this.channels, sampleRate);
       this.volume = volume;
       this.dsp = dsp;
-      this.send({ type: 'ready' });
+      this.send({ type: 'ready', stretchLatencyFrames });
     } catch (err) {
       this.send({ type: 'error', message: String(err) });
     }
@@ -136,6 +145,9 @@ class DspChainProcessor extends AudioWorkletProcessor {
         break;
       case 'volume':
         this.volume = msg.volume;
+        break;
+      case 'playbackRate':
+        dsp.set_playback_rate(msg.rate, msg.preservePitch ? 1 : 0);
         break;
       case 'reset':
         dsp.request_reset();

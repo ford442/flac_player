@@ -20,6 +20,8 @@ export interface PlayerFallbackSettingsTabProps {
   resetEQ: () => void;
   playbackRate: number;
   setPlaybackRate: (r: number) => void;
+  preservePitch: boolean;
+  setPreservePitch: (enabled: boolean) => void;
   gaplessMode: GaplessMode;
   setGaplessMode: (mode: GaplessMode) => void;
   crossfadeMs: number;
@@ -35,7 +37,7 @@ export interface PlayerFallbackSettingsTabProps {
 }
 
 export const PlayerFallbackSettingsTab: React.FC<PlayerFallbackSettingsTabProps> = ({
-  eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate,
+  eqGains, setEQBandGain, resetEQ, playbackRate, setPlaybackRate, preservePitch, setPreservePitch,
   gaplessMode, setGaplessMode, crossfadeMs, setCrossfadeMs,
   replayGainMode, setReplayGainMode, replayGainLimiter, setReplayGainLimiter,
   latencyMode, setLatencyMode, audioOutput,
@@ -60,6 +62,7 @@ export const PlayerFallbackSettingsTab: React.FC<PlayerFallbackSettingsTabProps>
         <div className="bg-white/5 rounded-xl p-5 border border-white/10">
           <EQPanel eqGains={eqGains} onBandChange={setEQBandGain} onReset={resetEQ}
             playbackRate={playbackRate} onPlaybackRateChange={setPlaybackRate}
+            preservePitch={preservePitch} onPreservePitchChange={setPreservePitch}
             gaplessMode={gaplessMode} onGaplessModeChange={setGaplessMode}
             crossfadeMs={crossfadeMs} onCrossfadeMsChange={setCrossfadeMs}
             replayGainMode={replayGainMode} onReplayGainModeChange={setReplayGainMode}

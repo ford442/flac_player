@@ -11,6 +11,11 @@ if [ -z "${CXX:-}" ] && command -v clang++ >/dev/null 2>&1; then
   export CXX=clang++
 fi
 
-cmake -S "$PROJECT_ROOT/tests/native" -B "$BUILD_DIR" >/dev/null
+# dsp_chain.h includes the pinned Signalsmith headers (scripts/dsp-third-party.sh).
+PROJECT_ROOT="$PROJECT_ROOT" source "$SCRIPT_DIR/dsp-third-party.sh"
+dsp_third_party_fetch
+THIRD_PARTY_DIRS="$(IFS=';'; echo "${DSP_THIRD_PARTY_DIRS[*]}")"
+
+cmake -S "$PROJECT_ROOT/tests/native" -B "$BUILD_DIR" -DDSP_THIRD_PARTY_DIRS="$THIRD_PARTY_DIRS" >/dev/null
 cmake --build "$BUILD_DIR" --parallel
 ctest --test-dir "$BUILD_DIR" --output-on-failure

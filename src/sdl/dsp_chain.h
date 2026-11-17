@@ -1,17 +1,21 @@
 #pragma once
-// Speaker-path DSP for every backend: ReplayGain -> limiter -> volume -> EQ,
-// compiled into public/dsp-chain.wasm and run by the `dsp-chain` AudioWorklet
-// on the shared graph (src/dsp/dsp_wasm_entry.cpp).
+// Speaker-path DSP for every backend: ReplayGain -> limiter -> volume ->
+// pitch hold (dsp_stretch.h) -> EQ, compiled into public/dsp-chain.wasm and run
+// by the `dsp-chain` AudioWorklet on the shared graph (src/dsp/dsp_wasm_entry.cpp).
+// The `sdl` engine plays into that graph too (#268), so this is the one build.
 //
 // Mirrors the Web Audio fallback in AudioContextManager.ts (ReplayGainNode ->
 // master Gain -> EQChain) so both paths honour the same EQ / loudness settings.
+// The fallback has no pitch hold: without this module the speed control is
+// varispeed (AudioContextManager reports it).
 // Biquad coefficients follow the Web Audio spec (RBJ cookbook; shelves use S = 1
 // and ignore Q, exactly like BiquadFilterNode). Band layout is pushed from JS
 // (DEFAULT_EQ_BANDS) so there is one source of truth for frequencies and Q.
 //
 // Threading: setters and dsp_process() both run on the worklet's audio thread
 // (the atomics are uncontended); dsp_process() recomputes coefficients when the
-// version or stream format changes, and never allocates.
+// version or stream format changes, and never allocates (the stretcher is sized
+// by dsp_stretch_configure() before the first quantum).
 
 #include <algorithm>
 #include <atomic>
@@ -20,6 +24,8 @@
 #if defined(__wasm_simd128__)
 #include <wasm_simd128.h>
 #endif
+
+#include "dsp_stretch.h"
 
 enum DspEqType { DSP_EQ_LOWSHELF = 0, DSP_EQ_PEAKING = 1, DSP_EQ_HIGHSHELF = 2 };
 
@@ -85,6 +91,10 @@ struct DspParams {
     std::atomic<int> bandCount{0};
     std::atomic<float> replayGain{1.0f};
     std::atomic<int> limiter{0};
+    /** Varispeed rate of the source feeding the chain (0.25..4). */
+    std::atomic<float> playbackRate{1.0f};
+    /** Hold the original pitch at playbackRate (dsp_stretch.h); 0 = varispeed. */
+    std::atomic<int> preservePitch{1};
     std::atomic<uint32_t> version{1};
     std::atomic<uint32_t> resetVersion{0};
 
@@ -141,7 +151,18 @@ inline void dsp_set_replaygain(float linear, int limiterEnabled) {
     g_dspParams.limiter.store(limiterEnabled ? 1 : 0);
 }
 
-/** Clear filter/limiter history (seek, stop, new stream). Safe from any thread. */
+/**
+ * The source plays at `rate` (varispeed). With `preservePitch` the chain
+ * transposes by 1/rate so only the tempo changes. Rate changes never reset the
+ * stretch window. Clamped to 0.25..4 like useAudioSettings.ts.
+ */
+inline void dsp_set_playback_rate(float rate, int preservePitch) {
+    if (!(rate > 0.0f) || !std::isfinite(rate)) rate = 1.0f;
+    g_dspParams.playbackRate.store(std::max(0.25f, std::min(4.0f, rate)));
+    g_dspParams.preservePitch.store(preservePitch ? 1 : 0);
+}
+
+/** Clear filter/limiter/stretch history (seek, stop, new stream). Safe from any thread. */
 inline void dsp_request_reset() {
     g_dspParams.resetVersion.fetch_add(1);
 }
@@ -161,6 +182,7 @@ inline void dsp_refresh(DspState& s, int channels, int sampleRate) {
         s.channelPos = 0;
         s.limiterEnvDb = 0.0;
         s.appliedResetVersion = resetVersion;
+        dsp_stretch_reset(g_dspStretch);
     }
 
     if (formatChanged || version != s.appliedVersion) {
@@ -274,7 +296,9 @@ inline int dsp_eq_simd_stereo(DspState& s, float* samples, int numFloats, int ch
 
 /**
  * In-place speaker DSP on interleaved f32. `samples` must be a scratch copy,
- * never the buffered source PCM. `numFloats` need not be frame-aligned.
+ * never the buffered source PCM. `numFloats` need not be frame-aligned, but
+ * pitch hold only engages on whole-frame calls at the format the stretcher was
+ * configured for (the worklet always passes whole frames).
  * `allowSimd` exists for the scalar-vs-SIMD golden test.
  */
 inline void dsp_process(float* samples, int numFloats, int channels, int sampleRate, float volume,
@@ -285,6 +309,8 @@ inline void dsp_process(float* samples, int numFloats, int channels, int sampleR
     dsp_refresh(s, channels, sampleRate);
 
     dsp_gain_stage(s, samples, numFloats, volume);
+    dsp_stretch_process(g_dspStretch, samples, numFloats, channels, sampleRate,
+                        g_dspParams.playbackRate.load(), g_dspParams.preservePitch.load() != 0);
 #if defined(__wasm_simd128__)
     if (allowSimd && channels == 2) {
         s.channelPos = dsp_eq_simd_stereo(s, samples, numFloats, s.channelPos);

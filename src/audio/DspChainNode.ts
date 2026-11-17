@@ -11,12 +11,13 @@ import {
 } from './worklets/dspChainMessages';
 
 /**
- * Speaker DSP (ReplayGain -> limiter -> volume -> EQ) as one AudioWorkletNode
- * running src/sdl/dsp_chain.h compiled to public/dsp-chain.wasm — the same
- * code SDL runs in its audio callback. AudioContextManager wires it between
- * the backend input and the analyser and keeps ReplayGainNode / EQChain as the
- * fallback when the module or AudioWorklet is unavailable (mirrors SpeexDSP →
- * linear resampling).
+ * Speaker DSP (ReplayGain -> limiter -> volume -> pitch hold -> EQ) as one
+ * AudioWorkletNode running src/sdl/dsp_chain.h compiled to
+ * public/dsp-chain.wasm, for every backend (the `sdl` engine plays into it
+ * too). AudioContextManager wires it between the backend input and the
+ * analyser and keeps ReplayGainNode / EQChain as the fallback when the module
+ * or AudioWorklet is unavailable (mirrors SpeexDSP → linear resampling). The
+ * fallback has no pitch hold: the speed control is then varispeed.
  *
  * The processor also copies its output into an analysis ring (analysisRing.ts)
  * when the page is cross-origin isolated — the Web Audio backends' side of the
@@ -35,6 +36,10 @@ export interface DspChainSettings {
   replayGainLinear: number;
   limiter: boolean;
   volume: number;
+  /** Varispeed rate of the source feeding the chain (1 when an `<audio>` element holds pitch). */
+  playbackRate: number;
+  /** Transpose by 1/playbackRate in the worklet so only the tempo changes. */
+  preservePitch: boolean;
 }
 
 const FLAT_SETTINGS: DspChainSettings = {
@@ -42,6 +47,8 @@ const FLAT_SETTINGS: DspChainSettings = {
   replayGainLinear: 1,
   limiter: false,
   volume: 1,
+  playbackRate: 1,
+  preservePitch: true,
 };
 
 /** DEFAULT_EQ_BANDS layout with the given gains, in the dsp_chain.h encoding. */
@@ -106,7 +113,7 @@ export function isDspWasmSupported(context: BaseAudioContext): boolean {
     && !!context.audioWorklet;
 }
 
-function waitForReady(node: AudioWorkletNode): Promise<void> {
+function waitForReady(node: AudioWorkletNode): Promise<{ stretchLatencyFrames: number }> {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       node.port.onmessage = null;
@@ -115,7 +122,7 @@ function waitForReady(node: AudioWorkletNode): Promise<void> {
     node.port.onmessage = (e: MessageEvent<DspChainOutbound>) => {
       clearTimeout(timer);
       node.port.onmessage = null;
-      if (e.data.type === 'ready') resolve();
+      if (e.data.type === 'ready') resolve({ stretchLatencyFrames: e.data.stretchLatencyFrames });
       else reject(new Error(`dsp-chain processor: ${e.data.message}`));
     };
   });
@@ -139,6 +146,8 @@ export class DspChainNode {
       replayGain: Math.max(0, s.replayGainLinear),
       limiter: s.limiter,
       volume: s.volume,
+      playbackRate: s.playbackRate,
+      preservePitch: s.preservePitch,
     };
     const count = Math.max(1, Math.min(DSP_MAX_CHANNELS, Math.floor(channels)));
     const [wasm] = await Promise.all([loadDspWasm(), addProcessorModule(context)]);
@@ -161,14 +170,16 @@ export class DspChainNode {
       if (!(err instanceof DOMException && err.name === 'DataCloneError')) throw err;
       node = construct(wasm.bytes.slice(0));
     }
+    let ready: { stretchLatencyFrames: number };
     try {
-      await waitForReady(node);
+      ready = await waitForReady(node);
     } catch (err) {
       node.disconnect();
       node.port.close();
       throw err;
     }
-    return new DspChainNode(node, count, analysisRing ? readerForRingBuffer(analysisRing) : null);
+    const reader = analysisRing ? readerForRingBuffer(analysisRing) : null;
+    return new DspChainNode(node, count, reader, Math.max(0, ready.stretchLatencyFrames | 0), context.sampleRate);
   }
 
   private constructor(
@@ -176,7 +187,20 @@ export class DspChainNode {
     readonly channels: number,
     /** The processor's output tap; null when SharedArrayBuffer is unavailable. */
     readonly analysisRing: AnalysisRingReader | null,
+    /** Delay the pitch-hold stage adds while engaged; 0 = no pitch hold at this format. */
+    readonly stretchLatencyFrames: number,
+    private readonly sampleRate: number,
   ) {}
+
+  /** True when the worklet can hold pitch at this node's channel count × context rate. */
+  get canHoldPitch(): boolean {
+    return this.stretchLatencyFrames > 0;
+  }
+
+  /** Pitch-hold latency in seconds (0 when unavailable). */
+  get stretchLatency(): number {
+    return this.sampleRate > 0 ? this.stretchLatencyFrames / this.sampleRate : 0;
+  }
 
   private post(msg: DspChainInbound): void {
     this.node.port.postMessage(msg);
@@ -193,6 +217,11 @@ export class DspChainNode {
 
   setVolume(volume: number): void {
     this.post({ type: 'volume', volume });
+  }
+
+  /** The source plays at `rate` (varispeed); with `preservePitch` the worklet transposes back. */
+  setPlaybackRate(rate: number, preservePitch: boolean): void {
+    this.post({ type: 'playbackRate', rate, preservePitch });
   }
 
   reset(): void {

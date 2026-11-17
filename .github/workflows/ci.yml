@@ -108,9 +108,12 @@ jobs:
             dsp:
               - 'src/sdl/dsp_chain.h'
               - 'src/sdl/dsp_fft.h'
+              - 'src/sdl/dsp_loudness.h'
+              - 'src/sdl/dsp_stretch.h'
               - 'src/dsp/**'
               - 'scripts/build-dsp-wasm.sh'
               - 'scripts/dsp-source-hash.sh'
+              - 'scripts/dsp-third-party.sh'
             projectm:
               - 'scripts/wasm-flags.sh'
               - 'src/projectm/**'

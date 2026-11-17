@@ -561,6 +561,8 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
       playable: this.supported,
       seek: true,
       playbackRate: true,
+      // The engine plays varispeed into the dsp-chain worklet, which holds pitch (#283).
+      pitchHold: this.contextManager.pitchHoldAvailable(),
       gapless: this.isStreaming,
       crossfade: false,
       sinkId: isAudioContextSinkSupported(),
@@ -580,10 +582,17 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
     this.contextManager.setVolume(volume);
   }
 
-  /** Tempo by interpolation in the processor (pitch follows speed). Clock stays in media seconds. */
-  setPlaybackRate(rate: number): void {
+  /**
+   * Tempo by interpolation in the processor (varispeed: pitch follows speed);
+   * with `preservePitch` the dsp-chain worklet the engine plays into transposes
+   * by 1/rate, the same dsp_stretch.h stage as every other graph source. The
+   * engine's `_set_playback_rate` stays the varispeed read rate. Clock stays in
+   * media seconds.
+   */
+  setPlaybackRate(rate: number, preservePitch = true): void {
     this.playbackRate = Math.max(0.25, Math.min(4, Number.isFinite(rate) ? rate : 1));
     this.module?._set_playback_rate(this.playbackRate);
+    this.contextManager.setSourceRate(this.playbackRate, preservePitch, 'graph');
   }
 
   setEQGains(gains: number[]): void {

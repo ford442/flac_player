@@ -66,6 +66,8 @@ export interface LoadOptions {
 export interface EngineAudioSettings {
   eqGains: number[];
   playbackRate: number;
+  /** Keep the original pitch at any rate (default); false = varispeed. */
+  preservePitch: boolean;
   gapless: GaplessSettings;
   replayGain: ReplayGainSettings;
 }
@@ -73,6 +75,7 @@ export interface EngineAudioSettings {
 export const DEFAULT_ENGINE_AUDIO: EngineAudioSettings = {
   eqGains: [],
   playbackRate: 1,
+  preservePitch: true,
   gapless: { mode: DEFAULT_GAPLESS_MODE, crossfadeMs: DEFAULT_CROSSFADE_MS },
   replayGain: { mode: DEFAULT_REPLAYGAIN_MODE, limiterEnabled: false },
 };
@@ -278,7 +281,7 @@ export class PlaybackEngine {
     const { volume, muted } = this.store.getState().settings;
     backend.setVolume(muted ? 0 : volume);
     backend.setEQGains(this.audio.eqGains);
-    backend.setPlaybackRate(this.audio.playbackRate);
+    backend.setPlaybackRate(this.audio.playbackRate, this.audio.preservePitch);
     this.rate = this.audio.playbackRate;
     // setGaplessSettings only: the deprecated setCrossfadeEnabled(false) resets 'gapless' to 'off'.
     backend.setGaplessSettings?.(this.audio.gapless);
@@ -875,7 +878,9 @@ export class PlaybackEngine {
     this.audio = next;
     const backend = this.backend;
     if (next.eqGains !== prev.eqGains) backend?.setEQGains(next.eqGains);
-    if (next.playbackRate !== prev.playbackRate) this.setBackendRate(next.playbackRate);
+    if (next.playbackRate !== prev.playbackRate || next.preservePitch !== prev.preservePitch) {
+      this.setBackendRate(next.playbackRate);
+    }
     if (!sameGapless(next.gapless, prev.gapless)) {
       backend?.setGaplessSettings?.(next.gapless);
       if (!isGaplessActive(next.gapless)) this.preloaded = null;
@@ -888,7 +893,7 @@ export class PlaybackEngine {
     // Re-base the clock so extrapolation switches rate at this instant.
     this.sample = { ...this.sample, position: this.clockNow(), at: this.deps.now() };
     this.rate = rate;
-    this.backend?.setPlaybackRate(rate);
+    this.backend?.setPlaybackRate(rate, this.audio.preservePitch);
   }
 
   private applyReplayGain(track: PlaylistTrack | null = this.store.getState().transport.currentTrack): void {
@@ -916,7 +921,12 @@ export class PlaybackEngine {
     return this.backend?.getSyncClock?.() ?? null;
   }
 
-  /** A room guest's drift correction; the user's rate setting is untouched. */
+  /**
+   * A room guest's drift correction; the user's rate setting is untouched.
+   * Rooms run the native `<audio>` path (setNativeOnly), whose element changes
+   * rate itself, so the dsp-chain pitch-hold stage stays at 1× and a nudge
+   * never engages or resets its stretch window (#283).
+   */
   nudgeRate(rate: number): void {
     this.setBackendRate(rate);
   }
