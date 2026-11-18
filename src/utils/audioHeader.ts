@@ -13,7 +13,7 @@ export interface ParsedAudioHeader {
   format: 'flac' | 'wav';
 }
 
-const HEADER_PROBE_BYTES = 64 * 1024;
+export const HEADER_PROBE_BYTES = 64 * 1024;
 
 function readAscii(view: DataView, offset: number, length: number): string {
   let out = '';

@@ -99,6 +99,10 @@ export function makeEngine(overrides: Partial<EngineDeps> = {}) {
     recordPlay: vi.fn(),
     enrichReplayGain: async (t) => t,
     readLocalFile: async (file) => ({ id: `local-${file.name}`, source: 'local', file, name: file.name, url: 'blob:x' }),
+    resolveLocalFile: async (track) => {
+      if (!track.file) throw new Error('This local file is no longer available; add it again.');
+      return track.file;
+    },
     readSavedPosition: () => null,
     attachVisualizerFeed: () => () => {},
     onTrackChange: () => {},

@@ -11,6 +11,7 @@ import { createProjectMPCMFeed, notifyInAppProjectMTrackChange } from '../utils/
 import { probeRemoteAudio } from '../utils/rangeFetch';
 import type { EngineDeps } from './PlaybackEngine';
 import { readLocalTrack } from './localTracks';
+import { resolveLocalFile } from '../storage/localLibrary';
 import { readSavedPosition } from './persistence';
 
 export function browserEngineDeps(): EngineDeps {
@@ -28,6 +29,7 @@ export function browserEngineDeps(): EngineDeps {
     },
     enrichReplayGain: enrichTrackReplayGain,
     readLocalFile: readLocalTrack,
+    resolveLocalFile: (track) => resolveLocalFile(track),
     readSavedPosition: (id) => readSavedPosition(id),
     attachVisualizerFeed: createProjectMPCMFeed,
     onTrackChange: notifyInAppProjectMTrackChange,

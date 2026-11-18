@@ -45,7 +45,9 @@ const { PlayerProvider } = await import('../src/player/PlayerContext');
 const { PlayerToasts } = await import('../src/components/Toast');
 const { ErrorBoundary } = await import('../src/components/ErrorBoundary');
 const { reportError } = await import('../src/player/playerStore');
-const { useLibraryCatalog, DEFAULT_LIBRARY_FILTERS, LIBRARY_PAGE_SIZE } = await import('../src/api/library');
+const { useLibraryCatalog, DEFAULT_LIBRARY_FILTERS } = await import('../src/api/library');
+/** Untagged rows in the fixture (the view used to page at 200; it is windowed now, #284). */
+const UNTAGGED = 200;
 const { useQueueActions } = await import('../src/hooks/useQueueActions');
 const { trackFromUrl } = await import('../src/utils/remoteTracks');
 
@@ -104,29 +106,25 @@ describe('Player render isolation', () => {
 
 describe('library catalog (#258 bug 10, phase 1)', () => {
   const library = [
-    ...page('all-', LIBRARY_PAGE_SIZE),
+    ...page('all-', UNTAGGED),
     ...Array.from({ length: 30 }, (_, i) => track(`bass-${i}`, { tags: ['bass'], rating: 4, duration: 3600 })),
   ];
 
-  it('syncs once; filters and loadMore run over the catalog without refetching', async () => {
+  it('syncs once; every match comes back and filters run over the catalog without refetching', async () => {
     songApi.fetchSongPage.mockImplementation(async (offset: number) => (offset === 0 ? library : []));
     const { result, rerender } = renderHook(
       ({ search }) => useLibraryCatalog({ ...DEFAULT_LIBRARY_FILTERS, search }),
       { wrapper: queryWrapper(), initialProps: { search: '' } },
     );
-    await vi.waitFor(() => expect(result.current.tracks).toHaveLength(LIBRARY_PAGE_SIZE));
-    expect(result.current.hasMore).toBe(true);
-    act(() => result.current.loadMore());
     await vi.waitFor(() => expect(result.current.tracks).toHaveLength(library.length));
-    expect(result.current.hasMore).toBe(false);
 
     rerender({ search: 'bass' });
     await vi.waitFor(() => expect(result.current.tracks).toHaveLength(30));
     expect(result.current.tracks.every((t) => t.id.startsWith('bass-'))).toBe(true);
     expect(result.current.tags).toEqual([{ name: 'bass', count: 30 }]);
-    expect(result.current.stats).toMatchObject({ total_tracks: library.length, rated_4plus: 30, untagged_count: LIBRARY_PAGE_SIZE });
+    expect(result.current.stats).toMatchObject({ total_tracks: library.length, rated_4plus: 30, untagged_count: UNTAGGED });
 
-    // One short page ends the walk; the filter change and loadMore never hit the host.
+    // One short page ends the walk; the filter change never hits the host.
     expect(songApi.fetchSongPage.mock.calls.map(([offset]) => offset)).toEqual([0]);
   });
 
@@ -145,7 +143,7 @@ describe('library catalog (#258 bug 10, phase 1)', () => {
     await vi.waitFor(() => expect(result.current.backendStatus).toBe('down'));
     expect(result.current.offline).toBe(true);
     expect(onOffline).toHaveBeenCalledTimes(1);
-    expect(result.current.tracks).toHaveLength(LIBRARY_PAGE_SIZE);
+    expect(result.current.tracks).toHaveLength(library.length);
     expect(result.current.stats.total_tracks).toBe(library.length);
     expect(result.current.tags).toEqual([{ name: 'bass', count: 30 }]);
   });

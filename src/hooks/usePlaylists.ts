@@ -2,7 +2,8 @@ import { useState, useCallback, useEffect, useMemo } from 'react';
 import { fetchPlaylistTracks, fetchPlaylists, fetchSong } from '../api/songApi';
 import { playlistStore, type PlaylistStore } from '../storage/playlistStore';
 import type { CloudPlaylist, PlaylistTrack } from '../types/library';
-import { isLibraryTrack } from '../types/track';
+import { isLibraryTrack, isResolvableTrack, parseLocalTrackId } from '../types/track';
+import { findFolderTrack } from '../storage/localLibrary';
 import type { LocalPlaylist, PlaylistsController } from '../types/playlist';
 import { moveItem, resolveTracksById } from '../utils/playlistUtils';
 
@@ -65,15 +66,18 @@ export function usePlaylists({
   }, [library, queue]);
 
   const resolveTracks = useCallback(
-    // Only catalog ids are looked up; a link or local-file id saved before #258 is skipped.
+    // Library ids from the host, folder ids from the catalog (#284); a link or dropped-file
+    // id saved before #258 is skipped.
     (trackIds: string[]) => resolveTracksById(trackIds, knownTracks, id => (
-      isLibraryTrack({ id }) ? fetchSong(id) : Promise.reject(new Error(`Not a library track: ${id}`))
+      isLibraryTrack({ id }) ? fetchSong(id)
+        : parseLocalTrackId(id) ? findFolderTrack(id)
+          : Promise.reject(new Error(`Not a library track: ${id}`))
     )),
     [knownTracks],
   );
 
-  // Playlists hold catalog ids: links and local files in the queue cannot be resolved later.
-  const queueIds = useCallback(() => queue.filter(isLibraryTrack).map(t => t.id), [queue]);
+  // Playlists hold library and folder-track ids; links and dropped files cannot be resolved later.
+  const queueIds = useCallback(() => queue.filter(isResolvableTrack).map(t => t.id), [queue]);
 
   const createFromQueue = useCallback(async (title: string) => {
     const trackIds = queueIds();

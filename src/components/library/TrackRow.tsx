@@ -3,18 +3,23 @@ import { StarRating } from '../StarRating';
 import { OfflineBadge } from '../OfflineCache';
 import { formatDate, formatDuration, formatReplayGainBadge, trackItemLabel } from './trackFormat';
 import type { TrackItemProps } from './trackItem';
+import { isLibraryTrack } from '../../types/track';
 
 export const TRACK_ROW_COLUMNS = ['Title', 'Author', 'Rating', 'Tags', 'RG', 'Duration', 'Plays', 'Added', 'Offline'] as const;
 
 /** List row. `editor` (a TrackEditor) opens in a full-width row underneath. */
 export const TrackRow: React.FC<TrackItemProps> = ({
-  track, isCurrent, isLoading, isPlaying, editor, actions, offline, onKeyDown,
+  track, isCurrent, isLoading, isPlaying, editor, actions, offline, onKeyDown, position, itemRef,
 }) => {
   const { onPlayNow, onPlayNext, onAddToQueue, onRegenerate } = actions;
+  // Edit, trash and offline copies are host features; local-folder tracks have none (#284).
+  const hostTrack = isLibraryTrack(track);
 
   return (
     <>
       <tr
+        ref={itemRef}
+        aria-rowindex={position}
         onClick={() => actions.onClick(track)}
         onDoubleClick={() => actions.onDoubleClick(track)}
         onKeyDown={onKeyDown}
@@ -63,7 +68,7 @@ export const TrackRow: React.FC<TrackItemProps> = ({
         <td className="p-3 text-gray-400">{track.play_count || 0}</td>
         <td className="p-3 text-gray-400 text-sm">{formatDate(track.created_at)}</td>
         <td className="p-3">
-          <OfflineBadge track={track} {...offline} />
+          {hostTrack && <OfflineBadge track={track} {...offline} />}
         </td>
         <td className="p-3">
           <div className="flex gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
@@ -107,22 +112,26 @@ export const TrackRow: React.FC<TrackItemProps> = ({
                 ＋
               </button>
             )}
-            <button
-              onClick={(e) => { e.stopPropagation(); actions.onEdit(track); }}
-              className="p-1 text-gray-400 hover:text-white"
-              title="Edit"
-              aria-label="Edit"
-            >
-              ✏️
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); actions.onTrash(track); }}
-              className="p-1 text-gray-400 hover:text-red-500"
-              title="Trash"
-              aria-label="Trash"
-            >
-              🗑️
-            </button>
+            {hostTrack && (
+              <>
+                <button
+                  onClick={(e) => { e.stopPropagation(); actions.onEdit(track); }}
+                  className="p-1 text-gray-400 hover:text-white"
+                  title="Edit"
+                  aria-label="Edit"
+                >
+                  ✏️
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); actions.onTrash(track); }}
+                  className="p-1 text-gray-400 hover:text-red-500"
+                  title="Trash"
+                  aria-label="Trash"
+                >
+                  🗑️
+                </button>
+              </>
+            )}
           </div>
         </td>
       </tr>

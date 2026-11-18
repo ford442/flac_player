@@ -132,4 +132,18 @@ export interface ConfigurableAudioBackend extends AudioBackend {
       onProgress?: (loaded: number, total: number | null) => void;
     }
   ): Promise<void>;
+  /**
+   * A local file on the same graph as remote tracks (#284): FLAC through the hi-fi stream
+   * session (range reads from the Blob, so seek never reads the whole file), other
+   * formats decoded whole. Backends without it get `loadFromArrayBuffer`.
+   */
+  loadFromBlob?(blob: Blob, options: BlobLoadOptions): Promise<void>;
+}
+
+export interface BlobLoadOptions {
+  /** The track's `url`: identity for gapless preload; never fetched. */
+  key: string;
+  /** File name, for format detection and decode errors. */
+  name: string;
+  expectedDuration?: number;
 }

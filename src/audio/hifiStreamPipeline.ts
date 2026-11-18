@@ -17,10 +17,20 @@ import type { FlacDecoderResult } from './flacDecoder';
 const FALLBACK_PUSH_FRAMES = 16384;
 
 export interface HifiTrackSource {
+  /** Fetched for remote tracks; for a `blob` source only the identity key (#284). */
   url: string;
   /** Pre-fetched Response (e.g. from track cache) — read lazily as a Blob, never arrayBuffer(). */
   cachedResponse?: Response;
+  /** A local file: read in slices through the same range reader as HTTP (#284). */
+  blob?: Blob;
   expectedDuration?: number;
+}
+
+/** `fLaC` at byte 0 (else the `.flac` name, for files with a leading ID3 tag). */
+export async function isFlacBlob(blob: Blob, name = ''): Promise<boolean> {
+  const head = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+  const magic = head.length === 4 && head[0] === 0x66 && head[1] === 0x4c && head[2] === 0x61 && head[3] === 0x43;
+  return magic || /\.flac$/i.test(name);
 }
 
 /** A track after the HEAD probe + metadata read; reused by every seek. */
@@ -75,7 +85,9 @@ function nativeDecodeFor(opened: OpenedHifiTrack, signal?: AbortSignal): Promise
 
 export async function openHifiTrack(source: HifiTrackSource, signal?: AbortSignal): Promise<OpenedHifiTrack> {
   let reader: RangeByteReader | null = null;
-  if (source.cachedResponse) {
+  if (source.blob) {
+    reader = createBlobReader(source.blob);
+  } else if (source.cachedResponse) {
     reader = createBlobReader(await source.cachedResponse.blob());
   } else {
     const probe = await confirmRangeSupport(await probeRemoteAudio(source.url, signal), signal);

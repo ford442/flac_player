@@ -1,4 +1,5 @@
 import type { PlaylistTrack } from '../../types/library';
+import { isLibraryTrack } from '../../types/track';
 
 export const formatDuration = (seconds?: number) => {
   if (!seconds) return '--:--';
@@ -20,7 +21,7 @@ export const formatReplayGainBadge = (track: PlaylistTrack) => {
 };
 
 export const trackItemLabel = (track: PlaylistTrack) =>
-  `${track.title || track.name} by ${track.author || 'Unknown'}. Space to queue and play, Enter to play now, E to edit`;
+  `${track.title || track.name} by ${track.author || 'Unknown'}. Space to queue and play, Enter to play now${isLibraryTrack(track) ? ', E to edit' : ''}`;
 
 /** Bar heights (%) for the placeholder art, stable per track id. */
 export function placeholderBars(id: string, count = 20): number[] {

@@ -4,25 +4,31 @@ import { StarRating } from '../StarRating';
 import { OfflineBadge } from '../OfflineCache';
 import { formatDuration, formatReplayGainBadge, placeholderBars, trackItemLabel } from './trackFormat';
 import type { TrackItemProps } from './trackItem';
+import { isLibraryTrack } from '../../types/track';
 
 /** Grid tile. `editor` (a TrackEditor) covers the tile while this track is being edited. */
 export const TrackCard: React.FC<TrackItemProps> = ({
-  track, isCurrent, isLoading, isPlaying, editor, actions, offline, onKeyDown,
+  track, isCurrent, isLoading, isPlaying, editor, actions, offline, onKeyDown, position, setSize, itemRef,
 }) => {
   const bars = useMemo(() => placeholderBars(track.id), [track.id]);
   const { onPlayNow, onPlayNext, onAddToQueue, onRegenerate } = actions;
+  // Edit, trash and offline copies are host features; local-folder tracks have none (#284).
+  const hostTrack = isLibraryTrack(track);
 
   return (
     // A keyboard-operable tile (Space / Enter / E in onKeyDown) inside role="list"; Phase 3 revisits
     // the grid semantics together with virtualization.
     // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
+      ref={itemRef}
       onClick={() => actions.onClick(track)}
       onDoubleClick={() => actions.onDoubleClick(track)}
       onKeyDown={onKeyDown}
       // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
       tabIndex={0}
       role="listitem"
+      aria-posinset={position}
+      aria-setsize={setSize}
       aria-label={trackItemLabel(track)}
       aria-current={isCurrent ? 'true' : undefined}
       data-testid="library-track"
@@ -122,7 +128,7 @@ export const TrackCard: React.FC<TrackItemProps> = ({
             )}
           </div>
           <span className="flex items-center gap-2 text-xs text-gray-400">
-            <OfflineBadge track={track} {...offline} />
+            {hostTrack && <OfflineBadge track={track} {...offline} />}
             {formatDuration(track.duration)}
           </span>
         </div>
@@ -153,22 +159,26 @@ export const TrackCard: React.FC<TrackItemProps> = ({
             ✨
           </button>
         )}
-        <button
-          onClick={(e) => { e.stopPropagation(); actions.onEdit(track); }}
-          className="p-1.5 bg-black/50 rounded text-white hover:bg-purple-600 transition-colors"
-          title="Edit"
-          aria-label="Edit"
-        >
-          ✏️
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); actions.onTrash(track); }}
-          className="p-1.5 bg-black/50 rounded text-white hover:bg-red-500 transition-colors"
-          title="Trash"
-          aria-label="Trash"
-        >
-          🗑️
-        </button>
+        {hostTrack && (
+          <>
+            <button
+              onClick={(e) => { e.stopPropagation(); actions.onEdit(track); }}
+              className="p-1.5 bg-black/50 rounded text-white hover:bg-purple-600 transition-colors"
+              title="Edit"
+              aria-label="Edit"
+            >
+              ✏️
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); actions.onTrash(track); }}
+              className="p-1.5 bg-black/50 rounded text-white hover:bg-red-500 transition-colors"
+              title="Trash"
+              aria-label="Trash"
+            >
+              🗑️
+            </button>
+          </>
+        )}
       </div>
 
       {editor && (

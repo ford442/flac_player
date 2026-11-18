@@ -99,7 +99,7 @@ test.describe('Library features', () => {
     await expect(page.getByText('Shareable playlist link copied to clipboard!')).toBeVisible();
   });
 
-  test('syncs the catalog once and pages it locally', async ({ page }) => {
+  test('syncs the catalog once and windows it locally (#284)', async ({ page }) => {
     const library = Array.from({ length: 250 }, (_, i) => ({
       id: `p-${i}`, name: `Song ${i}.flac`, title: `Song ${i}`, author: 'Pager', url: '/fixtures/test.flac', duration: 1,
     }));
@@ -114,13 +114,20 @@ test.describe('Library features', () => {
     await page.goto('/');
     await page.getByRole('button', { name: 'Open Advanced Library' }).click();
     await page.getByRole('button', { name: '📚 Library' }).click();
-    const songs = page.getByText(/^Song \d+$/);
-    await expect(songs).toHaveCount(200, { timeout: 15_000 });
+    const cards = page.getByTestId('library-track');
+    await expect(cards.first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('button', { name: /Play All \(250\)/ })).toBeVisible();
+    // Windowed: a viewport's worth of the 250 cards is mounted, not all of them.
+    const mounted = await cards.count();
+    expect(mounted).toBeGreaterThan(0);
+    expect(mounted).toBeLessThan(250);
+    const firstSet = new Set(await cards.evaluateAll((els) => els.map((el) => el.getAttribute('aria-posinset'))));
+    expect(firstSet.has('1')).toBe(true);
 
-    await page.getByRole('button', { name: /Load more/ }).click();
-    await expect(songs).toHaveCount(250);
-    await expect(page.getByRole('button', { name: /Load more/ })).toHaveCount(0);
-    // One short sync page; "Load more" never goes back to the host.
+    await page.locator('.library-grid-scroll').evaluate((el) => { el.scrollTop = el.scrollHeight; });
+    await expect(cards.last()).toHaveAttribute('aria-posinset', '250');
+    expect(await cards.count()).toBeLessThan(250);
+    // One short sync page; scrolling never goes back to the host.
     expect(requests).toEqual([{ offset: '0', limit: '1000' }]);
   });
 

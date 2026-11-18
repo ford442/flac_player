@@ -1,8 +1,10 @@
 // The library view over the IndexedDB catalog. The host is synced into the catalog
 // (a TanStack query, so refresh/rescan just refetch it); rows, filters, tags and stats
-// are read locally with a live query, so the library works the same offline.
+// are read locally with a live query, so the library works the same offline. Local
+// folder rows (#284) share the catalog and the filters; the view windows its rows, so
+// every match is returned (no paging).
 
-import { useCallback, useMemo, useState, useEffect, useRef } from 'react';
+import { useCallback, useMemo, useEffect, useRef } from 'react';
 import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLiveQuery } from 'dexie-react-hooks';
 import type { LibraryStats, PlaylistTrack, TagInfo } from '../types/library';
@@ -14,9 +16,6 @@ import {
 import { fetchSongPage } from './songApi';
 
 export { DEFAULT_LIBRARY_FILTERS, EMPTY_STATS, type LibraryFilters } from '../catalog/libraryQuery';
-
-/** Rows shown per "Load more" until the list is virtualized. */
-export const LIBRARY_PAGE_SIZE = 200;
 
 export const libraryKeys = {
   all: ['library'] as const,
@@ -59,8 +58,6 @@ export interface LibraryCatalog {
   tags: TagInfo[];
   stats: LibraryStats;
   isLoading: boolean;
-  hasMore: boolean;
-  loadMore(): void;
   /** 'checking' until the first sync answers; 'down' when the last sync failed. */
   backendStatus: 'checking' | 'up' | 'down';
   /** The host is unreachable and the view shows the synced catalog. */
@@ -88,7 +85,7 @@ export function useLibraryCatalog(
 
   // Filters by value, so callers needn't memoize the object.
   const filterKey = JSON.stringify(filters);
-  // A fresh shuffle per filter change, stable while paging.
+  // A fresh shuffle per filter change, stable while rows stream in.
   const { stableFilters, seed } = useMemo(
     () => ({ stableFilters: filters, seed: (Math.random() * 2 ** 32) >>> 0 }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- filterKey is filters by value
@@ -101,16 +98,10 @@ export function useLibraryCatalog(
   const tags = useMemo(() => (rows ? computeTags(rows) : []), [rows]);
   const stats = useMemo(() => (rows ? computeStats(rows, tags) : EMPTY_STATS), [rows, tags]);
 
-  // Paging resets whenever the filters change.
-  const [paging, setPaging] = useState({ filterKey, limit: LIBRARY_PAGE_SIZE });
-  const limit = paging.filterKey === filterKey ? paging.limit : LIBRARY_PAGE_SIZE;
-  const tracks = useMemo(() => matching.slice(0, limit).map(fromCatalogTrack), [matching, limit]);
-  const hasMore = matching.length > limit;
-  const loadMore = useCallback(() => {
-    if (hasMore) setPaging({ filterKey, limit: limit + LIBRARY_PAGE_SIZE });
-  }, [hasMore, filterKey, limit]);
+  const tracks = useMemo(() => matching.map(fromCatalogTrack), [matching]);
 
-  const offline = sync.isError && !!rows && rows.length > 0;
+  // Offline = the host is down but its synced rows are here (local folders don't count).
+  const offline = sync.isError && !!rows && rows.some((r) => r.source === 'library');
   const onOfflineRef = useRef(onOffline);
   onOfflineRef.current = onOffline;
   useEffect(() => {
@@ -126,8 +117,6 @@ export function useLibraryCatalog(
     tags,
     stats,
     isLoading: enabled && (!rows || (sync.isFetching && rows.length === 0)),
-    hasMore,
-    loadMore,
     backendStatus: sync.isError ? 'down' : sync.isSuccess ? 'up' : 'checking',
     offline,
     refresh,

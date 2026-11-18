@@ -156,6 +156,14 @@ controls are ARIA sliders (`utils/sliderKeys.ts`). `eslint-plugin-jsx-a11y` runs
   Remote rows are `source: 'library'`; host-trashed rows stay with `trashed: true` and are hidden.
 - Edits mirror into the catalog after the host accepts them (`catalog/libraryRows.ts`).
 - `migrateLegacyStorage` moves the pre-catalog `flac_player_playlists` DB and localStorage queue in once.
+- Local folders (#284, `storage/localLibrary.ts`): `sources` rows of kind `folder` (Chromium, the
+  `FileSystemDirectoryHandle` is stored on the row) or `files` (`webkitdirectory` fallback, this page only).
+  Rows are `source: 'local'`, `sourceId` `<folderId>:<path>`, id `local-<folderId>:<path>`, `url` `local:…`
+  (an identity key, never fetched) and a `local` `LocalFileRef`. Scans run in `workers/libraryScanWorker.ts`
+  (`catalog/folderScanCore.ts` stays free of Dexie for the worker bundle).
+- Local tracks play through `resolveLocalFile` → `backend.loadFromBlob` (FLAC: `HifiStreamSession` with a
+  `blob` source, the same range reader as HTTP; WAV: whole decode). Never pass `local:` or `blob:` to
+  `loadFromURL`. Both library layouts are windowed (`components/library/useWindowedRows.ts`); no paging.
 - Tests get a fresh `fake-indexeddb` factory per test (`tests/setup.ts`); pass a `CatalogDb` on its own
   `IDBFactory` where a test needs isolation.
 
@@ -171,8 +179,9 @@ Helper: `src/utils/debug.ts` — used by `api/http.ts` and `api/songApi.ts`.
 - `loadFromURL()` only handles `http`, `https`, `gs://` schemes — don't pass relative paths
 - The backend must always return absolute `https://` URLs in the `url` field
 - Default output mode is `streaming` (`player/playerStore.ts`)
-- Only `source: 'library'` tracks reach library endpoints, share links, playlists and rooms
-  (`isLibraryTrack()`, `types/track.ts`); ids in paths are `encodeURIComponent`-ed
+- Only `source: 'library'` tracks reach library endpoints, share links and rooms
+  (`isLibraryTrack()`, `types/track.ts`); playlists and the saved queue also keep local-folder ids
+  (`isResolvableTrack()`); ids in paths are `encodeURIComponent`-ed
 
 ## Deployment base path
 

@@ -1,6 +1,8 @@
 import React, { useId } from 'react';
 import type { SortBy, TagInfo } from '../../types/library';
 import { FileDropZone } from '../FileDropZone';
+import { LocalFoldersPanel } from '../library/LocalFoldersPanel';
+import type { StorageSourceFilter } from '../../hooks/useLibraryState';
 import { UrlLoader } from '../UrlLoader';
 import { FAST_STORAGE_HOST } from '../../utils/audioUtils';
 import { useActions } from '../PlayerActionsContext';
@@ -18,9 +20,10 @@ export interface PlayerFallbackSidebarProps {
   setUntaggedOnly: (v: boolean) => void;
   sortBy: SortBy;
   setSortBy: (s: SortBy) => void;
-  storageSourceFilter: 'all' | 'fast';
-  setStorageSourceFilter: (f: 'all' | 'fast') => void;
+  storageSourceFilter: StorageSourceFilter;
+  setStorageSourceFilter: (f: StorageSourceFilter) => void;
   fastMirrorCount: number;
+  localCount: number;
   generationModelFilter: string;
   setGenerationModelFilter: (v: string) => void;
   generationModels: string[];
@@ -32,7 +35,7 @@ export interface PlayerFallbackSidebarProps {
 export const PlayerFallbackSidebar: React.FC<PlayerFallbackSidebarProps> = ({
   activeTab, setActiveTab, libraryCount, playlistCount,
   minRating, setMinRating, untaggedOnly, setUntaggedOnly,
-  sortBy, setSortBy, storageSourceFilter, setStorageSourceFilter, fastMirrorCount,
+  sortBy, setSortBy, storageSourceFilter, setStorageSourceFilter, fastMirrorCount, localCount,
   generationModelFilter, setGenerationModelFilter, generationModels,
   allTags, selectedTags, setSelectedTags,
 }) => {
@@ -40,7 +43,7 @@ export const PlayerFallbackSidebar: React.FC<PlayerFallbackSidebarProps> = ({
   const queueCount = useQueue((q) => q.tracks.length);
   const { addFiles, loadUrl, loadDemo } = useActions();
   return (
-    <aside className="w-64 border-r border-white/10 bg-surface-sunken flex flex-col">
+    <aside className="w-64 shrink-0 border-r border-white/10 bg-surface-sunken flex flex-col overflow-y-auto">
       <nav className="p-4 space-y-1">
         {[
           { id: 'library',     label: '📚 Library',    count: libraryCount },
@@ -86,10 +89,11 @@ export const PlayerFallbackSidebar: React.FC<PlayerFallbackSidebarProps> = ({
         </div>
         <div>
           <label htmlFor={`${id}-source`} className="text-xs text-gray-400 uppercase">Storage Source</label>
-          <select id={`${id}-source`} value={storageSourceFilter} onChange={(e) => setStorageSourceFilter(e.target.value as 'all' | 'fast')}
+          <select id={`${id}-source`} value={storageSourceFilter} onChange={(e) => setStorageSourceFilter(e.target.value as StorageSourceFilter)}
             className="w-full mt-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm">
             <option value="all">All tracks</option>
             <option value="fast">Fast mirror only</option>
+            <option value="local">Local folders ({localCount})</option>
           </select>
           <p className="text-xs text-gray-400 mt-2">{fastMirrorCount}/{libraryCount} tracks available on fast mirror ({FAST_STORAGE_HOST})</p>
         </div>
@@ -114,6 +118,10 @@ export const PlayerFallbackSidebar: React.FC<PlayerFallbackSidebarProps> = ({
               }`}>{tag.name} ({tag.count})</button>
           ))}
         </div>
+      </div>
+
+      <div className="p-4 border-t border-white/10">
+        <LocalFoldersPanel />
       </div>
 
       <div className="p-4 border-t border-white/10">

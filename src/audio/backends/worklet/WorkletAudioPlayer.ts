@@ -5,14 +5,14 @@
 // AudioContext is never suspended here: pause is a message to the processor.
 import { decodeAudio } from '../../audioDecoder';
 import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextManager } from '../../AudioContextManager';
-import { ensureContextForBuffer, ensureContextForUrl } from '../../ensureContextForSource';
+import { ensureContextForBlob, ensureContextForBuffer, ensureContextForUrl } from '../../ensureContextForSource';
 import { createStreamResampler, resampleInterleaved, type StreamResampler } from '../../resampler';
-import { HifiStreamSession, type HifiTrackSource } from '../../hifiStreamPipeline';
+import { HifiStreamSession, isFlacBlob, type HifiTrackSource } from '../../hifiStreamPipeline';
 import { getOrFetchTrack } from '../../../storage/trackCache';
 import type { PlaybackPathInfo } from '../../../utils/playbackPath';
 import { debug } from '../../../utils/debug';
 import { describePlaybackPath } from '../../../utils/playbackPath';
-import type { AudioBackendCapabilities, AudioPlaybackState, DecodedPcmView } from '../../../types/audio';
+import type { AudioBackendCapabilities, AudioPlaybackState, BlobLoadOptions, DecodedPcmView } from '../../../types/audio';
 import {
   DEFAULT_CROSSFADE_MS,
   DEFAULT_GAPLESS_MODE,
@@ -230,11 +230,11 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
 
   preloadNext(options: PreloadNextOptions | string): void {
     if (!isGaplessActive(this.gaplessSettings)) return;
-    const { url, duration } = typeof options === 'string' ? { url: options, duration: undefined } : options;
-    this.lastPreloadRequest = { url, expectedDuration: duration };
+    const { url, duration, blob } = typeof options === 'string' ? { url: options, duration: undefined, blob: undefined } : options;
+    this.lastPreloadRequest = { url, expectedDuration: duration, blob };
     if (this.playbackPath?.strategy === 'hifi-stream') {
       // Decode-ahead happens in the session once the current decode finishes.
-      this.nextSource = { url, expectedDuration: duration };
+      this.nextSource = { url, expectedDuration: duration, blob };
       this.session?.setNext(this.nextSource);
       return;
     }
@@ -245,9 +245,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
 
     void (async () => {
       try {
-        const response = await getOrFetchTrack(url);
-        if (controller.signal.aborted) return;
-        const arrayBuffer = await response.arrayBuffer();
+        const arrayBuffer = blob ? await blob.arrayBuffer() : await (await getOrFetchTrack(url)).arrayBuffer();
         if (controller.signal.aborted) return;
         if (!this.audioContext) await this.ensureWorkletGraph();
         const decoded = await decodeAudio(arrayBuffer, this.audioContext!, undefined);
@@ -441,6 +439,8 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     options: {
       expectedDuration?: number;
       cachedResponse?: Response;
+      /** A local file (#284); `url` is then only its identity key. */
+      blob?: Blob;
       onProgress?: (loaded: number, total: number | null) => void;
     } = {}
   ): Promise<void> {
@@ -451,7 +451,8 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     // Set before any await: a preloadNext() racing this load goes to the session.
     this.playbackPath = describePlaybackPath('hifi-stream');
     this.adoptPreloadForStream(url);
-    await ensureContextForUrl(this.contextManager, url);
+    if (options.blob) await ensureContextForBlob(this.contextManager, options.blob);
+    else await ensureContextForUrl(this.contextManager, url);
     await this.ensureWorkletGraph();
 
     this.cancelStream();
@@ -493,7 +494,7 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     try {
       await Promise.race([
         session.load(
-          { url, cachedResponse: options.cachedResponse, expectedDuration: options.expectedDuration },
+          { url, cachedResponse: options.cachedResponse, blob: options.blob, expectedDuration: options.expectedDuration },
           { onProgress: (p) => options.onProgress?.(p.loaded, p.total) }
         ),
         timeout,
@@ -501,6 +502,12 @@ export class WorkletAudioPlayer extends BaseAudioBackend {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  /** Local file (#284): FLAC streams from the Blob through the hi-fi session; WAV decodes whole. */
+  async loadFromBlob(blob: Blob, { key, name, expectedDuration }: BlobLoadOptions): Promise<void> {
+    if (await isFlacBlob(blob, name)) return this.loadFromURLStreaming(key, { blob, expectedDuration });
+    return this.loadFromArrayBuffer(await blob.arrayBuffer(), name);
   }
 
   /** A buffered preload requested before this stream load becomes the session's successor. */

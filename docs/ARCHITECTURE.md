@@ -226,6 +226,9 @@ Broadcast SharedArrayBuffer tap of post-DSP PCM for analysis consumers: written 
 | `hooks/useTrackMetadata.ts` | Memory → persisted → network, in-flight dedupe; feeds `MetadataPanel` and the ShaderGUI top screen |
 | `storage/queueStorage.ts` | Persisted queue + repeat/shuffle (catalog `state.queue`) |
 | `storage/playlistStore.ts` | Local-first playlists (catalog `playlists` table) |
+| `storage/localLibrary.ts` | Local folders (#284): directory picker / `webkitdirectory` fallback, handle on the `sources` row, permission re-check, `resolveLocalFile` |
+| `catalog/localScan.ts` + `workers/libraryScanWorker.ts` | Folder scan in a worker, incremental by (path, size, mtime); tags only, audio stays on disk |
+| `components/library/useWindowedRows.ts` | Windowing for the library grid and list (only rows near the viewport mount) |
 | `components/OfflineCache.tsx` | Per-track download / evict UI |
 
 Production API: **`https://storage.noahcohn.com`** (`REACT_APP_API_URL`).

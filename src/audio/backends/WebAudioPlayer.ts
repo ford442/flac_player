@@ -91,7 +91,7 @@ export class WebAudioPlayer extends BaseAudioBackend {
 
   preloadNext(options: PreloadNextOptions | string): void {
     if (!isGaplessActive(this.gaplessSettings)) return;
-    const { url } = typeof options === 'string' ? { url: options } : options;
+    const { url, blob } = typeof options === 'string' ? { url: options, blob: undefined } : options;
     this.preloadAbort?.abort();
     const controller = new AbortController();
     this.preloadAbort = controller;
@@ -99,9 +99,7 @@ export class WebAudioPlayer extends BaseAudioBackend {
 
     void (async () => {
       try {
-        const response = await getOrFetchTrack(url);
-        if (controller.signal.aborted) return;
-        const arrayBuffer = await response.arrayBuffer();
+        const arrayBuffer = blob ? await blob.arrayBuffer() : await (await getOrFetchTrack(url)).arrayBuffer();
         if (controller.signal.aborted) return;
         const { context } = this.requireGraph();
         const { decoderResult, audioBuffer: nativeBuffer } = await decodeAudioWithBuffer(

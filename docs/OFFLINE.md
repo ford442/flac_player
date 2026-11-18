@@ -31,6 +31,17 @@ filters, tags and stats work with the network off. After the first sync fills an
 app calls `navigator.storage.persist()` once; Settings → Offline shows `navigator.storage.estimate()`
 and a "Keep offline data" button while storage is not persistent.
 
+### Local folders (#284)
+
+A granted folder plays from disk with no copy: the catalog holds each file's tags and a
+`LocalFileRef` (folder id, relative path, size, mtime), never audio bytes, and nothing from a
+folder goes into Cache Storage or OPFS. Chromium keeps the `FileSystemDirectoryHandle` on the
+folder's `sources` row and re-checks read permission after a reload (the sidebar shows
+Reconnect while it is not granted; a play click inside the grant window asks again). Firefox
+and Safari use `<input webkitdirectory>`: the rows stay after a reload, but the folder has to be
+picked again before its tracks play. Folder ids (`local-<folder>:<path>`) are stable, so
+playlists and the saved queue can hold them; rooms and share links never receive them.
+
 ## Track cache, quota and eviction (`src/storage/trackCache.ts`)
 
 - Tracks are stored in Cache API `flac-player-tracks-v1`, keyed by their full URL.
