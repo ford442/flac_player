@@ -30,4 +30,12 @@ export interface TrackItemProps {
   actions: TrackItemActions;
   offline: OfflineBadgeCallbacks;
   onKeyDown: (e: React.KeyboardEvent) => void;
+  /**
+   * Windowed views (#284) mount a slice of the rows: the item's 1-based place in the full
+   * list (`aria-posinset` on cards, `aria-rowindex` on rows, header = row 1) and the size.
+   */
+  position?: number;
+  setSize?: number;
+  /** Measures the first mounted item for the window's row height. */
+  itemRef?: (el: HTMLElement | null) => void;
 }

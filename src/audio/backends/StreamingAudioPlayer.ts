@@ -9,6 +9,7 @@
 import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextManager } from '../AudioContextManager';
 import { ensureContextForUrl } from '../ensureContextForSource';
 import { WorkletAudioPlayer } from './worklet/WorkletAudioPlayer';
+import { isFlacBlob } from '../hifiStreamPipeline';
 import { probeRemoteAudio } from '../../utils/rangeFetch';
 import { probeRemoteAudioDuration } from '../../utils/audioHeader';
 import {
@@ -18,7 +19,7 @@ import {
   type PlaybackPathInfo,
 } from '../../utils/playbackPath';
 import { isTrackCached, getOrFetchTrack } from '../../storage/trackCache';
-import type { AudioBackendCapabilities, AudioPlaybackState, DecodedPcmView, SyncClock } from '../../types/audio';
+import type { AudioBackendCapabilities, AudioPlaybackState, BlobLoadOptions, DecodedPcmView, SyncClock } from '../../types/audio';
 import {
   DEFAULT_GAPLESS_MODE,
   DEFAULT_CROSSFADE_MS,
@@ -238,6 +239,25 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
   }
 
   /**
+   * Local file (#284): always the worklet (hi-fi FLAC from Blob slices, else a whole-file
+   * decode), never `<audio>` with a blob: URL, so local tracks share the remote FLAC path.
+   */
+  async loadFromBlob(blob: Blob, options: BlobLoadOptions): Promise<void> {
+    if (this.nativeOnly) {
+      throw new Error('Local files cannot play in a listening room; leave the room to play them.');
+    }
+    await this.initialize();
+    this._cancelTransition();
+    this.currentTrackDuration = options.expectedDuration && options.expectedDuration > 0
+      ? options.expectedDuration
+      : null;
+    this.switchPath(await isFlacBlob(blob, options.name) ? 'hifi' : 'buffered');
+    await this.workletPlayer!.loadFromBlob(blob, options);
+    this.workletPlayer?.setGaplessSettings(this.gaplessSettings);
+    this.notifyStateChange();
+  }
+
+  /**
    * Make `next` the only path that can sound. FLAC goes through the worklet and
    * everything else through `<audio>`, so a FLAC ↔ MP3 queue used to leave the
    * previous track playing under the new one (#258).
@@ -320,12 +340,13 @@ export class StreamingAudioPlayer extends BaseAudioBackend {
   }
 
   preloadNext(options: PreloadNextOptions | string): void {
-    const { url, duration } = normalizePreloadOptions(options);
+    const { url, duration, blob } = normalizePreloadOptions(options);
     if (this.activePath === 'native') {
-      this._preloadNativeNext(url, duration);
+      // `<audio>` never plays local files; the worklet path loads them when they start.
+      if (!blob) this._preloadNativeNext(url, duration);
       return;
     }
-    this.workletPlayer?.preloadNext({ url, duration });
+    this.workletPlayer?.preloadNext({ url, duration, blob });
   }
 
   private _preloadNativeNext(url: string, duration?: number): void {

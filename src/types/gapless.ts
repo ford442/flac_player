@@ -13,9 +13,12 @@ export interface GaplessSettings {
 }
 
 export interface PreloadNextOptions {
+  /** Fetched, unless `blob` is set (then only the successor's identity). */
   url: string;
   /** Library metadata duration (seconds); header parse refines this when available. */
   duration?: number;
+  /** A local successor's file (#284). Backends that cannot use it skip the preload. */
+  blob?: Blob;
 }
 
 export interface TrackTransitionEvent {

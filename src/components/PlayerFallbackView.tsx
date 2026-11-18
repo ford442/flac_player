@@ -57,7 +57,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = ({
     backendStatus, refresh, isResyncingLibrary, triggerLibraryResync,
     searchQuery, setSearchQuery, minRating, setMinRating, selectedTags, setSelectedTags,
     untaggedOnly, setUntaggedOnly, sortBy, setSortBy, storageSourceFilter, setStorageSourceFilter,
-    hasMoreLibrary, loadMoreLibrary, updateTrack, trashTrack,
+    localCount, updateTrack, trashTrack,
   } = library;
 
   const [generationModelFilter, setGenerationModelFilter] = useState('all');
@@ -79,7 +79,8 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-surface text-white flex flex-col">
+    // A fixed-height shell: the library scroller (not the page) scrolls, so windowing sees its viewport (#284).
+    <div className="h-screen bg-surface text-white flex flex-col">
       {helpModal}
 
       {backendStatus === 'down' && (
@@ -102,7 +103,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = ({
         room={room}
       />
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 min-h-0 flex overflow-hidden">
         <PlayerFallbackSidebar
           activeTab={activeTab} setActiveTab={setActiveTab}
           libraryCount={libraryTracks.length} playlistCount={playlists.local.length + playlists.cloud.length}
@@ -110,7 +111,7 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = ({
           untaggedOnly={untaggedOnly} setUntaggedOnly={setUntaggedOnly}
           sortBy={sortBy} setSortBy={setSortBy}
           storageSourceFilter={storageSourceFilter} setStorageSourceFilter={setStorageSourceFilter}
-          fastMirrorCount={fastMirrorCount}
+          fastMirrorCount={fastMirrorCount} localCount={localCount}
           generationModelFilter={generationModelFilter} setGenerationModelFilter={setGenerationModelFilter}
           generationModels={generationModels}
           allTags={allTags} selectedTags={selectedTags} setSelectedTags={setSelectedTags}
@@ -125,7 +126,6 @@ export const PlayerFallbackView: React.FC<PlayerFallbackViewProps> = ({
               selectedTags={selectedTags} setSelectedTags={setSelectedTags}
               onUpdateTrack={updateTrack} onTrashTrack={trashTrack}
               onRegenerate={regenerateTrack}
-              hasMore={hasMoreLibrary} onLoadMore={loadMoreLibrary}
             />
           )}
 

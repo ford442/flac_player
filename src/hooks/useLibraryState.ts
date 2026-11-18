@@ -15,17 +15,20 @@ const SEARCH_DEBOUNCE_MS = 250;
 
 type Notify = (message: string, type: 'success' | 'error' | 'info') => void;
 
+/** `fast`: on the fast mirror; `local`: from a granted local folder (#284). */
+export type StorageSourceFilter = 'all' | 'fast' | 'local';
+
 export interface LibraryState {
   /** Rows of the current filters, from the catalog (so also offline). */
   library: PlaylistTrack[];
   /** `library` narrowed by the storage-source filter. */
   displayedLibrary: PlaylistTrack[];
+  /** Rows from local folders (#284). */
+  localCount: number;
   fastMirrorCount: number;
   allTags: TagInfo[];
   stats: LibraryStats;
   isLoadingLibrary: boolean;
-  hasMoreLibrary: boolean;
-  loadMoreLibrary: () => void;
   backendStatus: 'checking' | 'up' | 'down';
   /** Re-sync the catalog from the host. */
   refresh: () => Promise<void>;
@@ -40,8 +43,8 @@ export interface LibraryState {
   setUntaggedOnly: (value: boolean) => void;
   sortBy: SortBy;
   setSortBy: (sort: SortBy) => void;
-  storageSourceFilter: 'all' | 'fast';
-  setStorageSourceFilter: (filter: 'all' | 'fast') => void;
+  storageSourceFilter: StorageSourceFilter;
+  setStorageSourceFilter: (filter: StorageSourceFilter) => void;
 
   isResyncingLibrary: boolean;
   triggerLibraryResync: () => Promise<void>;
@@ -66,7 +69,7 @@ export function useLibraryState(
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [untaggedOnly, setUntaggedOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>('date');
-  const [storageSourceFilter, setStorageSourceFilter] = useState<'all' | 'fast'>('all');
+  const [storageSourceFilter, setStorageSourceFilter] = useState<StorageSourceFilter>('all');
   const [isResyncingLibrary, setIsResyncingLibrary] = useState(false);
 
   const search = useDebounced(searchQuery.trim(), SEARCH_DEBOUNCE_MS);
@@ -84,10 +87,12 @@ export function useLibraryState(
     () => catalog.tracks.filter(track => isFastMirrorEligible(track.url)).length,
     [catalog.tracks],
   );
-  const displayedLibrary = useMemo(
-    () => storageSourceFilter === 'fast' ? catalog.tracks.filter(track => isFastMirrorEligible(track.url)) : catalog.tracks,
-    [catalog.tracks, storageSourceFilter],
-  );
+  const localCount = useMemo(() => catalog.tracks.filter(track => track.source === 'local').length, [catalog.tracks]);
+  const displayedLibrary = useMemo(() => {
+    if (storageSourceFilter === 'fast') return catalog.tracks.filter(track => isFastMirrorEligible(track.url));
+    if (storageSourceFilter === 'local') return catalog.tracks.filter(track => track.source === 'local');
+    return catalog.tracks;
+  }, [catalog.tracks, storageSourceFilter]);
 
   const { refresh } = catalog;
 
@@ -137,12 +142,11 @@ export function useLibraryState(
   return {
     library: catalog.tracks,
     displayedLibrary,
+    localCount,
     fastMirrorCount,
     allTags: catalog.tags,
     stats: catalog.stats,
     isLoadingLibrary: catalog.isLoading,
-    hasMoreLibrary: catalog.hasMore,
-    loadMoreLibrary: catalog.loadMore,
     backendStatus: catalog.backendStatus,
     refresh,
     searchQuery, setSearchQuery,

@@ -104,6 +104,8 @@ export interface EngineDeps {
   enrichReplayGain(track: PlaylistTrack): Promise<PlaylistTrack>;
   /** Build a `local` track from a dropped or picked file. */
   readLocalFile(file: File): Promise<PlaylistTrack>;
+  /** The `File` behind a `local` track: a dropped file, or one reopened from a granted folder (#284). */
+  resolveLocalFile(track: PlaylistTrack): Promise<File>;
   readSavedPosition(trackId: string): number | null;
   /** projectM PCM feed; returns its detach function. */
   attachVisualizerFeed(backend: ConfigurableAudioBackend): () => void;
@@ -487,14 +489,22 @@ export class PlaybackEngine {
 
   private async loadIntoBackend(backend: ConfigurableAudioBackend, track: PlaylistTrack, signal: AbortSignal): Promise<void> {
     const mode = this.backendMode;
+    const expectedDuration = track.duration && track.duration > 0 ? track.duration : undefined;
     if (trackSource(track) === 'local') {
-      if (mode === 'streaming') throw new Error('Streaming mode does not support local files. Switch to a buffered audio mode.');
-      if (!track.file) throw new Error('This local file is no longer available; add it again.');
-      await backend.loadFromArrayBuffer(await track.file.arrayBuffer(), track.file.name);
+      // One entry for dropped files and folder tracks (#284): the backend reads the Blob
+      // through the same hi-fi range reader as HTTP, so seek never loads the whole file.
+      const file = await this.deps.resolveLocalFile(track);
+      if (signal.aborted) throw abortError();
+      if (backend.loadFromBlob) {
+        await backend.loadFromBlob(file, { key: track.url, name: file.name, expectedDuration });
+      } else if (mode === 'streaming') {
+        throw new Error('Streaming mode does not support local files. Switch to a buffered audio mode.');
+      } else {
+        await backend.loadFromArrayBuffer(await file.arrayBuffer(), file.name);
+      }
       return;
     }
 
-    const expectedDuration = track.duration && track.duration > 0 ? track.duration : undefined;
     const candidates = this.deps.candidateUrls(track.url);
     let lastError: unknown;
     for (const url of candidates) {
@@ -671,16 +681,20 @@ export class PlaybackEngine {
       if (!backend) return;
       if (files.length > 0) {
         void this.addLocalFiles(files);
-      } else if (resume && !(mode === 'streaming' && trackSource(resume.track) === 'local')) {
+      } else if (resume && !(mode === 'streaming' && trackSource(resume.track) === 'local' && !backend.loadFromBlob)) {
         void this.load(resume.track, { ...resume, restorePosition: false, silent: true });
       }
     });
   }
 
-  /** Add dropped/picked files to the queue and play the first (switches off streaming, which cannot). */
+  /**
+   * Add dropped/picked files to the queue and play the first. A streaming backend without
+   * `loadFromBlob` cannot play them, so that case switches to a buffered engine first.
+   */
   async addLocalFiles(files: File[]): Promise<void> {
     if (files.length === 0) return;
-    if (this.store.getState().settings.outputMode === 'streaming') {
+    const backend = await this.backendReady;
+    if (this.store.getState().settings.outputMode === 'streaming' && !backend?.loadFromBlob) {
       this.pendingLocalFiles = files;
       notify(this.store, 'Switched to buffered mode for local files', 'info');
       this.setOutputMode('worklet');
@@ -826,7 +840,7 @@ export class PlaybackEngine {
     // Shuffle picks at random: keep a still-valid pick instead of re-rolling on every edit.
     const next = blocked ? null : (queue.shuffle ? this.validPreload() : null)
       ?? getNextQueueTrack(queue.tracks, queue.currentIndex, queue.shuffle, queue.repeatMode);
-    const usable = next && !(trackSource(next.track) === 'local' && this.backendMode === 'streaming') ? next : null;
+    const usable = next;
     if (!usable) {
       if (this.preloaded) backend.clearPreload?.();
       this.preloaded = null;
@@ -834,6 +848,14 @@ export class PlaybackEngine {
     }
     if (this.preloaded?.index === usable.index && this.preloaded.track.url === usable.track.url) return;
     this.preloaded = usable;
+    if (trackSource(usable.track) === 'local') {
+      // Gapless into a local track: hand the backend its file (#284).
+      void this.deps.resolveLocalFile(usable.track).then((blob) => {
+        if (this.preloaded !== usable || this.backend !== backend) return;
+        backend.preloadNext?.({ url: usable.track.url, duration: usable.track.duration, blob });
+      }, () => { /* the track reports why when it is played */ });
+      return;
+    }
     backend.preloadNext?.({ url: usable.track.url, duration: usable.track.duration });
   }
 

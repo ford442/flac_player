@@ -2,6 +2,9 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { FakeBackend, makeEngine, track } from './helpers/fakeEngine';
 import { trackFromUrl } from '../src/utils/remoteTracks';
 import { canTransition } from '../src/player/transport';
+import { localTrackId, localTrackUrl } from '../src/types/track';
+import type { ConfigurableAudioBackend } from '../src/types/audio';
+import type { PlaylistTrack } from '../src/types/library';
 
 // #258: the PlaybackEngine owns the backend, load tokens, the queue cursor and the clock.
 
@@ -255,6 +258,76 @@ describe('PlaybackEngine', () => {
     expect(store.getState().queue.tracks.map((t) => t.id)).toEqual(['local-x.flac']);
     expect(backend().loadFromArrayBuffer).toHaveBeenCalled();
     expect(store.getState().transport.status).toBe('playing');
+  });
+
+  describe('local folder tracks (#284)', () => {
+    const folderTrack = (path: string) => track(localTrackId('fab12', path), {
+      source: 'local', url: localTrackUrl('fab12', path), local: { folderId: 'fab12', path, size: 4, mtime: 1 },
+    });
+    /** A backend that, like the real four, takes Blobs. */
+    const blobBackend = async (mode: string) => Object.assign(new FakeBackend(mode), {
+      loadFromBlob: vi.fn(async function (this: FakeBackend) {
+        this.state = { isPlaying: false, currentTime: 0, duration: 100, isLoading: false };
+      }),
+    }) as unknown as ConfigurableAudioBackend;
+
+    it('play through loadFromBlob on the current (streaming) backend; nothing is fetched', async () => {
+      const file = new File([new Uint8Array([0x66, 0x4c, 0x61, 0x43])], '01.flac');
+      const resolveLocalFile = vi.fn(async () => file);
+      const fetchTrackBytes = vi.fn(async () => new ArrayBuffer(8));
+      const { engine, store, backend, flush } = setup({ createBackend: vi.fn(blobBackend), resolveLocalFile, fetchTrackBytes });
+      await flush();
+      const t = folderTrack('Album/01.flac');
+      expect(await engine.load(t)).toBe(true);
+
+      const b = backend() as FakeBackend & { loadFromBlob: ReturnType<typeof vi.fn> };
+      expect(resolveLocalFile).toHaveBeenCalledWith(expect.objectContaining({ id: t.id }));
+      expect(b.loadFromBlob).toHaveBeenCalledWith(file, { key: t.url, name: '01.flac', expectedDuration: 100 });
+      expect(b.loadFromURL).not.toHaveBeenCalled();
+      expect(b.loadFromArrayBuffer).not.toHaveBeenCalled();
+      expect(fetchTrackBytes).not.toHaveBeenCalled();
+      expect(store.getState().settings.outputMode).toBe('streaming');
+      expect(store.getState().transport.status).toBe('playing');
+    });
+
+    it('a folder that lost access is an error toast with the recover hint, not a throw', async () => {
+      const resolveLocalFile = vi.fn(async () => {
+        throw new Error('Access to the folder "Music" needs to be granted again: use Reconnect under Local Folders.');
+      });
+      const { engine, store, flush } = setup({ createBackend: vi.fn(blobBackend), resolveLocalFile });
+      await flush();
+      expect(await engine.load(folderTrack('a.flac'))).toBe(false);
+      expect(store.getState().transport.status).toBe('error');
+      expect(store.getState().errors.toasts.at(-1)?.message).toMatch(/Reconnect under Local Folders/);
+    });
+
+    it('hand a local successor to the backend with its file for gapless', async () => {
+      const files = new Map<string, File>();
+      const resolveLocalFile = vi.fn(async (t: PlaylistTrack) => {
+        const f = files.get(t.id) ?? new File([new Uint8Array(4)], t.name);
+        files.set(t.id, f);
+        return f;
+      });
+      const { engine, backend, flush } = setup({ createBackend: vi.fn(blobBackend), resolveLocalFile });
+      await flush();
+      engine.setAudioSettings({ gapless: { mode: 'gapless', crossfadeMs: 0 } });
+      const a = folderTrack('a.flac');
+      const b2 = folderTrack('b.flac');
+      engine.setQueue([a, b2], { currentIndex: 0 });
+      await engine.load(a, { index: 0 });
+      await flush();
+      const preload = backend().preloadNext.mock.calls.at(-1)?.[0];
+      expect(preload).toMatchObject({ url: b2.url, blob: files.get(b2.id) });
+    });
+
+    it('dropped files stay on a streaming backend that takes Blobs', async () => {
+      const { engine, store, backend, flush } = setup({ createBackend: vi.fn(blobBackend) });
+      await flush();
+      await engine.addLocalFiles([new File([new Uint8Array(4)], 'x.flac')]);
+      await flush();
+      expect(store.getState().settings.outputMode).toBe('streaming');
+      expect((backend() as unknown as { loadFromBlob: ReturnType<typeof vi.fn> }).loadFromBlob).toHaveBeenCalled();
+    });
   });
 
   it('reports a failed load as an error toast and the error state', async () => {

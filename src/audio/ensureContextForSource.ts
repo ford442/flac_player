@@ -1,4 +1,4 @@
-import { probeRemoteAudioDuration, parseAudioHeader } from '../utils/audioHeader';
+import { probeRemoteAudioDuration, parseAudioHeader, HEADER_PROBE_BYTES } from '../utils/audioHeader';
 import type { AudioContextManager } from './AudioContextManager';
 
 export async function ensureContextForUrl(
@@ -22,4 +22,12 @@ export async function ensureContextForBuffer(
     sampleRate: header?.sampleRate,
     channels: header?.channels,
   });
+}
+
+/** A local file (#284): only the header bytes are read. */
+export async function ensureContextForBlob(
+  manager: AudioContextManager,
+  blob: Blob
+): Promise<void> {
+  await ensureContextForBuffer(manager, await blob.slice(0, HEADER_PROBE_BYTES).arrayBuffer());
 }

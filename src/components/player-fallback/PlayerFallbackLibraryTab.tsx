@@ -17,8 +17,6 @@ export interface PlayerFallbackLibraryTabProps {
   onUpdateTrack: (id: string, updates: Partial<PlaylistTrack>) => Promise<void>;
   onTrashTrack: (id: string) => Promise<void>;
   onRegenerate: (track: PlaylistTrack) => void;
-  hasMore: boolean;
-  onLoadMore: () => void;
 }
 
 export const PlayerFallbackLibraryTab: React.FC<PlayerFallbackLibraryTabProps> = ({
@@ -26,7 +24,6 @@ export const PlayerFallbackLibraryTab: React.FC<PlayerFallbackLibraryTabProps> =
   libraryViewMode, setLibraryViewMode,
   selectedTags, setSelectedTags,
   onUpdateTrack, onTrashTrack, onRegenerate,
-  hasMore, onLoadMore,
 }) => {
   const currentTrackId = useTransport((t) => t.currentTrack?.id);
   const loadingTrackId = useTransport((t) => t.loadingTrackId);
@@ -70,7 +67,7 @@ export const PlayerFallbackLibraryTab: React.FC<PlayerFallbackLibraryTabProps> =
         onPlayNow={playNow} onPlayNext={enqueueNext} onAddToQueue={enqueue}
         onRegenerate={onRegenerate}
         isLoading={isLoadingLibrary}
-        hasMore={hasMore} onLoadMore={onLoadMore} onNotify={onNotify}
+        onNotify={onNotify}
       />
     </div>
   );

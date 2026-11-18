@@ -2,7 +2,7 @@
 // the queue in the catalog database.
 
 import { saveQueue as saveQueueToCatalog, type QueueState as SavedQueue } from '../storage/queueStorage';
-import { trackSource } from '../types/track';
+import { isResolvableTrack, trackSource } from '../types/track';
 import type { PlaylistTrack } from '../types/library';
 import type { PlayerStore, QueueState } from './playerStore';
 
@@ -30,11 +30,16 @@ export function readStoredVolume(storage: Storage | null = safeLocalStorage()): 
   }
 }
 
-/** Local files cannot survive a reload (their `File` and blob URL die with the page). */
+/**
+ * Dropped files cannot survive a reload (their `File` and blob URL die with the page);
+ * folder tracks can (#284): they reopen from the granted folder when played.
+ */
+const survivesReload = (t: PlaylistTrack) => trackSource(t) !== 'local' || isResolvableTrack(t);
+
 export function persistableQueue(queue: QueueState): QueueState {
-  if (!queue.tracks.some((t) => trackSource(t) === 'local')) return queue;
+  if (queue.tracks.every(survivesReload)) return queue;
   const current = queue.tracks[queue.currentIndex];
-  const tracks = queue.tracks.filter((t) => trackSource(t) !== 'local');
+  const tracks = queue.tracks.filter(survivesReload);
   return { ...queue, tracks, currentIndex: current ? tracks.indexOf(current) : -1 };
 }
 

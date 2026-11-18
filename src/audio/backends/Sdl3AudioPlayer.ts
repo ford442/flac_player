@@ -12,10 +12,10 @@ import { AudioContextManager, isAudioContextSinkSupported, sharedAudioContextMan
 import { createStreamResampler, resampleInterleaved, type StreamResampler } from '../resampler';
 import { WASM_ASSETS, loadWasmScript } from '../wasmLoader';
 import { SDL_ENGINE_PROCESSOR_NAME, type SdlEngineOptions } from '../worklets/sdlEngineMessages';
-import type { AudioBackendCapabilities, AudioPlaybackState, DecodedPcmView } from '../../types/audio';
+import type { AudioBackendCapabilities, AudioPlaybackState, BlobLoadOptions, DecodedPcmView } from '../../types/audio';
 import { isGaplessActive, DEFAULT_CROSSFADE_MS, DEFAULT_GAPLESS_MODE, type GaplessSettings, type PreloadNextOptions } from '../../types/gapless';
 import { BaseAudioBackend } from './BaseAudioBackend';
-import { HifiStreamSession, type HifiTrackSource } from '../hifiStreamPipeline';
+import { HifiStreamSession, isFlacBlob, type HifiTrackSource } from '../hifiStreamPipeline';
 import { describePlaybackPath, type PlaybackPathInfo } from '../../utils/playbackPath';
 import { playRingShouldPause } from '../playRingBackpressure';
 
@@ -371,6 +371,8 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
     options: {
       expectedDuration?: number;
       cachedResponse?: Response;
+      /** A local file (#284); `url` is then only its identity key. */
+      blob?: Blob;
       onProgress?: (loaded: number, total: number | null) => void;
     } = {}
   ): Promise<void> {
@@ -435,7 +437,7 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
     try {
       await Promise.race([
         session.load(
-          { url, cachedResponse: options.cachedResponse, expectedDuration: options.expectedDuration },
+          { url, cachedResponse: options.cachedResponse, blob: options.blob, expectedDuration: options.expectedDuration },
           { onProgress: (p) => options.onProgress?.(p.loaded, p.total) }
         ),
         timeout,
@@ -443,6 +445,12 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
     } finally {
       clearTimeout(timer);
     }
+  }
+
+  /** Local file (#284): FLAC streams from the Blob through the hi-fi session; WAV decodes whole. */
+  async loadFromBlob(blob: Blob, { key, name, expectedDuration }: BlobLoadOptions): Promise<void> {
+    if (await isFlacBlob(blob, name)) return this.loadFromURLStreaming(key, { blob, expectedDuration });
+    return this.loadFromArrayBuffer(await blob.arrayBuffer(), name);
   }
 
   /** Push the resampler's filter tail, then tell the processor no more PCM is coming. */
@@ -469,8 +477,8 @@ export class Sdl3AudioPlayer extends BaseAudioBackend {
    */
   preloadNext(options: PreloadNextOptions | string): void {
     if (!isGaplessActive(this.gaplessSettings)) return;
-    const { url, duration } = typeof options === 'string' ? { url: options, duration: undefined } : options;
-    this.nextSource = { url, expectedDuration: duration };
+    const { url, duration, blob } = typeof options === 'string' ? { url: options, duration: undefined, blob: undefined } : options;
+    this.nextSource = { url, expectedDuration: duration, blob };
     if (this.isStreaming) this.session?.setNext(this.nextSource);
   }
 

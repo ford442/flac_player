@@ -1,6 +1,7 @@
 import type { ConfigurableAudioBackend } from '../types/audio';
 import type { PlaylistTrack } from '../types/library';
 import { fetchReplayGainFromUrl } from '../utils/fetchReplayGain';
+import { LOCAL_URL_SCHEME } from '../types/track';
 import {
   computeReplayGainLinear,
   replayGainTagsToTrackFields,
@@ -23,7 +24,8 @@ export async function enrichTrackReplayGain(track: PlaylistTrack): Promise<Playl
   if (track.replaygain_track_db !== undefined || track.replaygain_album_db !== undefined) {
     return track;
   }
-  if (!track.url || track.url.startsWith('blob:')) return track;
+  // Local tracks carry their tags from the drop or the folder scan; nothing to fetch.
+  if (!track.url || track.url.startsWith('blob:') || track.url.startsWith(LOCAL_URL_SCHEME)) return track;
 
   const tags = await fetchReplayGainFromUrl(track.url);
   if (!tags) return track;

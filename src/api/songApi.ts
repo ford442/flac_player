@@ -3,6 +3,7 @@
 
 import type { CloudPlaylist, PlaylistTrack, ShareResponse, SortBy } from '../types/library';
 import { debug } from '../utils/debug';
+import { isLibraryTrack } from '../types/track';
 import { API_BASE_URL, PLAYLIST_API_URL, ApiError, apiFetch, apiRequest, resolveTrackUrl } from './http';
 import {
   CloudPlaylistListSchema, CloudPlaylistSchema, MusicBrainzSearchSchema, PlaylistHealthSchema,
@@ -284,12 +285,14 @@ export function createShare(
   title: string = 'Shared Playlist',
   expiresInDays: number = 30
 ): Promise<ShareResponse> {
-  if (!trackIds || trackIds.length === 0) {
+  // Only host ids are shareable: local-folder and link ids never leave the device (#284).
+  const shareable = (trackIds ?? []).filter((id) => isLibraryTrack({ id }));
+  if (shareable.length === 0) {
     return Promise.reject(new Error('No tracks available to share'));
   }
   return apiFetch('/api/share', ShareResponseSchema, {
     method: 'POST',
-    json: { track_ids: trackIds, title, expires_in_days: expiresInDays },
+    json: { track_ids: shareable, title, expires_in_days: expiresInDays },
   });
 }
 
