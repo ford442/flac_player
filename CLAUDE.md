@@ -209,10 +209,19 @@ rebuilds all four. Never merge `public/*.wasm` or `*.sha256` textually; rebuild 
 
 Production webpack (`npm run build`) copies prebuilt artifacts from `public/` — no emsdk required.
 
+## Embeddable mini player
+
+`src/embed/` (`<FlacMiniPlayer>`, `mountMiniPlayer`, script/iframe entry `standalone.tsx`) is a
+separate, small entry built by `npm run build:embed` (`webpack.embed.config.js` → `dist-embed/`).
+It plays through one native `<audio>` and must not import the engine, store, catalog, projectM,
+ffmpeg, WebGPU or Tailwind. Its only links into the app are `DEFAULT_EQ_BANDS` and
+`openAudioContext` (for a non-flat `eq` preset). Props contract: `docs/EMBED.md`.
+
 ## Related docs
 
 - `docs/ARCHITECTURE.md` — system diagram
 - `docs/AUDIO_BACKENDS.md` — backend selection
 - `docs/API.md` — REST + projectM embed
 - `docs/LISTENING_ROOMS.md` — synced listening rooms
+- `docs/EMBED.md` — embeddable mini player
 - `AGENTS.md` — full agent reference
