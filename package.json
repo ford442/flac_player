@@ -13,6 +13,7 @@
     "build:projectm": "bash ./scripts/build-projectm-wasm.sh",
     "verify:wasm": "bash ./scripts/verify-wasm-artifacts.sh",
     "build": "webpack --mode production",
+    "build:embed": "webpack --config webpack.embed.config.js --mode production",
     "build:all": "npm run build:wasm && npm run build",
     "lint": "eslint src --ext .js,.jsx,.ts,.tsx",
     "typecheck": "tsc --noEmit",
